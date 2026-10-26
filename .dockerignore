@@ -1,0 +1,19 @@
+# Keep secrets and collected data out of the build context and the image.
+.env
+.env.*
+data/
+reports/
+exports/
+annotation/
+logs/
+manifest.json
+.git/
+.venv/
+# The image is the data pipeline only; the web app is not part of it.
+backend/
+frontend/
+tests/
+**/__pycache__/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/

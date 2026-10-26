@@ -1,0 +1,89 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "synergyrx-data"
+version = "0.1.0"
+description = "Polite, reproducible data collection pipeline for SynergyRx AI (drug-combination synergy and PubMed literature)."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27",
+    "tenacity>=8.2",
+    "pydantic>=2.6",
+    "typer>=0.12",
+    "pandas>=2.2",
+    "pyarrow>=15",
+    "rdkit>=2023.9",
+    "pyyaml>=6.0",
+    "rich>=13",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+# PyTDC pins numpy<2 and pandas<3, so it only installs on Python 3.11 / 3.12.
+tdc = ["PyTDC>=1.0; python_version < '3.13'"]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "respx>=0.21",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "pre-commit>=3.7",
+    "types-PyYAML",
+]
+
+[project.scripts]
+synergyrx = "synergyrx_data.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/synergyrx_data"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-q -m 'not live'"
+markers = [
+    "live: hits real public services with tiny samples; run with `pytest -m live`",
+]
+filterwarnings = ["ignore::DeprecationWarning:rdkit.*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "S", "ASYNC", "PTH", "C4"]
+ignore = [
+    "S101",   # assert is fine in tests and for internal invariants
+    "S311",   # random is used for jitter and sampling, not for security
+    "S324",   # md5 is only used to verify publisher-supplied checksums
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "S108", "ASYNC240"]  # blocking file reads are fine in tests
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["pandas.*", "pyarrow.*", "tdc.*", "dotenv.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
+
+# RDKit ships stub files that mypy cannot parse; treat the package as untyped.
+[[tool.mypy.overrides]]
+module = ["rdkit", "rdkit.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
+follow_imports_for_stubs = true

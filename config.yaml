@@ -1,0 +1,128 @@
+# SynergyRx data pipeline configuration.
+# Any value can be overridden on the command line:  synergyrx --set http.cache_ttl_seconds=0 fetch
+# Keys that contain dots go in brackets:            --set "http.hosts[zenodo.org].rate=0.05"
+# Secrets (CONTACT_EMAIL, NCBI_API_KEY) live in .env, never in this file.
+
+# Everything the pipeline produces lives under this one folder, grouped by format:
+#   data/parquet   the processed tables          data/csv      every CSV output
+#   data/json      JSON for the frontend         data/reports  quality report (md / html)
+# Working folders next to them: data/raw, data/interim, data/manual (files you place
+# yourself), data/cache and data/state.
+data_dir: data
+# To put one format somewhere else, set parquet_dir, csv_dir, json_dir or reports_dir.
+
+http:
+  product: synergyrx-data
+  project_url: null              # public page describing the project, added to the User-Agent
+  require_contact_email: true    # refuse live requests until CONTACT_EMAIL is set in .env
+  connect_timeout: 10
+  read_timeout: 60
+  max_response_bytes: 67108864   # 64 MB per API response
+  max_download_bytes: 4294967296 # 4 GB per bulk file
+  sample_max_bytes: 67108864     # most a --sample fetch may read from one file
+  cache_ttl_seconds: 86400       # reuse cached API answers for a day, then revalidate
+  honor_crawl_delay: true        # a robots.txt Crawl-delay always slows us down
+  robots_for_bulk: true          # check robots.txt before bulk downloads, not only HTML
+  safety_factor: 0.9             # run at 90% of every limit below
+
+  default_limit: {rate: 1.0, burst: 1, max_concurrency: 1}
+
+  # NCBI E-utilities: about 3 requests/second without an API key, about 10 with one.
+  ncbi:
+    rate_without_key: 3.0
+    rate_with_key: 10.0
+    hosts: [eutils.ncbi.nlm.nih.gov]
+
+  # Requests per second per host. See docs/SOURCES.md for what each provider documents.
+  hosts:
+    pubchem.ncbi.nlm.nih.gov: {rate: 5.0, burst: 1, max_concurrency: 2}
+    www.ncbi.nlm.nih.gov: {rate: 2.0, burst: 1, max_concurrency: 1}     # PubTator 3: max 3/s
+    ftp.ncbi.nlm.nih.gov: {rate: 1.0, burst: 1, max_concurrency: 1}
+    www.ebi.ac.uk: {rate: 2.0, burst: 1, max_concurrency: 2}            # ChEMBL, Europe PMC
+    zenodo.org: {rate: 1.0, burst: 1, max_concurrency: 1}               # Crawl-delay 10 applies
+    api.figshare.com: {rate: 1.0, burst: 1, max_concurrency: 1}         # "one request per second"
+    ndownloader.figshare.com: {rate: 1.0, burst: 1, max_concurrency: 1}
+    dataverse.harvard.edu: {rate: 1.0, burst: 1, max_concurrency: 1}
+
+  retry: {max_attempts: 5, backoff_base: 1.0, backoff_max: 60.0, max_retry_after: 300.0}
+  circuit: {failure_threshold: 5, reset_seconds: 300.0}
+
+sources:
+  # --- stage 1: drug combinations and cell lines -------------------------------------------
+  drugcomb:
+    enabled: true
+    version: "1.4"               # pinned Zenodo record 11102665
+  tdc:
+    enabled: true
+    options:
+      dataset: drugcomb          # or: oncopolypharmacology (1.6 GB)
+      loader: auto               # auto | pytdc | builtin
+  oneil:
+    enabled: true
+  nci_almanac:
+    enabled: true                # needs a manual download: see docs/SOURCES.md
+  depmap:
+    enabled: true
+    version: "24Q4"
+    options:
+      article_id: 27993248       # Figshare+ article of the release
+      include_expression: true   # 507 MB
+  gdsc:
+    enabled: false               # optional
+  ddinter:
+    enabled: false               # optional, CC BY-NC-SA 4.0
+    options:
+      terms_acknowledged: false  # set to true only after reading https://ddinter2.scbdd.com/terms/
+  drugbank:
+    enabled: false               # licence-gated: reads a file you place yourself, never downloads
+
+  # --- stage 2-3: identifiers --------------------------------------------------------------
+  pubchem:
+    enabled: true
+  chembl:
+    enabled: true
+
+  # --- stage 4-5: literature ---------------------------------------------------------------
+  pubmed:
+    enabled: true
+    options:
+      mode: pairs                # pairs | drugs
+      max_queries: 25
+      max_records_per_query: 200
+      start_date: "2000/01/01"
+  pubmed_baseline:
+    enabled: false               # optional, very large
+    options:
+      files: []                  # e.g. [1, 2, 3] for pubmed26n0001..0003.xml.gz
+  europepmc:
+    enabled: true
+  pubtator:
+    enabled: false               # optional
+
+cleaning:
+  manual_overrides: config/manual_drug_overrides.csv
+  cell_line_aliases: config/cell_line_aliases.csv
+  review_confidence_below: 0.7
+  max_synonyms: 50
+  score_outlier_abs: 200.0       # flag (never clip) synergy scores beyond this
+  conflict_abs_tolerance: 10.0   # two records of one pair + cell line disagree beyond this
+  expression_top_variable_genes: null   # e.g. 5000 to keep only the most variable genes
+
+literature:
+  min_synonym_length: 4
+  max_ngram: 6
+  min_drugs_per_sentence: 2
+  annotation_sample_size: 300    # 200 to 500
+  annotation_max_per_pmid: 3
+  annotation_seed: 20260101
+
+export:
+  mock_seed: 42
+  mock_examples: 200
+  max_synonyms: 10
+
+logging:
+  level: INFO
+  json_logs: true
+  file: null                     # e.g. logs/synergyrx.jsonl
+  progress: true

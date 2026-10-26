@@ -1,0 +1,16 @@
+# Cell-line spellings that differ from DepMap by more than punctuation.
+# alias: the name as a source writes it. canonical: DepMap's StrippedCellLineName.
+# Every canonical name below exists in DepMap 24Q4. These equivalences are curated: review
+# them, and add your own after working through data/csv/cell_line_review_queue.csv.
+# Lines mapped through this file get match_method = "alias" in cell_lines.parquet.
+alias,canonical
+# NCI-60 panel names
+OVCAR3,NIHOVCAR3
+U251,U251MG
+SR,SR786
+786-0,786O
+# O'Neil screen short names
+LNCAP,LNCAPCLONEFGC
+MSTO,MSTO211H
+# Deliberately NOT mapped (related but different lines): MDA-MB-435 vs MDA-MB-435S,
+# EFM192B vs EFM-192A, COLO320DM vs COLO-320, UWB1289+BRCA1 vs UWB1.289.

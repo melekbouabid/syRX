@@ -1,0 +1,13 @@
+# Incremental update every Monday at 03:15 (server time), outside NCBI's peak hours
+# (NCBI asks for large jobs between 21:00 and 05:00 US Eastern on weekdays, or at weekends).
+#
+# `synergyrx update` is safe to repeat: unchanged files are skipped by hash, API answers are
+# cached, and PubMed is only asked for records entered since the previous run.
+# It exits non-zero when a source needs attention, so cron mails the log.
+#
+# Edit the two paths, then install with:  crontab -e
+
+15 3 * * 1  cd /opt/synergyrx-data && flock -n /tmp/synergyrx.lock ./.venv/bin/synergyrx update >> logs/update.log 2>&1
+
+# Monthly link check: rewrites docs/SOURCES.md with the HTTP status of every source link.
+30 4 1 * *  cd /opt/synergyrx-data && ./.venv/bin/synergyrx sources --check >> logs/sources.log 2>&1

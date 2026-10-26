@@ -1,0 +1,6 @@
+# Same rules as the data pipeline; only the import root and the test exceptions differ.
+extend = "../pyproject.toml"
+src = ["."]
+
+[lint.per-file-ignores]
+"tests/**" = ["S105", "S106"]

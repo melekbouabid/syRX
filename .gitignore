@@ -1,0 +1,38 @@
+# Collected data is never committed: several sources forbid redistribution.
+# Everything the pipeline produces is under data/ (parquet, csv, json, reports, plus the
+# raw and interim working folders).
+data/
+logs/
+# Folder names of earlier layouts, still ignored in case an output is pointed back here.
+exports/
+annotation/
+reports/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Web app: accounts database and JavaScript dependencies
+*.db
+*.db-journal
+node_modules/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

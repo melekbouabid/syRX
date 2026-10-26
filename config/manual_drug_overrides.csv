@@ -1,0 +1,3 @@
+# Manual decisions for drug names the pipeline could not resolve (see data/csv/drug_review_queue.csv).
+# One row per name. Give a SMILES, a PubChem CID, or both. Lines starting with # are ignored.
+name,smiles,pubchem_cid,note

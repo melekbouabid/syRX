@@ -1,0 +1,49 @@
+# Install once with:  pre-commit install
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: ["--maxkb=500"]   # data never belongs in the repository
+
+  - repo: local
+    hooks:
+      # Tools run from the project environment, so their versions match pyproject.toml.
+      - id: ruff
+        name: ruff (lint)
+        entry: python -m ruff check --fix
+        language: system
+        types: [python]
+
+      - id: ruff-format
+        name: ruff (format)
+        entry: python -m ruff format
+        language: system
+        types: [python]
+
+      - id: mypy
+        name: mypy
+        entry: python -m mypy
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: no-secrets-or-data
+        name: no .env or collected data in commits
+        entry: Refusing to commit secrets or collected data
+        language: fail
+        files: '^(\.env(\..*)?|data/.*|exports/.*|annotation/.*)$'
+        exclude: '^\.env\.example$'
+
+      - id: unit-tests
+        name: unit tests (mocked HTTP)
+        entry: python -m pytest tests/unit -q
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
