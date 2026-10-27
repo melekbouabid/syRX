@@ -16,7 +16,7 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [ ] Change the default admin password (admin@gmail.com / admin)
 
 ## 1. Pill data (C3PI, no personal photos)
-- [ ] Explore the C3PI sample and the full archive layout (docs/DATASET_C3PI.md)
+- [x] Explore the C3PI sample and the full archive layout (docs/DATASET_C3PI.md)
 - [ ] `config/pill_classes.csv`: 100-200 classes with the most consumer images
 - [ ] Download the images of these classes only (budget 20 GB)
 - [ ] Train / val / test split with no photo in two splits

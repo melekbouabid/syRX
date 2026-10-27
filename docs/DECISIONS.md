@@ -190,3 +190,19 @@ The backend venv only lacked its dev requirements, which were installed.
 **D28. Documentation language.** The README presentation, requirement checklist and
 progress journal, and docs/NIGHT_REPORT.md are in French as requested; the other docs stay
 in English like the rest of `docs/`.
+
+**D29. C3PI metadata comes from the ALLXML files, not the Excel directory.** The XML has
+everything the directory has plus file size and SHA-1 (exact download budget, verified
+downloads), camera, background and lighting. 316 files are listed twice (always for the
+same pill); each file is counted once.
+
+**D30. A pill class is a product = NDC9 + part**, not an NDC11. The last two NDC digits only
+name the package, so package variants of one pill are merged (380 classes with 20+ consumer
+photos instead of 364 by NDC11).
+
+**D31. "Consumer images" = `C3PI_Test` JPGs; "reference images" = the RxNav API JPG.** The
+consumer photos are what the app will see (phone / webcam, real backgrounds). Of the
+reference types, only `MC_API_RXNAV_V1.3` (~0.6 MB) is downloaded, one per package NDC,
+and kept in train only. CR2 (23 MB), calibrated PNG (110 MB) and segmented PNG (3 MB) are
+too large for the night's bandwidth; the segmented PNGs (alpha mask) are noted for
+synthetic detection data later. WMV videos are not used.

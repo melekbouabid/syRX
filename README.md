@@ -62,6 +62,7 @@ pipeline SynergyRx sont décrites dans l'annexe ci-dessous.
 ## Journal de progression
 
 | Date | Tâche | Ce qui a été fait | Fichiers | Résultats |
+| 2026-10-28 | Tâche 2 : exploration de C3PI | Téléchargement de `sampleData.zip` (517 Mo) et des 110 fichiers XML de métadonnées ; outil `vision/tujya_vision` (index des images, sélection, téléchargement vérifié par SHA-1) ; documentation complète du jeu de données | `docs/DATASET_C3PI.md`, `vision/tujya_vision/c3pi.py`, `vision/tujya_vision/data_cli.py`, `vision/tests/test_c3pi.py` | 133 458 fichiers ; 40 587 photos « consumer » de 2 400 comprimés ; 380 comprimés ont au moins 20 photos ; aucune bounding box ni masque pour les photos consumer, masques alpha dans les images de référence segmentées ; 8 tests |
 |---|---|---|---|---|
 | 2026-10-26 | Commit initial (`c1cb26d`) | Import du pipeline SynergyRx, du backend FastAPI, du frontend React (marque Tujya) et du plan Tujya | tout le dépôt | 270 tests unitaires du pipeline ; backend avec comptes, sessions, admin, catalogue |
 | 2026-10-27 | Tâche 1 : README et règles du projet | Présentation de Tujya, exigences des modules, sources de données, journal ; règles obligatoires de session dans CLAUDE.md ; nouvelle orientation données (C3PI, pas de photos personnelles, deux étapes détection + identification, ePillID, openFDA) | `README.md`, `CLAUDE.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/NIGHT_REPORT.md` | Documentation à jour ; aucune exigence cochée (aucune n'est encore satisfaite) |

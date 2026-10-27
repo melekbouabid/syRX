@@ -1,0 +1,17 @@
+[project]
+name = "tujya-vision"
+version = "0.1.0"
+description = "Tujya pill detection and identification: C3PI subset, training, MLflow, ONNX export."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+
+[tool.ruff]
+extend = "../pyproject.toml"
+src = ["."]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "S108"]
