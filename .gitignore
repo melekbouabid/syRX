@@ -36,3 +36,12 @@ node_modules/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Tujya: extra virtual environments (dev pipeline venv, vision venv) and ML outputs
+.venv-*/
+vision/.venv/
+vision/runs/
+mlruns/
+mlartifacts/
+*.onnx
+*.pt

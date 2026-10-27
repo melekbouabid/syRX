@@ -1,4 +1,74 @@
-# synergyrx-data
+# Tujya
+
+Tujya est une application de sécurité du médicament, réalisée comme projet étudiant solo.
+On photographie un ou plusieurs comprimés (upload ou webcam) : un modèle YOLO **détecte**
+chaque comprimé, puis un classifieur entraîné par *transfer learning* l'**identifie** parmi
+une liste fermée de 100 à 200 comprimés du jeu de données public NLM C3PI. Chaque comprimé
+est relié à son ou ses principes actifs, et Tujya vérifie les **interactions** entre ces
+principes actifs dans DDInter. Un agent LangGraph répond ensuite aux questions de suivi par
+RAG (notices openFDA, résumés PubMed, DDInter), en **citant ses sources**.
+
+> Information uniquement : Tujya ne remplace pas l'avis d'un pharmacien ou d'un médecin.
+> Tujya ne donne jamais de posologie et ne dit jamais qu'une association est « sûre » :
+> il indique au mieux « aucune interaction connue dans cette base ».
+
+Règles du projet pour les sessions de travail : [CLAUDE.md](CLAUDE.md). Feuille de route :
+[docs/ROADMAP.md](docs/ROADMAP.md). Décisions : [docs/DECISIONS.md](docs/DECISIONS.md).
+
+## Exigences des modules
+
+Une case n'est cochée que lorsque l'exigence est réellement satisfaite.
+
+### Module 1 : Industrialisation Vision & MLOps
+
+- [ ] Axe vision : détection des comprimés avec YOLOv8/v11
+- [ ] Axe vision : identification de chaque comprimé par transfer learning
+- [ ] Backend FastAPI asynchrone, schémas Pydantic, Swagger sur `/docs`
+- [ ] Frontend React : upload d'image, webcam, affichage des prédictions et des bounding boxes
+- [ ] DVC (versionnement des données)
+- [ ] MLflow : tracking des expériences
+- [ ] MLflow : Model Registry
+- [ ] Export ONNX et inférence ONNX Runtime
+- [ ] Docker Compose
+- [ ] GitHub Actions CI/CD
+- [ ] Soutenance pratique (démonstration technique en direct)
+
+### Module 2 : AI Engineering
+
+- [ ] RAG avec gestion des documents, métadonnées, citations, documentation
+- [ ] Tool calling / MCP
+- [ ] LangChain et/ou LangGraph
+- [ ] Benchmarking de la récupération et de la génération
+- [ ] Interface web
+- [ ] Dépôt GitHub documenté avec commits réguliers
+- [ ] Rapport technique
+- [ ] Démonstration
+
+## Sources de données
+
+| Jeu de données | Lien | Licence | Usage dans Tujya |
+|---|---|---|---|
+| NLM C3PI (Computational Photography Project for Pill Identification) | [catalog.data.gov](https://catalog.data.gov/dataset/computational-photography-project-for-pill-identification-c3pi), [fichiers](https://data.lhncbc.nlm.nih.gov/public/Pills/) | ODbL ; usage recherche et développement uniquement | Images de comprimés (photos « consumer » et images de référence) pour la détection et l'identification ; métadonnées (NDC, nom, principe actif) |
+| ePillID | [arXiv:2005.14288](https://arxiv.org/abs/2005.14288) | article (benchmark construit sur C3PI) | Benchmark de référence pour comparer l'identification |
+| DDInter 2 | [ddinter2.scbdd.com](https://ddinter2.scbdd.com/) | CC BY-NC-SA 4.0 (usage académique non commercial) | Interactions entre principes actifs : sévérité, description |
+| RxNorm / RxNav (NLM) | [lhncbc.nlm.nih.gov/RxNav](https://lhncbc.nlm.nih.gov/RxNav/APIs/) | conditions d'utilisation UMLS / RxNorm (API publique) | Correspondance NDC / nom -> principe(s) actif(s) si les métadonnées C3PI ne suffisent pas |
+| openFDA drug labels | [open.fda.gov/apis/drug/label](https://open.fda.gov/apis/drug/label/) | CC0 / domaine public (conditions openFDA) | Corpus RAG : notices officielles, avec métadonnées et citations |
+| PubMed (E-utilities) | [ncbi.nlm.nih.gov/books/NBK25501](https://www.ncbi.nlm.nih.gov/books/NBK25501/) | conditions NLM | Corpus RAG : résumés d'articles |
+
+Les données ne sont jamais commitées dans git (plusieurs sources interdisent la
+redistribution) : elles sont sous `data/`, versionnées avec DVC. Les sources de l'ancien
+pipeline SynergyRx sont décrites dans l'annexe ci-dessous.
+
+## Journal de progression
+
+| Date | Tâche | Ce qui a été fait | Fichiers | Résultats |
+|---|---|---|---|---|
+| 2026-10-26 | Commit initial (`c1cb26d`) | Import du pipeline SynergyRx, du backend FastAPI, du frontend React (marque Tujya) et du plan Tujya | tout le dépôt | 270 tests unitaires du pipeline ; backend avec comptes, sessions, admin, catalogue |
+| 2026-10-27 | Tâche 1 : README et règles du projet | Présentation de Tujya, exigences des modules, sources de données, journal ; règles obligatoires de session dans CLAUDE.md ; nouvelle orientation données (C3PI, pas de photos personnelles, deux étapes détection + identification, ePillID, openFDA) | `README.md`, `CLAUDE.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/NIGHT_REPORT.md` | Documentation à jour ; aucune exigence cochée (aucune n'est encore satisfaite) |
+
+---
+
+## Annexe : pipeline de données SynergyRx
 
 Data collection pipeline for **SynergyRx AI**: prediction of drug-combination synergy on
 cancer cell lines, enriched with knowledge extracted from PubMed.
@@ -7,7 +77,7 @@ It collects public scientific data from a fixed list of sources, politely and re
 official APIs first, official bulk files second, and no HTML scraping. It is not a
 general-purpose web scraper and refuses to talk to any host that is not one of its sources.
 
-## What you get
+### What you get
 
 Everything the pipeline produces is in one folder, `data/`, with one sub-folder per file
 format. The extension of a file tells you where it is:
@@ -45,7 +115,7 @@ hold no data, they describe the folder, and unlike `data/` they can be committed
 `--data-dir` moves the whole folder; `parquet_dir`, `csv_dir`, `json_dir` and `reports_dir`
 in `config.yaml` can point one format elsewhere.
 
-## Setup
+### Setup
 
 Requires Python 3.11 or newer.
 
@@ -69,7 +139,7 @@ Then check the machine:
 synergyrx preflight
 ```
 
-## Running it
+### Running it
 
 ```bash
 synergyrx fetch --sample 100 --dry-run   # print the plan; requests and writes nothing
@@ -93,7 +163,7 @@ Or everything in one go, incrementally: `synergyrx update`.
 4. PubMed, with queries built from the cleaned drug table (so run `clean` first).
 5. Europe PMC (open-access status) and PubTator, for the PMIDs PubMed returned.
 
-### Commands
+#### Commands
 
 | Command | What it does |
 |---|---|
@@ -118,14 +188,14 @@ synergyrx --set sources.tdc.enabled=false --set "http.hosts[zenodo.org].rate=0.0
 
 Logs are JSON lines on stderr; tables and reports go to stdout.
 
-### Second runs are cheap
+#### Second runs are cheap
 
 Nothing is downloaded or duplicated twice. Raw files are skipped when their hash matches the
 manifest, API answers are cached on disk and revalidated with ETag / Last-Modified, lookups
 (including "not found") are remembered, interrupted downloads resume with an HTTP Range
 request, and PubMed is only asked for records entered since the previous run.
 
-## Sources
+### Sources
 
 | Source | Access | On by default | Licence |
 |---|---|---|---|
@@ -147,7 +217,7 @@ request, and PubMed is only asked for records entered since the previous run.
 Link statuses, endpoints, rate limits and what was found for each source are in
 [docs/SOURCES.md](docs/SOURCES.md). Licences and citations are in `LICENSES.md`.
 
-### Manual steps
+#### Manual steps
 
 - **NCI-ALMANAC.** robots.txt of `wiki.nci.nih.gov` disallows automated downloads. Open the
   [NCI-ALMANAC page](https://wiki.nci.nih.gov/spaces/NCIDTPdata/pages/338237347/NCI-ALMANAC)
@@ -166,7 +236,7 @@ Link statuses, endpoints, rate limits and what was found for each source are in
   `data/csv/cell_line_review_queue.csv`, record decisions in
   `config/manual_drug_overrides.csv` and `config/cell_line_aliases.csv`, and run `clean`.
 
-## How it behaves on the network
+### How it behaves on the network
 
 - Identifies itself: `synergyrx-data/<version> (research data pipeline; mailto:<you>)`.
 - Per-host token-bucket rate limits and connection caps, run at 90 % of each limit; a
@@ -182,13 +252,13 @@ Link statuses, endpoints, rate limits and what was found for each source are in
 A source that fails does not stop the run: the others continue and `status` shows which one
 needs attention and why. `fetch` and `update` exit non-zero in that case.
 
-## Scheduling
+### Scheduling
 
 `synergyrx update` is safe to run repeatedly. Examples:
 [docs/examples/crontab.txt](docs/examples/crontab.txt) and
 [docs/examples/github-actions-update.yml](docs/examples/github-actions-update.yml).
 
-## Docker
+### Docker
 
 ```bash
 docker build -t synergyrx-data .
@@ -198,7 +268,7 @@ docker run --rm --env-file .env -v "$PWD/data:/app/data" synergyrx-data fetch --
 Add `--build-arg INSTALL_TDC=1` to include PyTDC. Secrets are passed at run time and are
 not part of the image.
 
-## Web app
+### Web app
 
 A FastAPI backend (`backend/`) and a React frontend (`frontend/`) on top of the processed
 tables. They are separate from the pipeline: the backend has its own virtual environment and
@@ -249,7 +319,7 @@ credentials, copy `backend/.env.example` to `backend/.env` before the first star
 Checks: `python -m pytest` in `backend/` (API tests on a temporary database), and
 `npm run build` in `frontend/` (type check and production build).
 
-## Development
+### Development
 
 ```bash
 make check        # lint, type check, unit tests (mocked HTTP, no network)
@@ -264,7 +334,7 @@ Adding a source means writing one `Connector` subclass (`discover`, `fetch`, `pa
 `validate`) and registering it in `src/synergyrx_data/connectors/__init__.py`. Read
 [docs/CODE_REVIEW.md](docs/CODE_REVIEW.md) first.
 
-## Layout
+### Layout
 
 ```
 config.yaml              settings (no secrets)        .env        secrets (git-ignored)

@@ -170,3 +170,23 @@ folder, and can be committed.
 
 **D25. `make` is not installed on the build machine (Windows).** The Makefile targets are
 one command each; the equivalent commands were run directly and are listed in the README.
+
+## Tujya (night of 2026-10-27 to 2026-10-28)
+
+Decisions taken while the owner was away. Each one is listed in docs/NIGHT_REPORT.md for
+review.
+
+**D26. pandas is capped below 3.1.** A fresh install pulled pandas 3.1.0 and three end-to-end
+tests failed (`TypeError: data type 'list<item: string>[pyarrow]' not understood` in the
+build step). With pandas 3.0.6, the version of the original environment, all 270 unit tests
+pass. `pyproject.toml` now says `pandas>=2.2,<3.1`; making the build work on 3.1 is a
+separate fix.
+
+**D27. A new pipeline venv `.venv-dev`.** The committed workspace's `.venv` was created on
+another machine (`C:\Users\LENOVO\...`) and cannot start. It was left untouched; `.venv-dev`
+(Python 3.14, `pip install -e ".[dev]"`) is used instead and is git-ignored (`.venv-*/`).
+The backend venv only lacked its dev requirements, which were installed.
+
+**D28. Documentation language.** The README presentation, requirement checklist and
+progress journal, and docs/NIGHT_REPORT.md are in French as requested; the other docs stay
+in English like the rest of `docs/`.
