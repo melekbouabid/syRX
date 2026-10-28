@@ -46,6 +46,19 @@ class Settings(BaseSettings):
     # data/parquet); the API only ever reads them.
     processed_dir: Path = PROJECT_DIR / "data" / "parquet"
 
+    # Module 2: RAG and agent (docs/RAG.md, docs/AGENT.md). The chunk index lives in the
+    # pharma database (table rag_chunks, pgvector); `python -m app.rag.index` fills it from
+    # this file. Ollama serves both the LLM and the embeddings (docker compose `ollama`).
+    rag_chunks_file: Path = PROJECT_DIR / "data" / "rag" / "corpus" / "chunks.parquet"
+    ollama_url: str = "http://localhost:11434"
+    llm_model: str = "qwen2.5:3b"
+    llm_temperature: float = 0.1
+    llm_num_ctx: int = 8192
+    llm_timeout_seconds: float = 180.0
+    embedding_model: str = "bge-m3"
+    embedding_dim: int = 1024
+    rag_top_k: int = 6
+
     session_cookie: str = "synergyrx_session"
     session_hours: int = 12
     cookie_secure: bool = False  # set to true as soon as the site is served over HTTPS

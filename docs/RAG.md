@@ -152,10 +152,44 @@ reads all of them from the database (D62).
 - As for the images, there is no DVC remote yet: the cache is local (docs/ROADMAP.md).
 - Nothing under `data/` is committed to git (some sources forbid redistribution).
 
-## Embeddings and index
+## Embeddings and index (backend, `backend/app/rag/`)
 
-See "Retrieval" below (Task 2): bge-m3 through Ollama, table `rag_chunks` in PostgreSQL with
-pgvector, BM25, reciprocal rank fusion.
+- **Embeddings: bge-m3** (1,024 dimensions, multilingual) through Ollama's `/api/embed`
+  (D59). Each chunk is embedded as `title + "\n" + text`.
+- **Store:** table `rag_chunks` in the PostgreSQL database `tujya` (the pharma database):
+  the metadata columns of the schema above, `content_hash`, and `embedding vector(1024)`
+  (pgvector); ingredient lists are `text[]`. Table `rag_index_meta` keeps the model, the
+  dimension, the chunk count and `indexed_at`.
+- **Indexing:** `python -m app.rag.index` (backend venv; `--database-url`, `--chunks`,
+  `--pull` to pull the Ollama models first). Idempotent: a chunk is embedded again only if
+  its hash (text, metadata, model) changed, chunks gone from the corpus are deleted, a new
+  embedding model rebuilds the table. Run on 2026-10-28: 8,661 chunks embedded in 364 s on
+  the RTX 2050; second run `{"embedded": 0, "unchanged": 8661, "seconds": 0.1}`.
+
+## Retrieval (`backend/app/rag/retrieval.py`)
+
+| Mode | How | Time per query (8,661 chunks, laptop) |
+|---|---|---:|
+| `bm25` | Okapi BM25 (k1 1.2, b 0.75) in memory over title + text; lower case, accents removed, English and French stop words, plural "s" stripped | ~6 ms |
+| `dense` | bge-m3 query vector, exact cosine distance in SQL (`ORDER BY embedding <=> :q`), filters in the WHERE clause | 130-190 ms (mostly the query embedding) |
+| `hybrid` (default) | both lists (50 candidates each) fused by reciprocal rank fusion, score = sum 1 / (60 + rank) | ~170 ms |
+
+Loading the retriever (all chunk texts for BM25) takes 1.1 s, once; it reloads by itself
+when `indexed_at` changes. No HNSW index: at this size the exact scan is fast and exact.
+
+**Filters** (all modes): `ingredients` (chunks about OR mentioning one of them),
+`doc_types` (label, abstract, interaction), `sections`, `exclude_retracted` (default
+true). In SQL: `ingredients && :names OR mentioned_ingredients && :names`.
+
+Try it: `python scripts/search.py "warfarin bleeding" --ingredient fluconazole --doc-type
+label` (prints the three modes with their ranks and timings).
+
+Which mode is best is measured in docs/BENCHMARK.md.
+
+Tests (CI, no model): `backend/tests/test_rag.py` (SQLite, fake hashed embeddings: index
+idempotence, model change, BM25, the three modes, filters, reload) and
+`backend/tests/test_rag_pgvector.py` (the same on PostgreSQL + pgvector, in its own schema;
+the CI backend job now has a `pgvector/pgvector:pg16` service).
 
 ## Tests
 

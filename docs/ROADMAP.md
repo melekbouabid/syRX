@@ -50,7 +50,7 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [x] openFDA drug labels for the 82 ingredients (connector `openfda_label`, D60)
 - [x] PubMed abstracts: up to 20 per ingredient on interactions and adverse effects (D61)
 - [x] Chunking with metadata (source, drug, section, URL, date, licence, retraction; docs/RAG.md)
-- [ ] bge-m3 embeddings in PostgreSQL + pgvector, BM25 hybrid search
+- [x] bge-m3 embeddings in PostgreSQL + pgvector, BM25 hybrid search (RRF), filters (D59)
 - [x] Corpus versioned with DVC (`data/rag/*.dvc`, stage `rag_corpus`)
 
 ## 5. Agent

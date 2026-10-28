@@ -40,6 +40,22 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    # PostgreSQL + pgvector for the RAG store tests (tests/test_rag_pgvector.py). The tests
+    # use fake embeddings and a fake LLM: CI never needs Ollama or a real model.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: tujya
+          POSTGRES_PASSWORD: tujya
+          POSTGRES_DB: tujya
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tujya" --health-interval 5s --health-timeout 5s
+          --health-retries 20
+    env:
+      TUJYA_TEST_PG_URL: postgresql+psycopg://tujya:tujya@localhost:5432/tujya
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

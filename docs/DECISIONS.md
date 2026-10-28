@@ -435,3 +435,17 @@ be 80 % of the corpus in near-identical sentences and push labels and abstracts 
 results; the `check_interaction` tool reads every pair from the database instead. The RAG
 corpus is versioned with DVC: sources with `dvc add` (`data/rag/raw`, `interim`,
 `manifest.json`), chunks as the `rag_corpus` stage of `dvc.yaml`.
+
+**D59. Embeddings: bge-m3 (1,024 dimensions) served by the same Ollama container.** The
+corpus is English and half of the questions are French, so the model must be
+multilingual; bge-m3 (568M parameters, 100+ languages, 8,192-token context) is the
+reference multilingual retrieval model. In Ollama it takes 0.7 GB of VRAM, so it stays
+loaded next to qwen2.5:3b (2.2 GB) on the 4 GB GPU (`ollama ps`: both 100 % GPU), and the
+backend needs neither PyTorch nor a model download (it calls `/api/embed`). Measured: the 8,661
+chunks are embedded in 364 s (24 chunks/s); a French and an English sentence with the same
+meaning have cosine 0.87, an unrelated English sentence 0.53. Smaller multilingual models
+(multilingual-e5-small, paraphrase-multilingual) would be faster but weaker; the machine
+(31.7 GB RAM, 4 GB VRAM) does not need them. Retrieval stores vectors in pgvector with exact
+cosine search (no HNSW index: at 8,661 rows the exact scan takes milliseconds and is
+exact); BM25 is computed in the backend over the same chunks (Okapi, k1 1.2, b 0.75, French
+and English stop words) and both lists are fused by reciprocal rank fusion (k = 60).
