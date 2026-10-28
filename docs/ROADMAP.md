@@ -85,6 +85,6 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 
 ## Bonus (only if time remains)
 - [x] Tool `predict_toxicity`: Tox21 in vitro assays, LightGBM on Morgan fingerprints, scaffold split, mean test ROC-AUC 0.725 (docs/TOXICITY.md)
-- [ ] Tool `predict_synergy(drug_a, drug_b)`: cancer synergy from the DrugComb data in the pipeline
+- [x] `predict_synergy` studied (DrugComb, leave-drug-out, docs/SYNERGY.md): RMSE −7.3 % vs the mean, below the 10 % rule (D75), so **no tool added**
 - [ ] OCR of pill imprints
 - [ ] Cancer synergy data page

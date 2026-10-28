@@ -578,3 +578,18 @@ removes "non-toxic" claims from any answer. Applicability domain: nearest-neighb
 Tanimoto < 0.3 flagged (heuristic). Version 1 of `tujya-tox21` is an identical run that
 crashed after registering (console encoding); it is kept and marked FAILED rather than
 deleted, version 2 is served.
+
+**D75. Synergy bonus: one source per experiment, ZIP target, success rule fixed in advance.**
+An experiment is (unordered drug pair, cell line). All 379,670 experiments are in DrugComb
+v1.4; TDC is an exact copy of DrugComb (r = 1.00 on Loewe and ZIP for 286,674 shared
+experiments) and O'Neil disagrees with it (r = 0.415 on Loewe, 22,737 shared, ZIP not
+given): **DrugComb is the single source**, TDC and O'Neil rows are dropped. Target:
+**ZIP** (DrugComb's own score, combines the Loewe and Bliss references, centred near 0;
+Loewe is strongly negative-skewed in DrugComb, mean -9.0). Only experiments where both drugs
+have a valid structure (287 drugs, 323,339 experiments). Split: **leave-drug-out**, a
+random 15 % of the drugs is held out for the test set (every experiment with at least one
+of them) and another 10 % for validation; reported separately for one and two unseen drugs.
+Decision rule, written before any training: `predict_synergy` is added **only if** the
+LightGBM model has a test RMSE at least 10 % below the mean baseline (training mean) and a
+Pearson r of at least 0.3 on the leave-drug-out test set; otherwise the result is
+documented and no tool is added.

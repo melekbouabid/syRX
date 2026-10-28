@@ -1,0 +1,6 @@
+outs:
+- md5: 22f2b5232b6c98f67a42bf5ec2619c9a.dir
+  size: 38471619
+  nfiles: 6
+  hash: md5
+  path: parquet
