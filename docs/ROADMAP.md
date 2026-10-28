@@ -60,7 +60,7 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [x] Ollama local LLM: qwen2.5:3b in the `ollama` service, on the GPU (D57, D58)
 - [ ] Benchmark set of 50-100 questions
 - [ ] Retrieval benchmark (Recall@k, MRR) and generation benchmark (RAGAS)
-- [ ] MCP server exposing the same tools (lower priority)
+- [x] MCP server exposing the same tools (official SDK, stdio + HTTP; docs/MCP.md)
 
 ## 6. Web
 - [x] Scan page: upload + webcam (live predictions) + bounding boxes + demo gallery (D52)
