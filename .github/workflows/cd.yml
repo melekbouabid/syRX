@@ -1,0 +1,105 @@
+# Continuous delivery: after the `ci` workflow succeeds on a push to main, build the backend
+# and frontend Docker images of that exact commit and push them to GitHub Container Registry:
+#   ghcr.io/<owner>/tujya-backend:latest and :sha-<short commit>
+#   ghcr.io/<owner>/tujya-frontend:latest and :sha-<short commit>
+# The images contain code only (no data, no model, no secret); see docs/CD.md.
+name: cd
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  images:
+    name: ${{ matrix.image }} image
+    # Only after a green CI run of a push (not of a pull request), or when started by hand.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The commit CI tested, not whatever main points to now.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Image name and tags
+        id: names
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          image="ghcr.io/${owner}/tujya-${{ matrix.image }}"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+          echo "tags=${image}:latest,${image}:sha-$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build (local copy for the smoke test)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.image }}
+          load: true
+          tags: tujya-${{ matrix.image }}:ci
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,scope=${{ matrix.image }},mode=max
+
+      - name: Smoke test of the backend image
+        if: matrix.image == 'backend'
+        run: |
+          docker run -d --name api -p 8000:8000 \
+            -e SYNERGYRX_DATABASE_URL=sqlite:////tmp/accounts.db tujya-backend:ci
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:8000/api/health && break
+            sleep 2
+          done
+          curl -fsS http://localhost:8000/api/health
+          curl -fsS -o /dev/null http://localhost:8000/docs
+          curl -fsS http://localhost:8000/openapi.json | grep -q '"/api/scan"'
+          docker logs api
+
+      - name: Smoke test of the frontend image
+        if: matrix.image == 'frontend'
+        run: |
+          docker run -d --name web --add-host backend:127.0.0.1 -p 8080:80 tujya-frontend:ci
+          sleep 3
+          curl -fsS http://localhost:8080/ | grep -q '<div id="root">'
+          curl -fsS -o /dev/null http://localhost:8080/scan
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push to GitHub Container Registry
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.image }}
+          push: true
+          tags: ${{ steps.names.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ steps.names.outputs.revision }}
+            org.opencontainers.image.title=tujya-${{ matrix.image }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+
+      - name: Summary
+        run: |
+          echo "Pushed ${{ steps.names.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"

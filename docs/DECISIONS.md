@@ -365,3 +365,11 @@ tables on every start (a few seconds) and the backend waits for it, so `docker c
 is the only command. In Docker the accounts live in PostgreSQL (database `tujya`), so
 `backend/app.db` is never used or touched by the containers. Ollama is not in the compose
 file yet: it comes with the Module 2 agent.
+
+**D56. CD = images on GitHub Container Registry after a green CI, no deployment.** There is
+no server to deploy to, so delivery stops at versioned images: `cd.yml` runs on
+`workflow_run` of `ci` (success, push to main) and builds the commit CI tested
+(`head_sha`), smoke-tests each image, then pushes `latest` and `sha-<commit>` with the
+workflow's `GITHUB_TOKEN` (`packages: write`). A deployment step (a server pulling
+`latest`) can be added later without changing the images. Packages stay private until
+their visibility is changed by hand (docs/CD.md).
