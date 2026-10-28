@@ -72,7 +72,8 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [x] Docker Compose: backend, frontend (nginx), one-shot loader; one command (docs/INFRA.md)
 - [ ] Docker Compose: ollama (with the Module 2 agent)
 - [x] GitHub Actions CI (lint, tests, frontend build)
-- [ ] GitHub Actions CD (images / deploy)
+- [x] GitHub Actions CD: images on ghcr.io after a green CI (docs/CD.md)
+- [ ] Deployment to a server (no server yet, D56)
 - [x] README updated for Tujya
 - [ ] Report Module 1 (Vision & MLOps)
 - [ ] Report Module 2 (AI Engineering)
