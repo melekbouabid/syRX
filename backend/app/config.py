@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     )
 
     database_url: str = f"sqlite:///{(BACKEND_DIR / 'app.db').as_posix()}"
+    # Tujya medicine tables (pills, ingredients, interactions): PostgreSQL from
+    # docker-compose.yml, e.g. postgresql+psycopg://tujya:tujya@localhost:5432/tujya.
+    # The default is a SQLite file under data/ so nothing else is needed for development.
+    pharma_database_url: str = f"sqlite:///{(PROJECT_DIR / 'data' / 'tujya.db').as_posix()}"
     # Tables written by `synergyrx clean` (the pipeline keeps its Parquet tables in
     # data/parquet); the API only ever reads them.
     processed_dir: Path = PROJECT_DIR / "data" / "parquet"

@@ -35,7 +35,7 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [ ] Measure top-1 / top-5 (identification) and mAP (detection); compare with ePillID
 
 ## 3. API
-- [ ] SQL schema (pills, ingredients, pill_ingredients, interactions, sources) + loader
+- [x] SQL schema (pills, ingredients, pill_ingredients, interactions, sources) + loader
 - [ ] Async `POST /api/scan` (image -> boxes, classes, confidence; confirm on low confidence)
 - [ ] Async `POST /api/interactions` (DDInter severity, explanation, timing only if sourced)
 - [ ] Pydantic schemas, Swagger at `/docs`
@@ -63,7 +63,7 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [ ] Disclaimer everywhere: information only, consult a pharmacist or doctor
 
 ## 7. Delivery
-- [ ] Docker Compose: postgres + pgvector, mlflow
+- [x] Docker Compose: postgres + pgvector, mlflow (docs/INFRA.md)
 - [ ] Docker Compose: backend, frontend, ollama
 - [ ] GitHub Actions CI (lint, tests, frontend build)
 - [ ] GitHub Actions CD (images / deploy)
