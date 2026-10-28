@@ -40,10 +40,11 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [x] SQL schema (pills, ingredients, pill_ingredients, interactions, sources) + loader
 - [x] Async `POST /api/scan` (image -> boxes, top-5, confidence; confirm below 0.85, docs/API.md)
 - [x] `python -m tujya_vision.publish`: registered models -> `models/` for the API
-- [ ] Async `POST /api/interactions` (DDInter severity, explanation, timing only if sourced)
+- [x] Async `POST /api/interactions` (DDInter severity, description, source; never "safe")
+- [x] `GET /api/pills?q=` search of the 150 classes (manual confirmation)
 - [x] Swagger at `/docs` and schema at `/openapi.json` (`/api/docs` redirects, D44)
-- [ ] Pydantic schemas for scan and interactions
-- [ ] Tests
+- [x] Pydantic schemas for scan and interactions
+- [x] Tests (fake ONNX models, SQLite medicine tables; 69 backend tests)
 
 ## 4. RAG corpus
 - [ ] openFDA drug labels for the listed ingredients
