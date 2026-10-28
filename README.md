@@ -62,6 +62,9 @@ pipeline SynergyRx sont décrites dans l'annexe ci-dessous.
 ## Journal de progression
 
 | Date | Tâche | Ce qui a été fait | Fichiers | Résultats |
+|---|---|---|---|---|
+| 2026-10-26 | Commit initial (`9398f0c`) | Import du pipeline SynergyRx, du backend FastAPI, du frontend React (marque Tujya) et du plan Tujya | tout le dépôt | 270 tests unitaires du pipeline ; backend avec comptes, sessions, admin, catalogue |
+| 2026-10-27 | Tâche 1 : README et règles du projet | Présentation de Tujya, exigences des modules, sources de données, journal ; règles obligatoires de session dans CLAUDE.md ; nouvelle orientation données (C3PI, pas de photos personnelles, deux étapes détection + identification, ePillID, openFDA) | `README.md`, `CLAUDE.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/NIGHT_REPORT.md` | Documentation à jour ; aucune exigence cochée (aucune n'est encore satisfaite) |
 | 2026-10-28 | Tâche 2 : exploration de C3PI | Téléchargement de `sampleData.zip` (517 Mo) et des 110 fichiers XML de métadonnées ; outil `vision/tujya_vision` (index des images, sélection, téléchargement vérifié par SHA-1) ; documentation complète du jeu de données | `docs/DATASET_C3PI.md`, `vision/tujya_vision/c3pi.py`, `vision/tujya_vision/data_cli.py`, `vision/tests/test_c3pi.py` | 133 458 fichiers ; 40 587 photos « consumer » de 2 400 comprimés ; 380 comprimés ont au moins 20 photos ; aucune bounding box ni masque pour les photos consumer, masques alpha dans les images de référence segmentées ; 8 tests |
 | 2026-10-28 | Tâche 3 : sous-ensemble d'entraînement | 150 classes (comprimés = NDC9 + part) classées par nombre de photos consumer, hors appareils Canon G10 et Nikon S3000 (trop lourds pour le débit) ; jusqu'à 30 photos par classe + 1 image de référence RxNav par NDC ; téléchargement vérifié par SHA-1 ; split par photo 70/15/15 stratifié par classe ; DVC initialisé, images et métadonnées suivies (pas encore de remote) | `config/pill_classes.csv`, `config/splits/selected_images.csv`, `data/vision/c3pi/images.dvc`, `data/vision/c3pi/metadata.dvc`, `.dvc/`, `vision/requirements.txt` | 4 206 fichiers (4,8 Go), 24 à 30 photos par classe, 3 006 train / 600 val / 600 test, 0 échec de téléchargement ; DVC local seulement : case DVC non cochée tant qu'aucun remote n'est configuré |
 | 2026-10-28 | Tâche 4 : principes actifs et interactions | Principes actifs par RxNav (NDC -> RxCUI -> ingrédients de base, sans dosage) ; connecteur DDInter existant activé par une étape Tujya (conditions CC BY-NC-SA acceptées, 14 fichiers ATC au lieu de 8) ; 3 alias de noms ; tables d'interactions propres (paire, sévérité, description, source) suivies par DVC | `src/synergyrx_data/tujya/`, `tests/unit/test_tujya.py`, `config/ingredient_aliases.csv`, `docs/INTERACTIONS.md`, `data/tujya.dvc` | 149/150 classes associées (82 principes actifs ; seule la multivitamine n'a pas d'ingrédient) ; 82/82 trouvés dans DDInter ; 2 350 paires entre classes (125 Major, 826 Moderate, 72 Minor, 1 327 Unknown) ; 40 508 paires avec n'importe quel médicament ; 279 tests du pipeline passent |
@@ -69,9 +72,7 @@ pipeline SynergyRx sont décrites dans l'annexe ci-dessous.
 | 2026-10-28 | Tâche 6 : pipeline vision (identification) | Matériel : RTX 2050 4 Go (PyTorch CUDA 13.0 installé après les images) ; venv `vision/.venv` ; boîtes automatiques sur les photos consumer (vision classique : fond quadratique robuste, rejet des pièces, GrabCut), photos douteuses exclues ; jeux YOLO détection + crops 224 px ; étape DVC `prepare` ; classifieur YOLO11s-cls par transfer learning, suivi MLflow, export ONNX vérifié avec ONNX Runtime, enregistré dans le Model Registry | `vision/tujya_vision/autolabel.py`, `prepare.py`, `train.py`, `evaluate.py`, `dvc.yaml`, `docs/VISION.md` | 3 306/4 056 photos étiquetées (81,5 %, précision ~90 % sur un audit de 48 photos) ; test top-1 **93,5 %**, top-5 **98,1 %** (589 crops, 148 classes) ; ONNX = PyTorch sur 100 % des crops vérifiés ; `tujya-pill-classifier` v2 dans MLflow ; essai CPU 3 époques : 19,4 % / 36,0 % |
 | 2026-10-28 | Tâche 7 : CI | `.github/workflows/ci.yml` : 4 jobs (pipeline : ruff + format + mypy + tests unitaires ; backend : ruff + format + pytest ; vision : ruff + format + tests sans entraînement ; frontend : npm ci + build). Aucun test réseau en direct | `.github/workflows/ci.yml` | En local : 279 tests pipeline, 37 backend, 14 vision passent, ruff/mypy propres, build frontend OK ; résultat GitHub Actions dans le rapport de nuit ; case CI/CD non cochée (pas encore de CD) |
 | 2026-10-28 | Tâche 6 (suite) : détection et bout en bout | Détecteur YOLO11n (1 classe « pill ») entraîné 30 époques sur GPU avec les boîtes automatiques, export ONNX vérifié, enregistré `tujya-pill-detector` v1 ; évaluation de bout en bout détecteur -> crop -> classifieur avec les deux modèles ONNX sur les 600 photos de test ; `dvc.lock` de l'étape `prepare` ; auto-installation d'Ultralytics désactivée | `vision/tujya_vision/evaluate.py`, `vision/tujya_vision/__init__.py`, `dvc.lock`, `.dvcignore`, `docs/VISION.md` | Détection test : mAP50 **0,972**, mAP50-95 **0,861**, précision 0,957, rappel 0,936 (par rapport aux boîtes automatiques) ; ONNX = PyTorch (même nombre de boîtes sur 100 %, IoU 0,976) ; bout en bout : comprimé trouvé sur 98,5 % des photos, top-1 **89,2 %**, top-5 **95,8 %** |
-|---|---|---|---|---|
-| 2026-10-26 | Commit initial (`9398f0c`) | Import du pipeline SynergyRx, du backend FastAPI, du frontend React (marque Tujya) et du plan Tujya | tout le dépôt | 270 tests unitaires du pipeline ; backend avec comptes, sessions, admin, catalogue |
-| 2026-10-27 | Tâche 1 : README et règles du projet | Présentation de Tujya, exigences des modules, sources de données, journal ; règles obligatoires de session dans CLAUDE.md ; nouvelle orientation données (C3PI, pas de photos personnelles, deux étapes détection + identification, ePillID, openFDA) | `README.md`, `CLAUDE.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/NIGHT_REPORT.md` | Documentation à jour ; aucune exigence cochée (aucune n'est encore satisfaite) |
+| 2026-10-28 | Session 2, tâche 1 : Swagger sur `/docs` | Swagger UI servi sur `/docs` et le schéma sur `/openapi.json` (exigence du module 1) ; `/api/docs` redirige vers `/docs`, `/api/openapi.json` sert le même schéma ; proxy Vite et futur `nginx.conf` du frontend exposent `/docs` et `/openapi.json` ; API renommée « Tujya API » ; tableau du journal remis en ordre (la ligne de séparation était au milieu) | `backend/app/main.py`, `backend/tests/test_docs.py`, `frontend/vite.config.ts`, `frontend/nginx.conf` | 4 nouveaux tests ; 41 tests backend passent |
 
 ---
 
@@ -282,7 +283,7 @@ tables. They are separate from the pipeline: the backend has its own virtual env
 only ever reads the tables in `data/parquet`.
 
 ```bash
-# Terminal 1: API on http://127.0.0.1:8000 (interactive docs at /api/docs)
+# Terminal 1: API on http://127.0.0.1:8000 (Swagger UI at /docs, schema at /openapi.json)
 cd backend
 python -m venv .venv
 .venv\Scripts\Activate.ps1           # Linux / macOS: source .venv/bin/activate
@@ -295,8 +296,9 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:5173>. The dev server forwards `/api` to the backend, so the browser
-talks to a single origin. Visitors first see a public introduction page; it shows the table
+Open <http://localhost:5173>. The dev server forwards `/api`, `/docs` and `/openapi.json` to
+the backend, so the browser talks to a single origin (Swagger: <http://localhost:5173/docs>;
+the old address `/api/docs` redirects there). Visitors first see a public introduction page; it shows the table
 sizes (`/api/public/summary`), which is the only data readable without an account.
 
 The site is branded **Tujya**. The logo files in `frontend/src/assets/` and the favicon are

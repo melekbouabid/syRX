@@ -277,3 +277,10 @@ because removing either package can break the other; a clean rebuild from
 `prepare` records the datasets built from the tracked images (`dvc.lock`); `*.cache` files
 that Ultralytics writes next to the labels are in `.dvcignore` because they are rebuilt on
 any machine.
+
+**D44. Swagger lives at `/docs`, the old `/api/docs` redirects.** The course requires
+Swagger at `/docs`. FastAPI now serves the UI at `/docs` and the schema at `/openapi.json`;
+`/api/docs` answers 307 to `/docs` and `/api/openapi.json` returns the same schema, so old
+links keep working. Both are outside `/api`, so the Vite dev proxy and the frontend's
+`nginx.conf` forward them explicitly. The Swagger UI page loads its JavaScript and CSS from
+FastAPI's default CDN; a demo without Internet would need them served locally.

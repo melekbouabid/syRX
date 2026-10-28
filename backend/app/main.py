@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import sessionmaker
 
 from app.accounts import seed_accounts, warn_about_default_password
@@ -13,6 +14,13 @@ from app.catalog import Catalog
 from app.config import Settings
 from app.db import Base, make_engine
 from app.routers import admin, auth, catalog
+
+DESCRIPTION = (
+    "Pill identification and interaction checks for the Tujya project. "
+    "Information uniquement, consultez un pharmacien ou un médecin. "
+    "No doses are ever given; a pair missing from the database is reported as "
+    '"aucune interaction connue dans cette base de données", never as safe.'
+)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -29,14 +37,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         yield
         engine.dispose()
 
+    # Swagger UI at /docs (required by the course); the older /api/docs address redirects
+    # there and /api/openapi.json serves the same schema, so existing links keep working.
     app = FastAPI(
-        title="SynergyRx API",
-        version="0.1.0",
+        title="Tujya API",
+        version="0.2.0",
+        description=DESCRIPTION,
         lifespan=lifespan,
-        docs_url="/api/docs",
+        docs_url="/docs",
         redoc_url=None,
-        openapi_url="/api/openapi.json",
+        openapi_url="/openapi.json",
     )
+
+    @app.get("/api/docs", include_in_schema=False)
+    def old_docs_address() -> RedirectResponse:
+        return RedirectResponse("/docs")
+
+    @app.get("/api/openapi.json", include_in_schema=False)
+    def old_schema_address() -> JSONResponse:
+        return JSONResponse(app.openapi())
+
     app.state.settings = settings
     app.state.session_factory = session_factory
     app.state.catalog = Catalog(settings.processed_dir)
