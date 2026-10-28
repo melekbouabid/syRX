@@ -4,8 +4,8 @@
    questions refused, no uncited timing advice; plus what the safety node removed.
 2. Citations (all answered questions): for every answer sentence citing [n], a local LLM
    judge (gemma3:4b, not the generator) says whether source n supports it.
-3. RAGAS 0.4 (stratified subset of 8, one per question type: the judge is slow on 4 GB): faithfulness, answer
-   relevancy (bge-m3 embeddings), context precision with reference.
+3. RAGAS 0.4 (stratified subset of 8, one per question type: the judge is slow on a 4 GB
+   GPU): faithfulness, answer relevancy (bge-m3 embeddings), context precision with reference.
 Logged to MLflow (experiment `tujya-rag`); aggregates in benchmark/results_generation.json,
 per-question scores (no source text) in benchmark/generation_per_question.jsonl.
 
