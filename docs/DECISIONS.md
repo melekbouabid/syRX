@@ -545,3 +545,11 @@ runs only here. It is not a backup (same disk as the repository): the report ask
 owner to copy it to an external disk. Google Drive and S3 commands are documented in
 docs/INFRA.md, not configured: either would put licensed data (DDInter CC BY-NC-SA, C3PI
 research use) on a cloud service, which must then stay private.
+
+**D72. Host-side clients use 127.0.0.1, not localhost.** Found while rehearsing the demo
+(session 4, task 4): after D69, Docker publishes its ports on IPv4 loopback only. On this
+PC `localhost` resolves to `::1` first; browsers and curl fall back to IPv4 at once, but
+libpq waited 65 to 100 s per connection, so the MCP smoke test took 2 min 34 s (11 s with
+127.0.0.1). Default URLs in code (Ollama, MLflow tracking) and every connection string in
+the docs now use 127.0.0.1. Browser addresses (`http://localhost:8080`) are unchanged. The
+alternative, also publishing on `[::1]`, would double every port line for no gain.

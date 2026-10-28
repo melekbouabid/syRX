@@ -10,7 +10,7 @@ Each run:
 4. logs params, per-epoch metrics, test metrics and artefacts to MLflow, and registers the
    ONNX model in the Model Registry ("tujya-pill-classifier" / "tujya-pill-detector").
 
-MLflow server: MLFLOW_TRACKING_URI, default http://localhost:5000 (docker compose up -d).
+MLflow server: MLFLOW_TRACKING_URI, default http://127.0.0.1:5000 (docker compose up -d).
 """
 
 from __future__ import annotations
@@ -187,7 +187,7 @@ def run(args: argparse.Namespace) -> None:
         "patience": args.patience,
     }
 
-    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000"))
+    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000"))
     mlflow.set_experiment(EXPERIMENT)
     with mlflow.start_run(run_name=name) as active:
         mlflow.log_params(params)

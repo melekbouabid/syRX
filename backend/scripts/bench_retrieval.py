@@ -102,7 +102,7 @@ async def run_config(
 def log_mlflow(name: str, params: dict[str, Any], metrics: dict[str, float], rows: Any) -> str:
     import mlflow
 
-    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000"))
+    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000"))
     mlflow.set_experiment(EXPERIMENT)
     with mlflow.start_run(run_name=name) as run:
         mlflow.set_tag("benchmark", "retrieval")

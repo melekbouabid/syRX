@@ -90,6 +90,13 @@ No `0.0.0.0:<port>` or `[::]:<port>` line any more (before: `0.0.0.0:8080->80/tc
 answer 200; the same ports on the PC's LAN and WSL addresses (192.168.1.6, 172.x) refuse
 the connection. The Vite dev server listens on `127.0.0.1:5173` only.
 
+**Use `127.0.0.1`, not `localhost`, in connection strings of host-side tools** (D72). On this
+PC `localhost` resolves to `::1` first, and Docker now listens on IPv4 only: browsers and
+curl fall back to `127.0.0.1` at once, but libpq (psycopg) waited **65 to 100 s** per
+connection (`scripts/mcp_smoke.py` took 2 min 34 s instead of 5 s). Defaults and docs now
+use `127.0.0.1` (`SYNERGYRX_OLLAMA_URL`, `MLFLOW_TRACKING_URI`, the PostgreSQL URLs);
+`http://localhost:8080` in a browser is fine.
+
 ## DVC remote (since 2026-10-28)
 
 Default remote `localstore`: a folder on this PC, outside the repository (D71).
@@ -158,7 +165,7 @@ In Docker, `pharma-init` loads them on every start. By hand (full refresh, safe 
 
 ```bash
 cd backend
-python -m app.pharma_loader --database-url postgresql+psycopg://tujya:tujya@localhost:5432/tujya
+python -m app.pharma_loader --database-url postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
 ```
 
 Without `--database-url` the loader uses `SYNERGYRX_PHARMA_DATABASE_URL`, default
@@ -168,7 +175,7 @@ Tests: `backend/tests/test_pharma.py` (SQLite).
 
 ## MLflow
 
-Training scripts read `MLFLOW_TRACKING_URI` (default `http://localhost:5000`). The UI at
+Training scripts read `MLFLOW_TRACKING_URI` (default `http://127.0.0.1:5000`). The UI at
 http://localhost:5000 shows the `tujya-vision` experiment and the registered models
 `tujya-pill-classifier` and `tujya-pill-detector`.
 

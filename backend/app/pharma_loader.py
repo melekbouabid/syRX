@@ -1,7 +1,7 @@
 """Load the pill classes, ingredients and DDInter interactions into the pharma tables.
 
     python -m app.pharma_loader                       # database from SYNERGYRX_PHARMA_DATABASE_URL
-    python -m app.pharma_loader --database-url postgresql+psycopg://tujya:tujya@localhost:5432/tujya
+    python -m app.pharma_loader --database-url postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
 
 Inputs (built by the data steps, see docs/INTERACTIONS.md):
 - config/pill_classes.csv                        one row per identification class

@@ -43,7 +43,7 @@ async def main() -> None:
     rng.shuffle(pairs)
     judge = ChatOllama(
         model=args.judge,
-        base_url=os.environ.get("SYNERGYRX_OLLAMA_URL", "http://localhost:11434"),
+        base_url=os.environ.get("SYNERGYRX_OLLAMA_URL", "http://127.0.0.1:11434"),
         temperature=0,
         num_ctx=2048,
         num_predict=3,
@@ -63,7 +63,7 @@ async def main() -> None:
     OUT.write_text(json.dumps(result, indent=1) + "\n", encoding="utf-8")
     import mlflow
 
-    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000"))
+    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000"))
     mlflow.set_experiment("tujya-rag")
     with mlflow.start_run(run_name="citation-judge-control"):
         mlflow.set_tag("benchmark", "judge-control")

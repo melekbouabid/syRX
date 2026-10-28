@@ -107,7 +107,7 @@ def main(argv: list[str] | None = None) -> None:
     if not args.from_runs:
         import mlflow
 
-        mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000"))
+        mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000"))
     manifest = publish(
         args.out,
         use_runs=args.from_runs,

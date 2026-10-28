@@ -175,7 +175,7 @@ the per-question scores (`benchmark/generation_per_question.jsonl`, no source te
 
 ```bash
 cd backend                                # backend venv; stack running (postgres, ollama, mlflow)
-export SYNERGYRX_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@localhost:5432/tujya
+export SYNERGYRX_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
 python scripts/bench_build.py             # benchmark/rag_questions.jsonl from the corpus
 python scripts/bench_retrieval.py         # six retrieval runs -> MLflow, results_retrieval.json
 python scripts/bench_answers.py           # the agent on the 88 questions -> data/rag/bench/

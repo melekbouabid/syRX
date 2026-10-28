@@ -23,8 +23,8 @@ docs/INFRA.md and docs/RAG.md), Ollama for the query embeddings, and `models/` f
 `identify_pills`. From `backend/` with the backend venv:
 
 ```bash
-# PowerShell: $env:SYNERGYRX_PHARMA_DATABASE_URL = "postgresql+psycopg://tujya:tujya@localhost:5432/tujya"
-export SYNERGYRX_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@localhost:5432/tujya
+# PowerShell: $env:SYNERGYRX_PHARMA_DATABASE_URL = "postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya"
+export SYNERGYRX_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
 python -m app.mcp_server                                     # stdio transport
 python -m app.mcp_server --transport streamable-http --port 8765   # http://127.0.0.1:8765/mcp
 python scripts/mcp_smoke.py                                  # starts it over stdio, lists, calls
@@ -52,8 +52,8 @@ search_documents -> ['Metformin label (METFORMIN HYDROCHLORIDE): Warnings and pr
       "args": ["-m", "app.mcp_server"],
       "cwd": "C:/path/to/Proj/backend",
       "env": {
-        "SYNERGYRX_PHARMA_DATABASE_URL": "postgresql+psycopg://tujya:tujya@localhost:5432/tujya",
-        "SYNERGYRX_OLLAMA_URL": "http://localhost:11434"
+        "SYNERGYRX_PHARMA_DATABASE_URL": "postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya",
+        "SYNERGYRX_OLLAMA_URL": "http://127.0.0.1:11434"
       }
     }
   }
@@ -63,7 +63,7 @@ search_documents -> ['Metformin label (METFORMIN HYDROCHLORIDE): Warnings and pr
 **Claude Code**:
 
 ```bash
-claude mcp add tujya --env SYNERGYRX_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@localhost:5432/tujya \
+claude mcp add tujya --env SYNERGYRX_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya \
   -- C:/path/to/Proj/backend/.venv/Scripts/python.exe -m app.mcp_server
 ```
 

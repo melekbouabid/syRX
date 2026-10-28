@@ -64,7 +64,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--classifier", type=Path, required=True)
     parser.add_argument("--conf", type=float, default=0.25)
     args = parser.parse_args(argv)
-    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://localhost:5000"))
+    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000"))
     mlflow.set_experiment(EXPERIMENT)
     with mlflow.start_run(run_name="evaluate-end-to-end"):
         mlflow.log_params(

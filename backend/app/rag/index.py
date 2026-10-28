@@ -5,7 +5,7 @@ run embeds nothing, a changed chunk is re-embedded, and a chunk gone from the co
 deleted. Changing the embedding model (or its dimension) rebuilds the table.
 
     python -m app.rag.index                               # settings from SYNERGYRX_* env
-    python -m app.rag.index --database-url postgresql+psycopg://tujya:tujya@localhost:5432/tujya
+    python -m app.rag.index --database-url postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
     python -m app.rag.index --pull                        # also pull the Ollama models first
 """
 

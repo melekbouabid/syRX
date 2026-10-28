@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     database_url: str = f"sqlite:///{(BACKEND_DIR / 'app.db').as_posix()}"
     # Tujya medicine tables (pills, ingredients, interactions): PostgreSQL from
-    # docker-compose.yml, e.g. postgresql+psycopg://tujya:tujya@localhost:5432/tujya.
+    # docker-compose.yml, e.g. postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya.
     # The default is a SQLite file under data/ so nothing else is needed for development.
     pharma_database_url: str = f"sqlite:///{(PROJECT_DIR / 'data' / 'tujya.db').as_posix()}"
     # ONNX models for /api/scan: detector.onnx, classifier.onnx and models.json, written by
@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     # pharma database (table rag_chunks, pgvector); `python -m app.rag.index` fills it from
     # this file. Ollama serves both the LLM and the embeddings (docker compose `ollama`).
     rag_chunks_file: Path = PROJECT_DIR / "data" / "rag" / "corpus" / "chunks.parquet"
-    ollama_url: str = "http://localhost:11434"
+    ollama_url: str = "http://127.0.0.1:11434"
     llm_model: str = "qwen2.5:3b"
     llm_temperature: float = 0.1
     # 4096 keeps qwen2.5:3b (2.2 GB) and bge-m3 on the 4 GB GPU together; at 8192 Ollama
