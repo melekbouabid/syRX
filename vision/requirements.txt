@@ -1,0 +1,10 @@
+# Vision venv (vision/.venv, git-ignored):  uv venv vision/.venv && uv pip install -r vision/requirements.txt
+# CPU PyTorch from PyPI. For the GPU (RTX 2050): install torch/torchvision from
+# https://download.pytorch.org/whl/cu128 first (about 2.5 GB), then this file.
+ultralytics==8.4.191
+mlflow==3.17.2
+dvc==3.67.1
+onnx>=1.17
+onnxruntime>=1.20
+onnxslim>=0.1.50
+pytest>=8

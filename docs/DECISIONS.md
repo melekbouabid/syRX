@@ -206,3 +206,39 @@ reference types, only `MC_API_RXNAV_V1.3` (~0.6 MB) is downloaded, one per packa
 and kept in train only. CR2 (23 MB), calibrated PNG (110 MB) and segmented PNG (3 MB) are
 too large for the night's bandwidth; the segmented PNGs (alpha mask) are noted for
 synthetic detection data later. WMV videos are not used.
+
+**D32. 150 classes, at most 30 consumer photos each, two cameras left out.** The download
+budget (20 GB) was not the limit; the connection was (about 1 MB/s, so ~3.5 GB per hour).
+The top 200 products weigh 17.8 GB, mostly because of the Canon G10 and Nikon S3000
+(~4.5 MB per photo: 28 % of the photos, 60 % of the bytes). Without those two cameras the
+remaining seven (phones, webcams, compact cameras, ~1.1 MB per photo) are also closer to
+what the app will receive. Result: 150 classes (the middle of the requested 100-200), 24 to
+30 photos per class (mean 27), 4,206 files, 4.8 GB. The two cameras can be added back
+later with `--exclude-camera` removed and a larger budget.
+
+**D33. Split by photo, 70 / 15 / 15, stratified by class, saved in `config/splits/`.** The
+split list is small, hand-checkable and must be versioned with the code that trains on it,
+so it is in git (`config/splits/selected_images.csv`), while the images are in DVC.
+Duplicated files (same SHA-1) always share a split; reference images are train only. The
+same physical pill appears in several photos (C3PI photographed each pill many times), so
+train and test share pills but never photos; ePillID makes the same choice.
+
+**D34. Ingredients come from RxNav, by NDC.** C3PI has no RxNorm code. NDC -> RxCUI
+(`ndcstatus`, which also resolves obsolete NDCs) -> base ingredients (`historystatus`).
+Base ingredient (IN), not the salt, because DDInter uses base names. Strengths are dropped
+(no doses in Tujya). 149/150 classes mapped; the multivitamin class has no ingredient.
+
+**D35. DDInter is enabled by a Tujya step, not in the shared config.** Two existing tests
+pin DDInter as opt-in with unacknowledged terms in `config.yaml`; changing the shared
+default would have meant weakening them. `python -m synergyrx_data.tujya ddinter` runs the
+same connector with the terms acknowledged (owner's decision, non-commercial use) and all
+14 ATC files (the connector default lists 8; C and N were missing).
+
+**D36. Interaction descriptions only restate DDInter.** The bulk files have no mechanism or
+management text and DDInter's pages are not scraped (D9, no HTML scraping). The table's
+`description` says "DDInter 2.0 lists an interaction between X and Y with severity Z.";
+explanations will come from cited openFDA label passages in the RAG step.
+
+**D37. Contact email.** No `.env` exists and the owner's address was not given for use in a
+User-Agent, so RxNav and DDInter were called with `http.require_contact_email=false`, as in
+D1 (about 400 RxNav requests and 14 DDInter files).

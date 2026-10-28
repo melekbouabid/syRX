@@ -22,14 +22,11 @@ SPLITS = ROOT / "config" / "splits"
 
 
 def _selected(index: Path) -> list[c3pi.ImageRecord]:
-    """Images of the selected classes, as listed in config/splits/selected_images.csv."""
-    wanted = {row["path"] for row in _read_csv(SPLITS / "selected_images.csv")}
-    out, seen = [], set()
+    """Images listed in config/splits/selected_images.csv, in that order (class by class)."""
+    by_path: dict[str, c3pi.ImageRecord] = {}
     for record in c3pi.read_index(index):
-        if record.path in wanted and record.path not in seen:
-            seen.add(record.path)
-            out.append(record)
-    return out
+        by_path.setdefault(record.path, record)
+    return [by_path[row["path"]] for row in _read_csv(SPLITS / "selected_images.csv")]
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:

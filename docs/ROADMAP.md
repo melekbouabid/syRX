@@ -17,10 +17,11 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 
 ## 1. Pill data (C3PI, no personal photos)
 - [x] Explore the C3PI sample and the full archive layout (docs/DATASET_C3PI.md)
-- [ ] `config/pill_classes.csv`: 100-200 classes with the most consumer images
-- [ ] Download the images of these classes only (budget 20 GB)
-- [ ] Train / val / test split with no photo in two splits
-- [ ] DVC set up; `data/vision/` tracked
+- [x] `config/pill_classes.csv`: 150 classes with the most consumer images (D32)
+- [x] Download the images of these classes only (4.8 GB, SHA-1 checked)
+- [x] Train / val / test split with no photo in two splits (`config/splits/`)
+- [x] DVC set up; `data/vision/c3pi` images and metadata tracked (local cache)
+- [ ] DVC remote configured and pushed (needs a storage choice)
 - [ ] Each class mapped to its active ingredient(s)
 - [ ] DDInter enabled; interactions for these ingredients in a clean table
 

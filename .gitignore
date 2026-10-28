@@ -1,7 +1,10 @@
 # Collected data is never committed: several sources forbid redistribution.
 # Everything the pipeline produces is under data/ (parquet, csv, json, reports, plus the
 # raw and interim working folders).
-data/
+# Only DVC pointer files (*.dvc) under data/ are committed; the data itself is in DVC.
+data/**
+!data/**/
+!data/**/*.dvc
 logs/
 # Folder names of earlier layouts, still ignored in case an output is pointed back here.
 exports/
