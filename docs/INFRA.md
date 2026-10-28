@@ -15,7 +15,8 @@ docker compose down                 # stops; volumes are kept (down -v deletes t
 | `postgres` | `pgvector/pgvector:pg16` | 5432 | volume `pgdata`; database `tujya` (accounts, medicine tables, pgvector) and `mlflow` |
 | `mlflow` | built from `docker/mlflow/Dockerfile` (MLflow 3.17.2 + psycopg2) | 5000 | tracking store in PostgreSQL, artefacts in volume `mlartifacts`, Model Registry |
 | `pharma-init` | `tujya-backend` | none | one-shot: `python -m app.pharma_loader` rebuilds the medicine tables from `config/` and `data/tujya/`, then exits; the backend waits for it |
-| `backend` | built from `backend/Dockerfile` (Python 3.12, FastAPI, ONNX Runtime CPU) | 8000 | the API; Swagger at `/docs` |
+| `rag-init` | `tujya-backend` | none | one-shot: `python -m app.rag.index --pull` pulls the Ollama models if missing, then indexes `data/rag/corpus` into the `rag_chunks` table (idempotent; docs/RAG.md); the backend does not wait for it |
+| `backend` | built from `backend/Dockerfile` (Python 3.12, FastAPI, ONNX Runtime CPU, LangGraph) | 8000 | the API and the agent (`/api/chat`, talks to `ollama`); Swagger at `/docs` |
 | `frontend` | built from `frontend/Dockerfile` (Node 22 build, nginx 1.27) | 8080 | the React app; nginx forwards `/api`, `/docs`, `/openapi.json` to `backend` (`frontend/nginx.conf`) |
 | `ollama` | `ollama/ollama:0.40.12` | 11434 | local LLM (`qwen2.5:3b`) and embeddings (`bge-m3`); models in volume `ollama`; NVIDIA GPU reserved (D57) |
 

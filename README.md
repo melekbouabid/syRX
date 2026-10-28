@@ -35,31 +35,58 @@ Une case n'est cochée que lorsque l'exigence est réellement satisfaite.
 
 ### Module 2 : AI Engineering
 
-- [ ] RAG avec gestion des documents, métadonnées, citations, documentation
-- [ ] Tool calling / MCP
-- [ ] LangChain et/ou LangGraph
-- [ ] Benchmarking de la récupération et de la génération
-- [ ] Interface web
-- [ ] Dépôt GitHub documenté avec commits réguliers
+- [x] RAG avec gestion des documents, métadonnées, citations, documentation
+- [x] Tool calling / MCP
+- [x] LangChain et/ou LangGraph
+- [x] Benchmarking de la récupération et de la génération
+- [x] Interface web
+- [x] Dépôt GitHub documenté avec commits réguliers
 - [ ] Rapport technique
 - [ ] Démonstration
 
 ## Lancer l'application
 
-Toute l'application (PostgreSQL + pgvector, MLflow, API, site web) démarre avec une seule
-commande, depuis la racine du dépôt :
+Toute l'application (PostgreSQL + pgvector, MLflow, Ollama sur le GPU, API, agent, site web)
+démarre avec une seule commande, depuis la racine du dépôt :
 
 ```bash
 docker compose up -d --build
 ```
 
 - Site : <http://localhost:8080> (compte de démonstration `user@gmail.com` / `user`, puis
-  « Scanner ») ; Swagger : <http://localhost:8080/docs> ; MLflow : <http://localhost:5000>.
+  « Scanner », et le panneau « Ask about your pills » en bas de page) ; Swagger :
+  <http://localhost:8080/docs> ; MLflow : <http://localhost:5000>.
+- Module 2 : au premier démarrage, `rag-init` télécharge les modèles Ollama (qwen2.5:3b,
+  bge-m3) puis indexe le corpus `data/rag/corpus` (DVC) dans pgvector. Agent :
+  [docs/AGENT.md](docs/AGENT.md) ; corpus et recherche : [docs/RAG.md](docs/RAG.md) ;
+  serveur MCP : [docs/MCP.md](docs/MCP.md) ; benchmark : [docs/BENCHMARK.md](docs/BENCHMARK.md).
 - Avant le premier démarrage : les données sous `data/` (DVC) et les modèles dans `models/`
   (`cd vision && python -m tujya_vision.publish`, depuis le Model Registry MLflow). Détails :
   [docs/INFRA.md](docs/INFRA.md) ; API : [docs/API.md](docs/API.md).
-- Démonstration pas à pas : [docs/SESSION_REPORT_2.md](docs/SESSION_REPORT_2.md) ; captures
-  d'écran : [docs/screenshots/](docs/screenshots/).
+- Démonstration pas à pas : [docs/SESSION_REPORT_2.md](docs/SESSION_REPORT_2.md) (scan) et
+  [docs/SESSION_REPORT_3.md](docs/SESSION_REPORT_3.md) (agent) ; captures d'écran :
+  [docs/screenshots/](docs/screenshots/).
+
+## Résultats du benchmark RAG (module 2)
+
+88 questions (44 FR, 44 EN) sur les 82 principes actifs, construites à partir du corpus et
+relues à la main ; détails, limites et commandes : [docs/BENCHMARK.md](docs/BENCHMARK.md) ;
+chaque run est dans MLflow (expérience `tujya-rag`).
+
+| Récupération (83 questions, top 10) | Recall@1 | Recall@3 | Recall@5 | Recall@10 | MRR |
+|---|---:|---:|---:|---:|---:|
+| BM25 + filtre principe actif | 0,566 | 0,747 | 0,783 | 0,819 | 0,660 |
+| hybride (RRF) + filtre | 0,711 | 0,892 | 0,904 | 0,928 | 0,796 |
+| **dense (bge-m3) + filtre, retenu** | **0,795** | **0,880** | **0,928** | **0,976** | **0,852** |
+
+| Génération (qwen2.5:3b, juge gemma3:4b) | Résultat |
+|---|---:|
+| Phrases citées soutenues par leur source | 94,0 % |
+| Phrases avec citation | 69,8 % |
+| Doses chiffrées / « sûr » dans les réponses | 0 / 0 (et 4 conseils d'ajustement sans chiffre, règle étendue depuis) |
+| Avertissement présent ; questions de dose refusées | 100 % ; 2/2 |
+| RAGAS (8 questions) : fidélité / pertinence / précision du contexte | 0,979 / n/d / 0,809 |
+| Temps de réponse moyen (RTX 2050) | 4,7 s |
 
 ## Sources de données
 
@@ -100,6 +127,8 @@ pipeline SynergyRx sont décrites dans l'annexe ci-dessous.
 | 2026-10-28 | Session 3, tâche 2 : récupération | Embeddings **bge-m3** servis par Ollama (D59) ; table `rag_chunks` dans PostgreSQL avec pgvector (`vector(1024)`, listes `text[]`) ; script d'indexation idempotent `python -m app.rag.index` (hash par chunk) ; BM25 en mémoire, recherche dense exacte en SQL, fusion RRF ; filtres principe actif, type, section, rétractés ; tests avec des embeddings factices sur SQLite et sur PostgreSQL (service pgvector ajouté au job backend de la CI) | `backend/app/rag/embeddings.py`, `store.py`, `retrieval.py`, `index.py`, `backend/scripts/search.py`, `backend/tests/test_rag.py`, `test_rag_pgvector.py`, `.github/workflows/ci.yml`, `docs/RAG.md` | 8 661 chunks indexés en 364 s (GPU) ; 2e passage : 0 recalculé en 0,1 s ; par requête : BM25 ~6 ms, dense 130-190 ms, hybride ~170 ms ; bge-m3 et qwen2.5:3b tiennent ensemble sur le GPU (0,7 + 2,2 Go) |
 | 2026-10-28 | Session 3, tâche 3 : agent LangGraph et `/api/chat` | Outils LangChain `identify_pills`, `check_interaction`, `get_drug_info`, `search_documents` (point d'extension pour `predict_toxicity` et `predict_synergy`, ajoutés en Bonus) ; graphe LangGraph comprendre -> outils (choix par appel d'outils Ollama, complété par des règles, D64) -> récupération -> réponse avec citations numérotées -> contrôle de sécurité (doses, « sûr », horaires non sourcés, citations, avertissement ; refus des questions de dose, D63) ; `POST /api/chat` asynchrone, connexion requise, JSON ou flux SSE (outils, phrases vérifiées, résultat final) ; service compose `rag-init` (téléchargement des modèles + indexation) ; URL d'Ollama par variable d'environnement | `backend/app/rag/agent.py`, `tools.py`, `safety.py`, `names.py`, `runtime.py`, `backend/app/routers/chat.py`, `backend/app/schemas.py`, `backend/scripts/ask.py`, `backend/tests/test_chat.py`, `test_safety.py`, `docker-compose.yml`, `docs/AGENT.md` | Questions réelles (qwen2.5:3b + bge-m3, GPU) : warfarine + fluconazole -> DDInter Major cité [1] ; contre-indications de la metformine -> réponse sourcée [1] ; ~13-15 s par question ; 8 tests de l'API de chat et 9 tests de sécurité avec un LLM factice ; 94 tests backend passent |
 | 2026-10-28 | Session 3, tâche 4 : serveur MCP | Serveur MCP avec le SDK Python officiel (`mcp` 2.3, `MCPServer`) exposant les 4 mêmes outils que l'agent (même code) ; transports stdio et streamable HTTP ; documentation de connexion (Claude Desktop, Claude Code, client HTTP) ; script de test de fumée en stdio | `backend/app/mcp_server.py`, `backend/scripts/mcp_smoke.py`, `backend/tests/test_mcp.py`, `docs/MCP.md` | Essai réel en stdio sur PostgreSQL : 4 outils listés, `check_interaction` warfarine + fluconazole -> Major, `search_documents` -> notices de la metformine ; 2 tests (liste des outils, appels) ; 96 tests backend passent |
+| 2026-10-28 | Session 3, tâche 5 : benchmark | Jeu de 88 questions (44 FR, 44 EN : interactions, contre-indications, encadrés, mécanismes, effets indésirables, mises en garde, articles PubMed, sécurité) construit à partir du corpus puis relu à la main (D66) ; récupération : Recall@1/3/5/10 et MRR pour BM25, dense, hybride, avec et sans filtre de principe actif ; génération : sécurité, vérification des citations par un juge local (gemma3:4b, contrôle à 10 % de faux oui), RAGAS 0.4.3 sur 8 questions (D67) ; tout est dans MLflow (expérience `tujya-rag`) ; corrections trouvées par le benchmark (contexte 4096, 450 jetons max, attribution des citations, conseils de dose sans chiffre, D68) | `benchmark/`, `backend/scripts/bench_*.py`, `docs/BENCHMARK.md`, `docs/DECISIONS.md` (D65-D68) | Meilleure récupération : **dense + filtre**, Recall@5 **0,928**, MRR **0,852** (hybride 0,904 / 0,796 ; BM25 0,783 / 0,660) -> réglage par défaut (D65) ; génération : aucune dose chiffrée (4 conseils d'ajustement sans chiffre, règle étendue ensuite), 0 « sûr », avertissement 100 %, questions de dose refusées 2/2, phrases citées soutenues **94,0 %**, RAGAS : fidélité 0,979, pertinence n/a, précision du contexte 0,809 ; réponse en 4,7 s en moyenne |
+| 2026-10-28 | Session 3, tâche 6 : chat dans le site | Panneau « Ask about your pills » sous la page Scanner : questions sur les comprimés confirmés (suggestions), réponse en flux SSE phrase par phrase, citations numérotées cliquables vers la liste des sources (titre, type, section, date, extrait sans dose), appels d'outils discrets (repliables), avertissement toujours visible ; nginx sans tampon pour `/api/chat` ; pile complète `docker compose up -d --build` avec Ollama et `rag-init` ; captures Playwright | `frontend/src/pages/ChatPanel.tsx`, `frontend/src/api.ts`, `ScanPage.tsx`, `styles.css`, `frontend/nginx.conf`, `frontend/scripts/chat-screenshots.mjs`, `docs/screenshots/08-11` | `npm run build` OK ; sur les conteneurs : question réelle (fluconazole + citalopram) -> DDInter Major cité, réponse en ~7 s ; question de dose refusée ; 4 captures |
 
 ---
 

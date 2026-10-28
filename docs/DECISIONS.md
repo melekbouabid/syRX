@@ -471,3 +471,48 @@ failing planner never leaves the answer without sources. `identify_pills` is not
 the chat model (a chat question carries no image; the app sends the confirmed pills) but
 is exposed by the MCP server. Each call is returned with `chosen_by` (`llm` or `rule`), so
 the UI and the benchmark show which ones the model chose.
+
+**D65. Retrieval default: dense (bge-m3) with the ingredient filter, not hybrid.** On the
+83 benchmark questions with expected chunks, dense + ingredient filter has Recall@5 0.928
+and MRR 0.852; hybrid (RRF) + filter 0.904 / 0.796; BM25 + filter 0.783 / 0.660. BM25 only
+matches English words, so French questions (half of the set) lose with it (BM25 Recall@5
+0.59 in French, 0.98 in English) and it pulls the fusion down; on English questions alone
+hybrid is slightly better (MRR 0.944 vs 0.937). The setting is `SYNERGYRX_RAG_SEARCH_MODE`
+(bm25, dense or hybrid); BM25 and hybrid stay available to tools and MCP clients. Not
+tuned further (language-aware mode, query translation) to avoid fitting the system to its
+own test set.
+
+**D66. Benchmark built from the corpus by rules, then checked by hand.** 88 questions (44
+French, 44 English): 24 interactions, 12 contraindications, 10 boxed warnings, 10
+mechanisms, 10 adverse reactions, 8 warnings, 9 PubMed findings, 5 safety probes. Expected
+chunks come from rules on the chosen labels (docs/BENCHMARK.md), so another relevant chunk
+counts as a miss (scores are a lower bound). Recall@k is the hit rate (at least one expected
+chunk in the top k), the usual RAG definition; the share of expected chunks found is
+reported as Coverage@10. Every candidate was read: 14 interaction references and the 9
+abstract references were rewritten by hand, references never contain a dose. Limits:
+templated questions, one author for the system and the set.
+
+**D67. Generation judged by a different local model: gemma3:4b; RAGAS on a subset.** The
+generator (qwen2.5:3b) judged its own answers too strictly in a trial (faithfulness 0 for a
+near-verbatim answer: "the context does not explicitly state ...") and llama3.2:3b returned
+unparseable output (RAGAS NaN). gemma3:4b gave sensible scores on the same trial and is a
+different model family, so it judges both the citations (one yes/no question per cited
+sentence, all answers) and RAGAS 0.4.3 (faithfulness, answer relevancy with bge-m3, context
+precision with the reference). RAGAS makes ~10 judge calls per question and gemma3 only
+half fits on the 4 GB GPU, so RAGAS runs on a stratified subset of 8 answered questions
+(one per question type, both languages), with the judge's output capped at 700 tokens
+(runs on 30 then 12 questions were stopped: more than 2 hours, one call took 4 minutes). RAGAS 0.4.3 imports a module removed from
+langchain-community 0.4; the benchmark script stubs that one unused import. A 4B judge is
+far weaker than the GPT-4-class judges RAGAS is designed for: the scores compare runs of
+this system, they are not absolute.
+
+**D68. Two runtime fixes found by the benchmark.** (1) With `num_ctx` 8,192, qwen2.5:3b
+(2.3 GB) and bge-m3 no longer fit together on the GPU and Ollama evicted one for the other
+on every question (12 s per question, and one stalled request); `SYNERGYRX_LLM_NUM_CTX` is
+now 4,096 (agent prompts are ~1,300 tokens) and the embedding context 2,048 (chunks are at
+most ~400 tokens): 4.7 s per question on average. (2) One answer looped for more than
+24,000 tokens (no length limit): answers are now capped at 450 tokens
+(`SYNERGYRX_LLM_MAX_TOKENS`) with a repeat penalty of 1.1. Also added: one retry of a failed
+embedding call, a citation example in the answer prompt, and the meaning-based attribution
+of uncited sentences (bge-m3 cosine at least 0.65 and 0.03 above the next source; the
+citation judge measures whether these citations hold).

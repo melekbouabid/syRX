@@ -4,7 +4,7 @@
    questions refused, no uncited timing advice; plus what the safety node removed.
 2. Citations (all answered questions): for every answer sentence citing [n], a local LLM
    judge (gemma3:4b, not the generator) says whether source n supports it.
-3. RAGAS 0.4 (stratified subset of 12, the judge is slow on a 4 GB GPU): faithfulness, answer
+3. RAGAS 0.4 (stratified subset of 8, one per question type: the judge is slow on 4 GB): faithfulness, answer
    relevancy (bge-m3 embeddings), context precision with reference.
 Logged to MLflow (experiment `tujya-rag`); aggregates in benchmark/results_generation.json,
 per-question scores (no source text) in benchmark/generation_per_question.jsonl.
@@ -158,7 +158,9 @@ def run_ragas(rows: list[dict[str, Any]], judge_model: str, base_url: str) -> di
             }
         )
     llm = LangchainLLMWrapper(
-        ChatOllama(model=judge_model, base_url=base_url, temperature=0, num_ctx=4096)
+        ChatOllama(
+            model=judge_model, base_url=base_url, temperature=0, num_ctx=4096, num_predict=700
+        )
     )
     embeddings = LangchainEmbeddingsWrapper(OllamaEmbeddings(model="bge-m3", base_url=base_url))
     result = evaluate(
@@ -199,7 +201,7 @@ def _mean(values: list[float | None]) -> tuple[float | None, int]:
 async def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--judge", default="gemma3:4b")
-    parser.add_argument("--ragas", type=int, default=12, help="subset size (0 = skip RAGAS)")
+    parser.add_argument("--ragas", type=int, default=8, help="subset size (0 = skip RAGAS)")
     parser.add_argument("--reuse", action="store_true", help="reuse the saved citation scores")
     args = parser.parse_args()
     base_url = os.environ.get("SYNERGYRX_OLLAMA_URL", "http://localhost:11434")

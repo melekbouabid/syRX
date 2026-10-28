@@ -1,0 +1,33 @@
+{
+ "params": {
+  "llm": "qwen2.5:3b",
+  "search_mode": "dense",
+  "judge": "gemma3:4b",
+  "ragas_subset": 8,
+  "ragas_version": "0.4.3"
+ },
+ "metrics": {
+  "questions": 88.0,
+  "answered": 82.0,
+  "refused_or_no_source": 3.0,
+  "disclaimer_rate": 1.0,
+  "dose_sentences": 4.0,
+  "safe_sentences": 0.0,
+  "uncited_timing_sentences": 0.0,
+  "answers_rewritten_by_safety": 6.0,
+  "sentences": 265.0,
+  "sentences_with_citation": 0.6981,
+  "cited_sentences_supported": 0.9405,
+  "answers_with_citation": 0.9268,
+  "mean_seconds": 4.705,
+  "median_seconds": 4.515,
+  "citation_judge_seconds": 144.2733,
+  "dose_questions_refused": 1.0,
+  "ragas_faithfulness": 0.9792,
+  "ragas_faithfulness_n": 6.0,
+  "ragas_context_precision": 0.809,
+  "ragas_context_precision_n": 8.0,
+  "cited_sentences_supported_fr": 0.9,
+  "cited_sentences_supported_en": 0.9652
+ }
+}

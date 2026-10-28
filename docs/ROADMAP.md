@@ -58,15 +58,15 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [x] Tools: identify_pills, check_interaction, get_drug_info, search_documents (extension point for more)
 - [x] Async `POST /api/chat` (JSON or SSE stream), answer + citations + tool calls; tests with a fake LLM
 - [x] Ollama local LLM: qwen2.5:3b in the `ollama` service, on the GPU (D57, D58)
-- [ ] Benchmark set of 50-100 questions
-- [ ] Retrieval benchmark (Recall@k, MRR) and generation benchmark (RAGAS)
+- [x] Benchmark set: 88 questions FR/EN built from the corpus, checked by hand (D66)
+- [x] Retrieval benchmark (Recall@k, MRR) and generation benchmark (safety, citations, RAGAS); MLflow `tujya-rag`
 - [x] MCP server exposing the same tools (official SDK, stdio + HTTP; docs/MCP.md)
 
 ## 6. Web
 - [x] Scan page: upload + webcam (live predictions) + bounding boxes + demo gallery (D52)
 - [x] Result (interaction, severity, source) on the Scanner page; screenshots in docs/screenshots/
-- [ ] Chat panel with citations
-- [ ] Disclaimer everywhere: information only, consult a pharmacist or doctor
+- [x] Chat panel with streamed answer, clickable citations, tool calls (Scanner page)
+- [x] Disclaimer on the Scanner page, every interaction report, the chat panel and every answer
 
 ## 7. Delivery
 - [x] Docker Compose: postgres + pgvector, mlflow (docs/INFRA.md)
