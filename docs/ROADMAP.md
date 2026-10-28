@@ -56,7 +56,7 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 ## 5. Agent
 - [ ] LangGraph graph: understand -> tools -> retrieve -> answer with citations -> safety check
 - [ ] Tools: identify_pills, check_interaction, get_drug_info, search_literature (optional get_synergy)
-- [ ] Ollama local LLM (Mistral, Llama or Qwen)
+- [x] Ollama local LLM: qwen2.5:3b in the `ollama` service, on the GPU (D57, D58)
 - [ ] Benchmark set of 50-100 questions
 - [ ] Retrieval benchmark (Recall@k, MRR) and generation benchmark (RAGAS)
 - [ ] MCP server exposing the same tools (lower priority)
@@ -70,7 +70,7 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 ## 7. Delivery
 - [x] Docker Compose: postgres + pgvector, mlflow (docs/INFRA.md)
 - [x] Docker Compose: backend, frontend (nginx), one-shot loader; one command (docs/INFRA.md)
-- [ ] Docker Compose: ollama (with the Module 2 agent)
+- [x] Docker Compose: ollama service with the NVIDIA GPU (docs/INFRA.md)
 - [x] GitHub Actions CI (lint, tests, frontend build)
 - [x] GitHub Actions CD: images on ghcr.io after a green CI (docs/CD.md)
 - [ ] Deployment to a server (no server yet, D56)
