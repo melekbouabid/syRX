@@ -188,6 +188,46 @@ export interface DemoGallery {
   note: string;
 }
 
+export interface ChatCitation {
+  n: number;
+  title: string;
+  url: string;
+  section: string;
+  snippet: string;
+  source_name: string;
+  doc_type: "label" | "abstract" | "interaction" | string;
+  date: string;
+  cited: boolean;
+}
+
+export interface ChatToolCall {
+  name: string;
+  args: Record<string, unknown>;
+  chosen_by: "llm" | "rule" | string;
+  ok: boolean;
+  summary: string;
+}
+
+export interface ChatResult {
+  question: string;
+  answer: string;
+  language: string;
+  ingredients: string[];
+  citations: ChatCitation[];
+  tool_calls: ChatToolCall[];
+  safety: { action?: "ok" | "rewritten" | "refused"; violations?: string[]; cited?: number[] };
+  model: string;
+  timings: Record<string, number>;
+  disclaimer: string;
+}
+
+/** One Server-Sent Event of POST /api/chat with `stream: true`. */
+export type ChatEvent =
+  | { type: "tool"; tool: ChatToolCall }
+  | { type: "token"; text: string }
+  | { type: "final"; result: ChatResult }
+  | { type: "error"; detail: string };
+
 export class ApiError extends Error {
   readonly status: number;
 
@@ -275,6 +315,58 @@ async function request<T>(method: string, path: string, options: RequestOptions 
   return data as T;
 }
 
+/**
+ * Ask the Tujya agent; the answer streams as Server-Sent Events (tool calls, then the
+ * checked sentences, then the final result, which is the one to display).
+ */
+async function chatStream(
+  question: string,
+  pills: number[],
+  onEvent: (event: ChatEvent) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(new URL("/api/chat", window.location.origin), {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+      body: JSON.stringify({ question, pills, stream: true }),
+      signal,
+    });
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    throw new ApiError(0, "Cannot reach the server. Check that the API is running.");
+  }
+  if (!response.ok || !response.body) {
+    const data: unknown = await response.json().catch(() => null);
+    if (response.status === 401) onSessionEnded?.();
+    throw new ApiError(response.status, describeFailure(response.status, data));
+  }
+  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += value;
+    let end = buffer.indexOf("\n\n");
+    while (end !== -1) {
+      const block = buffer.slice(0, end);
+      buffer = buffer.slice(end + 2);
+      const name = /^event: (.+)$/m.exec(block)?.[1];
+      const data = /^data: (.+)$/m.exec(block)?.[1];
+      if (name && data) {
+        const payload = JSON.parse(data);
+        if (name === "final") onEvent({ type: "final", result: payload as ChatResult });
+        else if (name === "tool") onEvent({ type: "tool", tool: payload.tool });
+        else if (name === "token") onEvent({ type: "token", text: payload.text });
+        else if (name === "error") onEvent({ type: "error", detail: payload.detail });
+      }
+      end = buffer.indexOf("\n\n");
+    }
+  }
+}
+
 export const api = {
   me: () => request<User>("GET", "/auth/me", { anonymous: true }),
   signIn: (email: string, password: string) =>
@@ -305,6 +397,9 @@ export const api = {
   interactions: (pills: number[], ingredients: string[] = []) =>
     request<InteractionsResult>("POST", "/interactions", { body: { pills, ingredients } }),
   demoImages: (signal?: AbortSignal) => request<DemoGallery>("GET", "/demo/images", { signal }),
+  chat: (question: string, pills: number[]) =>
+    request<ChatResult>("POST", "/chat", { body: { question, pills, stream: false } }),
+  chatStream,
   /** A demo photo as a file, to send it to the scan like an upload. */
   demoImage: async (image: DemoImage): Promise<Blob> => {
     const response = await fetch(image.url, { credentials: "same-origin" });

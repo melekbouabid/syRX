@@ -14,6 +14,7 @@ import {
 import { Alert, Badge, Spinner, staggerIndex } from "../components";
 import { useDebounced, useQuery } from "../hooks";
 import { Icon, type IconName } from "../icons";
+import ChatPanel from "./ChatPanel";
 
 // Safety texts are shown exactly as the project rules write them (CLAUDE.md, D53).
 const DISCLAIMER = "Information uniquement, consultez un pharmacien ou un médecin.";
@@ -646,8 +647,8 @@ export default function ScanPage() {
           <div>
             <h1>Scanner</h1>
             <p className="muted">
-              Identify pills from a photo, confirm them, then check their active ingredients for
-              interactions.
+              Identify pills from a photo, confirm them, check their active ingredients for
+              interactions, then ask questions answered from cited sources.
             </p>
           </div>
         </div>
@@ -762,6 +763,8 @@ export default function ScanPage() {
         </div>
         {report && <InteractionReport report={report} />}
       </section>
+
+      <ChatPanel pills={mine} />
     </>
   );
 }
