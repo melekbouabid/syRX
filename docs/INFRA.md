@@ -38,8 +38,8 @@ Accounts: in Docker the accounts tables live in the same PostgreSQL database `tu
 default administrator and the demo account (`user@gmail.com` / `user`); change the
 administrator password before the server is reachable by anyone else.
 
-Images on GitHub Container Registry: docs/CD.md. To run the published images instead of
-building: `BACKEND_IMAGE=ghcr.io/... FRONTEND_IMAGE=ghcr.io/... docker compose up -d --no-build`.
+Images are always built locally by `docker compose up -d --build`. The CD workflow builds and
+smoke-tests the same images on GitHub but no longer publishes them (D70, docs/CD.md).
 
 `docker/postgres/init/01-init.sql` runs once, on an empty volume: it enables `vector` in
 the `tujya` database and creates the `mlflow` database. Credentials are development

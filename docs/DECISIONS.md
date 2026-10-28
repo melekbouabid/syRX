@@ -525,3 +525,14 @@ MCP server's HTTP transport refuses any non-loopback `--host` (argparse choices,
 fails loudly instead of silently opening the server). Processes inside the containers keep
 listening on 0.0.0.0, which is only the container's private interface. Replaces the
 "deployment to a server" item of the roadmap: there will be none.
+
+**D70. CD builds and smoke-tests the images but no longer publishes them (replaces D56).**
+Consequence of D69: an image on ghcr.io is a way to run the app elsewhere. On every green
+push to main, `cd.yml` builds the backend and frontend images of the tested commit and
+smoke-tests them (ports on the runner's 127.0.0.1), with `contents: read` only. Pushing to
+ghcr.io survives only as a separate `publish` job, run by hand (`workflow_dispatch` with
+`push_images=true`, default false), the only job with `packages: write`; kept because the
+owner asked for it as an option. The two packages published before (tujya-backend,
+tujya-frontend, private, code only) could not be deleted from here: the local gh token has
+no `delete:packages` scope and changing the owner's login was out of scope; the manual steps
+are in docs/CD.md.

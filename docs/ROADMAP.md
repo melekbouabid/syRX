@@ -73,7 +73,8 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [x] Docker Compose: backend, frontend (nginx), one-shot loader; one command (docs/INFRA.md)
 - [x] Docker Compose: ollama service with the NVIDIA GPU (docs/INFRA.md)
 - [x] GitHub Actions CI (lint, tests, frontend build)
-- [x] GitHub Actions CD: images on ghcr.io after a green CI (docs/CD.md)
+- [x] GitHub Actions CD: images built and smoke-tested after a green CI, not pushed (D70, docs/CD.md)
+- [ ] Delete the two old packages on ghcr.io (manual: no `delete:packages` scope, docs/CD.md)
 - [x] Strictly local usage: every port on 127.0.0.1, checked with netstat (D69, docs/INFRA.md)
 - No deployment to a server, by design: the project runs only on this PC (D69)
 - [x] README updated for Tujya
