@@ -78,6 +78,7 @@ def app(tmp_path: Path, processed_dir: Path, pharma_url: str) -> Iterator[FastAP
         models_dir=tmp_path / "models",  # empty: tests that scan write fake models here
         demo_images_dir=tmp_path / "demo_images",
         demo_split_file=tmp_path / "demo_split.csv",
+        demo_gallery_file=tmp_path / "demo_gallery.csv",
     )
     application = create_app(settings)
     with TestClient(application):  # runs start-up: creates the tables and the first accounts

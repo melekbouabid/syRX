@@ -85,6 +85,7 @@ export function UserLayout() {
   const { user } = useAuth();
   const items: NavItem[] = [
     { to: "/home", label: "Home", icon: "home" },
+    { to: "/scan", label: "Scanner", icon: "scan" },
     { to: "/drugs", label: "Drugs", icon: "pill" },
     { to: "/cell-lines", label: "Cell lines", icon: "cells" },
     { to: "/profile", label: "Profile", icon: "user" },

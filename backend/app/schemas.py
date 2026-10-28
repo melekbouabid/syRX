@@ -259,3 +259,17 @@ class InteractionsResult(BaseModel):
     message: str
     sources: list[SourceOut]
     disclaimer: str
+
+
+class DemoImage(BaseModel):
+    id: int
+    class_id: int = Field(description="Class the photo shows (C3PI label), to compare with")
+    expected_name: str
+    why: str = Field(description="Why it is in the gallery: major, confirm, no-ingredient...")
+    url: str
+    thumbnail_url: str
+
+
+class DemoGallery(BaseModel):
+    items: list[DemoImage]
+    note: str

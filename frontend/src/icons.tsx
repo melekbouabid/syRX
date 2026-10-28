@@ -71,6 +71,32 @@ const PATHS = {
       <circle cx="12" cy="12" r="3" />
     </>
   ),
+  scan: (
+    <>
+      <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3" />
+      <rect x="8" y="9" width="8" height="6" rx="3" />
+    </>
+  ),
+  camera: (
+    <>
+      <path d="M4 8h3l1.5-2.5h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" />
+      <circle cx="12" cy="13.5" r="3.5" />
+    </>
+  ),
+  upload: <path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />,
+  image: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <circle cx="9" cy="10" r="2" />
+      <path d="m21 16-5-5L5 20" />
+    </>
+  ),
+  alert: (
+    <>
+      <path d="M12 3 2.5 20h19z" />
+      <path d="M12 10v4M12 17.2v.1" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof PATHS;

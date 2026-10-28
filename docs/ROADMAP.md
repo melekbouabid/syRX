@@ -62,8 +62,8 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [ ] MCP server exposing the same tools (lower priority)
 
 ## 6. Web
-- [ ] Scan page: upload + webcam + bounding boxes
-- [ ] Result page (interaction, severity, source)
+- [x] Scan page: upload + webcam (live predictions) + bounding boxes + demo gallery (D52)
+- [x] Result (interaction, severity, source) on the Scanner page; screenshots in docs/screenshots/
 - [ ] Chat panel with citations
 - [ ] Disclaimer everywhere: information only, consult a pharmacist or doctor
 

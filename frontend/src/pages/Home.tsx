@@ -21,6 +21,12 @@ const TILES: { key: keyof CatalogSummary; label: string; note: string; icon: Ico
 
 const SHORTCUTS: { to: string; title: string; text: string; icon: IconName }[] = [
   {
+    to: "/scan",
+    icon: "scan",
+    title: "Scan pills",
+    text: "Identify pills from a photo or the webcam and check their interactions.",
+  },
+  {
     to: "/drugs",
     icon: "pill",
     title: "Browse drugs",

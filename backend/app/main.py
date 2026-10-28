@@ -14,7 +14,7 @@ from app.catalog import Catalog
 from app.config import Settings
 from app.db import Base, make_engine
 from app.limits import BodySizeLimit
-from app.routers import admin, auth, catalog, medicines, scan
+from app.routers import admin, auth, catalog, demo, medicines, scan
 from app.scanner import ScannerHolder
 
 DESCRIPTION = (
@@ -81,6 +81,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(catalog.public_router)
     app.include_router(scan.router)
     app.include_router(medicines.router)
+    app.include_router(demo.router)
 
     @app.get("/api/health", tags=["health"])
     def health() -> dict[str, str]:

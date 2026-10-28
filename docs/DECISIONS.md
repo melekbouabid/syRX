@@ -330,3 +330,27 @@ merges MLflow's external weight file into one `.onnx` per model, and writes `mod
 (version, run id, SHA-256). The API returns that manifest with every scan, so each answer
 says which model versions produced it. `models/` is git-ignored; it is mounted into the
 backend container (Task 5).
+
+**D52. The demo gallery is eight hand-picked test photos.** `config/demo_gallery.csv` lists
+C3PI consumer photos of the **test** split (the API refuses any other): five pills whose
+ingredients have Major interactions with each other (tramadol, citalopram, fluconazole,
+haloperidol, hydroxychloroquine), cyclobenzaprine, one trazodone photo whose top-1 is below
+the 0.85 threshold (to show the confirmation step), and the multivitamin (no known
+ingredient). They were chosen with the per-photo results of `scripts/evaluate_scan.py
+--split test`, so the gallery shows the model at its best on purpose, except for the
+trazodone photo; the honest numbers are the full test-split results (docs/VISION.md). The
+images are served from the DVC-tracked folder, never committed to git.
+
+**D53. The app stays in English; the safety texts are in French, word for word.** The
+existing site is in English. The project rules give the safety texts in French
+("Information uniquement, consultez un pharmacien ou un médecin.", "Aucune interaction
+connue dans cette base de données."), so the API returns them in French and the Scanner page
+shows them unchanged rather than translating them. A full French interface is a separate
+choice for later.
+
+**D54. Browser proof with Playwright, screenshots as small JPEGs.** `playwright` 1.64.1 is a
+pinned frontend dev dependency (npm does not download a browser; `npx playwright install
+chromium` does, once). `frontend/scripts/screenshots.mjs` signs in, uploads a test photo,
+scans two demo photos, checks the interactions, opens the webcam (Chromium's fake camera)
+and Swagger, and fails if a step does not show what it should. The seven screenshots in
+`docs/screenshots/` are JPEG (quality 82, 33-125 kB) to keep the repository small.

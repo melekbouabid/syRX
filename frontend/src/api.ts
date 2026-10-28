@@ -75,6 +75,119 @@ export interface NewUser {
 
 export type UserChanges = Partial<Pick<User, "email" | "full_name" | "role" | "is_active">>;
 
+// --- Tujya: scan, pills, interactions (docs/API.md) ------------------------------------------
+
+export interface Source {
+  name: string;
+  title: string;
+  url: string;
+  license: string;
+  citation: string;
+}
+
+export interface PillCandidate {
+  class_id: number;
+  name: string;
+  generic_name: string;
+  active_ingredients: string[];
+  probability: number;
+}
+
+export interface Box {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+export interface ScannedPill {
+  box: Box;
+  box_normalized: Box;
+  detection_confidence: number;
+  candidates: PillCandidate[];
+  needs_confirmation: boolean;
+}
+
+export interface ScanResult {
+  image_width: number;
+  image_height: number;
+  inference_ms: number;
+  timings: { detection_ms: number; classification_ms: number; total_ms: number };
+  confirm_threshold: number;
+  pills: ScannedPill[];
+  message: string | null;
+  models: Record<string, { registered_model?: string; version?: number } | string>;
+  sources: Source[];
+  disclaimer: string;
+}
+
+export interface Pill {
+  class_id: number;
+  name: string;
+  generic_name: string;
+  labeled_by: string;
+  imprint: string;
+  color: string;
+  shape: string;
+  active_ingredients: string[];
+}
+
+export interface PillList {
+  items: Pill[];
+  total: number;
+  sources: Source[];
+}
+
+export type Severity = "Major" | "Moderate" | "Minor" | "Unknown";
+
+export interface CheckedItem {
+  kind: "pill" | "ingredient";
+  label: string;
+  class_id: number | null;
+  found: boolean;
+  active_ingredients: string[];
+}
+
+export interface InteractionFound {
+  ingredient_a: string;
+  ingredient_b: string;
+  severity: Severity;
+  description: string;
+  source: Source;
+}
+
+export interface InteractionPair {
+  item_a: CheckedItem;
+  item_b: CheckedItem;
+  highest_severity: Severity | null;
+  interactions: InteractionFound[];
+  shared_ingredients: string[];
+  message: string | null;
+}
+
+export interface InteractionsResult {
+  items: CheckedItem[];
+  pairs: InteractionPair[];
+  highest_severity: Severity | null;
+  message: string;
+  sources: Source[];
+  disclaimer: string;
+}
+
+export interface DemoImage {
+  id: number;
+  class_id: number;
+  expected_name: string;
+  why: string;
+  url: string;
+  thumbnail_url: string;
+}
+
+export interface DemoGallery {
+  items: DemoImage[];
+  note: string;
+}
+
 export class ApiError extends Error {
   readonly status: number;
 
@@ -100,6 +213,8 @@ type QueryParams = Record<string, string | number | undefined>;
 
 interface RequestOptions {
   body?: unknown;
+  /** Multipart body (file upload); the browser sets its Content-Type and boundary. */
+  form?: FormData;
   query?: QueryParams;
   signal?: AbortSignal;
   /** A 401 is an expected answer here (sign-in form, first load), not a lost session. */
@@ -143,7 +258,7 @@ async function request<T>(method: string, path: string, options: RequestOptions 
       method,
       credentials: "same-origin",
       headers: options.body === undefined ? undefined : { "Content-Type": "application/json" },
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.form ?? (options.body === undefined ? undefined : JSON.stringify(options.body)),
       signal: options.signal,
     });
   } catch (error) {
@@ -179,6 +294,23 @@ export const api = {
     request<Page<Drug>>("GET", "/catalog/drugs", { query, signal }),
   cellLines: (query: QueryParams, signal?: AbortSignal) =>
     request<Page<CellLine>>("GET", "/catalog/cell-lines", { query, signal }),
+
+  scan: (image: Blob, filename: string, signal?: AbortSignal) => {
+    const form = new FormData();
+    form.append("image", image, filename);
+    return request<ScanResult>("POST", "/scan", { form, signal });
+  },
+  pills: (q: string, signal?: AbortSignal) =>
+    request<PillList>("GET", "/pills", { query: { q, limit: 12 }, signal }),
+  interactions: (pills: number[], ingredients: string[] = []) =>
+    request<InteractionsResult>("POST", "/interactions", { body: { pills, ingredients } }),
+  demoImages: (signal?: AbortSignal) => request<DemoGallery>("GET", "/demo/images", { signal }),
+  /** A demo photo as a file, to send it to the scan like an upload. */
+  demoImage: async (image: DemoImage): Promise<Blob> => {
+    const response = await fetch(image.url, { credentials: "same-origin" });
+    if (!response.ok) throw new ApiError(response.status, "Cannot load this demo photo.");
+    return response.blob();
+  },
 
   admin: {
     stats: (signal?: AbortSignal) => request<AdminStats>("GET", "/admin/stats", { signal }),
