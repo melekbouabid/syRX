@@ -238,6 +238,12 @@ séparément, jamais rien sur leur association (docs/TOXICITY.md).
 
 ![Page Toxicity : une carte par molécule, formulation et avertissement toujours visibles.](../screenshots/16-toxicity.jpg)
 
+**Synergie (étudiée, pas d'outil).** Sur DrugComb (une source par expérience : TDC en est
+une copie, O'Neil diverge ; cible ZIP ; 323 339 expériences, 287 médicaments), un LightGBM
+évalué en laissant 15 % des médicaments de côté fait mieux que la moyenne (RMSE 5,189 contre
+5,597, r 0,377) mais seulement de 7,3 %, sous la règle de 10 % fixée avant l'entraînement
+(D75) : aucun outil `predict_synergy` n'a été ajouté (docs/SYNERGY.md).
+
 ## 10. Limites et suite
 
 - **Modèle de 3B** : réponses justes et citées pour les contre-indications, mécanismes,

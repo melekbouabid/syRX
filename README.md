@@ -63,6 +63,9 @@ docker compose up -d --build
 - Avant le premier démarrage : les données sous `data/` (DVC) et les modèles dans `models/`
   (`cd vision && python -m tujya_vision.publish`, depuis le Model Registry MLflow). Détails :
   [docs/INFRA.md](docs/INFRA.md) ; API : [docs/API.md](docs/API.md).
+- **Script de la soutenance** : [docs/DEMO.md](docs/DEMO.md) ; questions probables du jury :
+  [docs/QUESTIONS_JURY.md](docs/QUESTIONS_JURY.md) ; rapport de la dernière session :
+  [docs/SESSION_REPORT_4.md](docs/SESSION_REPORT_4.md).
 - Démonstration pas à pas : [docs/SESSION_REPORT_2.md](docs/SESSION_REPORT_2.md) (scan) et
   [docs/SESSION_REPORT_3.md](docs/SESSION_REPORT_3.md) (agent) ; captures d'écran :
   [docs/screenshots/](docs/screenshots/).
