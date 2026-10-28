@@ -10,7 +10,7 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [x] Planning of the new direction (two modules, scope, tech choices)
 
 ## 0. Git and project rules
-- [x] First commit and push to https://github.com/melekbouabid/tujia-.git (c1cb26d)
+- [x] First commit and push to https://github.com/melekbouabid/tujia-.git (9398f0c)
 - [x] README with the module requirements, data sources and progress journal
 - [x] Mandatory session rules in CLAUDE.md
 - [ ] Change the default admin password (admin@gmail.com / admin)
