@@ -242,3 +242,25 @@ explanations will come from cited openFDA label passages in the RAG step.
 **D37. Contact email.** No `.env` exists and the owner's address was not given for use in a
 User-Agent, so RxNav and DDInter were called with `http.require_contact_email=false`, as in
 D1 (about 400 RxNav requests and 14 DDInter files).
+
+**D38. Detection boxes are made automatically from the consumer photos.** C3PI has no
+boxes; public pill detection sets have unclear licences and other images. Each consumer
+photo shows one or two pills on a plain-ish background, so `vision/tujya_vision/autolabel.py`
+finds them with classical computer vision (robust background surface, colour distance,
+coin rejection, GrabCut for pale pills). Photos with a doubtful flag are left out of both
+datasets rather than labelled badly. The detector learns, and is scored on, machine-made
+labels; docs/VISION.md gives the audited precision. A hand-checked subset is a later step.
+
+**D39. Identification is trained on pill crops, not whole photos.** The pill often covers
+less than 5 % of the photo; shrinking the whole photo to 224 px would leave a few pixels of
+pill. The classifier sees square crops (box + 20 % margin, 224 px), which is also what it
+receives in the app after detection (two-stage design).
+
+**D40. PyTorch: CPU build first, CUDA build when the bandwidth allowed.** The CUDA wheel is
+~2.5 GB; it was downloaded only after the images. The smoke run uses whatever
+`torch.cuda.is_available()` reports; the hardware is logged as MLflow tags.
+
+**D41. The registered models are the ONNX exports.** `mlflow.onnx.log_model` registers the
+deployment artefact (what the API will load with ONNX Runtime); `best.pt` is kept as a run
+artefact for retraining. The export is only trusted after an ONNX Runtime vs PyTorch check
+on test images (top-1 agreement / box IoU logged as metrics).

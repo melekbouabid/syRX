@@ -22,13 +22,13 @@ Une case n'est cochée que lorsque l'exigence est réellement satisfaite.
 ### Module 1 : Industrialisation Vision & MLOps
 
 - [ ] Axe vision : détection des comprimés avec YOLOv8/v11
-- [ ] Axe vision : identification de chaque comprimé par transfer learning
+- [x] Axe vision : identification de chaque comprimé par transfer learning
 - [ ] Backend FastAPI asynchrone, schémas Pydantic, Swagger sur `/docs`
 - [ ] Frontend React : upload d'image, webcam, affichage des prédictions et des bounding boxes
 - [ ] DVC (versionnement des données)
-- [ ] MLflow : tracking des expériences
-- [ ] MLflow : Model Registry
-- [ ] Export ONNX et inférence ONNX Runtime
+- [x] MLflow : tracking des expériences
+- [x] MLflow : Model Registry
+- [x] Export ONNX et inférence ONNX Runtime
 - [ ] Docker Compose
 - [ ] GitHub Actions CI/CD
 - [ ] Soutenance pratique (démonstration technique en direct)
@@ -66,6 +66,7 @@ pipeline SynergyRx sont décrites dans l'annexe ci-dessous.
 | 2026-10-28 | Tâche 3 : sous-ensemble d'entraînement | 150 classes (comprimés = NDC9 + part) classées par nombre de photos consumer, hors appareils Canon G10 et Nikon S3000 (trop lourds pour le débit) ; jusqu'à 30 photos par classe + 1 image de référence RxNav par NDC ; téléchargement vérifié par SHA-1 ; split par photo 70/15/15 stratifié par classe ; DVC initialisé, images et métadonnées suivies (pas encore de remote) | `config/pill_classes.csv`, `config/splits/selected_images.csv`, `data/vision/c3pi/images.dvc`, `data/vision/c3pi/metadata.dvc`, `.dvc/`, `vision/requirements.txt` | 4 206 fichiers (4,8 Go), 24 à 30 photos par classe, 3 006 train / 600 val / 600 test, 0 échec de téléchargement ; DVC local seulement : case DVC non cochée tant qu'aucun remote n'est configuré |
 | 2026-10-28 | Tâche 4 : principes actifs et interactions | Principes actifs par RxNav (NDC -> RxCUI -> ingrédients de base, sans dosage) ; connecteur DDInter existant activé par une étape Tujya (conditions CC BY-NC-SA acceptées, 14 fichiers ATC au lieu de 8) ; 3 alias de noms ; tables d'interactions propres (paire, sévérité, description, source) suivies par DVC | `src/synergyrx_data/tujya/`, `tests/unit/test_tujya.py`, `config/ingredient_aliases.csv`, `docs/INTERACTIONS.md`, `data/tujya.dvc` | 149/150 classes associées (82 principes actifs ; seule la multivitamine n'a pas d'ingrédient) ; 82/82 trouvés dans DDInter ; 2 350 paires entre classes (125 Major, 826 Moderate, 72 Minor, 1 327 Unknown) ; 40 508 paires avec n'importe quel médicament ; 279 tests du pipeline passent |
 | 2026-10-28 | Tâche 5 : infrastructure | `docker-compose.yml` : PostgreSQL 16 + pgvector et serveur MLflow 3.17.2 (store PostgreSQL, artefacts dans un volume) ; schéma SQL (sources, pills, ingredients, pill_ingredients, interactions) en SQLAlchemy, séparé de `app.db` ; chargeur idempotent + tests | `docker-compose.yml`, `docker/`, `backend/app/pharma.py`, `backend/app/pharma_loader.py`, `backend/tests/test_pharma.py`, `docs/INFRA.md` | Conteneurs démarrés (postgres healthy, MLflow /health = 200) ; chargé dans PostgreSQL : 150 comprimés, 1 716 ingrédients, 161 liens, 40 508 interactions ; 37 tests backend passent ; case Docker Compose non cochée (backend et frontend pas encore dans le compose) |
+| 2026-10-28 | Tâche 6 : pipeline vision (identification) | Matériel : RTX 2050 4 Go (PyTorch CUDA 13.0 installé après les images) ; venv `vision/.venv` ; boîtes automatiques sur les photos consumer (vision classique : fond quadratique robuste, rejet des pièces, GrabCut), photos douteuses exclues ; jeux YOLO détection + crops 224 px ; étape DVC `prepare` ; classifieur YOLO11s-cls par transfer learning, suivi MLflow, export ONNX vérifié avec ONNX Runtime, enregistré dans le Model Registry | `vision/tujya_vision/autolabel.py`, `prepare.py`, `train.py`, `evaluate.py`, `dvc.yaml`, `docs/VISION.md` | 3 306/4 056 photos étiquetées (81,5 %, précision ~90 % sur un audit de 48 photos) ; test top-1 **93,5 %**, top-5 **98,1 %** (589 crops, 148 classes) ; ONNX = PyTorch sur 100 % des crops vérifiés ; `tujya-pill-classifier` v2 dans MLflow ; essai CPU 3 époques : 19,4 % / 36,0 % |
 |---|---|---|---|---|
 | 2026-10-26 | Commit initial (`c1cb26d`) | Import du pipeline SynergyRx, du backend FastAPI, du frontend React (marque Tujya) et du plan Tujya | tout le dépôt | 270 tests unitaires du pipeline ; backend avec comptes, sessions, admin, catalogue |
 | 2026-10-27 | Tâche 1 : README et règles du projet | Présentation de Tujya, exigences des modules, sources de données, journal ; règles obligatoires de session dans CLAUDE.md ; nouvelle orientation données (C3PI, pas de photos personnelles, deux étapes détection + identification, ePillID, openFDA) | `README.md`, `CLAUDE.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/NIGHT_REPORT.md` | Documentation à jour ; aucune exigence cochée (aucune n'est encore satisfaite) |

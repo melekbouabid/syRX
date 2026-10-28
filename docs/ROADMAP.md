@@ -26,12 +26,12 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [x] DDInter enabled; interactions for these ingredients in a clean table (docs/INTERACTIONS.md)
 
 ## 2. Vision model
-- [ ] Hardware checked, `vision/` package with its own venv
-- [ ] Identification: classifier trained by transfer learning (YOLO cls)
+- [x] Hardware checked, `vision/` package with its own venv (RTX 2050, CUDA 13.0)
+- [x] Identification: classifier trained by transfer learning (YOLO11s-cls, test top-1 93.5 %)
 - [ ] Detection: pill bounding boxes (decision documented, YOLO detector)
-- [ ] MLflow runs (params, metrics, artefacts)
-- [ ] Best model registered in the MLflow Model Registry
-- [ ] ONNX export, inference with ONNX Runtime, outputs match PyTorch
+- [x] MLflow runs (params, metrics, artefacts)
+- [x] Best model registered in the MLflow Model Registry
+- [x] ONNX export, inference with ONNX Runtime, outputs match PyTorch
 - [ ] Measure top-1 / top-5 (identification) and mAP (detection); compare with ePillID
 
 ## 3. API
