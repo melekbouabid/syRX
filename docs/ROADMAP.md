@@ -22,8 +22,8 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [x] Train / val / test split with no photo in two splits (`config/splits/`)
 - [x] DVC set up; `data/vision/c3pi` images and metadata tracked (local cache)
 - [ ] DVC remote configured and pushed (needs a storage choice)
-- [ ] Each class mapped to its active ingredient(s)
-- [ ] DDInter enabled; interactions for these ingredients in a clean table
+- [x] Each class mapped to its active ingredient(s) (RxNav, 149/150)
+- [x] DDInter enabled; interactions for these ingredients in a clean table (docs/INTERACTIONS.md)
 
 ## 2. Vision model
 - [ ] Hardware checked, `vision/` package with its own venv

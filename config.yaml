@@ -43,6 +43,7 @@ http:
     api.figshare.com: {rate: 1.0, burst: 1, max_concurrency: 1}         # "one request per second"
     ndownloader.figshare.com: {rate: 1.0, burst: 1, max_concurrency: 1}
     dataverse.harvard.edu: {rate: 1.0, burst: 1, max_concurrency: 1}
+    rxnav.nlm.nih.gov: {rate: 10.0, burst: 1, max_concurrency: 2}      # Tujya; NLM allows 20/s per IP
 
   retry: {max_attempts: 5, backoff_base: 1.0, backoff_max: 60.0, max_retry_after: 300.0}
   circuit: {failure_threshold: 5, reset_seconds: 300.0}
