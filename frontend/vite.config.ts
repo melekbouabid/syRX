@@ -9,13 +9,21 @@ export default defineConfig(({ mode }) => {
   const target = env.VITE_API_TARGET ?? "http://127.0.0.1:8000";
   return {
     plugins: [react()],
+    // Strictly local (docs/INFRA.md): the dev and preview servers listen on 127.0.0.1 only.
     server: {
+      host: "127.0.0.1",
       port: 5173,
+      strictPort: true,
       proxy: {
         "/api": target,
         "/docs": target,
         "/openapi.json": target,
       },
+    },
+    preview: {
+      host: "127.0.0.1",
+      port: 4173,
+      strictPort: true,
     },
   };
 });

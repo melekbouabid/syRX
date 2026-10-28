@@ -74,7 +74,8 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [x] Docker Compose: ollama service with the NVIDIA GPU (docs/INFRA.md)
 - [x] GitHub Actions CI (lint, tests, frontend build)
 - [x] GitHub Actions CD: images on ghcr.io after a green CI (docs/CD.md)
-- [ ] Deployment to a server (no server yet, D56)
+- [x] Strictly local usage: every port on 127.0.0.1, checked with netstat (D69, docs/INFRA.md)
+- No deployment to a server, by design: the project runs only on this PC (D69)
 - [x] README updated for Tujya
 - [ ] Report Module 1 (Vision & MLOps)
 - [ ] Report Module 2 (AI Engineering)

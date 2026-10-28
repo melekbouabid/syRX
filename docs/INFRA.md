@@ -10,7 +10,7 @@ docker compose ps                   # postgres, backend, frontend healthy; pharm
 docker compose down                 # stops; volumes are kept (down -v deletes them)
 ```
 
-| Service | Image | Port | Role |
+| Service | Image | Host port (127.0.0.1 only) | Role |
 |---|---|---|---|
 | `postgres` | `pgvector/pgvector:pg16` | 5432 | volume `pgdata`; database `tujya` (accounts, medicine tables, pgvector) and `mlflow` |
 | `mlflow` | built from `docker/mlflow/Dockerfile` (MLflow 3.17.2 + psycopg2) | 5000 | tracking store in PostgreSQL, artefacts in volume `mlartifacts`, Model Registry |
@@ -46,6 +46,48 @@ the `tujya` database and creates the `mlflow` database. Credentials are developm
 defaults (`tujya` / `tujya`); override `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`,
 `POSTGRES_PORT`, `MLFLOW_PORT`, `BACKEND_PORT`, `WEB_PORT` in the shell or a compose `.env`
 file.
+
+## Strictly local usage (since 2026-10-28)
+
+The project runs **only on this PC** (rule in CLAUDE.md): no public deployment, no tunnel
+(ngrok, Cloudflare Tunnel...), no published Docker image of the app (docs/CD.md), and no
+service bound to `0.0.0.0` on the host. The GitHub repository stays public (code and docs
+only).
+
+| What | Where it listens | How |
+|---|---|---|
+| postgres, mlflow, backend, ollama, frontend (Docker) | `127.0.0.1:<port>` | `ports: ["127.0.0.1:${WEB_PORT:-8080}:80"]` etc. in `docker-compose.yml` |
+| Vite dev server / `vite preview` | `127.0.0.1:5173` / `127.0.0.1:4173` | `server.host` and `preview.host` in `frontend/vite.config.ts` |
+| uvicorn (local development) | `127.0.0.1:8000` | `uvicorn app.main:app --host 127.0.0.1 --reload` (also uvicorn's default) |
+| MCP server, HTTP transport | `127.0.0.1:8765` | `--host` only accepts `127.0.0.1`, `localhost` or `::1` (`backend/app/mcp_server.py`, tested) |
+| MLflow UI | `127.0.0.1:5000` | the compose port; never run `mlflow ui --host 0.0.0.0` on the host |
+
+Inside the containers, uvicorn, MLflow and nginx still listen on `0.0.0.0`: that is the
+container's private network interface, reachable only through Docker's port forwarding,
+which itself only listens on the host's loopback.
+
+Check (2026-10-28, after `docker compose up -d --build`):
+
+```
+$ docker compose ps --format "table {{.Name}}	{{.Ports}}"
+tujya-backend-1    127.0.0.1:8000->8000/tcp
+tujya-frontend-1   127.0.0.1:8080->80/tcp
+tujya-mlflow-1     127.0.0.1:5000->5000/tcp
+tujya-ollama-1     127.0.0.1:11434->11434/tcp
+tujya-postgres-1   127.0.0.1:5432->5432/tcp
+
+$ netstat -ano | findstr LISTENING     (the five ports)
+  TCP    127.0.0.1:5000         0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:5432         0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:8000         0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:8080         0.0.0.0:0              LISTENING
+  TCP    127.0.0.1:11434        0.0.0.0:0              LISTENING
+```
+
+No `0.0.0.0:<port>` or `[::]:<port>` line any more (before: `0.0.0.0:8080->80/tcp,
+[::]:8080->80/tcp`). `http://localhost:8080`, `/docs`, `/api/health` and MLflow `/health`
+answer 200; the same ports on the PC's LAN and WSL addresses (192.168.1.6, 172.x) refuse
+the connection. The Vite dev server listens on `127.0.0.1:5173` only.
 
 ## Smoke test (2026-10-28)
 

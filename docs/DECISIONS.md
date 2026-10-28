@@ -516,3 +516,12 @@ most ~400 tokens): 4.7 s per question on average. (2) One answer looped for more
 embedding call, a citation example in the answer prompt, and the meaning-based attribution
 of uncited sentences (bge-m3 cosine at least 0.65 and 0.03 above the next source; the
 citation judge measures whether these citations hold).
+
+**D69. Strictly local: the app runs only on this PC (session 4, 2026-10-28).** The owner's
+rule (now in CLAUDE.md): no public deployment, no tunnel, no published image of the app, no
+service bound to 0.0.0.0 on the host; the GitHub repository stays public for the code and
+the docs. Every compose port is published on 127.0.0.1, Vite listens on 127.0.0.1, and the
+MCP server's HTTP transport refuses any non-loopback `--host` (argparse choices, so a typo
+fails loudly instead of silently opening the server). Processes inside the containers keep
+listening on 0.0.0.0, which is only the container's private interface. Replaces the
+"deployment to a server" item of the roadmap: there will be none.

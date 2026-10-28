@@ -93,10 +93,14 @@ def default_toolbox(settings: Settings, embedder: Embedder | None = None) -> Too
     return Toolbox(settings, engine, retrievers, scanner)
 
 
+# Strictly local (docs/INFRA.md): the HTTP transport only ever listens on the loopback.
+LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m app.mcp_server")
     parser.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
-    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--host", default="127.0.0.1", choices=LOOPBACK_HOSTS)
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args(argv)
     server = build_server(default_toolbox(Settings()))

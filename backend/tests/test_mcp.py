@@ -7,10 +7,11 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
 from mcp import Client
 
 from app.config import Settings
-from app.mcp_server import build_server, default_toolbox
+from app.mcp_server import build_server, default_toolbox, main
 from app.rag.embeddings import FakeEmbedder
 from tests.pharma_data import load_pharma
 from tests.rag_fakes import DIM, build_index
@@ -78,3 +79,10 @@ def test_call_check_interaction_and_search(tmp_path: Path) -> None:
         found and found[0]["chunk_id"] == "war-ci" and all(r["doc_type"] == "label" for r in found)
     )
     assert missing.is_error if hasattr(missing, "is_error") else missing.isError
+
+
+def test_http_transport_refuses_a_non_loopback_host() -> None:
+    # The project runs only on this PC: never listen on 0.0.0.0 or a public address.
+    for host in ("0.0.0.0", "192.168.1.10"):  # noqa: S104
+        with pytest.raises(SystemExit):
+            main(["--transport", "streamable-http", "--host", host])
