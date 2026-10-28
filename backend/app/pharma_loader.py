@@ -8,8 +8,10 @@ Inputs (built by the data steps, see docs/INTERACTIONS.md):
 - data/tujya/pill_ingredients.csv                class -> ingredient (RxNav)
 - data/tujya/interactions_with_any_drug.csv      DDInter pairs involving a class ingredient
 
-The load is a full refresh in one transaction: the four data tables are emptied and filled
-again, the sources are upserted, so running it twice gives the same database.
+The load is a full refresh: the five tables are dropped and created again from the models
+in app/pharma.py (so a new column reaches an existing database), then filled in one
+transaction. Running it twice gives the same database. Nothing else lives in these tables:
+they are rebuilt from the CSV files above, which DVC versions.
 """
 
 from __future__ import annotations
@@ -20,7 +22,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
-from sqlalchemy import Engine, delete, select
+from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
 from app.config import PROJECT_DIR, Settings
@@ -121,13 +123,13 @@ def _ingredient_table(
 
 
 def load(engine: Engine, inputs: Inputs) -> LoadReport:
-    PharmaBase.metadata.create_all(engine)
+    # Read every input first, so a missing file leaves the current tables untouched.
     classes = _rows(inputs.classes)
     mapped = _rows(inputs.ingredients)
     interactions = _rows(inputs.interactions)
+    PharmaBase.metadata.drop_all(engine)
+    PharmaBase.metadata.create_all(engine)
     with Session(engine) as db, db.begin():
-        for table in (Interaction, PillIngredient, Pill, Ingredient):
-            db.execute(delete(table))
         sources = _upsert_sources(db)
         ingredients = _ingredient_table(db, mapped, interactions)
 
@@ -140,6 +142,7 @@ def load(engine: Engine, inputs: Inputs) -> LoadReport:
                 part=_int(row.get("part")) or 1,
                 ndc11_list=row.get("ndc11_list", ""),
                 name=row["name"],
+                generic_name=row.get("generic_name", ""),
                 labeled_by=row.get("labeled_by", ""),
                 imprint=row.get("imprint", ""),
                 color=row.get("color", ""),

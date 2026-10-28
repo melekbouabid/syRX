@@ -55,11 +55,29 @@ def processed_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def app(tmp_path: Path, processed_dir: Path) -> Iterator[FastAPI]:
+def pharma_url(tmp_path: Path) -> str:
+    """Medicine tables of this test: empty until a test asks for `pharma`."""
+    return f"sqlite:///{(tmp_path / 'pharma.db').as_posix()}"
+
+
+@pytest.fixture
+def pharma(pharma_url: str, tmp_path: Path) -> str:
+    from tests.pharma_data import load_pharma
+
+    load_pharma(pharma_url, tmp_path / "pharma_inputs")
+    return pharma_url
+
+
+@pytest.fixture
+def app(tmp_path: Path, processed_dir: Path, pharma_url: str) -> Iterator[FastAPI]:
     settings = Settings(
         _env_file=None,
         database_url=f"sqlite:///{(tmp_path / 'test.db').as_posix()}",
         processed_dir=processed_dir,
+        pharma_database_url=pharma_url,
+        models_dir=tmp_path / "models",  # empty: tests that scan write fake models here
+        demo_images_dir=tmp_path / "demo_images",
+        demo_split_file=tmp_path / "demo_split.csv",
     )
     application = create_app(settings)
     with TestClient(application):  # runs start-up: creates the tables and the first accounts

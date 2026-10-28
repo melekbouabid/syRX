@@ -284,3 +284,49 @@ Swagger at `/docs`. FastAPI now serves the UI at `/docs` and the schema at `/ope
 links keep working. Both are outside `/api`, so the Vite dev proxy and the frontend's
 `nginx.conf` forward them explicitly. The Swagger UI page loads its JavaScript and CSS from
 FastAPI's default CDN; a demo without Internet would need them served locally.
+
+**D45. The API runs its own numpy/OpenCV pipeline around ONNX Runtime.** PyTorch and
+Ultralytics would add about 2 GB to the backend image for pre- and post-processing only.
+`backend/app/scanner.py` re-implements Ultralytics' letterbox and NMS and the training crop
+(20 % margin, 224 px, OpenCV INTER_AREA), reads the class names from the ONNX metadata, and
+runs both models with ONNX Runtime. Parity with Ultralytics was measured on the test photos
+(docs/VISION.md); a change in the training code (crop margin, image size) must be mirrored
+there.
+
+**D46. `/api/scan`, `/api/pills` and `/api/interactions` need a signed-in account.** Same
+rule as the catalog: an open inference route can be used to load the server, and the demo
+does not need one because the first start creates the demo account (`user@gmail.com`). The
+demo therefore starts on the sign-in page. A public demo route can be added later if the
+defence needs it (it would need a rate limit).
+
+**D47. Confirmation threshold 0.85, chosen on the validation photos.** Rule: the lowest
+threshold at which at most 1 % of all validation photos would be accepted with a wrong pill
+(the table is in docs/VISION.md). 0.85 accepts 67 % of validation photos directly (98.5 %
+correct) and 70.5 % of test photos (99.3 % correct). The value is a setting
+(`SYNERGYRX_SCAN_CONFIRM_THRESHOLD`). The app shows the confidence and the top-5 for every
+pill anyway, confirmed or not.
+
+**D48. The pharma loader drops and recreates its five tables.** The scan needs the generic
+name, a new `pills` column; `create_all` does not alter existing tables. The tables hold
+nothing but what the loader writes from versioned CSV files, so a full rebuild is the
+simplest correct refresh. Reloaded into PostgreSQL on 2026-10-28: same counts (150 pills,
+1,716 ingredients, 161 links, 40,508 interactions).
+
+**D49. ONNX Runtime threads do not busy-wait.** With the default settings, the validation
+run took more than 25 minutes instead of 3: after each inference ONNX Runtime's threads keep
+spinning and starve OpenCV's resize threads on the shared laptop CPU (decoding one JPEG went
+from 40 ms to 1.3 s). The sessions now set `session.intra_op.allow_spinning=0`;
+`SYNERGYRX_ONNX_THREADS` sets the thread count (0 = one per core).
+
+**D50. Pill names are shown as C3PI labels them, strength included.** C3PI product names
+contain the strength ("AMRIX CAP 30MG"), which helps identify the product. This is the
+label of the product, not advice on how much to take; Tujya still never gives doses
+(posology), and the ingredient table has no strengths (docs/INTERACTIONS.md). To review: the
+names could be shown without the strength if the jury reads it as a dose.
+
+**D51. The API's models are copied from the Model Registry as single ONNX files.**
+`python -m tujya_vision.publish` downloads the latest registered versions (or given ones),
+merges MLflow's external weight file into one `.onnx` per model, and writes `models.json`
+(version, run id, SHA-256). The API returns that manifest with every scan, so each answer
+says which model versions produced it. `models/` is git-ignored; it is mounted into the
+backend container (Task 5).

@@ -25,8 +25,15 @@ def get_db(request: Request) -> Iterator[Session]:
         yield session
 
 
+def get_pharma_db(request: Request) -> Iterator[Session]:
+    """Session on the medicine tables (pills, ingredients, interactions), read only here."""
+    with Session(request.app.state.pharma_engine) as session:
+        yield session
+
+
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 DbSession = Annotated[Session, Depends(get_db)]
+PharmaSession = Annotated[Session, Depends(get_pharma_db)]
 
 
 def get_auth_session(request: Request, db: DbSession, settings: SettingsDep) -> AuthSession:

@@ -48,6 +48,7 @@ class Pill(PharmaBase):
     part: Mapped[int] = mapped_column(default=1)
     ndc11_list: Mapped[str] = mapped_column(Text, default="")  # ";"-joined package NDCs
     name: Mapped[str] = mapped_column(String(255))
+    generic_name: Mapped[str] = mapped_column(String(255), default="")
     labeled_by: Mapped[str] = mapped_column(String(255), default="")
     imprint: Mapped[str] = mapped_column(String(120), default="")
     color: Mapped[str] = mapped_column(String(120), default="")

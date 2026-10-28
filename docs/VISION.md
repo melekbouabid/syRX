@@ -141,3 +141,39 @@ over 150 products with 20+ photos each, trained and tested on consumer photos of
 products. The numbers are therefore **not comparable** to ePillID's; a fair comparison would
 retrain on ePillID's split and metrics (MAP, GAP, top-k on the holdout), which is a later
 step.
+
+## Serving: the API's own pipeline and the confirmation threshold
+
+`POST /api/scan` (docs/API.md) does not use Ultralytics: `backend/app/scanner.py`
+re-implements the letterbox, NMS and 20 %-margin crop with numpy and OpenCV and runs the two
+ONNX files with ONNX Runtime (D45). Checks:
+
+- on 40 test photos, against Ultralytics' ONNX predictor: same number of boxes on 40/40,
+  mean IoU of the main box 0.9999, same top-1 class on 39/39 (one photo without a box);
+- on all 600 test photos (`backend/scripts/evaluate_scan.py --split test`): pill found
+  98.5 %, top-1 **89.3 %**, top-5 **95.8 %**, as in the end-to-end evaluation above.
+
+### Confirmation threshold
+
+The app asks the user to confirm a pill when its top-1 probability is below a threshold
+(`needs_confirmation`). Chosen on the **validation** photos (600, never used for training),
+with `python scripts/evaluate_scan.py --split val`: rule = the lowest threshold at which at
+most 1 % of all photos would be accepted with a wrong pill.
+
+| Threshold | Accepted without confirmation | Top-1 among accepted | Wrong and accepted (share of all photos) |
+|---:|---:|---:|---:|
+| 0.5 | 87.2 % | 91.2 % | 7.7 % |
+| 0.7 | 77.7 % | 95.3 % | 3.7 % |
+| 0.8 | 71.7 % | 97.7 % | 1.7 % |
+| **0.85** | **67.2 %** | **98.5 %** | **1.0 %** |
+| 0.9 | 60.3 % | 98.9 % | 0.7 % |
+| 0.95 | 48.5 % | 99.7 % | 0.2 % |
+
+Validation overall: pill found 98.5 %, top-1 84.2 %, top-5 94.8 %. **Threshold 0.85**
+(D47). On the test photos at 0.85: 70.5 % accepted, 99.3 % of them correct, 0.5 % of all
+photos accepted with a wrong pill. A confirmed or corrected pill is always shown with its
+probability, and the identification stays a suggestion.
+
+Serving speed: ONNX Runtime's busy-waiting threads made OpenCV (and the whole process) about
+30 times slower on the shared laptop CPU; spinning is now disabled in the sessions (D49),
+giving about 50-220 ms per photo for decode, detection and identification.

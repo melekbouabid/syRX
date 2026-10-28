@@ -3,9 +3,17 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field, StringConstraints
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    StringConstraints,
+    model_validator,
+)
 
 from app.models import Role
 
@@ -106,3 +114,148 @@ class CatalogPage(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+# --- Tujya: pills, scan, interactions -------------------------------------------------------
+# Every answer about medicines carries its sources and the disclaimer (CLAUDE.md safety rules).
+
+IngredientName = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=2, max_length=100)
+]
+ClassId = Annotated[int, Field(ge=0, le=9999)]
+
+
+class SourceOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    name: str
+    title: str
+    url: str
+    license: str
+    citation: str
+
+
+class PillOut(BaseModel):
+    """One identification class: a C3PI product (NDC9 + part) and its active ingredients."""
+
+    class_id: int
+    name: str
+    generic_name: str
+    labeled_by: str
+    imprint: str
+    color: str
+    shape: str
+    active_ingredients: list[str]
+
+
+class PillList(BaseModel):
+    items: list[PillOut]
+    total: int
+    sources: list[SourceOut]
+
+
+class PillCandidate(BaseModel):
+    class_id: int
+    name: str
+    generic_name: str
+    active_ingredients: list[str]
+    probability: float = Field(ge=0, le=1)
+
+
+class PixelBox(BaseModel):
+    """x1, y1 top-left and x2, y2 bottom-right, in pixels of the uploaded image."""
+
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+
+
+class NormalizedBox(BaseModel):
+    """Same box divided by the image width (x) and height (y): values between 0 and 1."""
+
+    x1: float = Field(ge=0, le=1)
+    y1: float = Field(ge=0, le=1)
+    x2: float = Field(ge=0, le=1)
+    y2: float = Field(ge=0, le=1)
+
+
+class ScannedPill(BaseModel):
+    box: PixelBox
+    box_normalized: NormalizedBox
+    detection_confidence: float = Field(ge=0, le=1)
+    candidates: list[PillCandidate] = Field(description="Top-5 classes, most probable first")
+    needs_confirmation: bool = Field(
+        description="True when the top-1 probability is below confirm_threshold"
+    )
+
+
+class ScanTimings(BaseModel):
+    detection_ms: float
+    classification_ms: float
+    total_ms: float
+
+
+class ScanResult(BaseModel):
+    image_width: int
+    image_height: int
+    inference_ms: float = Field(description="Detection plus identification, ONNX Runtime")
+    timings: ScanTimings
+    confirm_threshold: float
+    pills: list[ScannedPill]
+    message: str | None = None
+    models: dict[str, Any]
+    sources: list[SourceOut]
+    disclaimer: str
+
+
+class InteractionsIn(BaseModel):
+    """At least two things to compare, pill classes (from a scan) and/or ingredient names."""
+
+    pills: list[ClassId] = Field(default_factory=list, max_length=10)
+    ingredients: list[IngredientName] = Field(default_factory=list, max_length=10)
+
+    @model_validator(mode="after")
+    def _two_to_ten(self) -> InteractionsIn:
+        count = len(self.pills) + len(self.ingredients)
+        if not 2 <= count <= 10:
+            raise ValueError("give between 2 and 10 pills and ingredients in total")
+        return self
+
+
+class CheckedItem(BaseModel):
+    kind: Literal["pill", "ingredient"]
+    label: str
+    class_id: int | None
+    found: bool = Field(description="False when this database does not know the item")
+    active_ingredients: list[str]
+
+
+class InteractionOut(BaseModel):
+    ingredient_a: str
+    ingredient_b: str
+    severity: str = Field(description="DDInter level: Major, Moderate, Minor or Unknown")
+    description: str
+    source: SourceOut
+
+
+class PairOut(BaseModel):
+    item_a: CheckedItem
+    item_b: CheckedItem
+    highest_severity: str | None
+    interactions: list[InteractionOut]
+    shared_ingredients: list[str] = Field(
+        description="Active ingredients present in both items (same substance twice)"
+    )
+    message: str | None = Field(
+        description="Set when nothing is listed: no known interaction, or nothing to check"
+    )
+
+
+class InteractionsResult(BaseModel):
+    items: list[CheckedItem]
+    pairs: list[PairOut]
+    highest_severity: str | None
+    message: str
+    sources: list[SourceOut]
+    disclaimer: str

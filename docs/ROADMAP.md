@@ -38,7 +38,8 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 
 ## 3. API
 - [x] SQL schema (pills, ingredients, pill_ingredients, interactions, sources) + loader
-- [ ] Async `POST /api/scan` (image -> boxes, classes, confidence; confirm on low confidence)
+- [x] Async `POST /api/scan` (image -> boxes, top-5, confidence; confirm below 0.85, docs/API.md)
+- [x] `python -m tujya_vision.publish`: registered models -> `models/` for the API
 - [ ] Async `POST /api/interactions` (DDInter severity, explanation, timing only if sourced)
 - [x] Swagger at `/docs` and schema at `/openapi.json` (`/api/docs` redirects, D44)
 - [ ] Pydantic schemas for scan and interactions

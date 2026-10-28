@@ -48,3 +48,5 @@ mlruns/
 mlartifacts/
 *.onnx
 *.pt
+# Models served by the API (python -m tujya_vision.publish), never committed
+/models/

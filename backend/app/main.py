@@ -13,7 +13,9 @@ from app.accounts import seed_accounts, warn_about_default_password
 from app.catalog import Catalog
 from app.config import Settings
 from app.db import Base, make_engine
-from app.routers import admin, auth, catalog
+from app.limits import BodySizeLimit
+from app.routers import admin, auth, catalog, scan
+from app.scanner import ScannerHolder
 
 DESCRIPTION = (
     "Pill identification and interaction checks for the Tujya project. "
@@ -27,6 +29,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     engine = make_engine(settings.database_url)
     session_factory = sessionmaker(engine, expire_on_commit=False)
+    # Medicine tables: their own database (PostgreSQL in docker compose), read only here.
+    pharma_engine = make_engine(settings.pharma_database_url)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -36,6 +40,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             warn_about_default_password(db, settings)
         yield
         engine.dispose()
+        pharma_engine.dispose()
 
     # Swagger UI at /docs (required by the course); the older /api/docs address redirects
     # there and /api/openapi.json serves the same schema, so existing links keep working.
@@ -60,11 +65,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.session_factory = session_factory
     app.state.catalog = Catalog(settings.processed_dir)
+    app.state.pharma_engine = pharma_engine
+    app.state.scanner = ScannerHolder(
+        settings.models_dir,
+        providers=settings.onnx_providers,
+        threads=settings.onnx_threads,
+        conf=settings.scan_detection_confidence,
+    )
+    # Refuse an oversized upload from its Content-Length, before the body is read.
+    app.add_middleware(BodySizeLimit, max_bytes=settings.scan_max_bytes + 64 * 1024)
 
     app.include_router(auth.router)
     app.include_router(admin.router)
     app.include_router(catalog.router)
     app.include_router(catalog.public_router)
+    app.include_router(scan.router)
 
     @app.get("/api/health", tags=["health"])
     def health() -> dict[str, str]:
