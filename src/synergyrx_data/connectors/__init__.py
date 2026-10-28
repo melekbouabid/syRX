@@ -13,6 +13,7 @@ from synergyrx_data.connectors.europepmc import EuropePmcConnector
 from synergyrx_data.connectors.gdsc import GdscConnector
 from synergyrx_data.connectors.nci_almanac import NciAlmanacConnector
 from synergyrx_data.connectors.oneil import ONeilConnector
+from synergyrx_data.connectors.openfda import OpenFdaLabelConnector
 from synergyrx_data.connectors.pubchem import PubChemConnector
 from synergyrx_data.connectors.pubmed import PubMedConnector
 from synergyrx_data.connectors.pubmed_baseline import PubMedBaselineConnector
@@ -35,6 +36,7 @@ _CONNECTORS: tuple[type[Connector], ...] = (
     PubMedBaselineConnector,
     EuropePmcConnector,
     PubTatorConnector,
+    OpenFdaLabelConnector,
 )
 REGISTRY: dict[str, type[Connector]] = {cls.info.name: cls for cls in _CONNECTORS}
 

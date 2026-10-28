@@ -39,6 +39,22 @@ _EPMC_SYNERGY = "(TITLE_ABS:synerg* OR TITLE_ABS:combination* OR TITLE_ABS:combi
 _EPMC_CONTEXT = (
     "(TITLE_ABS:cancer* OR TITLE_ABS:tumor* OR TITLE_ABS:tumour* OR TITLE_ABS:carcinoma*)"
 )
+# Tujya: one query per active ingredient, about interactions and adverse effects.
+TOPIC_TERMS = (
+    '"Drug Interactions"[mh]',
+    "interaction*[tiab]",
+    '"adverse effects"[sh]',
+    '"Drug-Related Side Effects and Adverse Reactions"[mh]',
+    '"adverse effect*"[tiab]',
+    '"adverse event*"[tiab]',
+    '"adverse reaction*"[tiab]',
+    "contraindicat*[tiab]",
+)
+TOPIC_FILTERS = ("hasabstract[text]", "english[la]")
+_EPMC_TOPIC = (
+    '(TITLE_ABS:interaction* OR TITLE_ABS:"adverse effect*" OR TITLE_ABS:"adverse event*" '
+    'OR TITLE_ABS:"adverse reaction*" OR TITLE_ABS:contraindicat*)'
+)
 _CAS_NUMBER = re.compile(r"^\d{2,7}-\d{2}-\d$")
 _UNSAFE = re.compile(r'["\[\]{}\\]')
 
@@ -172,6 +188,52 @@ def build_queries(
     else:
         raise ValueError(f"unknown query mode {mode!r} (use 'pairs' or 'drugs')")
     return queries
+
+
+def build_topic_query(name: str, synonyms: list[str], *, max_terms: int = 6) -> Query:
+    """One ingredient AND (interactions OR adverse effects), English abstracts only."""
+    block = drug_block(name, synonyms, max_terms)
+    topic = "(" + " OR ".join(TOPIC_TERMS) + ")"
+    pubmed = " AND ".join([block, topic, *TOPIC_FILTERS])
+    europepmc = " AND ".join([_epmc_block(name, synonyms, max_terms), _EPMC_TOPIC, "SRC:MED"])
+    ids = (f"ingredient:{name}",)
+    return Query(
+        query_id=_query_id("ingredient", ids),
+        kind="ingredient",
+        drug_ids=ids,
+        drug_names=(name,),
+        pair_key=None,
+        pubmed=pubmed,
+        europepmc=europepmc,
+    )
+
+
+def read_ingredients(path: Path) -> list[str]:
+    """Distinct active ingredients of `config/pill_classes.csv` (column `active_ingredients`)."""
+    if not path.is_file():
+        return []
+    frame = pd.read_csv(path, dtype="string", usecols=["active_ingredients"])
+    names = {
+        part.strip().lower()
+        for value in frame["active_ingredients"].dropna()
+        for part in str(value).split(";")
+        if part.strip()
+    }
+    return sorted(names)
+
+
+def build_ingredient_queries(
+    names: list[str],
+    aliases: dict[str, list[str]] | None = None,
+    *,
+    max_queries: int = 100,
+    max_terms: int = 6,
+) -> list[Query]:
+    aliases = aliases or {}
+    return [
+        build_topic_query(name, aliases.get(name, []), max_terms=max_terms)
+        for name in names[:max_queries]
+    ]
 
 
 def load_query_inputs(settings: Settings) -> tuple[pd.DataFrame, pd.DataFrame]:

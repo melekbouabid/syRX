@@ -404,3 +404,34 @@ not applied to this model); llama3.2 and gemma3 spill to the CPU. Mistral 7B (4.
 not fit at all. `SYNERGYRX_LLM_MODEL` switches the model without code changes. To review: a
 3B model is weak at reasoning; answers are kept short, grounded in retrieved sources and
 checked by the safety node (D63).
+
+**D60. One openFDA label per ingredient, chosen by a fixed rule; dosage sections never
+stored.** openFDA has dozens of labels per ingredient (generics, repackagers). The connector
+takes the 25 most recent prescription labels (then any product type if none matches) and
+keeps, in order: a label about the ingredient, single-ingredient before combination,
+prescription before OTC, the most indexed sections, the most recent `effective_time`. The
+most recent label alone was often a repackager copy without "drug interactions". Result:
+81 prescription + 1 OTC (fexofenadine); pseudoephedrine and vitamin B6 only exist in
+combination labels. The candidates are saved with each label for audit. Dosage and
+administration, dosage forms and strengths, overdosage, how supplied, package label,
+clinical pharmacology, pharmacokinetics and clinical studies are dropped before the raw file
+is written (refused again by the schema and the chunker), so no dosing text is ever indexed.
+Amounts still appear in other sections (study doses in adverse reactions): the agent's safety
+node removes dose sentences from its answers.
+
+**D61. PubMed: up to 20 relevance-sorted abstracts per ingredient, on interactions and
+adverse effects.** The existing PubMed connector gained a query mode `ingredients` and an
+optional `sort` (default unchanged, so SynergyRx runs are untouched): one query per
+ingredient, English abstracts since 2000, `sort=relevance`, at most 20 records (1,640 at
+most; 1,570 distinct articles). A larger bound would make abstracts dominate the labels in
+retrieval and take longer to embed; every query hit the cap, so this is a sample of the
+literature, not all of it. Retracted articles are kept and flagged, and excluded at search
+time by default. The RAG sources run in their own data folder (`data/rag`, own manifest),
+so they never mix with the SynergyRx PubMed records.
+
+**D62. DDInter in the text index: only the 2,350 pairs between the class ingredients.**
+DDInter rows only say "A and B interact, severity X". The 40,508 pairs with any drug would
+be 80 % of the corpus in near-identical sentences and push labels and abstracts out of the
+results; the `check_interaction` tool reads every pair from the database instead. The RAG
+corpus is versioned with DVC: sources with `dvc add` (`data/rag/raw`, `interim`,
+`manifest.json`), chunks as the `rag_corpus` stage of `dvc.yaml`.

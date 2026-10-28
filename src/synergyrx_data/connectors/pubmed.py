@@ -22,8 +22,10 @@ from synergyrx_data.literature.abstracts import articles_frame, deduplicate, par
 from synergyrx_data.literature.queries import (
     Query,
     append_query_log,
+    build_ingredient_queries,
     build_queries,
     load_query_inputs,
+    read_ingredients,
 )
 from synergyrx_data.manifest import utc_now_iso
 
@@ -80,7 +82,10 @@ class PubMedConnector(Connector):
         notes="Queries are built from the processed drug table, so run `clean` first.",
     )
     default_options: ClassVar[dict[str, Any]] = {
-        "mode": "pairs",  # pairs | drugs
+        "mode": "pairs",  # pairs | drugs | ingredients (Tujya: interactions, adverse effects)
+        "ingredients_file": "config/pill_classes.csv",  # mode `ingredients` only
+        "ingredient_aliases": {},  # extra search terms per ingredient, mode `ingredients`
+        "sort": None,  # ESearch sort order, e.g. "relevance"; None keeps PubMed's default
         "max_queries": 25,
         "max_records_per_query": 200,
         "batch_size": 200,
@@ -109,8 +114,16 @@ class PubMedConnector(Connector):
         return self.interim_dir / "query_log.jsonl"
 
     def queries(self) -> list[Query]:
-        drugs, pairs = load_query_inputs(self.settings)
         limit = min(self.options["max_queries"], 3) if self.sample else self.options["max_queries"]
+        if self.options["mode"] == "ingredients":
+            names = read_ingredients(self.settings.resolve(Path(self.options["ingredients_file"])))
+            return build_ingredient_queries(
+                names,
+                self.options["ingredient_aliases"],
+                max_queries=limit,
+                max_terms=self.options["max_terms_per_drug"],
+            )
+        drugs, pairs = load_query_inputs(self.settings)
         return build_queries(
             drugs,
             pairs,
@@ -204,6 +217,7 @@ class PubMedConnector(Connector):
                 "datetype": self.options["date_type"],
                 "mindate": mindate,
                 "maxdate": maxdate,
+                **({"sort": self.options["sort"]} if self.options["sort"] else {}),
                 **self._identity(),
             },
             use_cache=False,  # a cached WebEnv would have expired on the history server

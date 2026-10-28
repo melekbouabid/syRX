@@ -31,3 +31,34 @@ stages:
       md5: 955353297ec68253f1e925a7304ec275.dir
       size: 304693171
       nfiles: 10726
+  rag_corpus:
+    cmd: python -m synergyrx_data.tujya corpus
+    deps:
+    - path: data/rag/interim
+      hash: md5
+      md5: 0419ea6313c8ca6eba822de3bd8c76be.dir
+      size: 1858114
+      nfiles: 4
+    - path: data/rag/raw/pubmed
+      hash: md5
+      md5: c95d50e0b58af134900dc7d81420654a.dir
+      size: 22134557
+      nfiles: 164
+    - path: data/tujya/interactions_between_classes.csv
+      hash: md5
+      md5: 91982324eb744e1ce2a132dcf2cb88ba
+      size: 552534
+    - path: data/tujya/pill_ingredients.csv
+      hash: md5
+      md5: 6051d52004ad0d914547068491a20339
+      size: 19017
+    - path: src/synergyrx_data/tujya/corpus.py
+      hash: md5
+      md5: 1d6c5bdf7adf235802c1234a47bf5361
+      size: 11664
+    outs:
+    - path: data/rag/corpus
+      hash: md5
+      md5: 67ab752e53fb16523e9e01787320cf55.dir
+      size: 1832839
+      nfiles: 2

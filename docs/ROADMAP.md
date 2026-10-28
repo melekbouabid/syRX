@@ -47,11 +47,11 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [x] Tests (fake ONNX models, SQLite medicine tables; 69 backend tests)
 
 ## 4. RAG corpus
-- [ ] openFDA drug labels for the listed ingredients
-- [ ] PubMed abstracts for the listed ingredients
-- [ ] Chunking with metadata (source, drug, section, URL, date)
+- [x] openFDA drug labels for the 82 ingredients (connector `openfda_label`, D60)
+- [x] PubMed abstracts: up to 20 per ingredient on interactions and adverse effects (D61)
+- [x] Chunking with metadata (source, drug, section, URL, date, licence, retraction; docs/RAG.md)
 - [ ] bge-m3 embeddings in PostgreSQL + pgvector, BM25 hybrid search
-- [ ] Corpus versioned with DVC
+- [x] Corpus versioned with DVC (`data/rag/*.dvc`, stage `rag_corpus`)
 
 ## 5. Agent
 - [ ] LangGraph graph: understand -> tools -> retrieve -> answer with citations -> safety check

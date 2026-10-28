@@ -44,6 +44,7 @@ http:
     ndownloader.figshare.com: {rate: 1.0, burst: 1, max_concurrency: 1}
     dataverse.harvard.edu: {rate: 1.0, burst: 1, max_concurrency: 1}
     rxnav.nlm.nih.gov: {rate: 10.0, burst: 1, max_concurrency: 2}      # Tujya; NLM allows 20/s per IP
+    api.fda.gov: {rate: 3.0, burst: 1, max_concurrency: 1}            # Tujya; openFDA allows 240/min without a key
 
   retry: {max_attempts: 5, backoff_base: 1.0, backoff_max: 60.0, max_retry_after: 300.0}
   circuit: {failure_threshold: 5, reset_seconds: 300.0}
@@ -99,6 +100,8 @@ sources:
     enabled: true
   pubtator:
     enabled: false               # optional
+  openfda_label:
+    enabled: false               # Tujya RAG corpus: `python -m synergyrx_data.tujya labels`
 
 cleaning:
   manual_overrides: config/manual_drug_overrides.csv

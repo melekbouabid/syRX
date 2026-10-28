@@ -174,6 +174,23 @@ class ArticleRecord(Record):
     has_abstract: bool = False
 
 
+class LabelSectionRecord(Record):
+    """One section of one openFDA drug label (Tujya RAG corpus); dosage is never stored."""
+
+    ingredient: str = Name
+    label_id: str = Field(min_length=1)
+    set_id: str | None = None
+    effective_time: str | None = None
+    section: str = Field(min_length=1)
+    text: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _no_dosage(self) -> Self:
+        if "dosage" in self.section or "overdos" in self.section:
+            raise ValueError("dosage sections are never stored")
+        return self
+
+
 class EuropePmcRecord(Record):
     pmid: str = Field(pattern=r"^\d+$")
     pmcid: str | None = None
