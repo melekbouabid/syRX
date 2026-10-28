@@ -1,11 +1,21 @@
-# Tujya infrastructure: PostgreSQL + pgvector (app data and RAG vectors) and an MLflow
-# tracking server with Model Registry. Backend / frontend / ollama services come later.
+# Tujya, the whole app in one command:
 #
-#   docker compose up -d          # http://localhost:5000 = MLflow UI, localhost:5432 = Postgres
-#   docker compose down           # keeps the volumes; `down -v` deletes them
+#   docker compose up -d --build
+#
+#   http://localhost:8080        web app (nginx: React build; /api, /docs, /openapi.json -> backend)
+#   http://localhost:8000/docs   API directly (Swagger)
+#   http://localhost:5000        MLflow UI          localhost:5432  PostgreSQL + pgvector
+#
+#   docker compose down          # keeps the volumes; `down -v` deletes them
+#
+# Before the first start, on the host (docs/INFRA.md):
+#   - `dvc pull` or the data steps, so data/tujya/*.csv and data/vision/c3pi/images exist;
+#   - `python -m tujya_vision.publish` (vision venv) to fill models/ from the Model Registry.
+# `pharma-init` reloads the medicine tables from data/tujya on every start, then exits.
 #
 # Credentials are development defaults; override them in the shell or in a compose
-# `.env` file (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_PORT, MLFLOW_PORT).
+# `.env` file (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_PORT, MLFLOW_PORT,
+# BACKEND_PORT, WEB_PORT, BACKEND_IMAGE, FRONTEND_IMAGE).
 name: tujya
 
 services:
@@ -45,6 +55,50 @@ services:
       - "${MLFLOW_PORT:-5000}:5000"
     volumes:
       - mlartifacts:/mlartifacts
+    restart: unless-stopped
+
+  # One-shot: (re)build the medicine tables from config/ and data/tujya, then exit.
+  pharma-init:
+    image: ${BACKEND_IMAGE:-tujya-backend:local}
+    build: ./backend
+    command: ["python", "-m", "app.pharma_loader"]
+    environment: &backend-env
+      SYNERGYRX_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tujya}:${POSTGRES_PASSWORD:-tujya}@postgres:5432/${POSTGRES_DB:-tujya}
+      SYNERGYRX_PHARMA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tujya}:${POSTGRES_PASSWORD:-tujya}@postgres:5432/${POSTGRES_DB:-tujya}
+    volumes: &backend-mounts
+      # The app's project root is "/" in the image: these are its default paths.
+      - ./config:/config:ro
+      - ./data/tujya:/data/tujya:ro
+      - ./data/parquet:/data/parquet:ro
+      - ./data/vision/c3pi/images:/data/vision/c3pi/images:ro
+      - ./models:/models:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    image: ${BACKEND_IMAGE:-tujya-backend:local}
+    build: ./backend
+    environment: *backend-env
+    volumes: *backend-mounts
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pharma-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-tujya-frontend:local}
+    build: ./frontend
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

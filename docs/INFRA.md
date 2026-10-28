@@ -1,24 +1,60 @@
 # Infrastructure (Docker Compose)
 
-`docker-compose.yml` at the repository root runs the two services the data and the models
-need today. Backend, frontend and Ollama services will be added when those parts exist.
-
-| Service | Image | Port | Data |
-|---|---|---|---|
-| `postgres` | `pgvector/pgvector:pg16` | 5432 | volume `pgdata`; databases `tujya` (app tables, pgvector extension) and `mlflow` |
-| `mlflow` | built from `docker/mlflow/Dockerfile` (MLflow 3.17.2 + psycopg2) | 5000 | tracking store in PostgreSQL (`mlflow` database), artefacts in volume `mlartifacts`, served by the server (`--serve-artifacts`) |
+`docker-compose.yml` at the repository root runs the whole app with one command. Ollama
+(local LLM, Module 2) will be added with the agent.
 
 ```bash
-docker compose up -d --build        # first start builds the MLflow image
-docker compose ps                   # postgres should be "healthy"
-curl http://localhost:5000/health   # MLflow: OK
+docker compose up -d --build        # first start builds the images (a few minutes)
+docker compose ps                   # postgres, backend, frontend healthy; pharma-init exited (0)
+# web app http://localhost:8080   API http://localhost:8000/docs   MLflow http://localhost:5000
 docker compose down                 # stops; volumes are kept (down -v deletes them)
 ```
+
+| Service | Image | Port | Role |
+|---|---|---|---|
+| `postgres` | `pgvector/pgvector:pg16` | 5432 | volume `pgdata`; database `tujya` (accounts, medicine tables, pgvector) and `mlflow` |
+| `mlflow` | built from `docker/mlflow/Dockerfile` (MLflow 3.17.2 + psycopg2) | 5000 | tracking store in PostgreSQL, artefacts in volume `mlartifacts`, Model Registry |
+| `pharma-init` | `tujya-backend` | none | one-shot: `python -m app.pharma_loader` rebuilds the medicine tables from `config/` and `data/tujya/`, then exits; the backend waits for it |
+| `backend` | built from `backend/Dockerfile` (Python 3.12, FastAPI, ONNX Runtime CPU) | 8000 | the API; Swagger at `/docs` |
+| `frontend` | built from `frontend/Dockerfile` (Node 22 build, nginx 1.27) | 8080 | the React app; nginx forwards `/api`, `/docs`, `/openapi.json` to `backend` (`frontend/nginx.conf`) |
+
+**Before the first start** (the images contain no data and no model, D55):
+
+1. Data under `data/` (DVC, docs/DATASET_C3PI.md, docs/INTERACTIONS.md):
+   `data/tujya/*.csv` (medicine tables) and `data/vision/c3pi/images/` (demo gallery);
+   `data/parquet/` (SynergyRx tables) is optional.
+2. Models: `cd vision && python -m tujya_vision.publish` fills `models/` from the MLflow
+   Model Registry (MLflow must be running: `docker compose up -d mlflow` first).
+
+These folders are mounted **read-only** into the backend (`/config`, `/data/...`, `/models`;
+the app's project root is `/` in the image, so its default paths need no setting). Without
+models, `/api/scan` answers 503 and says how to publish them; without the CSV files,
+`pharma-init` fails and the backend does not start.
+
+Accounts: in Docker the accounts tables live in the same PostgreSQL database `tujya` (not in
+`backend/app.db`, which only the local development server uses). The first start creates the
+default administrator and the demo account (`user@gmail.com` / `user`); change the
+administrator password before the server is reachable by anyone else.
+
+Images on GitHub Container Registry: docs/CD.md. To run the published images instead of
+building: `BACKEND_IMAGE=ghcr.io/... FRONTEND_IMAGE=ghcr.io/... docker compose up -d --no-build`.
 
 `docker/postgres/init/01-init.sql` runs once, on an empty volume: it enables `vector` in
 the `tujya` database and creates the `mlflow` database. Credentials are development
 defaults (`tujya` / `tujya`); override `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`,
-`POSTGRES_PORT`, `MLFLOW_PORT` in the shell or a compose `.env` file.
+`POSTGRES_PORT`, `MLFLOW_PORT`, `BACKEND_PORT`, `WEB_PORT` in the shell or a compose `.env`
+file.
+
+## Smoke test (2026-10-28)
+
+After `docker compose up -d --build`, through nginx on port 8080: `/api/health` 200,
+`/docs` 200 (Swagger UI), `/openapi.json` 18 paths, `/api/docs` 307 to `/docs`,
+`/api/public/summary` 200, `/api/scan` 401 without sign-in; signed in as the demo user,
+`/api/scan` on a 2560 x 1920 C3PI test photo of fluconazole: one pill, top-1 class 9
+FLUCONAZOLE 100MG TABLETS, probability 0.996, 59 ms, models detector v1 / classifier v2;
+`/api/interactions` fluconazole + citalopram: Major (DDInter); demo gallery 8 photos. The
+Playwright script (`BASE=http://localhost:8080 node scripts/screenshots.mjs`) runs the whole
+browser flow against the containers.
 
 ## Medicine tables
 
@@ -33,7 +69,7 @@ pill_ingredients (pill_id, ingredient_id, source_id)   RxNav
 interactions (ingredient_a_id < ingredient_b_id, severity, description, source_id)   DDInter
 ```
 
-Load or refresh them (full refresh in one transaction, safe to rerun):
+In Docker, `pharma-init` loads them on every start. By hand (full refresh, safe to rerun):
 
 ```bash
 cd backend

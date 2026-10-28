@@ -69,7 +69,8 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 
 ## 7. Delivery
 - [x] Docker Compose: postgres + pgvector, mlflow (docs/INFRA.md)
-- [ ] Docker Compose: backend, frontend, ollama
+- [x] Docker Compose: backend, frontend (nginx), one-shot loader; one command (docs/INFRA.md)
+- [ ] Docker Compose: ollama (with the Module 2 agent)
 - [x] GitHub Actions CI (lint, tests, frontend build)
 - [ ] GitHub Actions CD (images / deploy)
 - [x] README updated for Tujya

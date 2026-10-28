@@ -29,7 +29,7 @@ Une case n'est cochée que lorsque l'exigence est réellement satisfaite.
 - [x] MLflow : tracking des expériences
 - [x] MLflow : Model Registry
 - [x] Export ONNX et inférence ONNX Runtime
-- [ ] Docker Compose
+- [x] Docker Compose
 - [ ] GitHub Actions CI/CD
 - [ ] Soutenance pratique (démonstration technique en direct)
 
@@ -43,6 +43,23 @@ Une case n'est cochée que lorsque l'exigence est réellement satisfaite.
 - [ ] Dépôt GitHub documenté avec commits réguliers
 - [ ] Rapport technique
 - [ ] Démonstration
+
+## Lancer l'application
+
+Toute l'application (PostgreSQL + pgvector, MLflow, API, site web) démarre avec une seule
+commande, depuis la racine du dépôt :
+
+```bash
+docker compose up -d --build
+```
+
+- Site : <http://localhost:8080> (compte de démonstration `user@gmail.com` / `user`, puis
+  « Scanner ») ; Swagger : <http://localhost:8080/docs> ; MLflow : <http://localhost:5000>.
+- Avant le premier démarrage : les données sous `data/` (DVC) et les modèles dans `models/`
+  (`cd vision && python -m tujya_vision.publish`, depuis le Model Registry MLflow). Détails :
+  [docs/INFRA.md](docs/INFRA.md) ; API : [docs/API.md](docs/API.md).
+- Démonstration pas à pas : [docs/SESSION_REPORT_2.md](docs/SESSION_REPORT_2.md) ; captures
+  d'écran : [docs/screenshots/](docs/screenshots/).
 
 ## Sources de données
 
@@ -76,6 +93,7 @@ pipeline SynergyRx sont décrites dans l'annexe ci-dessous.
 | 2026-10-28 | Session 2, tâche 2 : API de scan | `POST /api/scan` asynchrone : image (multipart, JPEG/PNG/WebP, 10 Mo max) -> détecteur ONNX -> crop de chaque comprimé -> classifieur ONNX, avec ONNX Runtime (CPU, GPU en option) ; pour chaque comprimé : boîte en pixels et normalisée, top-5 (classe, nom, nom générique, principes actifs, probabilité), `needs_confirmation` sous le seuil 0,85 choisi sur la validation ; taille de l'image et temps d'inférence ; schémas Pydantic, connexion requise ; modèles chargés depuis `SYNERGYRX_MODELS_DIR`, remplis par `python -m tujya_vision.publish` depuis le Model Registry MLflow (503 clair si absents) | `backend/app/scanner.py`, `backend/app/routers/scan.py`, `backend/app/medicines.py`, `backend/app/schemas.py`, `backend/app/limits.py`, `backend/scripts/evaluate_scan.py`, `vision/tujya_vision/publish.py`, `backend/tests/test_scan.py`, `backend/tests/fake_models.py`, `docs/API.md`, `docs/VISION.md` | Même résultat qu'Ultralytics (40/40 photos même nombre de boîtes, IoU 0,9999) ; sur les 600 photos de test : comprimé trouvé 98,5 %, top-1 **89,3 %**, top-5 **95,8 %** ; seuil 0,85 : 70,5 % des photos de test acceptées sans confirmation, 99,3 % justes ; 12 tests avec de petits modèles ONNX factices (pas de poids réels en CI) |
 | 2026-10-28 | Session 2, tâche 3 : API d'interactions | `POST /api/interactions` : 2 à 10 comprimés (class_id) et/ou principes actifs ; chaque paire avec sévérité DDInter, description, source (nom, URL, citation), principes actifs communs ; paires triées par sévérité ; sans résultat : « Aucune interaction connue dans cette base de données », jamais « sûr » ; élément inconnu ou comprimé sans principe actif : « aucune vérification n'est possible ». `GET /api/pills?q=` : recherche dans les 150 classes (nom, générique, empreinte, fabricant, principe actif, numéro). Lecture des tables PostgreSQL du chargeur | `backend/app/routers/medicines.py`, `backend/app/medicines.py`, `backend/tests/test_medicines.py`, `docs/API.md` | 16 tests sur SQLite (dont : jamais le mot « safe »/« sûr », avertissement et source toujours présents) ; 69 tests backend passent ; vérifié sur PostgreSQL (warfarine + fluconazole : Major) ; case « Backend FastAPI asynchrone, Pydantic, Swagger `/docs` » cochée |
 | 2026-10-28 | Session 2, tâche 4 : page Scanner | Page « Scanner » (comptes connectés) : upload (glisser-déposer) ou webcam (getUserMedia, capture d'une image et prédictions en direct environ toutes les secondes) ou galerie de démo ; photo avec boîtes et étiquettes en superposition SVG ; top-5 de chaque comprimé avec barres de probabilité, badge « Please confirm » sous le seuil, recherche d'un autre comprimé (`GET /api/pills`), confirmation ; liste « My pills » sur plusieurs photos ; dès 2 comprimés, `/api/interactions` affiché par sévérité avec sources et avertissement. Galerie de 8 photos du split de test servies en lecture seule par le backend (`GET /api/demo/images`), jamais commitées. Preuve Playwright | `frontend/src/pages/ScanPage.tsx`, `frontend/src/api.ts`, `frontend/src/styles.css`, `frontend/scripts/screenshots.mjs`, `backend/app/routers/demo.py`, `backend/tests/test_demo.py`, `config/demo_gallery.csv`, `docs/screenshots/` | `npm run build` OK ; script Playwright : connexion, upload d'une photo de test, 2 photos de démo, interactions (fluconazole + citalopram et citalopram + tramadol : Major ; fluconazole + tramadol : Moderate), cas « à confirmer », webcam (caméra factice de Chromium), Swagger : 7 captures dans `docs/screenshots/` ; 74 tests backend ; case « Frontend React » cochée |
+| 2026-10-28 | Session 2, tâche 5 : Docker Compose complet | Images backend (Python 3.12, FastAPI, ONNX Runtime CPU, utilisateur non root, healthcheck) et frontend (build Node 22 puis nginx 1.27 qui sert le site et transmet `/api`, `/docs`, `/openapi.json` au backend) ; service ponctuel `pharma-init` qui recharge les tables de médicaments ; modèles, données et config montés en lecture seule (D55) ; comptes dans PostgreSQL ; section « Lancer l'application » | `docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile`, `frontend/nginx.conf`, `docs/INFRA.md`, `README.md` | `docker compose up -d --build` : tous les services sains ; curl via nginx : health 200, `/docs` 200, `/openapi.json` 18 routes, `/api/public/summary` 200, `/api/scan` réel sur une photo de test (fluconazole, 0,996, 59 ms), interactions Major ; parcours Playwright complet sur les conteneurs ; case « Docker Compose » cochée (Ollama viendra avec le module 2) |
 
 ---
 

@@ -354,3 +354,14 @@ chromium` does, once). `frontend/scripts/screenshots.mjs` signs in, uploads a te
 scans two demo photos, checks the interactions, opens the webcam (Chromium's fake camera)
 and Swagger, and fails if a step does not show what it should. The seven screenshots in
 `docs/screenshots/` are JPEG (quality 82, 33-125 kB) to keep the repository small.
+
+**D55. The images carry code only; data, models and config are mounted read-only.** C3PI
+(research use), DDInter (CC BY-NC-SA, no redistribution) and the models stay out of the
+images, which can therefore be pushed to a registry (Task 6). docker-compose.yml mounts
+`config/`, `data/tujya`, `data/parquet`, `data/vision/c3pi/images` and `models/` read-only;
+the app's project root is `/` in the image, so the default paths of `app/config.py` match
+the mounts without extra settings. A one-shot `pharma-init` service rebuilds the medicine
+tables on every start (a few seconds) and the backend waits for it, so `docker compose up`
+is the only command. In Docker the accounts live in PostgreSQL (database `tujya`), so
+`backend/app.db` is never used or touched by the containers. Ollama is not in the compose
+file yet: it comes with the Module 2 agent.
