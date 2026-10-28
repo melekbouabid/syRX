@@ -28,11 +28,13 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 ## 2. Vision model
 - [x] Hardware checked, `vision/` package with its own venv (RTX 2050, CUDA 13.0)
 - [x] Identification: classifier trained by transfer learning (YOLO11s-cls, test top-1 93.5 %)
-- [ ] Detection: pill bounding boxes (decision documented, YOLO detector)
+- [x] Detection: pill bounding boxes (automatic labels, D38; YOLO11n, test mAP50 0.972)
 - [x] MLflow runs (params, metrics, artefacts)
 - [x] Best model registered in the MLflow Model Registry
 - [x] ONNX export, inference with ONNX Runtime, outputs match PyTorch
-- [ ] Measure top-1 / top-5 (identification) and mAP (detection); compare with ePillID
+- [x] Measure top-1 / top-5 (identification) and mAP (detection)
+- [ ] Compare with ePillID on its own split and metrics (docs/VISION.md)
+- [ ] Hand-check the test boxes; second labelling pass with the trained detector
 
 ## 3. API
 - [x] SQL schema (pills, ingredients, pill_ingredients, interactions, sources) + loader

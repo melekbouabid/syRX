@@ -264,3 +264,16 @@ receives in the app after detection (two-stage design).
 deployment artefact (what the API will load with ONNX Runtime); `best.pt` is kept as a run
 artefact for retraining. The export is only trusted after an ONNX Runtime vs PyTorch check
 on test images (top-1 agreement / box IoU logged as metrics).
+
+**D42. Ultralytics' automatic package installs are disabled.** During the end-to-end
+evaluation Ultralytics installed `onnxruntime-gpu` 1.31.1 into `vision/.venv` by itself
+(about 3 minutes, a few hundred MB). The venv now has both `onnxruntime` and
+`onnxruntime-gpu` (it works; CUDA and TensorRT providers are listed). It was left as it is,
+because removing either package can break the other; a clean rebuild from
+`vision/requirements.txt` gives the CPU runtime only. `tujya_vision/__init__.py` sets
+`YOLO_AUTOINSTALL=false` so dependencies only change through requirements.txt.
+
+**D43. The datasets are a DVC stage; Ultralytics caches are ignored.** `dvc.yaml` stage
+`prepare` records the datasets built from the tracked images (`dvc.lock`); `*.cache` files
+that Ultralytics writes next to the labels are in `.dvcignore` because they are rebuilt on
+any machine.

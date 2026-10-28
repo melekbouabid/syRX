@@ -100,6 +100,32 @@ Main run: 14 min of training, validation top-1 92.2 % / top-5 97.9 % at the last
 MLflow run `7d2ce0ff7c53401aa42d2ef89c3aa794`, registered as `tujya-pill-classifier`
 version 2 (version 1 is the smoke run). Test = 589 crops of photos never seen in training.
 
+### Detection
+
+| Run | Model | Device | Epochs | Test mAP50 | Test mAP50-95 | Precision | Recall | ONNX vs PyTorch |
+|---|---|---|---:|---:|---:|---:|---:|---|
+| main | YOLO11n, 640 px, batch 8 | RTX 2050 | 30 | **0.972** | **0.861** | 0.957 | 0.936 | same box count on 100 % of 50 test photos, mean IoU 0.976 |
+
+MLflow run `5c6db57a144b483aaf37b94e74f5e2cb`, registered as `tujya-pill-detector` version 1.
+Test = 483 clean test photos, scored against the automatic boxes (whose own precision is
+about 90 %, see above), so these numbers measure agreement with the auto-labeller.
+
+### End to end (what the app would do)
+
+`python -m tujya_vision.evaluate` on **all 600 consumer photos of the test split** (also
+the 117 the auto-labeller rejected), with the two **ONNX** exports: the detector runs on
+the full photo, the most confident box is cropped and classified.
+
+| Photos | Pill detected | Top-1 | Top-5 |
+|---:|---:|---:|---:|
+| 600 | 98.5 % | **89.2 %** | **95.8 %** |
+
+MLflow run `9bfa9d81a606472892fbf67efe7036e1` (`evaluate-end-to-end`). Slower than needed
+(25 min on CPU) because Ultralytics installed `onnxruntime-gpu` on the fly during this run;
+auto-install is now disabled in `tujya_vision/__init__.py` (D42).
+
+### Notes on the scores
+
 What these numbers mean: train and test contain **different photos of the same physical
 pills** (C3PI photographed each pill many times, under several cameras, lights and
 backgrounds), and the test crops come from the automatic boxes, not from the detector. The
