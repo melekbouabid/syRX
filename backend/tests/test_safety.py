@@ -98,3 +98,48 @@ def test_lab_values_are_not_doses_and_missing_citations_are_attributed() -> None
         source_texts=["Warfarin and bleeding.", label],
     )
     assert unrelated.cited == [] and "no_citation" in unrelated.violations
+
+
+def test_attribution_by_meaning_cites_the_closest_source_only_when_clear() -> None:
+    import asyncio
+
+    from app.rag.embeddings import FakeEmbedder
+    from app.rag.safety import attribute_by_meaning
+
+    sources = [
+        "Warfarin label: bleeding risk and prothrombin time monitoring with azole antifungals.",
+        "Metformin label: contraindicated in severe renal impairment and metabolic acidosis.",
+    ]
+    text = "Metformin is contraindicated in severe renal impairment and metabolic acidosis."
+    cited, added = asyncio.run(attribute_by_meaning(text, sources, FakeEmbedder(), threshold=0.5))
+    assert added == 1 and cited.endswith("acidosis [2].")
+    already = "Warfarin needs monitoring [1]."
+    assert asyncio.run(attribute_by_meaning(already, sources, FakeEmbedder(), threshold=0.5)) == (
+        already,
+        0,
+    )
+    unrelated = "Losartan may cause dizziness in some elderly people."
+    _, none = asyncio.run(attribute_by_meaning(unrelated, sources, FakeEmbedder(), threshold=0.9))
+    assert none == 0
+
+
+def test_dosing_advice_without_a_number_is_a_dose_sentence() -> None:
+    for sentence in (
+        "Un ajustement de la dose de warfarine peut être nécessaire [1].",
+        "Il faut peut-être ajuster la dose [2].",
+        "Dosage adjustment may be needed [1].",
+        "Reduce the dose of simvastatin [1].",
+        "A dose reduction is recommended [3].",
+    ):
+        assert sentence_problems(sentence) == ["dose"], sentence
+    assert sentence_problems("Le fluconazole augmente le temps de prothrombine [1].") == []
+
+
+def test_snippets_hide_dose_sentences() -> None:
+    from app.rag.safety import redact_doses
+
+    text = (
+        "Fluconazole increases warfarin exposure. Administration of 40 mg/day citalopram did "
+        "not change it. The tolvaptan dose should be reduced. Monitor the INR."
+    )
+    assert redact_doses(text) == "Fluconazole increases warfarin exposure. […] Monitor the INR."

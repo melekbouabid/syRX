@@ -18,7 +18,7 @@ import re
 from dataclasses import dataclass, field
 
 from app.medicines import DISCLAIMER, NO_KNOWN_INTERACTION
-from app.rag.embeddings import fold
+from app.rag.embeddings import Embedder, fold
 
 _UNITS = (
     r"(?:mg|mcg|µg|μg|ug|g|ml|ui|iu|unites?|units?|gouttes?|drops?|comprimes?"
@@ -31,7 +31,12 @@ DOSE = re.compile(
     rf"\b\d+(?:[.,]\d+)?\s*{_UNITS}\b"
     r"|\b(?:\d+|une|deux|trois|quatre)\s+fois\s+par\s+(?:jour|semaine)\b"
     r"|\b(?:once|twice|three times)\s+(?:a|per)\s+(?:day|week)\b"
-    r"|\bmg\s*/\s*(?:kg|j|jour|day)\b|\bposologie\b|\bdosage recommande\b",
+    r"|\bmg\s*/\s*(?:kg|j|jour|day)\b|\bposologie\b|\bdosage recommande\b"
+    # dosing advice without a number: "ajuster la dose", "dose adjustment", "reduce the dose"
+    r"|\b(?:ajust|adapt|redui|redu|diminu|augment|modifi|baiss)\w*\s+(?:de\s+)?(?:la\s+|les\s+)?doses?\b"
+    r"|\bdoses?\b[^.;]{0,40}?\b(?:adjust|modif|reduc|increas|titrat|lower|decreas|ajust|adapt|redui|diminu|augment)\w*"
+    r"|\b(?:adjust|reduc|increas|lower|decreas|titrat)\w*\s+(?:the\s+)?(?:doses?|dosage)\b"
+    r"|\bdosage\s+(?:adjust|modif|reduc)\w*",
     re.IGNORECASE,
 )
 # Checked on the lower-cased text with its accents: folded, "sûr" would be "sur" ("on").
@@ -193,3 +198,53 @@ class SentenceFilter:
     def flush(self) -> list[str]:
         rest, self.buffer = self.buffer, ""
         return [rest] if rest.strip() and not sentence_problems(rest) else []
+
+
+async def attribute_by_meaning(
+    text: str,
+    sources: list[str],
+    embedder: Embedder,
+    *,
+    threshold: float,
+    margin: float = 0.03,
+) -> tuple[str, int]:
+    """Cite, for each sentence the model left uncited, the source closest in meaning.
+
+    bge-m3 is multilingual, so a French sentence finds the English source it paraphrases,
+    which word overlap (`best_source`) cannot. A citation is added only when the closest
+    source is similar enough (`threshold`) and clearly closer than the next one (`margin`);
+    the benchmark's citation judge then checks that the cited source really supports it.
+    Returns the new text and the number of citations added.
+    """
+    sentences = split_sentences(text.replace(DISCLAIMER, ""))
+    uncited = [s for s in sentences if not CITATION.search(s) and len(s) >= 25]
+    if not uncited or not sources:
+        return text, 0
+    vectors = await embedder.embed(uncited + sources)
+    claims, documents = vectors[: len(uncited)], vectors[len(uncited) :]
+    added = 0
+    for sentence, claim in zip(uncited, claims, strict=True):
+        scores = sorted(
+            ((_cosine(claim, doc), number) for number, doc in enumerate(documents, start=1)),
+            reverse=True,
+        )
+        best, number = scores[0]
+        runner_up = scores[1][0] if len(scores) > 1 else -1.0
+        if best >= threshold and best - runner_up >= margin:
+            cited = re.sub(r"([.!?]?)$", rf" [{number}]\1", sentence, count=1)
+            text = text.replace(sentence, cited, 1)
+            added += 1
+    return text, added
+
+
+def _cosine(a: list[float], b: list[float]) -> float:
+    dot = sum(x * y for x, y in zip(a, b, strict=True))
+    norm = (sum(x * x for x in a) ** 0.5) * (sum(y * y for y in b) ** 0.5)
+    return dot / norm if norm else 0.0
+
+
+def redact_doses(text: str) -> str:
+    """A source excerpt for display: sentences with a dose become "[…]" (the labels' study
+    doses are in the indexed text, but the app never shows a dose)."""
+    kept = ["[…]" if "dose" in sentence_problems(s) else s for s in split_sentences(text)]
+    return re.sub(r"(?:\[…\]\s*){2,}", "[…] ", " ".join(kept)).strip()

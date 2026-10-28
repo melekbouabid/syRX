@@ -30,11 +30,12 @@ from langgraph.graph import END, START, StateGraph
 from sqlalchemy.orm import Session
 
 from app.medicines import DISCLAIMER, pill_infos
-from app.rag.embeddings import fold
+from app.rag.embeddings import EmbeddingError, fold
 from app.rag.safety import (
     CROSS_REFERENCE,
     REFUSAL_DOSE,
     SentenceFilter,
+    attribute_by_meaning,
     check_answer,
     is_dose_question,
 )
@@ -110,7 +111,8 @@ ANSWER_PROMPT = {
     "fr": """Tu es Tujya, un assistant d'information sur les médicaments. Réponds en français.
 Règles absolues :
 - Réponds UNIQUEMENT à partir des sources numérotées ci-dessous. Si elles ne répondent pas, dis-le.
-- Après chaque phrase, cite la ou les sources qui la soutiennent, par leur numéro : [1], [2].
+- Chaque phrase se termine par le numéro de la source qui la soutient, entre crochets.
+  Exemple : « La metformine est contre-indiquée en cas d'insuffisance rénale sévère [2]. »
 - Ne donne JAMAIS de dose, de posologie, de nombre de comprimés ou de fréquence de prise.
 - N'écris JAMAIS qu'une association est « sûre » ou « sans danger ». S'il n'y a pas d'interaction
   dans les sources, écris : « aucune interaction connue dans cette base de données ».
@@ -121,7 +123,8 @@ Règles absolues :
     "en": """You are Tujya, a medicine-information assistant. Answer in English.
 Absolute rules:
 - Answer ONLY from the numbered sources below. If they do not answer, say so.
-- After each sentence, cite the source(s) that support it by number: [1], [2].
+- Every sentence ends with the number of the source that supports it, in brackets.
+  Example: "Metformin is contraindicated in severe renal impairment [2]."
 - NEVER give a dose, a dosage, a number of tablets or how often to take a medicine.
 - NEVER write that a combination is "safe". If the sources show no interaction, write:
   "no known interaction in this database".
@@ -188,8 +191,16 @@ def interaction_sources(result: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 class TujyaAgent:
-    def __init__(self, llm: BaseChatModel, toolbox: Toolbox, *, top_k: int = 6) -> None:
+    def __init__(
+        self,
+        llm: BaseChatModel,
+        toolbox: Toolbox,
+        *,
+        top_k: int = 6,
+        attribution_threshold: float = 0.0,
+    ) -> None:
         self.llm, self.toolbox, self.top_k = llm, toolbox, top_k
+        self.attribution_threshold = attribution_threshold
         self.tools = {t.name: t for t in langchain_tools(toolbox, CHAT_TOOLS)}
         graph = StateGraph(AgentState)
         graph.add_node("understand", self.understand)
@@ -364,12 +375,26 @@ class TujyaAgent:
             for pair in entry["result"].get("pairs", [])
         )
         sources = state.get("sources", [])
+        texts = [f"{s['title']} {s.get('text') or s.get('snippet', '')}" for s in sources]
+        draft = state.get("draft", "")
+        semantic = 0
+        if self.attribution_threshold > 0 and draft and sources:
+            try:
+                draft, semantic = await attribute_by_meaning(
+                    draft,
+                    [t[:SOURCE_CHARS] for t in texts],
+                    self.toolbox.retrievers.embedder,
+                    threshold=self.attribution_threshold,
+                )
+            except EmbeddingError:
+                semantic = 0  # the lexical attribution of check_answer still applies
         checked = check_answer(
-            state.get("draft", ""),
+            draft,
             len(sources),
             interaction_found=found,
-            source_texts=[f"{s['title']} {s.get('text') or s.get('snippet', '')}" for s in sources],
+            source_texts=texts,
         )
+        checked.violations += ["citation_added_by_meaning"] * semantic
         return {
             "answer": checked.answer,
             "safety": {

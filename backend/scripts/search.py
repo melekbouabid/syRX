@@ -23,7 +23,12 @@ from app.rag.store import ChunkStore, Filters
 
 async def run(args: argparse.Namespace) -> None:
     settings = Settings()
-    embedder = OllamaEmbedder(settings.ollama_url, settings.embedding_model, settings.embedding_dim)
+    embedder = OllamaEmbedder(
+        settings.ollama_url,
+        settings.embedding_model,
+        settings.embedding_dim,
+        num_ctx=settings.embedding_num_ctx,
+    )
     started = time.perf_counter()
     store = ChunkStore(make_engine(settings.pharma_database_url), embedder.dim)
     retriever = Retriever(store, embedder)

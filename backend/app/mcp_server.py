@@ -78,7 +78,10 @@ def build_server(toolbox: Toolbox) -> MCPServer:
 def default_toolbox(settings: Settings, embedder: Embedder | None = None) -> Toolbox:
     engine = make_engine(settings.pharma_database_url)
     embedder = embedder or OllamaEmbedder(
-        settings.ollama_url, settings.embedding_model, settings.embedding_dim
+        settings.ollama_url,
+        settings.embedding_model,
+        settings.embedding_dim,
+        num_ctx=settings.embedding_num_ctx,
     )
     scanner = ScannerHolder(
         settings.models_dir,

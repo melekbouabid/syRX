@@ -1,0 +1,6 @@
+{
+ "judge": "gemma3:4b",
+ "pairs": 40,
+ "false_yes": 4,
+ "false_yes_rate": 0.1
+}

@@ -192,9 +192,10 @@ class Toolbox:
         sections: list[str] | None = None,
         k: int = 5,
         exclude_retracted: bool = True,
-        mode: str = "hybrid",
+        mode: str | None = None,
     ) -> dict[str, Any]:
-        """Hybrid search (BM25 + bge-m3, RRF) of labels, PubMed abstracts and DDInter."""
+        """Search labels, PubMed abstracts and DDInter (mode from settings: dense by default,
+        bm25 or hybrid on request)."""
         filters = Filters(
             ingredients=tuple(self.normalise(ingredients or [])),
             doc_types=tuple(t for t in (doc_types or []) if t in DOC_TYPES),
@@ -203,6 +204,7 @@ class Toolbox:
         )
         retriever = self.retriever()
         k = max(1, min(int(k), 20))
+        mode = mode or self.settings.rag_search_mode
         hits = await retriever.search(query, k=k, mode=mode, filters=filters)  # type: ignore[arg-type]
         return {
             "query": query,
@@ -271,8 +273,8 @@ TOOL_SPECS: dict[str, tuple[str, type[BaseModel], str]] = {
     "search_documents": (
         "search_documents",
         SearchArgs,
-        "Search openFDA labels, PubMed abstracts and DDInter rows (hybrid BM25 + "
-        "embeddings), with filters on ingredient, document type and section.",
+        "Search openFDA labels, PubMed abstracts and DDInter rows (bge-m3 embeddings, BM25 "
+        "or hybrid), with filters on ingredient, document type and section.",
     ),
 }
 # The agent's model is never given identify_pills: a chat question carries no image (the

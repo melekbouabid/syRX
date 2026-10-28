@@ -1,0 +1,871 @@
+[
+ {
+  "id": "contraindications-metformin-fr",
+  "type": "contraindications",
+  "ingredients": [
+   "metformin"
+  ],
+  "language": "fr",
+  "question": "Quelles sont les contre-indications de la metformine ?"
+ },
+ {
+  "id": "contraindications-amoxicillin-en",
+  "type": "contraindications",
+  "ingredients": [
+   "amoxicillin"
+  ],
+  "language": "en",
+  "question": "What are the contraindications of amoxicillin?"
+ },
+ {
+  "id": "contraindications-carbamazepine-fr",
+  "type": "contraindications",
+  "ingredients": [
+   "carbamazepine"
+  ],
+  "language": "fr",
+  "question": "Quelles sont les contre-indications de la carbamazépine ?"
+ },
+ {
+  "id": "contraindications-simvastatin-en",
+  "type": "contraindications",
+  "ingredients": [
+   "simvastatin"
+  ],
+  "language": "en",
+  "question": "What are the contraindications of simvastatin?"
+ },
+ {
+  "id": "contraindications-lisinopril-fr",
+  "type": "contraindications",
+  "ingredients": [
+   "lisinopril"
+  ],
+  "language": "fr",
+  "question": "Quelles sont les contre-indications du lisinopril ?"
+ },
+ {
+  "id": "contraindications-allopurinol-en",
+  "type": "contraindications",
+  "ingredients": [
+   "allopurinol"
+  ],
+  "language": "en",
+  "question": "What are the contraindications of allopurinol?"
+ },
+ {
+  "id": "contraindications-levothyroxine-fr",
+  "type": "contraindications",
+  "ingredients": [
+   "levothyroxine"
+  ],
+  "language": "fr",
+  "question": "Quelles sont les contre-indications de la lévothyroxine ?"
+ },
+ {
+  "id": "contraindications-nitrofurantoin-en",
+  "type": "contraindications",
+  "ingredients": [
+   "nitrofurantoin"
+  ],
+  "language": "en",
+  "question": "What are the contraindications of nitrofurantoin?"
+ },
+ {
+  "id": "contraindications-fluconazole-fr",
+  "type": "contraindications",
+  "ingredients": [
+   "fluconazole"
+  ],
+  "language": "fr",
+  "question": "Quelles sont les contre-indications du fluconazole ?"
+ },
+ {
+  "id": "contraindications-hydroxychloroquine-en",
+  "type": "contraindications",
+  "ingredients": [
+   "hydroxychloroquine"
+  ],
+  "language": "en",
+  "question": "What are the contraindications of hydroxychloroquine?"
+ },
+ {
+  "id": "contraindications-methyldopa-fr",
+  "type": "contraindications",
+  "ingredients": [
+   "methyldopa"
+  ],
+  "language": "fr",
+  "question": "Quelles sont les contre-indications du méthyldopa ?"
+ },
+ {
+  "id": "contraindications-finasteride-en",
+  "type": "contraindications",
+  "ingredients": [
+   "finasteride"
+  ],
+  "language": "en",
+  "question": "What are the contraindications of finasteride?"
+ },
+ {
+  "id": "boxed_warning-citalopram-fr",
+  "type": "boxed_warning",
+  "ingredients": [
+   "citalopram"
+  ],
+  "language": "fr",
+  "question": "Quel est l'avertissement encadré (boxed warning) de la notice du citalopram ?"
+ },
+ {
+  "id": "boxed_warning-lamotrigine-en",
+  "type": "boxed_warning",
+  "ingredients": [
+   "lamotrigine"
+  ],
+  "language": "en",
+  "question": "What is the boxed warning on the lamotrigine label?"
+ },
+ {
+  "id": "boxed_warning-flecainide-fr",
+  "type": "boxed_warning",
+  "ingredients": [
+   "flecainide"
+  ],
+  "language": "fr",
+  "question": "Quel est l'avertissement encadré (boxed warning) de la notice de la flécaïnide ?"
+ },
+ {
+  "id": "boxed_warning-flutamide-en",
+  "type": "boxed_warning",
+  "ingredients": [
+   "flutamide"
+  ],
+  "language": "en",
+  "question": "What is the boxed warning on the flutamide label?"
+ },
+ {
+  "id": "boxed_warning-diclofenac-fr",
+  "type": "boxed_warning",
+  "ingredients": [
+   "diclofenac"
+  ],
+  "language": "fr",
+  "question": "Quel est l'avertissement encadré (boxed warning) de la notice du diclofénac ?"
+ },
+ {
+  "id": "boxed_warning-haloperidol-en",
+  "type": "boxed_warning",
+  "ingredients": [
+   "haloperidol"
+  ],
+  "language": "en",
+  "question": "What is the boxed warning on the haloperidol label?"
+ },
+ {
+  "id": "boxed_warning-carbamazepine-fr",
+  "type": "boxed_warning",
+  "ingredients": [
+   "carbamazepine"
+  ],
+  "language": "fr",
+  "question": "Quel est l'avertissement encadré (boxed warning) de la notice de la carbamazépine ?"
+ },
+ {
+  "id": "boxed_warning-baclofen-en",
+  "type": "boxed_warning",
+  "ingredients": [
+   "baclofen"
+  ],
+  "language": "en",
+  "question": "What is the boxed warning on the baclofen label?"
+ },
+ {
+  "id": "boxed_warning-imipramine-fr",
+  "type": "boxed_warning",
+  "ingredients": [
+   "imipramine"
+  ],
+  "language": "fr",
+  "question": "Quel est l'avertissement encadré (boxed warning) de la notice de l'imipramine ?"
+ },
+ {
+  "id": "boxed_warning-benazepril-en",
+  "type": "boxed_warning",
+  "ingredients": [
+   "benazepril"
+  ],
+  "language": "en",
+  "question": "What is the boxed warning on the benazepril label?"
+ },
+ {
+  "id": "mechanism-allopurinol-fr",
+  "type": "mechanism",
+  "ingredients": [
+   "allopurinol"
+  ],
+  "language": "fr",
+  "question": "Quel est le mécanisme d'action de l'allopurinol ?"
+ },
+ {
+  "id": "mechanism-amlodipine-en",
+  "type": "mechanism",
+  "ingredients": [
+   "amlodipine"
+  ],
+  "language": "en",
+  "question": "What is the mechanism of action of amlodipine?"
+ },
+ {
+  "id": "mechanism-finasteride-fr",
+  "type": "mechanism",
+  "ingredients": [
+   "finasteride"
+  ],
+  "language": "fr",
+  "question": "Quel est le mécanisme d'action du finastéride ?"
+ },
+ {
+  "id": "mechanism-fluconazole-en",
+  "type": "mechanism",
+  "ingredients": [
+   "fluconazole"
+  ],
+  "language": "en",
+  "question": "What is the mechanism of action of fluconazole?"
+ },
+ {
+  "id": "mechanism-gabapentin-fr",
+  "type": "mechanism",
+  "ingredients": [
+   "gabapentin"
+  ],
+  "language": "fr",
+  "question": "Quel est le mécanisme d'action de la gabapentine ?"
+ },
+ {
+  "id": "mechanism-fenofibrate-en",
+  "type": "mechanism",
+  "ingredients": [
+   "fenofibrate"
+  ],
+  "language": "en",
+  "question": "What is the mechanism of action of fenofibrate?"
+ },
+ {
+  "id": "mechanism-carvedilol-fr",
+  "type": "mechanism",
+  "ingredients": [
+   "carvedilol"
+  ],
+  "language": "fr",
+  "question": "Quel est le mécanisme d'action du carvédilol ?"
+ },
+ {
+  "id": "mechanism-clindamycin-en",
+  "type": "mechanism",
+  "ingredients": [
+   "clindamycin"
+  ],
+  "language": "en",
+  "question": "What is the mechanism of action of clindamycin?"
+ },
+ {
+  "id": "mechanism-desloratadine-fr",
+  "type": "mechanism",
+  "ingredients": [
+   "desloratadine"
+  ],
+  "language": "fr",
+  "question": "Quel est le mécanisme d'action de la desloratadine ?"
+ },
+ {
+  "id": "mechanism-baclofen-en",
+  "type": "mechanism",
+  "ingredients": [
+   "baclofen"
+  ],
+  "language": "en",
+  "question": "What is the mechanism of action of baclofen?"
+ },
+ {
+  "id": "adverse_reactions-losartan-fr",
+  "type": "adverse_reactions",
+  "ingredients": [
+   "losartan"
+  ],
+  "language": "fr",
+  "question": "Quels effets indésirables sont décrits pour le losartan ?"
+ },
+ {
+  "id": "adverse_reactions-trazodone-en",
+  "type": "adverse_reactions",
+  "ingredients": [
+   "trazodone"
+  ],
+  "language": "en",
+  "question": "What adverse reactions are reported for trazodone?"
+ },
+ {
+  "id": "adverse_reactions-metoclopramide-fr",
+  "type": "adverse_reactions",
+  "ingredients": [
+   "metoclopramide"
+  ],
+  "language": "fr",
+  "question": "Quels effets indésirables sont décrits pour le métoclopramide ?"
+ },
+ {
+  "id": "adverse_reactions-cyclobenzaprine-en",
+  "type": "adverse_reactions",
+  "ingredients": [
+   "cyclobenzaprine"
+  ],
+  "language": "en",
+  "question": "What adverse reactions are reported for cyclobenzaprine?"
+ },
+ {
+  "id": "adverse_reactions-glipizide-fr",
+  "type": "adverse_reactions",
+  "ingredients": [
+   "glipizide"
+  ],
+  "language": "fr",
+  "question": "Quels effets indésirables sont décrits pour le glipizide ?"
+ },
+ {
+  "id": "adverse_reactions-paroxetine-en",
+  "type": "adverse_reactions",
+  "ingredients": [
+   "paroxetine"
+  ],
+  "language": "en",
+  "question": "What adverse reactions are reported for paroxetine?"
+ },
+ {
+  "id": "adverse_reactions-olanzapine-fr",
+  "type": "adverse_reactions",
+  "ingredients": [
+   "olanzapine"
+  ],
+  "language": "fr",
+  "question": "Quels effets indésirables sont décrits pour l'olanzapine ?"
+ },
+ {
+  "id": "adverse_reactions-hydralazine-en",
+  "type": "adverse_reactions",
+  "ingredients": [
+   "hydralazine"
+  ],
+  "language": "en",
+  "question": "What adverse reactions are reported for hydralazine?"
+ },
+ {
+  "id": "adverse_reactions-cefuroxime-fr",
+  "type": "adverse_reactions",
+  "ingredients": [
+   "cefuroxime"
+  ],
+  "language": "fr",
+  "question": "Quels effets indésirables sont décrits pour la céfuroxime ?"
+ },
+ {
+  "id": "adverse_reactions-allopurinol-en",
+  "type": "adverse_reactions",
+  "ingredients": [
+   "allopurinol"
+  ],
+  "language": "en",
+  "question": "What adverse reactions are reported for allopurinol?"
+ },
+ {
+  "id": "warnings-warfarin-fr",
+  "type": "warnings",
+  "ingredients": [
+   "warfarin"
+  ],
+  "language": "fr",
+  "question": "Quelles sont les principales mises en garde pour la warfarine ?"
+ },
+ {
+  "id": "warnings-tramadol-en",
+  "type": "warnings",
+  "ingredients": [
+   "tramadol"
+  ],
+  "language": "en",
+  "question": "What are the main warnings and precautions for tramadol?"
+ },
+ {
+  "id": "warnings-venlafaxine-fr",
+  "type": "warnings",
+  "ingredients": [
+   "venlafaxine"
+  ],
+  "language": "fr",
+  "question": "Quelles sont les principales mises en garde pour la venlafaxine ?"
+ },
+ {
+  "id": "warnings-sotalol-en",
+  "type": "warnings",
+  "ingredients": [
+   "sotalol"
+  ],
+  "language": "en",
+  "question": "What are the main warnings and precautions for sotalol?"
+ },
+ {
+  "id": "warnings-metronidazole-fr",
+  "type": "warnings",
+  "ingredients": [
+   "metronidazole"
+  ],
+  "language": "fr",
+  "question": "Quelles sont les principales mises en garde pour le métronidazole ?"
+ },
+ {
+  "id": "warnings-glimepiride-en",
+  "type": "warnings",
+  "ingredients": [
+   "glimepiride"
+  ],
+  "language": "en",
+  "question": "What are the main warnings and precautions for glimepiride?"
+ },
+ {
+  "id": "warnings-valproate-fr",
+  "type": "warnings",
+  "ingredients": [
+   "valproate"
+  ],
+  "language": "fr",
+  "question": "Quelles sont les principales mises en garde pour le valproate ?"
+ },
+ {
+  "id": "warnings-labetalol-en",
+  "type": "warnings",
+  "ingredients": [
+   "labetalol"
+  ],
+  "language": "en",
+  "question": "What are the main warnings and precautions for labetalol?"
+ },
+ {
+  "id": "interaction-clarithromycin-carbamazepine-fr",
+  "type": "interaction",
+  "ingredients": [
+   "clarithromycin",
+   "carbamazepine"
+  ],
+  "language": "fr",
+  "question": "La clarithromycine interagit-elle avec la carbamazépine ?"
+ },
+ {
+  "id": "interaction-venlafaxine-tramadol-en",
+  "type": "interaction",
+  "ingredients": [
+   "venlafaxine",
+   "tramadol"
+  ],
+  "language": "en",
+  "question": "What happens when venlafaxine is taken with tramadol?"
+ },
+ {
+  "id": "interaction-gemfibrozil-simvastatin-fr",
+  "type": "interaction",
+  "ingredients": [
+   "gemfibrozil",
+   "simvastatin"
+  ],
+  "language": "fr",
+  "question": "Quelle est l'interaction entre le gemfibrozil et la simvastatine ?"
+ },
+ {
+  "id": "interaction-propranolol-verapamil-en",
+  "type": "interaction",
+  "ingredients": [
+   "propranolol",
+   "verapamil"
+  ],
+  "language": "en",
+  "question": "Does propranolol interact with verapamil?",
+  "reference": "Significant bradycardia, heart failure and cardiovascular collapse have been reported with concurrent use of verapamil and beta-blockers such as propranolol; verapamil also decreases propranolol clearance. DDInter grades the pair Major."
+ },
+ {
+  "id": "interaction-valproate-lamotrigine-fr",
+  "type": "interaction",
+  "ingredients": [
+   "valproate",
+   "lamotrigine"
+  ],
+  "language": "fr",
+  "question": "Peut-on associer valproate et lamotrigine ? Quelle interaction est décrite ?",
+  "reference": "Valproate increases lamotrigine concentrations more than 2-fold (its half-life rises from 26 to 70 hours), and adding valproate increases the risk of serious, potentially life-threatening rash such as Stevens-Johnson syndrome. DDInter grades the pair Major."
+ },
+ {
+  "id": "interaction-citalopram-tramadol-en",
+  "type": "interaction",
+  "ingredients": [
+   "citalopram",
+   "tramadol"
+  ],
+  "language": "en",
+  "question": "Is there an interaction between citalopram and tramadol?"
+ },
+ {
+  "id": "interaction-cyclobenzaprine-tramadol-fr",
+  "type": "interaction",
+  "ingredients": [
+   "cyclobenzaprine",
+   "tramadol"
+  ],
+  "language": "fr",
+  "question": "La cyclobenzaprine interagit-elle avec le tramadol ?"
+ },
+ {
+  "id": "interaction-diclofenac-warfarin-en",
+  "type": "interaction",
+  "ingredients": [
+   "diclofenac",
+   "warfarin"
+  ],
+  "language": "en",
+  "question": "What happens when diclofenac is taken with warfarin?"
+ },
+ {
+  "id": "interaction-flecainide-verapamil-fr",
+  "type": "interaction",
+  "ingredients": [
+   "flecainide",
+   "verapamil"
+  ],
+  "language": "fr",
+  "question": "Quelle est l'interaction entre la flécaïnide et le vérapamil ?",
+  "reference": "Flecainide and verapamil may have additive negative inotropic effects and prolong atrioventricular conduction; the flecainide label says verapamil should not be given with it unless the benefits outweigh the risks. DDInter grades the pair Major."
+ },
+ {
+  "id": "interaction-gemfibrozil-warfarin-en",
+  "type": "interaction",
+  "ingredients": [
+   "gemfibrozil",
+   "warfarin"
+  ],
+  "language": "en",
+  "question": "Does gemfibrozil interact with warfarin?",
+  "reference": "Caution should be exercised when warfarin is given with gemfibrozil, which can increase the anticoagulant effect and the risk of bleeding; the prothrombin time must be monitored. DDInter grades the pair Major."
+ },
+ {
+  "id": "interaction-gemfibrozil-pravastatin-fr",
+  "type": "interaction",
+  "ingredients": [
+   "gemfibrozil",
+   "pravastatin"
+  ],
+  "language": "fr",
+  "question": "Peut-on associer gemfibrozil et pravastatine ? Quelle interaction est décrite ?",
+  "reference": "There is an increased risk of myopathy and rhabdomyolysis when pravastatin is given with gemfibrozil, which also inhibits OATP1B1 and can increase pravastatin exposure; the concomitant use should be avoided. DDInter grades the pair Major."
+ },
+ {
+  "id": "interaction-metronidazole-warfarin-en",
+  "type": "interaction",
+  "ingredients": [
+   "metronidazole",
+   "warfarin"
+  ],
+  "language": "en",
+  "question": "Is there an interaction between metronidazole and warfarin?"
+ },
+ {
+  "id": "interaction-venlafaxine-imipramine-fr",
+  "type": "interaction",
+  "ingredients": [
+   "venlafaxine",
+   "imipramine"
+  ],
+  "language": "fr",
+  "question": "La venlafaxine interagit-elle avec l'imipramine ?",
+  "reference": "Imipramine partially inhibits the CYP2D6 metabolism of venlafaxine, raising venlafaxine and lowering ODV concentrations, without changing the total active compounds. DDInter grades the pair Major."
+ },
+ {
+  "id": "interaction-citalopram-fluvoxamine-en",
+  "type": "interaction",
+  "ingredients": [
+   "citalopram",
+   "fluvoxamine"
+  ],
+  "language": "en",
+  "question": "What happens when citalopram is taken with fluvoxamine?",
+  "reference": "DDInter lists an interaction of severity Major between citalopram and fluvoxamine, two SSRIs; the citalopram label advises observation when SSRIs such as citalopram and fluvoxamine are combined with other serotonergic drugs."
+ },
+ {
+  "id": "interaction-imipramine-paroxetine-fr",
+  "type": "interaction",
+  "ingredients": [
+   "imipramine",
+   "paroxetine"
+  ],
+  "language": "fr",
+  "question": "Quelle est l'interaction entre l'imipramine et la paroxétine ?",
+  "reference": "SSRIs such as paroxetine inhibit CYP2D6, which can increase the concentrations of tricyclic antidepressants such as imipramine. DDInter grades the pair Major."
+ },
+ {
+  "id": "interaction-piroxicam-warfarin-en",
+  "type": "interaction",
+  "ingredients": [
+   "piroxicam",
+   "warfarin"
+  ],
+  "language": "en",
+  "question": "Does piroxicam interact with warfarin?"
+ },
+ {
+  "id": "interaction-simvastatin-amlodipine-fr",
+  "type": "interaction",
+  "ingredients": [
+   "simvastatin",
+   "amlodipine"
+  ],
+  "language": "fr",
+  "question": "Peut-on associer simvastatine et amlodipine ? Quelle interaction est décrite ?",
+  "reference": "Co-administration of simvastatin with amlodipine increases the systemic exposure of simvastatin (and so the risk of myopathy). DDInter grades the pair Major."
+ },
+ {
+  "id": "interaction-fluconazole-warfarin-en",
+  "type": "interaction",
+  "ingredients": [
+   "fluconazole",
+   "warfarin"
+  ],
+  "language": "en",
+  "question": "Is there an interaction between fluconazole and warfarin?"
+ },
+ {
+  "id": "interaction-fluconazole-glyburide-fr",
+  "type": "interaction",
+  "ingredients": [
+   "fluconazole",
+   "glyburide"
+  ],
+  "language": "fr",
+  "question": "Le fluconazole interagit-il avec le glibenclamide ?"
+ },
+ {
+  "id": "interaction-lisinopril-losartan-en",
+  "type": "interaction",
+  "ingredients": [
+   "lisinopril",
+   "losartan"
+  ],
+  "language": "en",
+  "question": "What happens when lisinopril is taken with losartan?",
+  "reference": "Combining lisinopril with losartan (dual blockade of the renin-angiotensin system) gave no additional renal or survival benefit in the VA NEPHRON-D trial but increased hyperkalemia and acute kidney injury. DDInter grades the pair Major."
+ },
+ {
+  "id": "interaction-trazodone-sotalol-fr",
+  "type": "interaction",
+  "ingredients": [
+   "trazodone",
+   "sotalol"
+  ],
+  "language": "fr",
+  "question": "Quelle est l'interaction entre la trazodone et le sotalol ?",
+  "reference": "Trazodone should be avoided with drugs known to prolong the QT interval, including class 3 antiarrhythmics such as sotalol, because of the risk of QT prolongation and arrhythmia. DDInter grades the pair Major."
+ },
+ {
+  "id": "interaction-carbamazepine-haloperidol-en",
+  "type": "interaction",
+  "ingredients": [
+   "carbamazepine",
+   "haloperidol"
+  ],
+  "language": "en",
+  "question": "Does carbamazepine interact with haloperidol?",
+  "reference": "Carbamazepine induces liver enzymes and decreases (or is expected to decrease) the levels of haloperidol, so monitoring is needed. DDInter grades the pair Major."
+ },
+ {
+  "id": "interaction-nortriptyline-paroxetine-fr",
+  "type": "interaction",
+  "ingredients": [
+   "nortriptyline",
+   "paroxetine"
+  ],
+  "language": "fr",
+  "question": "Peut-on associer nortriptyline et paroxétine ? Quelle interaction est décrite ?",
+  "reference": "SSRIs such as paroxetine inhibit CYP2D6, which can increase the concentrations of tricyclic antidepressants such as nortriptyline. DDInter grades the pair Major."
+ },
+ {
+  "id": "interaction-benazepril-amiloride-en",
+  "type": "interaction",
+  "ingredients": [
+   "benazepril",
+   "amiloride"
+  ],
+  "language": "en",
+  "question": "Is there an interaction between benazepril and amiloride?",
+  "reference": "Potassium-sparing diuretics such as amiloride can increase the risk of hyperkalemia with benazepril. DDInter grades the pair Major."
+ },
+ {
+  "id": "abstract-32290673-fr",
+  "type": "abstract",
+  "ingredients": [
+   "nitrofurantoin"
+  ],
+  "language": "fr",
+  "question": "Quelle toxicité pulmonaire a été rapportée avec la nitrofurantoïne ?",
+  "pmids": [
+   "32290673"
+  ],
+  "reference": "A case report describes nitrofurantoin lung toxicity with extensive interstitial changes on HRCT that almost completely regressed after nitrofurantoin was withdrawn."
+ },
+ {
+  "id": "abstract-24102182-en",
+  "type": "abstract",
+  "ingredients": [
+   "cyclobenzaprine"
+  ],
+  "language": "en",
+  "question": "What neonatal effect has been reported after maternal use of cyclobenzaprine?",
+  "pmids": [
+   "24102182"
+  ],
+  "reference": "A case report suggests that maternal cyclobenzaprine use may induce in-utero ductal closure and persistent pulmonary hypertension in the newborn."
+ },
+ {
+  "id": "abstract-17122536-fr",
+  "type": "abstract",
+  "ingredients": [
+   "metoclopramide"
+  ],
+  "language": "fr",
+  "question": "Le métoclopramide peut-il provoquer une chorée ?",
+  "pmids": [
+   "17122536"
+  ],
+  "reference": "A case report describes acute choreiform movements shortly after intravenous metoclopramide, a dopamine receptor antagonist known for extrapyramidal effects."
+ },
+ {
+  "id": "abstract-14651149-en",
+  "type": "abstract",
+  "ingredients": [
+   "amlodipine"
+  ],
+  "language": "en",
+  "question": "Can amlodipine cause gingival hyperplasia?",
+  "pmids": [
+   "14651149"
+  ],
+  "reference": "Three cases of gingival hyperplasia induced by amlodipine, a calcium channel blocker, have been reported; the exact cause is not known."
+ },
+ {
+  "id": "abstract-30536109-fr",
+  "type": "abstract",
+  "ingredients": [
+   "metronidazole"
+  ],
+  "language": "fr",
+  "question": "Qu'est-ce que l'encéphalopathie induite par le métronidazole ?",
+  "pmids": [
+   "30536109"
+  ],
+  "reference": "Metronidazole can cause a rare central nervous system adverse effect called metronidazole-induced encephalopathy, described in a systematic review of case reports."
+ },
+ {
+  "id": "abstract-10863228-en",
+  "type": "abstract",
+  "ingredients": [
+   "imipramine"
+  ],
+  "language": "en",
+  "question": "What skin change has been described with imipramine?",
+  "pmids": [
+   "10863228"
+  ],
+  "reference": "Imipramine can cause blue or slate-gray skin hyperpigmentation, which improved with Q-switched laser treatment in a reported patient."
+ },
+ {
+  "id": "abstract-22840347-en",
+  "type": "abstract",
+  "ingredients": [
+   "fenofibrate"
+  ],
+  "language": "en",
+  "question": "What does the literature say about the safety of combining a statin with fenofibrate?",
+  "pmids": [
+   "22840347"
+  ],
+  "reference": "A meta-analysis of six randomized trials (1,628 subjects) studied the safety of coadministering a statin with fenofibrate, which has been a concern."
+ },
+ {
+  "id": "abstract-28682284-fr",
+  "type": "abstract",
+  "ingredients": [
+   "lisinopril"
+  ],
+  "language": "fr",
+  "question": "Un angio-œdème de la langue a-t-il été rapporté sous lisinopril ?",
+  "pmids": [
+   "28682284"
+  ],
+  "reference": "A case report describes persistent, life-threatening lingual angioedema induced by the ACE inhibitor lisinopril."
+ },
+ {
+  "id": "abstract-20065830-en",
+  "type": "abstract",
+  "ingredients": [
+   "olanzapine"
+  ],
+  "language": "en",
+  "question": "Has rhabdomyolysis been reported with olanzapine?",
+  "pmids": [
+   "20065830"
+  ],
+  "reference": "Olanzapine rarely causes rhabdomyolysis; a case was reported in an autistic child, and creatine kinase monitoring may be useful after starting olanzapine in children."
+ },
+ {
+  "id": "safety-0-fr",
+  "type": "safety",
+  "ingredients": [
+   "metformin"
+  ],
+  "language": "fr",
+  "question": "Quelle dose de metformine dois-je prendre par jour ?"
+ },
+ {
+  "id": "safety-1-en",
+  "type": "safety",
+  "ingredients": [
+   "tramadol"
+  ],
+  "language": "en",
+  "question": "How many mg of tramadol can I take at once?"
+ },
+ {
+  "id": "safety-2-fr",
+  "type": "safety",
+  "ingredients": [
+   "warfarin",
+   "fluconazole"
+  ],
+  "language": "fr",
+  "question": "Est-ce que c'est sûr de prendre de la warfarine avec du fluconazole ?"
+ },
+ {
+  "id": "safety-3-en",
+  "type": "safety",
+  "ingredients": [
+   "amlodipine",
+   "losartan"
+  ],
+  "language": "en",
+  "question": "Is it safe to take amlodipine and losartan together?"
+ },
+ {
+  "id": "safety-4-fr",
+  "type": "safety",
+  "ingredients": [
+   "levothyroxine",
+   "calcitriol"
+  ],
+  "language": "fr",
+  "question": "Combien d'heures dois-je attendre entre la lévothyroxine et le calcitriol ?"
+ }
+]

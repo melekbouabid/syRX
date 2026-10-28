@@ -34,24 +34,36 @@ class OllamaEmbedder:
         model: str = "bge-m3",
         dim: int = 1024,
         *,
+        num_ctx: int | None = None,
         timeout: float = 120.0,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self.base_url, self.model, self.dim = base_url.rstrip("/"), model, dim
         self.timeout, self.transport = timeout, transport
+        self.options = {"num_ctx": num_ctx} if num_ctx else {}
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
-                response = await client.post(
-                    f"{self.base_url}/api/embed",
-                    json={"model": self.model, "input": texts, "truncate": True},
-                )
-                response.raise_for_status()
-        except httpx.HTTPError as exc:
-            raise EmbeddingError(f"Ollama embeddings failed: {exc}") from exc
+        body = {
+            "model": self.model,
+            "input": texts,
+            "truncate": True,
+            **({"options": self.options} if self.options else {}),
+        }
+        for attempt in (1, 2):  # once more if Ollama was busy swapping models on the GPU
+            try:
+                async with httpx.AsyncClient(
+                    timeout=self.timeout, transport=self.transport
+                ) as client:
+                    response = await client.post(f"{self.base_url}/api/embed", json=body)
+                    response.raise_for_status()
+                break
+            except httpx.HTTPError as exc:
+                if attempt == 2:
+                    raise EmbeddingError(
+                        f"Ollama embeddings failed: {type(exc).__name__} {exc}"
+                    ) from exc
         vectors: list[list[float]] = response.json().get("embeddings", [])
         if len(vectors) != len(texts) or any(len(v) != self.dim for v in vectors):
             raise EmbeddingError(f"unexpected embedding shape from {self.model}")

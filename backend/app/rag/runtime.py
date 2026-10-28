@@ -31,6 +31,8 @@ def ollama_llm(settings: Settings) -> BaseChatModel:
         base_url=settings.ollama_url,
         temperature=settings.llm_temperature,
         num_ctx=settings.llm_num_ctx,
+        num_predict=settings.llm_max_tokens,
+        repeat_penalty=1.1,
         keep_alive="30m",
         client_kwargs={"timeout": settings.llm_timeout_seconds},
         **options,
@@ -63,6 +65,7 @@ class AgentHolder:
                 self.settings.ollama_url,
                 self.settings.embedding_model,
                 self.settings.embedding_dim,
+                num_ctx=self.settings.embedding_num_ctx,
             )
             store = ChunkStore(self.pharma_engine, embedder.dim)
             self._toolbox = Toolbox(
@@ -73,5 +76,10 @@ class AgentHolder:
     def agent(self) -> TujyaAgent:
         if self._agent is None:
             self.llm = self.llm or ollama_llm(self.settings)
-            self._agent = TujyaAgent(self.llm, self.toolbox(), top_k=self.settings.rag_top_k)
+            self._agent = TujyaAgent(
+                self.llm,
+                self.toolbox(),
+                top_k=self.settings.rag_top_k,
+                attribution_threshold=self.settings.rag_attribution_threshold,
+            )
         return self._agent

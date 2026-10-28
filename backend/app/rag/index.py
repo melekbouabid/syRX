@@ -131,7 +131,9 @@ def main(argv: list[str] | None = None) -> None:
         asyncio.run(pull_models(args.ollama_url, [args.model, settings.llm_model]))
     rows = read_chunks(args.chunks)
     store = ChunkStore(make_engine(args.database_url), args.dim)
-    embedder = OllamaEmbedder(args.ollama_url, args.model, args.dim)
+    embedder = OllamaEmbedder(
+        args.ollama_url, args.model, args.dim, num_ctx=settings.embedding_num_ctx
+    )
     stats = asyncio.run(index_chunks(store, embedder, rows, batch_size=args.batch_size, log=print))
     print(json.dumps(stats))
 

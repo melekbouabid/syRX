@@ -53,11 +53,22 @@ class Settings(BaseSettings):
     ollama_url: str = "http://localhost:11434"
     llm_model: str = "qwen2.5:3b"
     llm_temperature: float = 0.1
-    llm_num_ctx: int = 8192
+    # 4096 keeps qwen2.5:3b (2.2 GB) and bge-m3 on the 4 GB GPU together; at 8192 Ollama
+    # evicts one for the other on every question. Agent prompts are ~1,300 tokens.
+    llm_num_ctx: int = 4096
     llm_timeout_seconds: float = 180.0
+    # A small model can loop on itself; answers are 3-6 sentences, far below this.
+    llm_max_tokens: int = 450
     embedding_model: str = "bge-m3"
     embedding_dim: int = 1024
+    embedding_num_ctx: int = 2048  # chunks are at most ~400 tokens
     rag_top_k: int = 6
+    # Chosen on the benchmark (docs/BENCHMARK.md, D65): dense + ingredient filter is best;
+    # hybrid loses on French questions (BM25 only matches English words).
+    rag_search_mode: str = "dense"
+    # An uncited answer sentence gets the source closest in meaning (bge-m3 cosine) above
+    # this; calibrated on the first benchmark run (docs/BENCHMARK.md). 0 disables it.
+    rag_attribution_threshold: float = 0.65
 
     session_cookie: str = "synergyrx_session"
     session_hours: int = 12

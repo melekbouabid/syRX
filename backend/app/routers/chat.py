@@ -21,6 +21,7 @@ from app.medicines import DISCLAIMER, PharmaUnavailable
 from app.rag.agent import AgentState, TujyaAgent
 from app.rag.embeddings import EmbeddingError
 from app.rag.runtime import AgentHolder
+from app.rag.safety import redact_doses
 from app.schemas import ChatIn, ChatResult, CitationOut, ToolCallOut
 
 router = APIRouter(prefix="/api", tags=["chat"], dependencies=[Depends(get_current_user)])
@@ -54,7 +55,7 @@ def to_result(state: AgentState, model: str, started: float) -> ChatResult:
                 title=s["title"],
                 url=s["url"],
                 section=s.get("section", ""),
-                snippet=s.get("snippet", "")[:500],
+                snippet=redact_doses(s.get("snippet", ""))[:500],
                 source_name=s.get("source_name", ""),
                 doc_type=s.get("doc_type", ""),
                 date=s.get("date", ""),
