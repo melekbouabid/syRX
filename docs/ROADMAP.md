@@ -54,8 +54,9 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [x] Corpus versioned with DVC (`data/rag/*.dvc`, stage `rag_corpus`)
 
 ## 5. Agent
-- [ ] LangGraph graph: understand -> tools -> retrieve -> answer with citations -> safety check
-- [ ] Tools: identify_pills, check_interaction, get_drug_info, search_literature (optional get_synergy)
+- [x] LangGraph graph: understand -> tools -> retrieve -> answer with citations -> safety check (docs/AGENT.md)
+- [x] Tools: identify_pills, check_interaction, get_drug_info, search_documents (extension point for more)
+- [x] Async `POST /api/chat` (JSON or SSE stream), answer + citations + tool calls; tests with a fake LLM
 - [x] Ollama local LLM: qwen2.5:3b in the `ollama` service, on the GPU (D57, D58)
 - [ ] Benchmark set of 50-100 questions
 - [ ] Retrieval benchmark (Recall@k, MRR) and generation benchmark (RAGAS)
@@ -80,5 +81,7 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [ ] Demo script (C3PI test images) + backup video
 
 ## Bonus (only if time remains)
+- [ ] Tool `predict_toxicity(smiles)`: single-molecule toxicity (model trained on Tox21 / ClinTox)
+- [ ] Tool `predict_synergy(drug_a, drug_b)`: cancer synergy from the DrugComb data in the pipeline
 - [ ] OCR of pill imprints
 - [ ] Cancer synergy data page

@@ -273,3 +273,44 @@ class DemoImage(BaseModel):
 class DemoGallery(BaseModel):
     items: list[DemoImage]
     note: str
+
+
+class ChatIn(BaseModel):
+    question: str = Field(min_length=2, max_length=1000, description="French or English")
+    pills: list[int] = Field(
+        default_factory=list, max_length=10, description="Confirmed pill class_ids (scan)"
+    )
+    stream: bool = Field(False, description="Server-Sent Events instead of one JSON answer")
+
+
+class CitationOut(BaseModel):
+    n: int = Field(description="The number used in the answer: [n]")
+    title: str
+    url: str
+    section: str
+    snippet: str
+    source_name: str
+    doc_type: str = Field(description="label, abstract or interaction")
+    date: str
+    cited: bool = Field(description="True if the answer cites [n]")
+
+
+class ToolCallOut(BaseModel):
+    name: str
+    args: dict[str, Any]
+    chosen_by: str = Field(description="llm (tool calling) or rule (added by the graph)")
+    ok: bool
+    summary: str
+
+
+class ChatResult(BaseModel):
+    question: str
+    answer: str = Field(description="Checked by the safety node; ends with the disclaimer")
+    language: str
+    ingredients: list[str] = Field(description="Active ingredients found in the question/pills")
+    citations: list[CitationOut]
+    tool_calls: list[ToolCallOut]
+    safety: dict[str, Any] = Field(description="action ok / rewritten / refused, violations")
+    model: str
+    timings: dict[str, float]
+    disclaimer: str

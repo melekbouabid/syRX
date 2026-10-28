@@ -14,7 +14,8 @@ from app.catalog import Catalog
 from app.config import Settings
 from app.db import Base, make_engine
 from app.limits import BodySizeLimit
-from app.routers import admin, auth, catalog, demo, medicines, scan
+from app.rag.runtime import AgentHolder
+from app.routers import admin, auth, catalog, chat, demo, medicines, scan
 from app.scanner import ScannerHolder
 
 DESCRIPTION = (
@@ -72,6 +73,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         threads=settings.onnx_threads,
         conf=settings.scan_detection_confidence,
     )
+    # Module 2 agent: built on the first /api/chat call (Ollama, chunk index in pgvector).
+    app.state.agents = AgentHolder(settings, pharma_engine, app.state.scanner)
     # Refuse an oversized upload from its Content-Length, before the body is read.
     app.add_middleware(BodySizeLimit, max_bytes=settings.scan_max_bytes + 64 * 1024)
 
@@ -82,6 +85,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(scan.router)
     app.include_router(medicines.router)
     app.include_router(demo.router)
+    app.include_router(chat.router)
 
     @app.get("/api/health", tags=["health"])
     def health() -> dict[str, str]:

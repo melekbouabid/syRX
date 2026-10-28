@@ -52,6 +52,56 @@ def _highest(severities: list[str]) -> str | None:
     return min(severities, key=lambda s: SEVERITY_ORDER.get(s, 9), default=None)
 
 
+def interactions_report(
+    session: Session, pill_ids: list[int], ingredients: list[str]
+) -> InteractionsResult:
+    """The /api/interactions answer; also used by the agent's check_interaction tool."""
+    items = resolve(session, pill_ids, ingredients)
+    pairs = []
+    for pair in check(session, items):
+        found = [
+            InteractionOut(
+                ingredient_a=f.ingredient_a,
+                ingredient_b=f.ingredient_b,
+                severity=f.severity,
+                description=f.description,
+                source=SourceOut.model_validate(f.source),
+            )
+            for f in pair.interactions
+        ]
+        pairs.append(
+            PairOut(
+                item_a=_item(pair.a),
+                item_b=_item(pair.b),
+                highest_severity=_highest([f.severity for f in found]),
+                interactions=found,
+                shared_ingredients=pair.shared_ingredients,
+                message=pair.message,
+            )
+        )
+    highest = _highest([p.highest_severity for p in pairs if p.highest_severity])
+    with_interaction = sum(1 for p in pairs if p.interactions)
+    if with_interaction:
+        message = (
+            f"{with_interaction} paire(s) sur {len(pairs)} avec une interaction connue "
+            "dans cette base de données."
+        )
+    else:
+        message = NO_KNOWN_INTERACTION
+    unchecked = sum(1 for p in pairs if p.message and p.message != NO_KNOWN_INTERACTION)
+    if unchecked:
+        message += f" {unchecked} paire(s) n'ont pas pu être vérifiées (voir le détail)."
+    cited = ["ddinter"] + (["c3pi", "rxnav"] if pill_ids else [])
+    return InteractionsResult(
+        items=[_item(i) for i in items],
+        pairs=pairs,
+        highest_severity=highest,
+        message=message,
+        sources=[SourceOut.model_validate(s) for s in sources(session, cited)],
+        disclaimer=DISCLAIMER,
+    )
+
+
 @router.get("/pills", response_model=PillList)
 async def list_pills(
     db: PharmaSession,
@@ -95,53 +145,7 @@ async def check_interactions(payload: InteractionsIn, db: PharmaSession) -> Inte
     DDInter does not grade. No dose or timing advice is given.
     """
 
-    def run(session: Session) -> InteractionsResult:
-        items = resolve(session, payload.pills, payload.ingredients)
-        pairs = []
-        for pair in check(session, items):
-            found = [
-                InteractionOut(
-                    ingredient_a=f.ingredient_a,
-                    ingredient_b=f.ingredient_b,
-                    severity=f.severity,
-                    description=f.description,
-                    source=SourceOut.model_validate(f.source),
-                )
-                for f in pair.interactions
-            ]
-            pairs.append(
-                PairOut(
-                    item_a=_item(pair.a),
-                    item_b=_item(pair.b),
-                    highest_severity=_highest([f.severity for f in found]),
-                    interactions=found,
-                    shared_ingredients=pair.shared_ingredients,
-                    message=pair.message,
-                )
-            )
-        highest = _highest([p.highest_severity for p in pairs if p.highest_severity])
-        with_interaction = sum(1 for p in pairs if p.interactions)
-        if with_interaction:
-            message = (
-                f"{with_interaction} paire(s) sur {len(pairs)} avec une interaction connue "
-                "dans cette base de données."
-            )
-        else:
-            message = NO_KNOWN_INTERACTION
-        unchecked = sum(1 for p in pairs if p.message and p.message != NO_KNOWN_INTERACTION)
-        if unchecked:
-            message += f" {unchecked} paire(s) n'ont pas pu être vérifiées (voir le détail)."
-        cited = ["ddinter"] + (["c3pi", "rxnav"] if payload.pills else [])
-        return InteractionsResult(
-            items=[_item(i) for i in items],
-            pairs=pairs,
-            highest_severity=highest,
-            message=message,
-            sources=[SourceOut.model_validate(s) for s in sources(session, cited)],
-            disclaimer=DISCLAIMER,
-        )
-
     try:
-        return await run_in_threadpool(run, db)
+        return await run_in_threadpool(interactions_report, db, payload.pills, payload.ingredients)
     except PharmaUnavailable as exc:
         raise pharma_unavailable() from exc

@@ -12,7 +12,8 @@
 # Before the first start, on the host (docs/INFRA.md):
 #   - `dvc pull` or the data steps, so data/tujya/*.csv and data/vision/c3pi/images exist;
 #   - `python -m tujya_vision.publish` (vision venv) to fill models/ from the Model Registry.
-# `pharma-init` reloads the medicine tables from data/tujya on every start, then exits.
+# `pharma-init` reloads the medicine tables from data/tujya on every start, then exits;
+# `rag-init` pulls the Ollama models (first start only) and indexes data/rag/corpus.
 #
 # Credentials are development defaults; override them in the shell or in a compose
 # `.env` file (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_PORT, MLFLOW_PORT,
@@ -66,15 +67,35 @@ services:
     environment: &backend-env
       SYNERGYRX_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tujya}:${POSTGRES_PASSWORD:-tujya}@postgres:5432/${POSTGRES_DB:-tujya}
       SYNERGYRX_PHARMA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tujya}:${POSTGRES_PASSWORD:-tujya}@postgres:5432/${POSTGRES_DB:-tujya}
+      # Module 2: the agent's LLM and embeddings (docs/AGENT.md, docs/RAG.md)
+      SYNERGYRX_OLLAMA_URL: http://ollama:11434
+      SYNERGYRX_LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
     volumes: &backend-mounts
       # The app's project root is "/" in the image: these are its default paths.
       - ./config:/config:ro
       - ./data/tujya:/data/tujya:ro
       - ./data/parquet:/data/parquet:ro
       - ./data/vision/c3pi/images:/data/vision/c3pi/images:ro
+      - ./data/rag/corpus:/data/rag/corpus:ro
       - ./models:/models:ro
     depends_on:
       postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # One-shot: pull the Ollama models if missing, then (re)index the RAG corpus in pgvector.
+  # Idempotent: an unchanged corpus is not embedded again. The backend does not wait for it
+  # (scan and interactions work without it; /api/chat answers 503 until the index exists).
+  rag-init:
+    image: ${BACKEND_IMAGE:-tujya-backend:local}
+    build: ./backend
+    command: ["python", "-m", "app.rag.index", "--pull"]
+    environment: *backend-env
+    volumes: *backend-mounts
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
         condition: service_healthy
     restart: "no"
 

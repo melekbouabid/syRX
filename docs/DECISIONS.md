@@ -449,3 +449,25 @@ meaning have cosine 0.87, an unrelated English sentence 0.53. Smaller multilingu
 cosine search (no HNSW index: at 8,661 rows the exact scan takes milliseconds and is
 exact); BM25 is computed in the backend over the same chunks (Okapi, k1 1.2, b 0.75, French
 and English stop words) and both lists are fused by reciprocal rank fusion (k = 60).
+
+**D63. The agent's safety rules are code, not only prompt.** A 3B model does not follow
+every instruction, so the rules of CLAUDE.md are enforced after generation by a `safety`
+node (`app/rag/safety.py`), sentence by sentence: dose sentences removed (lab values such as
+"mL/min" or "mg/dL" excepted), "safe"/"sûr"/"sans danger" sentences removed and replaced by
+"aucune interaction connue dans cette base de données" when nothing was found, uncited timing
+advice removed, out-of-range citations removed, an uncited sentence gets the source that
+contains at least 60 % of its words (else the list of consulted sources is added), no source
+means no answer, the disclaimer always ends the answer. A question asking for a dose is
+refused before any LLM call. While streaming, unsafe sentences are held back. Limits: the
+rules are pattern-based (French and English), so a dose written in another way could pass,
+and a correct sentence with "sûr" in another sense ("bien sûr") is removed; the benchmark
+measures what remains (docs/BENCHMARK.md).
+
+**D64. Tool choice: the LLM plans, the graph guarantees the minimum.** The planner node
+uses Ollama tool calling (qwen2.5:3b) with three tools (check_interaction, get_drug_info,
+search_documents); unknown tool names are ignored and the graph adds `check_interaction`
+when two or more drugs are named or confirmed, and `search_documents` always, so a weak or
+failing planner never leaves the answer without sources. `identify_pills` is not offered to
+the chat model (a chat question carries no image; the app sends the confirmed pills) but
+is exposed by the MCP server. Each call is returned with `chosen_by` (`llm` or `rule`), so
+the UI and the benchmark show which ones the model chose.
