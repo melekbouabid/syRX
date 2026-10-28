@@ -238,6 +238,35 @@ export class ApiError extends Error {
   }
 }
 
+// Bonus toxicity tool (POST /api/toxicity, docs/TOXICITY.md): each molecule on its own.
+export interface ToxPrediction {
+  task: string;
+  assay: string;
+  probability: number;
+  test_roc_auc: number | null;
+}
+
+export interface ToxMolecule {
+  query: string;
+  resolved_as: "ingredient" | "smiles";
+  ingredient: string | null;
+  smiles: string;
+  predictions: ToxPrediction[];
+  max_similarity_to_training: number;
+  in_domain: boolean;
+}
+
+export interface ToxicityResult {
+  wording: string;
+  molecules: ToxMolecule[];
+  errors: { query: string; error: string }[];
+  mixture_note: string;
+  low_probability_note: string;
+  model: { name: string; version: string; tasks: number };
+  source: { title: string; url: string; citation: string };
+  disclaimer: string;
+}
+
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Something went wrong.";
 }
@@ -397,6 +426,8 @@ export const api = {
   interactions: (pills: number[], ingredients: string[] = []) =>
     request<InteractionsResult>("POST", "/interactions", { body: { pills, ingredients } }),
   demoImages: (signal?: AbortSignal) => request<DemoGallery>("GET", "/demo/images", { signal }),
+  toxicity: (molecules: string[]) =>
+    request<ToxicityResult>("POST", "/toxicity", { body: { molecules } }),
   chat: (question: string, pills: number[]) =>
     request<ChatResult>("POST", "/chat", { body: { question, pills, stream: false } }),
   chatStream,

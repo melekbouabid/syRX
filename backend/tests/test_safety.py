@@ -143,3 +143,31 @@ def test_snippets_hide_dose_sentences() -> None:
         "not change it. The tolvaptan dose should be reduced. Monitor the INR."
     )
     assert redact_doses(text) == "Fluconazole increases warfarin exposure. […] Monitor the INR."
+
+
+def test_non_toxicity_claims_are_removed_but_facts_about_toxicity_stay() -> None:
+    claims = [
+        "La warfarine n'est pas toxique [1].",
+        "La warfarine n'est pas identifiée comme toxique par le modèle [1].",
+        "Il n'y a pas de toxicité [1].",
+        "Aucune toxicité notable n'est prédite [1].",
+        "The model indicates no significant toxicity [1].",
+        "Fluconazole is not predicted to be toxic [1].",
+        "Low probability of toxicity in every assay [1].",
+    ]
+    for sentence in claims:
+        assert "not_toxic_claim" in sentence_problems(sentence), sentence
+    for sentence in (
+        "Fluconazole is hepatotoxic in rare cases [1].",
+        "La toxicité hépatique est rare [1].",
+        "The probability of activity in SR-MMP is 0.83 [1].",
+    ):
+        assert sentence_problems(sentence) == [], sentence
+
+
+def test_sentence_filter_can_hold_back_more_sentences() -> None:
+    held = SentenceFilter(hold=lambda sentence: "Tox21" in sentence)
+    shown = held.feed("La warfarine est un anticoagulant [1]. Le modèle Tox21 dit ")
+    shown += held.feed("autre chose [2]. Fin [1].")
+    shown += held.flush()
+    assert "".join(shown).strip() == "La warfarine est un anticoagulant [1]. Fin [1]."

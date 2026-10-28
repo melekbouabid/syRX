@@ -84,7 +84,7 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [ ] Backup video of the demo (to record by hand)
 
 ## Bonus (only if time remains)
-- [ ] Tool `predict_toxicity(smiles)`: single-molecule toxicity (model trained on Tox21 / ClinTox)
+- [x] Tool `predict_toxicity`: Tox21 in vitro assays, LightGBM on Morgan fingerprints, scaffold split, mean test ROC-AUC 0.725 (docs/TOXICITY.md)
 - [ ] Tool `predict_synergy(drug_a, drug_b)`: cancer synergy from the DrugComb data in the pipeline
 - [ ] OCR of pill imprints
 - [ ] Cancer synergy data page

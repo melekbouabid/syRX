@@ -38,10 +38,16 @@ from app.rag.safety import (
     attribute_by_meaning,
     check_answer,
     is_dose_question,
+    split_sentences,
 )
 from app.rag.tools import CHAT_TOOLS, Toolbox, ToolError, langchain_tools
+from app.toxicity import LOW_NOTE, MIXTURE_NOTE, WORDING
 
 MAX_SOURCES = 8
+# A question about toxicity gets predict_toxicity even if the planner forgets it (folded text).
+TOXICITY_QUESTION = re.compile(r"\btoxi\w*|\btox21\b|\bin vitro\b")
+# An answer sentence about the prediction (folded text): toxicity words, assays, Tox21 tasks.
+TOX_MENTION = re.compile(r"\btoxi\w*|\btox21\b|\bin vitro\b|\bassays?\b|\b(?:nr|sr)-\w+")
 MAX_TOOL_CALLS = 6
 SOURCE_CHARS = 900
 FRENCH_HINTS = frozenset(
@@ -104,7 +110,8 @@ TOOLS_PROMPT = """You are the tool planner of Tujya, a medicine-information assi
 Call the tools needed to answer the user's question about medicines:
 - check_interaction when the question is about two or more drugs together;
 - get_drug_info for facts about one drug (contraindications, warnings, mechanism);
-- search_documents for anything else, with an English query and the drug names as filters.
+- search_documents for anything else, with an English query and the drug names as filters;
+- predict_toxicity only when the question is about toxicity (one or two molecules).
 Use the active ingredient names given. Do not answer the question yourself."""
 
 ANSWER_PROMPT = {
@@ -147,7 +154,48 @@ def _summary(name: str, result: dict[str, Any] | None, error: str | None) -> str
             f"{result.get('ingredient')}: {len(result.get('pill_classes', []))} pill classes, "
             f"{len(result.get('label_sections', []))} label sections"
         )
+    if name == "predict_toxicity":
+        names = [m.get("ingredient") or m.get("query") for m in result.get("molecules", [])]
+        return f"{WORDING}: {', '.join(names) or 'no valid molecule'}"
     return "ok"
+
+
+def toxicity_sources(result: dict[str, Any]) -> list[dict[str, Any]]:
+    """Each molecule predicted by predict_toxicity, as a citable source (never a mixture)."""
+    found = []
+    source = result.get("source", {})
+    for molecule in result.get("molecules", []):
+        name = molecule.get("ingredient") or molecule.get("query")
+        values = "; ".join(
+            f"{p['task']} {p['probability']:.2f} (ROC-AUC {p['test_roc_auc']})"
+            for p in molecule.get("predictions", [])
+        )
+        domain = (
+            ""
+            if molecule.get("in_domain", True)
+            else " The molecule is far from the training molecules (low similarity): the "
+            "prediction is even less reliable."
+        )
+        # The caveats come first: the prompt keeps only the start of each source.
+        text = (
+            f"Tox21 model, {WORDING}. {MIXTURE_NOTE} {LOW_NOTE}{domain} {name}: probability "
+            f"of being active in each Tox21 in vitro assay (model test ROC-AUC): {values}."
+        )
+        found.append(
+            {
+                "chunk_id": f"tox21:{name}",
+                "doc_type": "prediction",
+                "title": f"Tox21 model (in vitro, not clinical): {name}",
+                "section": "toxicity_prediction",
+                "url": source.get("url", "https://tripod.nih.gov/tox21/challenge/"),
+                "source_name": f"Tujya model tujya-tox21 v{result.get('model', {}).get('version')}",
+                "date": "",
+                "license": "",
+                "text": text,
+                "snippet": text,
+            }
+        )
+    return found
 
 
 def interaction_sources(result: dict[str, Any]) -> list[dict[str, Any]]:
@@ -188,6 +236,60 @@ def interaction_sources(result: dict[str, Any]) -> list[dict[str, Any]]:
                 }
             )
     return found
+
+
+ACTIVE_AT = 0.5  # reading aid only: the summary lists the assays at or above it
+
+
+def prediction_numbers(state: AgentState) -> set[int]:
+    return {s["n"] for s in state.get("sources", []) if s.get("doc_type") == "prediction"}
+
+
+def about_prediction(sentence: str, numbers: set[int]) -> bool:
+    """A sentence citing a toxicity prediction or talking about toxicity / the assays."""
+    cites = {int(n) for n in re.findall(r"\[(\d+)\]", sentence)}
+    return bool(cites & numbers) or bool(TOX_MENTION.search(fold(sentence)))
+
+
+def toxicity_summary(state: AgentState) -> tuple[str, list[int]]:
+    """A fixed, cited sentence per predicted molecule, written from the tool output (not by
+    the LLM), so the numbers and the in vitro caveat are always right in the answer."""
+    numbers = {s["chunk_id"]: s["n"] for s in state.get("sources", []) if "n" in s}
+    french = state.get("language", "fr") == "fr"
+    sentences, cited = [], []
+    for entry in state.get("tool_results", []):
+        if entry["name"] != "predict_toxicity" or not entry["result"]:
+            continue
+        for molecule in entry["result"].get("molecules", []):
+            name = molecule.get("ingredient") or molecule.get("query")
+            n = numbers.get(f"tox21:{name}")
+            if n is None:
+                continue
+            high = [p for p in molecule.get("predictions", []) if p["probability"] >= ACTIVE_AT]
+            listed = ", ".join(f"{p['task']} ({p['probability']:.2f})" for p in high)
+            if french:
+                found = (
+                    f"probabilité d'activité d'au moins 0,5 dans {len(high)} des 12 tests : "
+                    f"{listed}".replace(".", ",")
+                    if high
+                    else "aucun des 12 tests n'atteint une probabilité d'activité de 0,5, ce qui "
+                    "ne prouve pas l'absence de toxicité"
+                )
+                sentences.append(f"Modèle Tox21 pour {name} ({WORDING}) : {found} [{n}].")
+            else:
+                found = (
+                    f"probability of activity of at least 0.5 in {len(high)} of the 12 assays: "
+                    f"{listed}"
+                    if high
+                    else "none of the 12 assays reaches a probability of activity of 0.5, which "
+                    "does not show an absence of toxicity"
+                )
+                sentences.append(
+                    f"Tox21 model for {name} (a model prediction on in vitro tests, not a "
+                    f"clinical evaluation): {found} [{n}]."
+                )
+            cited.append(n)
+    return " ".join(sentences), cited
 
 
 class TujyaAgent:
@@ -266,6 +368,15 @@ class TujyaAgent:
             planned.append(
                 {"name": "check_interaction", "args": {"drugs": ingredients}, "by": "rule"}
             )
+        if (
+            TOXICITY_QUESTION.search(fold(state["question"]))
+            and "predict_toxicity" not in names
+            and "predict_toxicity" in self.tools
+            and ingredients
+        ):
+            planned.append(
+                {"name": "predict_toxicity", "args": {"molecules": ingredients[:2]}, "by": "rule"}
+            )
         if "search_documents" not in names:
             planned.append(
                 {
@@ -318,6 +429,9 @@ class TujyaAgent:
             if entry["name"] == "check_interaction" and entry["result"]:
                 add(interaction_sources(entry["result"]), 3)
         for entry in results:
+            if entry["name"] == "predict_toxicity" and entry["result"]:
+                add(toxicity_sources(entry["result"]), 2)
+        for entry in results:
             if entry["name"] == "get_drug_info" and entry["result"]:
                 add(entry["result"].get("label_sections", []), 2)
         for entry in results:
@@ -349,7 +463,11 @@ class TujyaAgent:
         if not state.get("sources"):
             return {"draft": "", "timings": {**state.get("timings", {}), "answer_ms": 0.0}}
         writer = get_stream_writer()
-        sentences = SentenceFilter()
+        # With a toxicity prediction, its sentences come from toxicity_summary, not the LLM.
+        numbers = prediction_numbers(state)
+        sentences = SentenceFilter(
+            hold=(lambda s: about_prediction(s, numbers)) if numbers else None
+        )
         parts: list[str] = []
         async for chunk in self.llm.astream(self._answer_messages(state)):
             text = chunk.content if isinstance(chunk.content, str) else ""
@@ -377,6 +495,12 @@ class TujyaAgent:
         sources = state.get("sources", [])
         texts = [f"{s['title']} {s.get('text') or s.get('snippet', '')}" for s in sources]
         draft = state.get("draft", "")
+        replaced = 0
+        numbers = prediction_numbers(state)
+        if numbers:  # a 3B model misreads the probabilities: the fixed summary replaces them
+            kept = [s for s in split_sentences(draft) if not about_prediction(s, numbers)]
+            replaced = len(split_sentences(draft)) - len(kept)
+            draft = " ".join(kept)
         semantic = 0
         if self.attribution_threshold > 0 and draft and sources:
             try:
@@ -395,6 +519,15 @@ class TujyaAgent:
             source_texts=texts,
         )
         checked.violations += ["citation_added_by_meaning"] * semantic
+        checked.violations += ["toxicity_sentence_replaced"] * replaced
+        summary, tox_cited = toxicity_summary(state)
+        if summary:
+            # Dose questions never get here; "refused" means no LLM sentence survived.
+            refused = checked.action == "refused"
+            body = "" if refused else checked.answer.rpartition(DISCLAIMER)[0].strip()
+            checked.action = "rewritten" if refused or replaced else checked.action
+            checked.answer = f"{body} {summary}".strip() + f"\n\n{DISCLAIMER}"
+            checked.cited = sorted(set(checked.cited) | set(tox_cited))
         return {
             "answer": checked.answer,
             "safety": {

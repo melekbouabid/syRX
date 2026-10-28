@@ -123,6 +123,25 @@ chaque run est dans MLflow (expérience `tujya-rag`).
 | RAGAS (8 questions) : fidélité / pertinence / précision du contexte | 0,979 / n/d / 0,809 |
 | Temps de réponse moyen (RTX 2050) | 4,7 s |
 
+## Bonus : outil de toxicité (Tox21)
+
+Outil `predict_toxicity` (agent, serveur MCP, `POST /api/toxicity`, page **Toxicity** du
+site) : pour une ou deux molécules (nom de principe actif ou SMILES), probabilité d'activité
+dans les 12 tests in vitro de Tox21, **« prédiction d'un modèle sur des tests in vitro, pas
+une évaluation clinique »**. Chaque molécule est prédite séparément ; rien n'est dit sur leur
+association. Détails : [docs/TOXICITY.md](docs/TOXICITY.md).
+
+- Données : Tox21 (copie MoleculeNet / DeepChem, 7 831 molécules), versionnées par DVC ;
+  aucune licence explicite trouvée (données publiques d'agences fédérales américaines,
+  citées, non redistribuées, D73).
+- Modèle : empreintes Morgan (RDKit, rayon 2, 2 048 bits), un LightGBM par test, **split par
+  scaffold** (6 258 / 782 / 783) ; ROC-AUC moyen **0,725** en test (0,647 à 0,822 selon le
+  test), 0,766 en validation ; MLflow `tujya-tox`, modèle enregistré `tujya-tox21` v2.
+- Dans le chat, les phrases sur la prédiction sont écrites par le code à partir du résultat de
+  l'outil (le LLM de 3B lisait mal les probabilités, D74) ; nouvelle règle : jamais « non
+  toxique ».
+- Non fait : `predict_synergy` (voir le rapport de session 4).
+
 ## Sources de données
 
 | Jeu de données | Lien | Licence | Usage dans Tujya |
@@ -169,6 +188,7 @@ pipeline SynergyRx sont décrites dans l'annexe ci-dessous.
 | 2026-10-28 | Session 4, tâche 3 : remote DVC | Remote par défaut `localstore` = `C:\Users\msi\dvc-storage\tujya` (dossier hors du dépôt, D71), `.dvc/config` commité ; `dvc push` de tout ce qui est suivi (images et métadonnées C3PI, tables DDInter, corpus RAG brut, intermédiaire et découpé, sorties de `prepare`) ; preuve : clone neuf depuis GitHub dans un dossier temporaire, `dvc pull`, `dvc status`, comparaison SHA-256 fichier par fichier avec l'original, clone supprimé ; commandes pour passer à Google Drive ou S3 (non configurés) | `.dvc/config`, `docs/INFRA.md`, `README.md`, `docs/DECISIONS.md` | `dvc push` : 15 306 fichiers, 5,0 Go, 1 min 40 ; `dvc status -c` : synchronisés ; clone : `dvc pull` 15 306 fichiers en 10 min 54, `dvc status` à jour, 15 306/15 306 fichiers identiques (SHA-256), seuls manquent 5 caches Ultralytics `*.cache` exclus par `.dvcignore` ; case « DVC » cochée |
 | 2026-10-28 | Session 4, tâche 4 : script de démo et questions du jury | `docs/DEMO.md` : démonstration de 15 étapes (≈ 14 min) avec, pour chacune, l'action, ce que le jury voit et une phrase ; préparation (préchauffage du LLM) et plan B ; `docs/QUESTIONS_JURY.md` : 25 questions et réponses chiffrées ; répétition complète sur les conteneurs (Playwright + CLI) ; nouveau script de captures MLflow ; correction trouvée par la répétition : les outils côté PC se connectent à `127.0.0.1` et non `localhost` (D72) | `docs/DEMO.md`, `docs/QUESTIONS_JURY.md`, `frontend/scripts/mlflow-screenshots.mjs`, `docs/screenshots/12-15`, `backend/app/config.py`, `vision/tujya_vision/*.py`, `docs/MCP.md`, `docs/INFRA.md` | Scan + interactions + webcam + Swagger : OK (29 s) ; chat : 1re réponse 83,9 s (modèles froids), ensuite 5,6 s, Major cité, dose refusée ; MCP 2 min 34 -> 11 s après D72 ; MLflow : 4 runs vision, registre v2/v1 ; DVC à jour et synchronisé ; CI/CD vertes |
 | 2026-10-28 | Session 4, tâche 5 : rapports techniques | Deux rapports en français, avec uniquement les chiffres des docs et de MLflow : module 1 (données, étiquetage automatique et audit, modèles, seuil, ONNX, API, DVC, MLflow, Compose, CI/CD, web, déploiement local, limites) et module 2 (corpus, découpage, récupération, agent, sécurité, MCP, LLM, benchmark, chat, limites) ; schémas Mermaid rendus en PNG (architecture, chaîne de vision, graphe de l'agent) ; PDF par impression Chromium (pas de pandoc) ; docs/RAG.md et AGENT.md remis à jour | `docs/rapports/*.md`, `docs/rapports/*.pdf`, `docs/rapports/diagrams/`, `docs/rapports/img/`, `frontend/scripts/build-reports.mjs`, `docs/RAG.md`, `docs/AGENT.md` | PDF module 1 : 11 pages, 9 figures ; module 2 : 8 pages, 6 figures ; ouverts et relus (images visibles) ; case « Rapport technique » cochée |
+| 2026-10-28 | Session 4, tâche 6 : bonus toxicité | Données Tox21 (MoleculeNet, licence non explicite, D73) dans DVC ; empreintes Morgan RDKit + un LightGBM par test, split par scaffold, ROC-AUC par test, MLflow `tujya-tox`, modèle enregistré `tujya-tox21` et publié dans `models/tox21` ; structures des 82 principes actifs depuis PubChem ; outil `predict_toxicity` (agent, MCP, `POST /api/toxicity`), page web « Toxicity » (une carte par molécule) ; phrases de l'agent sur la prédiction écrites par le code, règle « jamais non toxique » (D74) | `backend/app/toxicity.py`, `backend/app/routers/toxicity.py`, `backend/app/rag/{tools,agent,safety,runtime}.py`, `backend/app/mcp_server.py`, `backend/scripts/train_tox21.py`, `backend/scripts/fetch_ingredient_smiles.py`, `backend/tests/test_toxicity.py`, `config/ingredient_smiles.csv`, `data/tox21.dvc`, `frontend/src/pages/ToxicityPage.tsx`, `docs/TOXICITY.md` | 7 823 molécules, split 6 258 / 782 / 783 ; ROC-AUC test moyen **0,725** (0,647 à 0,822), validation 0,766 ; 82/82 principes actifs avec une structure (49 identiques à une molécule d'entraînement, 4 hors domaine) ; page testée par Playwright sur les conteneurs (2 molécules en 1,2 s) ; chat : réponses correctes après correction (le LLM lisait mal les probabilités) ; 113 tests backend |
 
 ---
 

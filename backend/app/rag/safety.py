@@ -10,11 +10,14 @@
 4. Citations: [n] must point to a numbered source; an answer citing nothing gets the list
    of the sources it was given; an answer without any source is replaced by "no source".
 5. The disclaimer always ends the answer.
+6. No "non-toxic" claim (bonus toxicity tool): a model of in vitro assays never shows that a
+   molecule is harmless, so "non toxique", "not toxic", "sans toxicité" sentences are removed.
 """
 
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from app.medicines import DISCLAIMER, NO_KNOWN_INTERACTION
@@ -43,6 +46,17 @@ DOSE = re.compile(
 SAFE = re.compile(
     r"\bsûr(?:e|s|es)?\b|\bsafe(?:ly)?\b|\bharmless\b|\bsans (?:danger|risque)\b"
     r"|\bsécuritaire\b|\ben toute sécurité\b|\bno risk\b",
+    re.IGNORECASE,
+)
+# Checked on folded text.
+NOT_TOXIC = re.compile(
+    r"\bnon[- ]?toxi(?:que|ques|c)\b|\bpas toxiques?\b|\batoxiques?\b|\bnot toxic\b"
+    r"|\bsans (?:aucune )?toxicite\b|\bnot harmful\b"
+    # "no significant toxicity", "aucune toxicité notable", "pas de toxicité"
+    r"|\bno (?:\w+ )?toxicity\b|\b(?:pas de|aucune) (?:\w+ )?toxicite\b"
+    # "n'est pas identifiee comme toxique", "is not predicted to be toxic"
+    r"|\bpas\b[^.;]{0,40}\btoxiques?\b|\bnot\b[^.;]{0,40}\btoxic\b"
+    r"|\bfaible (?:probabilite|risque) de toxicite\b|\blow (?:probability|risk) of toxicity\b",
     re.IGNORECASE,
 )
 TIMING = re.compile(
@@ -94,6 +108,8 @@ def sentence_problems(sentence: str) -> list[str]:
         problems.append("dose")
     if SAFE.search(sentence.lower()):
         problems.append("safe")
+    if NOT_TOXIC.search(folded):
+        problems.append("not_toxic_claim")
     if TIMING.search(folded) and not CITATION.search(sentence):
         problems.append("uncited_timing")
     return problems
@@ -184,8 +200,16 @@ class SentenceFilter:
     ever reaching the screen while the answer is being generated.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, hold: Callable[[str], bool] | None = None) -> None:
         self.buffer = ""
+        self.hold = hold  # extra sentences to hold back (e.g. replaced by a fixed summary)
+
+    def _shown(self, sentence: str) -> bool:
+        return (
+            bool(sentence.strip())
+            and not sentence_problems(sentence)
+            and not (self.hold and self.hold(sentence))
+        )
 
     def feed(self, text: str) -> list[str]:
         self.buffer += text
@@ -193,11 +217,11 @@ class SentenceFilter:
         if len(parts) == 1:
             return []
         complete, self.buffer = parts[:-1], parts[-1]
-        return [s + " " for s in complete if s.strip() and not sentence_problems(s)]
+        return [s + " " for s in complete if self._shown(s)]
 
     def flush(self) -> list[str]:
         rest, self.buffer = self.buffer, ""
-        return [rest] if rest.strip() and not sentence_problems(rest) else []
+        return [rest] if self._shown(rest) else []
 
 
 async def attribute_by_meaning(

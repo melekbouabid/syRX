@@ -70,6 +70,11 @@ class Settings(BaseSettings):
     # this; calibrated on the first benchmark run (docs/BENCHMARK.md). 0 disables it.
     rag_attribution_threshold: float = 0.65
 
+    # Bonus: single-molecule toxicity (docs/TOXICITY.md). The model bundle is published by
+    # `python scripts/train_tox21.py publish`; ingredient names -> SMILES from PubChem.
+    tox_model_dir: Path = PROJECT_DIR / "models" / "tox21"
+    ingredient_smiles_file: Path = PROJECT_DIR / "config" / "ingredient_smiles.csv"
+
     session_cookie: str = "synergyrx_session"
     session_hours: int = 12
     cookie_secure: bool = False  # set to true as soon as the site is served over HTTPS

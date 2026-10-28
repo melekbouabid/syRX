@@ -1,6 +1,6 @@
 # Tujya MCP server
 
-`backend/app/mcp_server.py` exposes the agent's four tools through the Model Context
+`backend/app/mcp_server.py` exposes the agent's five tools through the Model Context
 Protocol, with the official Python SDK (`mcp` 2.3, `MCPServer`, formerly FastMCP). It is the
 same code as the LangGraph agent's tools (`backend/app/rag/tools.py`), so an MCP client gets
 exactly what the agent gets.
@@ -11,6 +11,7 @@ exactly what the agent gets.
 | `check_interaction` | `drugs` (names, French or English), `pills` (class_ids) | DDInter pairs with severity, description, source; never "safe" |
 | `get_drug_info` | `drug`, `sections` | pill classes with the ingredient, openFDA label excerpts (no dosage section) |
 | `search_documents` | `query`, `ingredients`, `doc_types`, `sections`, `k`, `exclude_retracted` | hybrid BM25 + bge-m3 hits with title, section, URL, source, licence, text |
+| `predict_toxicity` (bonus) | `molecules` (1 or 2 ingredient names or SMILES) | per molecule, probability of activity in the 12 Tox21 in vitro assays, test ROC-AUC per assay, similarity to the training set; "prédiction d'un modèle sur des tests in vitro, pas une évaluation clinique"; never about a mixture (docs/TOXICITY.md) |
 
 The server's `instructions` repeat the safety rules (no doses, never "safe", cite sources,
 disclaimer); a client's own model is responsible for following them in its answers.
@@ -76,6 +77,6 @@ authentication, so do not expose it.
 ## Tests
 
 `backend/tests/test_mcp.py` (in-process MCP client, SQLite tables, fake embeddings): the
-four tools are listed with their input schemas; `check_interaction` (French name) returns
+the tools are listed with their input schemas (five since session 4); `check_interaction` (French name) returns
 DDInter Major for warfarin + fluconazole; `search_documents` with a `doc_types` filter
 returns labels only; `identify_pills` on a missing file returns an MCP error result.

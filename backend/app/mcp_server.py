@@ -1,13 +1,13 @@
-"""Tujya MCP server: the agent's four tools for any MCP client (official Python MCP SDK).
+"""Tujya MCP server: the agent's five tools for any MCP client (official Python MCP SDK).
 
     cd backend
     python -m app.mcp_server                              # stdio (Claude Desktop, IDEs)
     python -m app.mcp_server --transport streamable-http --port 8765   # http://127.0.0.1:8765/mcp
 
 Same tools, same code as the LangGraph agent (app/rag/tools.py): identify_pills,
-check_interaction, get_drug_info, search_documents. Settings come from the SYNERGYRX_*
-environment (database, Ollama URL for the query embeddings, models directory); see
-docs/MCP.md for client configuration.
+check_interaction, get_drug_info, search_documents, predict_toxicity (bonus). Settings come
+from the SYNERGYRX_* environment (database, Ollama URL for the query embeddings, models
+directory); see docs/MCP.md for client configuration.
 """
 
 from __future__ import annotations
@@ -25,13 +25,16 @@ from app.rag.retrieval import RetrieverHolder
 from app.rag.store import ChunkStore
 from app.rag.tools import TOOL_SPECS, Toolbox
 from app.scanner import ScannerHolder
+from app.toxicity import ToxHolder
 
 INSTRUCTIONS = (
     "Medicine information for the 150 Tujya pill classes and their 82 active ingredients: "
     "pill identification from a photo, DDInter interactions, openFDA label excerpts, and "
     "hybrid search of labels, PubMed abstracts and DDInter. Cite the returned sources. Never "
     "give doses; never call a combination safe (say 'aucune interaction connue dans cette "
-    f"base de données'). {DISCLAIMER}"
+    "base de données'). predict_toxicity is a model prediction on in vitro tests, not a "
+    "clinical evaluation: report each molecule separately, never conclude about a mixture. "
+    f"{DISCLAIMER}"
 )
 
 
@@ -72,6 +75,10 @@ def build_server(toolbox: Toolbox) -> MCPServer:
             exclude_retracted=exclude_retracted,
         )
 
+    @server.tool(name="predict_toxicity", description=TOOL_SPECS["predict_toxicity"][2])
+    async def predict_toxicity(molecules: list[str]) -> dict[str, Any]:
+        return await toolbox.predict_toxicity(molecules=molecules)
+
     return server
 
 
@@ -90,7 +97,8 @@ def default_toolbox(settings: Settings, embedder: Embedder | None = None) -> Too
         conf=settings.scan_detection_confidence,
     )
     retrievers = RetrieverHolder(ChunkStore(engine, embedder.dim), embedder)
-    return Toolbox(settings, engine, retrievers, scanner)
+    toxicity = ToxHolder(settings.tox_model_dir, settings.ingredient_smiles_file)
+    return Toolbox(settings, engine, retrievers, scanner, toxicity=toxicity)
 
 
 # Strictly local (docs/INFRA.md): the HTTP transport only ever listens on the loopback.

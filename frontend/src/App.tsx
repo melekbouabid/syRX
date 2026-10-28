@@ -10,6 +10,7 @@ import Home from "./pages/Home";
 import Intro from "./pages/Intro";
 import Profile from "./pages/Profile";
 import ScanPage from "./pages/ScanPage";
+import ToxicityPage from "./pages/ToxicityPage";
 
 /** "/" shows the introduction to visitors and sends signed-in accounts to their own area. */
 function Landing() {
@@ -43,6 +44,7 @@ export default function App() {
         <Route element={<UserLayout />}>
           <Route path="/home" element={<Home />} />
           <Route path="/scan" element={<ScanPage />} />
+          <Route path="/toxicity" element={<ToxicityPage />} />
           <Route path="/drugs" element={<DrugsPage />} />
           <Route path="/cell-lines" element={<CellLinesPage />} />
           <Route path="/profile" element={<Profile />} />

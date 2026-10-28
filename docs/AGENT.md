@@ -30,13 +30,13 @@ If the planner call fails (model down, bad JSON), the rule-based calls still run
 | `check_interaction` | `drugs` (names, French or English), `pills` (class_ids) | the `/api/interactions` result: every pair, DDInter severity, description, source; "aucune interaction connue dans cette base de données" when nothing is listed |
 | `get_drug_info` | `drug`, optional `sections` | pill classes containing the ingredient, and the first chunk of each label section (boxed warning, indications, contraindications, warnings, interactions, mechanism) |
 | `search_documents` | `query`, `ingredients`, `doc_types`, `sections`, `k`, `exclude_retracted` | hybrid search hits with title, section, URL, source, date, licence, text |
+| `predict_toxicity` (bonus) | `molecules` (1 or 2 names or SMILES) | Tox21 in vitro assay probabilities per molecule, never about a mixture (docs/TOXICITY.md); added by rule to a toxicity question; its sentences in the answer are written by the code, not the LLM (D74) |
 
 **Extension point.** A tool is one async method on `Toolbox` and one entry in
 `TOOL_SPECS`; it is then available to the agent (`CHAT_TOOLS`) and the MCP server. Two
-tools are planned, not implemented (docs/ROADMAP.md, Bonus): `predict_toxicity(smiles)`
-(single-molecule toxicity, a model trained on Tox21 / ClinTox) and
+bonus tools were planned: `predict_toxicity` is implemented (session 4, docs/TOXICITY.md);
 `predict_synergy(drug_a, drug_b)` (cancer synergy from the DrugComb data already in the
-pipeline).
+pipeline) is not.
 
 ## Safety rules (`app/rag/safety.py`, D63)
 

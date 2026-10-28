@@ -47,6 +47,7 @@ def test_tools_are_listed_with_their_schemas(tmp_path: Path) -> None:
         "check_interaction",
         "get_drug_info",
         "search_documents",
+        "predict_toxicity",
     }
     search = tools["search_documents"]
     schema = getattr(search, "input_schema", None) or search.inputSchema

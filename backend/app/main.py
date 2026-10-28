@@ -15,8 +15,9 @@ from app.config import Settings
 from app.db import Base, make_engine
 from app.limits import BodySizeLimit
 from app.rag.runtime import AgentHolder
-from app.routers import admin, auth, catalog, chat, demo, medicines, scan
+from app.routers import admin, auth, catalog, chat, demo, medicines, scan, toxicity
 from app.scanner import ScannerHolder
+from app.toxicity import ToxHolder
 
 DESCRIPTION = (
     "Pill identification and interaction checks for the Tujya project. "
@@ -73,8 +74,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         threads=settings.onnx_threads,
         conf=settings.scan_detection_confidence,
     )
+    # Bonus: Tox21 toxicity model, loaded on first use (models/tox21, docs/TOXICITY.md).
+    app.state.toxicity = ToxHolder(settings.tox_model_dir, settings.ingredient_smiles_file)
     # Module 2 agent: built on the first /api/chat call (Ollama, chunk index in pgvector).
-    app.state.agents = AgentHolder(settings, pharma_engine, app.state.scanner)
+    app.state.agents = AgentHolder(
+        settings, pharma_engine, app.state.scanner, toxicity=app.state.toxicity
+    )
     # Refuse an oversized upload from its Content-Length, before the body is read.
     app.add_middleware(BodySizeLimit, max_bytes=settings.scan_max_bytes + 64 * 1024)
 
@@ -86,6 +91,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(medicines.router)
     app.include_router(demo.router)
     app.include_router(chat.router)
+    app.include_router(toxicity.router)
 
     @app.get("/api/health", tags=["health"])
     def health() -> dict[str, str]:

@@ -2,7 +2,7 @@
 //
 //   MLFLOW=http://127.0.0.1:5000 node scripts/mlflow-screenshots.mjs
 //
-// Opens the vision and RAG experiments (run tables, "Model training" view) and the Model
+// Opens the vision, RAG and toxicity experiments (run tables, "Model training" view) and the Model
 // Registry (both registered models, then the classifier), closing MLflow 3's guidance
 // pop-ups and assistant panel. Fails if a page does not show what it should.
 import { mkdir } from "node:fs/promises";
@@ -50,5 +50,6 @@ const page = await browser.newPage({ viewport: { width: 1366, height: 860 } });
 await open(page, `/experiments/${await experimentId("tujya-vision")}/runs?workflowType=machine_learning`, "tujya-vision", "12-mlflow-vision.jpg");
 await open(page, `/experiments/${await experimentId("tujya-rag")}/runs?workflowType=machine_learning`, "tujya-rag", "13-mlflow-rag.jpg");
 await open(page, "/models", "tujya-pill-classifier", "14-mlflow-registry.jpg");
+await open(page, `/experiments/${await experimentId("tujya-tox")}/runs?workflowType=machine_learning`, "tujya-tox", "17-mlflow-tox.jpg");
 await open(page, "/models/tujya-pill-classifier", "Version 2", "15-mlflow-classifier.jpg");
 await browser.close();

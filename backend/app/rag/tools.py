@@ -5,9 +5,7 @@ Every tool returns plain JSON-serialisable data with the sources it used, never 
 (the corpus has no dosage section) and never the word "safe".
 
 Extension point: a new tool is one async method on `Toolbox` plus one entry in
-`TOOL_SPECS`. Planned (docs/ROADMAP.md, Bonus), not implemented:
-    predict_toxicity(smiles)       single-molecule toxicity, model trained on Tox21 / ClinTox
-    predict_synergy(drug_a, drug_b) cancer synergy from the DrugComb data of the pipeline
+`TOOL_SPECS`. Bonus tool: `predict_toxicity` (Tox21 in vitro assays, docs/TOXICITY.md).
 """
 
 from __future__ import annotations
@@ -30,6 +28,7 @@ from app.rag.names import NameIndex
 from app.rag.retrieval import Hit, RetrieverHolder
 from app.rag.store import Filters
 from app.scanner import ScannerHolder
+from app.toxicity import ToxHolder, ToxicityUnavailable, predict_molecules
 
 DOC_TYPES = ("label", "abstract", "interaction")
 SNIPPET_CHARS = 700
@@ -74,6 +73,7 @@ class Toolbox:
     pharma_engine: Engine
     retrievers: RetrieverHolder
     scanner: ScannerHolder | None = None
+    toxicity: ToxHolder | None = None
     _names: NameIndex | None = None
 
     # ----------------------------------------------------------- helpers
@@ -217,6 +217,24 @@ class Toolbox:
             "results": [hit_source(hit) for hit in hits],
         }
 
+    async def predict_toxicity(self, molecules: list[str]) -> dict[str, Any]:
+        """Tox21 in vitro assay probabilities for one or two molecules, each on its own."""
+        if self.toxicity is None:
+            raise ToolError("no toxicity model configured")
+        if not [m for m in molecules if m and m.strip()]:
+            raise ToolError("give one or two molecules (active ingredient names or SMILES)")
+
+        def resolve(value: str) -> str | None:
+            try:
+                return self.names().lookup(value)
+            except Exception:  # medicine tables missing: names are still tried as given
+                return None
+
+        try:
+            return await run_in_threadpool(predict_molecules, self.toxicity, molecules, resolve)
+        except ToxicityUnavailable as exc:
+            raise ToolError(str(exc)) from exc
+
 
 # ------------------------------------------------------------------ schemas
 
@@ -251,6 +269,14 @@ class SearchArgs(BaseModel):
     k: int = Field(5, ge=1, le=20, description="Number of results")
 
 
+class ToxicityArgs(BaseModel):
+    molecules: list[str] = Field(
+        description="One or two molecules: active ingredient names (e.g. 'warfarin') or SMILES",
+        min_length=1,
+        max_length=2,
+    )
+
+
 TOOL_SPECS: dict[str, tuple[str, type[BaseModel], str]] = {
     "identify_pills": (
         "identify_pills",
@@ -276,10 +302,18 @@ TOOL_SPECS: dict[str, tuple[str, type[BaseModel], str]] = {
         "Search openFDA labels, PubMed abstracts and DDInter rows (bge-m3 embeddings, BM25 "
         "or hybrid), with filters on ingredient, document type and section.",
     ),
+    "predict_toxicity": (
+        "predict_toxicity",
+        ToxicityArgs,
+        "Only for questions about toxicity: probability that each molecule (ingredient name "
+        "or SMILES, at most two) is active in the 12 Tox21 in vitro assays. A model "
+        "prediction on in vitro tests, not a clinical evaluation; each molecule is predicted "
+        "separately and nothing is said about their combination.",
+    ),
 }
 # The agent's model is never given identify_pills: a chat question carries no image (the
-# app sends the confirmed pills instead). MCP clients get all four.
-CHAT_TOOLS = ("check_interaction", "get_drug_info", "search_documents")
+# app sends the confirmed pills instead). MCP clients get all five.
+CHAT_TOOLS = ("check_interaction", "get_drug_info", "search_documents", "predict_toxicity")
 
 
 def langchain_tools(toolbox: Toolbox, names: tuple[str, ...] = CHAT_TOOLS) -> list[BaseTool]:

@@ -18,6 +18,7 @@ from app.rag.retrieval import RetrieverHolder
 from app.rag.store import ChunkStore
 from app.rag.tools import Toolbox
 from app.scanner import ScannerHolder
+from app.toxicity import ToxHolder
 
 
 def ollama_llm(settings: Settings) -> BaseChatModel:
@@ -48,8 +49,10 @@ class AgentHolder:
         *,
         llm: BaseChatModel | None = None,
         embedder: Embedder | None = None,
+        toxicity: ToxHolder | None = None,
     ) -> None:
         self.settings, self.pharma_engine, self.scanner = settings, pharma_engine, scanner
+        self.toxicity = toxicity
         self.llm = llm
         self.embedder = embedder
         self._toolbox: Toolbox | None = None
@@ -69,7 +72,12 @@ class AgentHolder:
             )
             store = ChunkStore(self.pharma_engine, embedder.dim)
             self._toolbox = Toolbox(
-                self.settings, self.pharma_engine, RetrieverHolder(store, embedder), self.scanner
+                self.settings,
+                self.pharma_engine,
+                RetrieverHolder(store, embedder),
+                self.scanner,
+                toxicity=self.toxicity
+                or ToxHolder(self.settings.tox_model_dir, self.settings.ingredient_smiles_file),
             )
         return self._toolbox
 

@@ -2992,3 +2992,77 @@ a.cite:hover {
     flex-direction: column;
   }
 }
+
+/* Toxicity page (bonus, docs/TOXICITY.md) */
+.tox-wording {
+  border-color: var(--warn, #c58a00);
+}
+
+.tox-form form {
+  display: grid;
+  gap: 12px;
+}
+
+.tox-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.tox-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tox-results {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.tox-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tox-card-head h3 {
+  margin: 0;
+  text-transform: capitalize;
+}
+
+.tox-smiles {
+  max-width: 60ch;
+  overflow-wrap: anywhere;
+}
+
+.tox-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tox-table th,
+.tox-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.tox-table td:first-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.tox-auc {
+  font-variant-numeric: tabular-nums;
+}
+
+.tox-notes p {
+  margin: 0 0 8px;
+}

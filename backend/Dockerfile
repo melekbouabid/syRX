@@ -9,6 +9,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
+# LightGBM (bonus toxicity tool) needs the OpenMP runtime, absent from the slim image.
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 

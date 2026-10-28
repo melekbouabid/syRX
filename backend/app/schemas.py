@@ -314,3 +314,48 @@ class ChatResult(BaseModel):
     model: str
     timings: dict[str, float]
     disclaimer: str
+
+
+# ---------------------------------------------------------------- toxicity (bonus)
+
+
+class ToxicityIn(BaseModel):
+    molecules: list[str] = Field(
+        min_length=1,
+        max_length=2,
+        description="One or two molecules: active ingredient names or SMILES",
+        examples=[["warfarin", "fluconazole"]],
+    )
+
+
+class ToxPrediction(BaseModel):
+    task: str = Field(description="Tox21 assay, e.g. SR-p53")
+    assay: str
+    probability: float = Field(description="Predicted probability of being active in the assay")
+    test_roc_auc: float | None = Field(description="The model's ROC-AUC on this assay (test set)")
+
+
+class ToxMolecule(BaseModel):
+    query: str
+    resolved_as: Literal["ingredient", "smiles"]
+    ingredient: str | None
+    smiles: str
+    predictions: list[ToxPrediction]
+    max_similarity_to_training: float
+    in_domain: bool = Field(description="False: far from the training molecules")
+
+
+class ToxError(BaseModel):
+    query: str
+    error: str
+
+
+class ToxicityResult(BaseModel):
+    wording: str = Field(description="Always: a model prediction on in vitro tests")
+    molecules: list[ToxMolecule] = Field(description="Each molecule on its own")
+    errors: list[ToxError]
+    mixture_note: str
+    low_probability_note: str
+    model: dict[str, Any]
+    source: dict[str, str]
+    disclaimer: str
