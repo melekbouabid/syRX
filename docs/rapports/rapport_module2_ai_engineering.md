@@ -20,7 +20,7 @@ sécurité médicales appliquées dans le code.
 | Exigence du module 2 | Réalisation | Section |
 |---|---|---|
 | RAG : gestion des documents, métadonnées, citations, documentation | corpus de 8 661 chunks, 18 colonnes de métadonnées, citations [n] | 2, 3 |
-| Tool calling / MCP | 4 outils appelés par le LLM ; serveur MCP officiel | 4, 5 |
+| Tool calling / MCP | 4 outils appelés par le LLM (+ 1 en bonus) ; serveur MCP officiel | 4, 5, 9 |
 | LangChain / LangGraph | graphe LangGraph à 5 nœuds, outils LangChain | 4 |
 | Benchmark de la récupération et de la génération | 88 questions, Recall@k / MRR, sécurité, citations, RAGAS | 7 |
 | Interface web | panneau de chat sur la page Scanner | 8 |
@@ -129,10 +129,10 @@ des événements SSE `tool`, `token`, `final`.
 
 ## 6. Serveur MCP et LLM local
 
-- **MCP** : `backend/app/mcp_server.py`, SDK Python officiel (`mcp` 2.3), les **4 mêmes
-  outils** (même code), consignes de sécurité dans les `instructions` du serveur ;
+- **MCP** : `backend/app/mcp_server.py`, SDK Python officiel (`mcp` 2.3), les **mêmes
+  outils** que l'agent (même code ; 4, plus `predict_toxicity` en bonus), consignes de sécurité dans les `instructions` du serveur ;
   transports stdio et streamable HTTP (limité à `127.0.0.1`). Test de fumée réel
-  (`scripts/mcp_smoke.py`, ≈ 11 s) : 4 outils listés, warfarine + fluconazole -> Major,
+  (`scripts/mcp_smoke.py`, ≈ 11 s, avant le bonus) : 4 outils listés, warfarine + fluconazole -> Major,
   « metformin lactic acidosis » -> notices de la metformine. 3 tests (liste et schémas,
   appels, refus d'une adresse non locale).
 - **Choix du LLM** (D58), sur une RTX 2050 de 4 Go, même question courte en français :
@@ -217,7 +217,28 @@ de préchauffage dans le script de démo).
 
 ![Question de dose refusée.](../screenshots/11-chat-dose-refused.jpg)
 
-## 9. Limites et suite
+## 9. Bonus : outil de toxicité (Tox21)
+
+Cinquième outil, `predict_toxicity` (agent, serveur MCP, `POST /api/toxicity`, page
+« Toxicity ») : pour une ou deux molécules (nom de principe actif ou SMILES), probabilité
+d'activité dans les 12 tests in vitro de Tox21, toujours présentée comme une **« prédiction
+d'un modèle sur des tests in vitro, pas une évaluation clinique »**, chaque molécule
+séparément, jamais rien sur leur association (docs/TOXICITY.md).
+
+- Données : Tox21, copie MoleculeNet (7 831 molécules) ; aucune licence explicite trouvée
+  (données publiques d'agences fédérales américaines), citées, versionnées par DVC (D73).
+- Modèle : empreintes Morgan RDKit (rayon 2, 2 048 bits), un LightGBM par test, **split par
+  scaffold** (6 258 / 782 / 783) : ROC-AUC moyen **0,725** en test (de 0,647 pour SR-ARE à
+  0,822 pour NR-AhR), 0,766 en validation ; fort surapprentissage (ROC-AUC d'entraînement
+  proche de 1). MLflow `tujya-tox`, modèle enregistré `tujya-tox21` v2.
+- **Leçon de sécurité** (D74) : en essayant le vrai agent, qwen2.5:3b a mal lu les
+  probabilités (warfarine « pas identifiée comme toxique » alors que SR-MMP = 0,83). Les
+  phrases sur la prédiction sont donc écrites par le code à partir du résultat de l'outil,
+  et une règle retire toute affirmation « non toxique ». Vérifié ensuite sur les conteneurs.
+
+![Page Toxicity : une carte par molécule, formulation et avertissement toujours visibles.](../screenshots/16-toxicity.jpg)
+
+## 10. Limites et suite
 
 - **Modèle de 3B** : réponses justes et citées pour les contre-indications, mécanismes,
   encadrés et sévérités DDInter, mais phrases hors sujet prises dans la même section de
@@ -233,7 +254,7 @@ de préchauffage dans le script de démo).
   un LLM plus grand sur un GPU plus gros, RAGAS sur tout le jeu avec un juge plus fort, un
   benchmark écrit par une autre personne, interface en français.
 
-## 10. Références
+## 11. Références
 
 - openFDA drug label API : <https://open.fda.gov/apis/drug/label/>.
 - NCBI E-utilities (PubMed) : <https://www.ncbi.nlm.nih.gov/books/NBK25501/>.
@@ -245,6 +266,9 @@ de préchauffage dans le script de démo).
 - pgvector <https://github.com/pgvector/pgvector> ; S. Robertson, H. Zaragoza, « The
   Probabilistic Relevance Framework: BM25 and Beyond », 2009 ; G. Cormack et al.,
   « Reciprocal Rank Fusion », SIGIR 2009.
+- R. Huang et al., « Tox21 Challenge to Build Predictive Models of Nuclear Receptor and
+  Stress Response Pathways… », Front. Environ. Sci. 2016 ; Z. Wu et al., « MoleculeNet: a
+  benchmark for molecular machine learning », Chem. Sci. 2018 ; RDKit, LightGBM.
 - S. Es et al., « RAGAS: Automated Evaluation of Retrieval Augmented Generation »,
   arXiv:2309.15217.
 - Documents du dépôt : docs/RAG.md, docs/AGENT.md, docs/MCP.md, docs/BENCHMARK.md,

@@ -183,7 +183,7 @@ scan renvoie les versions servies.
 | `/docs`, `/openapi.json` | Swagger UI et schéma OpenAPI (« Tujya API ») |
 
 Routes asynchrones, schémas Pydantic, connexion requise (cookie de session, D46). Tests :
-100 tests backend au total (dont 12 pour le scan avec de petits modèles ONNX factices
+113 tests backend au total (dont 12 pour le scan avec de petits modèles ONNX factices
 construits dans le test, 16 pour les interactions, jamais le mot « safe »/« sûr »).
 
 ![Swagger UI sur /docs.](../screenshots/07-swagger.jpg)
@@ -228,7 +228,7 @@ Swagger, `/openapi.json` (18 routes à l'époque), scan réel d'une photo de tes
 ### 5.4 GitHub Actions CI/CD
 
 - **CI** (`ci.yml`, chaque push et pull request) : 4 jobs : pipeline de données (ruff,
-  format, mypy, 287 tests unitaires), backend (ruff, format, 100 tests, avec un service
+  format, mypy, 287 tests unitaires), backend (ruff, format, 113 tests, avec un service
   PostgreSQL + pgvector), vision (ruff, format, 14 tests sans entraînement), frontend
   (`npm ci`, vérification de types, build). Aucun appel réseau réel.
 - **CD** (`cd.yml`, après une CI verte sur `main`) : construction des images backend et

@@ -178,3 +178,12 @@ tester sur d'autres exemplaires de comprimés et sur de vraies photos de webcam 
 ePillID sur son split ; un LLM plus grand sur un GPU plus gros et RAGAS sur tout le jeu avec
 un juge plus fort ; traduire les requêtes pour BM25 ; OCR des empreintes ; interface en
 français ; un benchmark écrit par une autre personne.
+
+**26. (Bonus) Que vaut votre modèle de toxicité ?**
+Tox21 (copie MoleculeNet, 7 831 molécules, licence non explicite : données publiques
+d'agences fédérales américaines, D73), empreintes Morgan + un LightGBM par test, split par
+scaffold : ROC-AUC moyen 0,725 en test (0,647 à 0,822), avec un fort surapprentissage et peu
+d'actifs par test. C'est une prédiction sur des tests in vitro, pas une évaluation clinique ;
+chaque molécule est prédite seule, rien sur le mélange ; 49 des 82 principes actifs sont déjà
+dans les données d'entraînement. Le LLM de 3B lisait mal les probabilités : dans le chat, ces
+phrases sont générées par le code (D74).

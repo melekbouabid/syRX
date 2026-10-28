@@ -212,6 +212,19 @@ et temps mesurés dans [SESSION_REPORT_4.md](SESSION_REPORT_4.md#tâche-4--scrip
   main ; le dense battait l'hybride sur ce jeu, surtout en français, donc c'est le réglage
   par défaut. »
 
+## 14 bis. Bonus : toxicité (optionnel, 45 s)
+
+- **Faire** : menu **Toxicity** -> laisser « warfarin » et « fluconazole » -> **Predict**.
+- **Le jury voit** (≈ 1 s) : une carte par molécule, les 12 tests Tox21 avec la probabilité
+  d'activité et le ROC-AUC du modèle pour chaque test, le bandeau « Prédiction d'un modèle sur
+  des tests in vitro, pas une évaluation clinique », la note « ce modèle ne dit rien de leur
+  association ». Exemple « citalopram » : badge « far from the training molecules ».
+- **Dire** : « En bonus, un modèle LightGBM sur Tox21 avec un split par scaffold, ROC-AUC
+  moyen 0,725 ; et comme le petit LLM lisait mal les probabilités, dans le chat ces phrases
+  sont écrites par le code, pas par le modèle. »
+- Dans le chat : « La warfarine est-elle toxique selon le modèle Tox21 ? » -> la phrase fixe
+  « Modèle Tox21 pour warfarin (…) : … SR-MMP (0,83) [1]. »
+
 ## 15. Limites (1 min)
 
 - **Dire**, honnêtement :
