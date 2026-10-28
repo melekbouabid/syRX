@@ -6,7 +6,7 @@ weights (transfer learning), tracked in MLflow, exported to ONNX.
 ```
 photo ──> detector (YOLO11n, 1 class "pill") ──> one box per pill
              └─ crop each box (square, +20 % margin, 224 px)
-                   └─> identifier (YOLO11n-cls, 150 classes) ──> top-5 pills + confidence
+                   └─> identifier (YOLO11s-cls, 150 classes) ──> top-5 pills + confidence
                           └─> class -> active ingredients (RxNav) -> DDInter interactions
 ```
 
