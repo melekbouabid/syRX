@@ -536,3 +536,12 @@ owner asked for it as an option. The two packages published before (tujya-backen
 tujya-frontend, private, code only) could not be deleted from here: the local gh token has
 no `delete:packages` scope and changing the owner's login was out of scope; the manual steps
 are in docs/CD.md.
+
+**D71. DVC remote on a local folder outside the repository.** Default remote `localstore`
+= `C:\Users\msi\dvc-storage\tujya` (the owner's choice for this session; consistent with D69, nothing leaves the
+PC). Its absolute path is in the committed `.dvc/config`, so a clone on another machine
+must add its own remote (`dvc remote add -d --local ...`); acceptable since the project
+runs only here. It is not a backup (same disk as the repository): the report asks the
+owner to copy it to an external disk. Google Drive and S3 commands are documented in
+docs/INFRA.md, not configured: either would put licensed data (DDInter CC BY-NC-SA, C3PI
+research use) on a cloud service, which must then stay private.

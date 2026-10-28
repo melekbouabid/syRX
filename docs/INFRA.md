@@ -22,9 +22,10 @@ docker compose down                 # stops; volumes are kept (down -v deletes t
 
 **Before the first start** (the images contain no data and no model, D55):
 
-1. Data under `data/` (DVC, docs/DATASET_C3PI.md, docs/INTERACTIONS.md):
-   `data/tujya/*.csv` (medicine tables) and `data/vision/c3pi/images/` (demo gallery);
-   `data/parquet/` (SynergyRx tables) is optional.
+1. Data under `data/` (DVC, docs/DATASET_C3PI.md, docs/INTERACTIONS.md): `dvc pull` from
+   the default remote (section "DVC remote" below) gives `data/tujya/*.csv` (medicine
+   tables), `data/vision/c3pi/images/` (demo gallery) and `data/rag/corpus` (RAG index);
+   `data/parquet/` (SynergyRx tables) is optional and not in DVC.
 2. Models: `cd vision && python -m tujya_vision.publish` fills `models/` from the MLflow
    Model Registry (MLflow must be running: `docker compose up -d mlflow` first).
 
@@ -88,6 +89,46 @@ No `0.0.0.0:<port>` or `[::]:<port>` line any more (before: `0.0.0.0:8080->80/tc
 [::]:8080->80/tcp`). `http://localhost:8080`, `/docs`, `/api/health` and MLflow `/health`
 answer 200; the same ports on the PC's LAN and WSL addresses (192.168.1.6, 172.x) refuse
 the connection. The Vite dev server listens on `127.0.0.1:5173` only.
+
+## DVC remote (since 2026-10-28)
+
+Default remote `localstore`: a folder on this PC, outside the repository (D71).
+
+```bash
+dvc remote add -d localstore C:\Users\msi\dvc-storage\tujya   # already in .dvc/config
+dvc push            # cache -> remote (15,306 files, 5.0 GB on 2026-10-28)
+dvc pull            # remote -> cache -> workspace (fresh clone)
+dvc status -c       # "Cache and remote 'localstore' are in sync."
+dvc remote list     # localstore  C:\Users\msi\dvc-storage\tujya  (default)
+```
+
+DVC is installed in the vision venv (`vision/.venv/Scripts/dvc.exe`, DVC 3.67.1). What is
+tracked: `data/vision/c3pi/images` and `metadata` (`dvc add`), `data/tujya`,
+`data/rag/raw`, `data/rag/interim`, `data/rag/manifest.json` (`dvc add`), and the outputs
+of the `prepare` (labels, YOLO datasets) and `rag_corpus` (chunks) stages of `dvc.yaml`.
+
+The remote holds C3PI (ODbL, research use), DDInter (CC BY-NC-SA, no redistribution beyond
+its terms) and openFDA/PubMed data: it must stay private. The folder is not a backup: copy
+it to an external disk if the PC is the only copy.
+
+**Switching later to Google Drive or S3** (commands only, not configured):
+
+```bash
+# Google Drive (pip install "dvc[gdrive]"): folder ID from the folder's URL
+dvc remote add gdrive gdrive://<folder-id>
+dvc remote default gdrive
+dvc push                                                         # opens a browser for OAuth once
+
+# Amazon S3 (pip install "dvc[s3]"): credentials from the AWS CLI profile, never in git
+dvc remote add s3store s3://<bucket>/tujya
+dvc remote modify s3store region eu-west-3
+dvc remote modify --local s3store profile <aws-profile>          # .dvc/config.local, git-ignored
+dvc remote default s3store
+dvc push
+```
+
+Credentials always go in `.dvc/config.local` (`--local`, git-ignored), never in
+`.dvc/config`. Keep the data private on either service (licences above).
 
 ## Smoke test (2026-10-28)
 

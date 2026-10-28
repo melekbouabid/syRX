@@ -25,7 +25,7 @@ Une case n'est cochée que lorsque l'exigence est réellement satisfaite.
 - [x] Axe vision : identification de chaque comprimé par transfer learning
 - [x] Backend FastAPI asynchrone, schémas Pydantic, Swagger sur `/docs`
 - [x] Frontend React : upload d'image, webcam, affichage des prédictions et des bounding boxes
-- [ ] DVC (versionnement des données)
+- [x] DVC (versionnement des données)
 - [x] MLflow : tracking des expériences
 - [x] MLflow : Model Registry
 - [x] Export ONNX et inférence ONNX Runtime
@@ -79,6 +79,28 @@ GitHub reste public (code et documentation seulement).
 - Serveurs de développement : Vite sur `127.0.0.1:5173`, uvicorn avec `--host 127.0.0.1`,
   serveur MCP HTTP limité à `127.0.0.1` / `localhost` / `::1`.
 - Détails et vérification : [docs/INFRA.md](docs/INFRA.md#strictly-local-usage-since-2026-10-28).
+
+### Données (DVC)
+
+Les données (images C3PI, métadonnées, tables DDInter, corpus RAG, sorties des étapes
+`prepare` et `rag_corpus`) sont versionnées par DVC. Remote par défaut : un dossier local hors
+du dépôt, `C:\Users\msi\dvc-storage\tujya` (15 306 fichiers, 5,0 Go).
+
+```bash
+vision/.venv/Scripts/dvc.exe pull        # récupère toutes les données dans un nouveau clone
+vision/.venv/Scripts/dvc.exe status -c   # cache et remote synchronisés ?
+```
+
+Passer plus tard à Google Drive ou S3 (commandes seulement, rien n'est configuré) :
+
+```bash
+dvc remote add gdrive gdrive://<id-du-dossier> && dvc remote default gdrive && dvc push
+dvc remote add s3store s3://<bucket>/tujya && dvc remote modify --local s3store profile <profil-aws>
+dvc remote default s3store && dvc push
+```
+
+Identifiants toujours dans `.dvc/config.local` (ignoré par git) ; les données doivent rester
+privées (licences C3PI, DDInter). Détails : [docs/INFRA.md](docs/INFRA.md#dvc-remote-since-2026-10-28).
 
 ## Résultats du benchmark RAG (module 2)
 
@@ -144,6 +166,7 @@ pipeline SynergyRx sont décrites dans l'annexe ci-dessous.
 | 2026-10-28 | Session 3, tâche 6 : chat dans le site | Panneau « Ask about your pills » sous la page Scanner : questions sur les comprimés confirmés (suggestions), réponse en flux SSE phrase par phrase, citations numérotées cliquables vers la liste des sources (titre, type, section, date, extrait sans dose), appels d'outils discrets (repliables), avertissement toujours visible ; nginx sans tampon pour `/api/chat` ; pile complète `docker compose up -d --build` avec Ollama et `rag-init` ; captures Playwright | `frontend/src/pages/ChatPanel.tsx`, `frontend/src/api.ts`, `ScanPage.tsx`, `styles.css`, `frontend/nginx.conf`, `frontend/scripts/chat-screenshots.mjs`, `docs/screenshots/08-11` | `npm run build` OK ; sur les conteneurs : question réelle (fluconazole + citalopram) -> DDInter Major cité, réponse en ~7 s ; question de dose refusée ; 4 captures |
 | 2026-10-28 | Session 4, tâche 1 : usage strictement local | Tous les ports publiés du compose liés à `127.0.0.1` (postgres, mlflow, backend, ollama, frontend) ; Vite (`server.host`, `preview.host`) sur `127.0.0.1` ; uvicorn documenté avec `--host 127.0.0.1` ; serveur MCP HTTP : `--host` limité aux adresses de bouclage (test) ; règle permanente dans CLAUDE.md (jamais de déploiement public, de tunnel, d'image publiée, de `0.0.0.0` sur la machine) | `docker-compose.yml`, `frontend/vite.config.ts`, `backend/app/mcp_server.py`, `backend/tests/test_mcp.py`, `CLAUDE.md`, `docs/INFRA.md`, `README.md` | `docker compose up -d --build` : tous les services sains ; `netstat` : 5432, 5000, 8000, 8080, 11434 seulement sur `127.0.0.1` ; `localhost:8080`, `/docs`, MLflow : 200 ; mêmes ports refusés depuis les adresses réseau du PC (192.168.1.6, WSL) ; Vite sur `127.0.0.1:5173` ; 3 tests MCP |
 | 2026-10-28 | Session 4, tâche 2 : CD sans publication | `cd.yml` : après une CI verte sur `main`, construit et teste les images backend et frontend du commit testé, **sans les pousser** (`contents: read` seulement) ; envoi sur ghcr.io conservé uniquement comme option manuelle (`workflow_dispatch`, `push_images`, désactivée par défaut, seul job avec `packages: write`) ; CI inchangée ; anciens paquets ghcr.io non supprimables depuis ici (`gh` sans le droit `delete:packages`), marche à suivre dans docs/CD.md (D70) | `.github/workflows/cd.yml`, `docs/CD.md`, `docs/INFRA.md`, `docs/DECISIONS.md`, `CLAUDE.md` | CI 40768873414 verte puis CD 40769096658 verte : 2 images construites et testées, job `publish` ignoré, « Not pushed » ; dernière publication par l'ancienne CD : `sha-2222e1b` ; suppression des paquets à faire à la main (docs/CD.md) |
+| 2026-10-28 | Session 4, tâche 3 : remote DVC | Remote par défaut `localstore` = `C:\Users\msi\dvc-storage\tujya` (dossier hors du dépôt, D71), `.dvc/config` commité ; `dvc push` de tout ce qui est suivi (images et métadonnées C3PI, tables DDInter, corpus RAG brut, intermédiaire et découpé, sorties de `prepare`) ; preuve : clone neuf depuis GitHub dans un dossier temporaire, `dvc pull`, `dvc status`, comparaison SHA-256 fichier par fichier avec l'original, clone supprimé ; commandes pour passer à Google Drive ou S3 (non configurés) | `.dvc/config`, `docs/INFRA.md`, `README.md`, `docs/DECISIONS.md` | `dvc push` : 15 306 fichiers, 5,0 Go, 1 min 40 ; `dvc status -c` : synchronisés ; clone : `dvc pull` 15 306 fichiers en 10 min 54, `dvc status` à jour, 15 306/15 306 fichiers identiques (SHA-256), seuls manquent 5 caches Ultralytics `*.cache` exclus par `.dvcignore` ; case « DVC » cochée |
 
 ---
 

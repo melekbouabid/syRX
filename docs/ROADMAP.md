@@ -21,7 +21,7 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [x] Download the images of these classes only (4.8 GB, SHA-1 checked)
 - [x] Train / val / test split with no photo in two splits (`config/splits/`)
 - [x] DVC set up; `data/vision/c3pi` images and metadata tracked (local cache)
-- [ ] DVC remote configured and pushed (needs a storage choice)
+- [x] DVC remote configured and pushed (local folder outside the repo, D71; fresh-clone `dvc pull` checked)
 - [x] Each class mapped to its active ingredient(s) (RxNav, 149/150)
 - [x] DDInter enabled; interactions for these ingredients in a clean table (docs/INTERACTIONS.md)
 
