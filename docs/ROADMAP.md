@@ -80,7 +80,8 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [x] README updated for Tujya
 - [ ] Report Module 1 (Vision & MLOps)
 - [ ] Report Module 2 (AI Engineering)
-- [ ] Demo script (C3PI test images) + backup video
+- [x] Demo script (docs/DEMO.md, rehearsed on the containers) and jury questions (docs/QUESTIONS_JURY.md)
+- [ ] Backup video of the demo (to record by hand)
 
 ## Bonus (only if time remains)
 - [ ] Tool `predict_toxicity(smiles)`: single-molecule toxicity (model trained on Tox21 / ClinTox)
