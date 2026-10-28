@@ -149,7 +149,8 @@ reads all of them from the database (D62).
   `data/rag/interim`, `data/rag/raw/pubmed`, the two DDInter / ingredient tables and the
   chunker code to `data/rag/corpus` (`dvc.lock` records the hashes). `dvc repro rag_corpus`
   rebuilds the chunks when any input changes.
-- As for the images, there is no DVC remote yet: the cache is local (docs/ROADMAP.md).
+- Pushed to the default DVC remote with the images (local folder outside the repository,
+  D71, docs/INFRA.md); a fresh clone gets the corpus with `dvc pull`.
 - Nothing under `data/` is committed to git (some sources forbid redistribution).
 
 ## Embeddings and index (backend, `backend/app/rag/`)
@@ -172,7 +173,7 @@ reads all of them from the database (D62).
 |---|---|---:|
 | `bm25` | Okapi BM25 (k1 1.2, b 0.75) in memory over title + text; lower case, accents removed, English and French stop words, plural "s" stripped | ~6 ms |
 | `dense` | bge-m3 query vector, exact cosine distance in SQL (`ORDER BY embedding <=> :q`), filters in the WHERE clause | 130-190 ms (mostly the query embedding) |
-| `hybrid` (default) | both lists (50 candidates each) fused by reciprocal rank fusion, score = sum 1 / (60 + rank) | ~170 ms |
+| `hybrid` | both lists (50 candidates each) fused by reciprocal rank fusion, score = sum 1 / (60 + rank) | ~170 ms |
 
 Loading the retriever (all chunk texts for BM25) takes 1.1 s, once; it reloads by itself
 when `indexed_at` changes. No HNSW index: at this size the exact scan is fast and exact.
@@ -184,7 +185,8 @@ true). In SQL: `ingredients && :names OR mentioned_ingredients && :names`.
 Try it: `python scripts/search.py "warfarin bleeding" --ingredient fluconazole --doc-type
 label` (prints the three modes with their ranks and timings).
 
-Which mode is best is measured in docs/BENCHMARK.md.
+Which mode is best is measured in docs/BENCHMARK.md: dense with the ingredient filter is the
+agent's default since D65 (`SYNERGYRX_RAG_SEARCH_MODE`).
 
 Tests (CI, no model): `backend/tests/test_rag.py` (SQLite, fake hashed embeddings: index
 idempotence, model change, BM25, the three modes, filters, reload) and

@@ -16,7 +16,7 @@ START -> understand --(dose question)--------------------------> safety -> END
 |---|---|---|
 | `understand` | drug names in the question (French or English: "warfarine" -> warfarin, "paracétamol" -> acetaminophen) and the confirmed pills' ingredients; language (fr / en); dose question? | no |
 | `tools` | the LLM chooses tool calls (Ollama tool calling with the three chat tools); the graph adds the calls a question always needs if the model forgot them (`check_interaction` for two or more drugs, `search_documents` always), runs every call, and records it (`chosen_by`: `llm` or `rule`) | yes (planner) |
-| `retrieve` | numbered sources [1], [2] ...: DDInter results of `check_interaction` first, then label excerpts of `get_drug_info`, then the `search_documents` hits (hybrid, retracted excluded); at most 8 | no |
+| `retrieve` | numbered sources [1], [2] ...: DDInter results of `check_interaction` first, then label excerpts of `get_drug_info`, then the `search_documents` hits (dense with the ingredient filter by default, D65; retracted excluded); at most 8 | no |
 | `answer` | the LLM answers from the numbered sources only, with the rules in the system prompt (French or English); streamed sentence by sentence through the safety filter | yes |
 | `safety` | the rules below on the whole answer: rewrite, or refuse | no |
 
@@ -85,7 +85,7 @@ Errors: 401 not signed in; 503 when the index is empty ("run `python -m app.rag.
 Ollama is not reachable.
 
 Configuration (`SYNERGYRX_*`): `OLLAMA_URL` (compose: `http://ollama:11434`), `LLM_MODEL`
-(`qwen2.5:3b`), `LLM_TEMPERATURE` (0.1), `LLM_NUM_CTX` (8192), `EMBEDDING_MODEL`
+(`qwen2.5:3b`), `LLM_TEMPERATURE` (0.1), `LLM_NUM_CTX` (4096, D68), `LLM_MAX_TOKENS` (450), `EMBEDDING_MODEL`
 (`bge-m3`), `RAG_TOP_K` (6).
 
 From the command line: `python scripts/ask.py "question" [--pills 9 120]` (backend venv).

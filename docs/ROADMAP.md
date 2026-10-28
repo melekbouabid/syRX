@@ -78,8 +78,8 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [x] Strictly local usage: every port on 127.0.0.1, checked with netstat (D69, docs/INFRA.md)
 - No deployment to a server, by design: the project runs only on this PC (D69)
 - [x] README updated for Tujya
-- [ ] Report Module 1 (Vision & MLOps)
-- [ ] Report Module 2 (AI Engineering)
+- [x] Report Module 1 (Vision & MLOps): docs/rapports/rapport_module1_vision_mlops.pdf
+- [x] Report Module 2 (AI Engineering): docs/rapports/rapport_module2_ai_engineering.pdf
 - [x] Demo script (docs/DEMO.md, rehearsed on the containers) and jury questions (docs/QUESTIONS_JURY.md)
 - [ ] Backup video of the demo (to record by hand)
 

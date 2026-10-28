@@ -1,0 +1,18 @@
+flowchart TB
+  NAV["Navigateur<br/>localhost : 8080 (127.0.0.1)"] --> FE["frontend<br/>nginx + React"]
+  FE -- "/api, /docs" --> BE["backend<br/>FastAPI asynchrone, Pydantic"]
+  MCP["serveur MCP<br/>stdio ou HTTP local"] --> AG
+  BE --> SCAN["ONNX Runtime<br/>YOLO11n (détection)<br/>YOLO11s-cls (identification)"]
+  BE --> AG["agent LangGraph<br/>outils + sécurité"]
+  AG --> OL["Ollama (GPU)<br/>qwen2.5:3b + bge-m3"]
+  BE --> PG[("PostgreSQL + pgvector<br/>médicaments, interactions,<br/>8 661 chunks")]
+  AG --> PG
+  DATA["data/ (DVC)<br/>C3PI, DDInter, corpus"] --> TR["vision/<br/>entraînement Ultralytics"]
+  TR --> MLF["MLflow<br/>tracking + Model Registry"]
+  MLF -- "publish (ONNX)" --> SCAN
+  DATA --> PG
+  DATA <--> DVC["remote DVC local"]
+  classDef ops fill:#eef6ee,stroke:#5a8f5a
+  classDef app fill:#eef3f8,stroke:#4a6f8f
+  class DATA,TR,MLF,DVC ops
+  class NAV,FE,BE,SCAN,AG,OL,PG,MCP app

@@ -1,0 +1,10 @@
+flowchart LR
+  P["Photo<br/>(upload ou webcam)"] --> D["Détecteur YOLO11n<br/>ONNX, 640 px<br/>1 classe « pill »"]
+  D --> C["Recadrage carré<br/>marge 20 %, 224 px"]
+  C --> K["Classifieur YOLO11s-cls<br/>ONNX, 150 classes"]
+  K --> T{"top-1 ≥ 0,85 ?"}
+  T -- oui --> A["Comprimé proposé<br/>(avec sa confiance)"]
+  T -- non --> U["« Please confirm »<br/>top-5 ou recherche"]
+  A --> I["Principes actifs<br/>(RxNav)"]
+  U --> I
+  I --> X["Interactions DDInter<br/>sévérité + source"]

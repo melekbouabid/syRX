@@ -1,0 +1,12 @@
+flowchart LR
+  S((début)) --> UN["understand<br/>noms FR/EN, langue,<br/>question de dose ?"]
+  UN -- "question de dose" --> SF
+  UN --> TO["tools<br/>appel d'outils du LLM<br/>+ outils ajoutés par règle"]
+  TO --> RE["retrieve<br/>sources numérotées [n]<br/>(8 au plus)"]
+  RE --> AN["answer<br/>qwen2.5:3b, citations,<br/>flux phrase par phrase"]
+  AN --> SF["safety<br/>doses, « sûr », horaires,<br/>citations, avertissement"]
+  SF --> E((fin))
+  TO -.-> T1["identify_pills"]
+  TO -.-> T2["check_interaction"]
+  TO -.-> T3["get_drug_info"]
+  TO -.-> T4["search_documents"]
