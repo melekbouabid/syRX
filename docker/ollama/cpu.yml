@@ -1,0 +1,5 @@
+# Ollama without a GPU (machine without NVIDIA / WSL2 GPU support):
+#   docker compose -f docker-compose.yml -f docker/ollama/cpu.yml up -d
+services:
+  ollama:
+    deploy: !reset null

@@ -373,3 +373,34 @@ no server to deploy to, so delivery stops at versioned images: `cd.yml` runs on
 workflow's `GITHUB_TOKEN` (`packages: write`). A deployment step (a server pulling
 `latest`) can be added later without changing the images. Packages stay private until
 their visibility is changed by hand (docs/CD.md).
+
+**D57. Ollama runs only as a Docker service, on the GPU.** Ollama is not installed on the
+host; `docker-compose.yml` has an `ollama` service (official image pinned to
+`ollama/ollama:0.40.12`, models in the named volume `ollama`, port 11434) with the NVIDIA GPU
+reserved through `deploy.resources.reservations.devices` (Docker Desktop + WSL2). Checked on
+2026-10-28: `docker compose exec ollama nvidia-smi` shows the RTX 2050 (4 GiB) and the Ollama
+log reports `library=CUDA compute=8.6 ... total="4.0 GiB" available="3.2 GiB"`. A machine
+without a GPU uses `docker compose -f docker-compose.yml -f docker/ollama/cpu.yml up -d`
+(the override removes the reservation with `!reset`). `OLLAMA_MAX_LOADED_MODELS=2` keeps the
+LLM and the embedding model loaded together, `OLLAMA_KEEP_ALIVE=30m` avoids reloading between
+questions.
+
+**D58. LLM: qwen2.5:3b (Q4_K_M), chosen on speed in 4 GB of VRAM and French quality.** Four
+small instruction models were pulled in the container and timed on the same short French
+question ("En deux phrases, explique ce qu'est une interaction médicamenteuse entre deux
+principes actifs.", temperature 0, context 4,096, model already loaded, nothing else loaded):
+
+| Model | Size in VRAM | Placement | Output tokens | Speed | Answer time |
+|---|---:|---|---:|---:|---:|
+| **qwen2.5:3b** | 2.2 GB | 100 % GPU | 76 | 47.4 tok/s | **1.7 s** |
+| llama3.2:3b | 2.9 GB | 80 % GPU / 20 % CPU | 101 | 32.0 tok/s | 3.2 s |
+| gemma3:4b | 2.9 GB | 55 % GPU / 45 % CPU | 67 | 11.8 tok/s | 12.1 s |
+| qwen3:4b | 2.9 GB | 82 % GPU / 18 % CPU | 1,259 (thinking) | 14.0 tok/s | 89.9 s |
+
+All three non-thinking models answered correctly in good French; qwen2.5:3b is the only one
+that fits entirely on the GPU, is the fastest, and supports Ollama tool calling (needed by the
+agent). qwen3:4b spent its time "thinking" in English (the generate API's `think: false` was
+not applied to this model); llama3.2 and gemma3 spill to the CPU. Mistral 7B (4.1 GB) would
+not fit at all. `SYNERGYRX_LLM_MODEL` switches the model without code changes. To review: a
+3B model is weak at reasoning; answers are kept short, grounded in retrieved sources and
+checked by the safety node (D63).

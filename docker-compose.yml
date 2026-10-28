@@ -5,6 +5,7 @@
 #   http://localhost:8080        web app (nginx: React build; /api, /docs, /openapi.json -> backend)
 #   http://localhost:8000/docs   API directly (Swagger)
 #   http://localhost:5000        MLflow UI          localhost:5432  PostgreSQL + pgvector
+#   http://localhost:11434       Ollama (local LLM and embeddings, GPU if available)
 #
 #   docker compose down          # keeps the volumes; `down -v` deletes them
 #
@@ -15,7 +16,7 @@
 #
 # Credentials are development defaults; override them in the shell or in a compose
 # `.env` file (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_PORT, MLFLOW_PORT,
-# BACKEND_PORT, WEB_PORT, BACKEND_IMAGE, FRONTEND_IMAGE).
+# BACKEND_PORT, WEB_PORT, OLLAMA_PORT, BACKEND_IMAGE, FRONTEND_IMAGE).
 name: tujya
 
 services:
@@ -91,6 +92,32 @@ services:
         condition: service_completed_successfully
     restart: unless-stopped
 
+  # Local LLM and embeddings (Module 2). GPU through Docker Desktop + WSL2 (NVIDIA); on a
+  # machine without one: `docker compose -f docker-compose.yml -f docker/ollama/cpu.yml up -d`.
+  # Models live in the `ollama` volume: `docker compose exec ollama ollama pull <model>`.
+  ollama:
+    image: ollama/ollama:0.40.12
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    environment:
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
+      OLLAMA_MAX_LOADED_MODELS: "2"
+    volumes:
+      - ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
   frontend:
     image: ${FRONTEND_IMAGE:-tujya-frontend:local}
     build: ./frontend
@@ -104,3 +131,4 @@ services:
 volumes:
   pgdata:
   mlartifacts:
+  ollama:
