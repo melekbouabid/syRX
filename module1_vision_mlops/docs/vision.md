@@ -10,12 +10,12 @@ photo ──> detector (YOLO11n, 1 class "pill") ──> one box per pill
                           └─> class -> active ingredients (RxNav) -> DDInter interactions
 ```
 
-Code: `vision/tujya_vision/` (`autolabel.py`, `prepare.py`, `train.py`), own venv
-`vision/.venv` (`vision/requirements.txt`). Data: docs/DATASET_C3PI.md.
+Code: `module1_vision_mlops/training/tujya_vision/` (`autolabel.py`, `prepare.py`, `train.py`), own venv
+`module1_vision_mlops/training/.venv` (`module1_vision_mlops/training/requirements.txt`). Data: module1_vision_mlops/docs/dataset_c3pi.md.
 
 ## Where the boxes come from (decision D38)
 
-C3PI has no boxes (docs/DATASET_C3PI.md). Three options were considered:
+C3PI has no boxes (module1_vision_mlops/docs/dataset_c3pi.md). Three options were considered:
 
 1. Existing annotations: none in C3PI; ePillID provides crops, not boxes on the photos.
 2. A public pill detection dataset (Roboflow and similar): licences are unclear or
@@ -144,7 +144,7 @@ step.
 
 ## Serving: the API's own pipeline and the confirmation threshold
 
-`POST /api/scan` (docs/API.md) does not use Ultralytics: `backend/app/scanner.py`
+`POST /api/scan` (docs/api.md) does not use Ultralytics: `module1_vision_mlops/serving/scanner.py`
 re-implements the letterbox, NMS and 20 %-margin crop with numpy and OpenCV and runs the two
 ONNX files with ONNX Runtime (D45). Checks:
 

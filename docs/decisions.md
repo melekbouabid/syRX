@@ -701,3 +701,21 @@ train`) ; le modÃ¨le MLflow journalise dÃ©sormais le dossier `bonus` comme c
 `models/tox21` (fichiers texte LightGBM, aucun pickle) ne dÃ©pendent pas de ce chemin. Le
 message Â« aucun modÃ¨le publiÃ© Â» donne la nouvelle commande, et le test qui le vÃ©rifie suit.
 Un job CI `bonus` lance ses tests.
+
+**D82. Rangement de la documentation.** Chaque module a son dossier `docs/` (ses documents
+techniques et son rapport, Markdown + PDF) ; `docs/` Ã  la racine garde ce qui concerne tout
+le projet (architecture, API, infra, CD, dÃ©mo, questions du jury, feuille de route,
+dÃ©cisions, captures). Noms en minuscules partout, sauf `README.md` et les rapports datÃ©s de
+`docs/journal/` (`NIGHT_REPORT.md`, `SESSION_REPORT_N.md`, `JOURNAL.md`), noms donnÃ©s dans la
+consigne de restructuration et cohÃ©rents entre eux. Chaque dossier de documentation range
+ses sources Mermaid dans `diagrams/` et ses images dans `assets/` (le schÃ©ma d'architecture,
+commun aux deux rapports, est dans `docs/`) ; `build-reports.mjs` traite les trois dossiers.
+Les liens de tous les documents ont Ã©tÃ© recalculÃ©s (chaque lien rÃ©solu depuis l'ancien
+emplacement du fichier, puis rÃ©Ã©crit depuis le nouveau ; aucun lien cassÃ©). Dans les
+documents vivants, les chemins citÃ©s sont aussi mis Ã  jour ; les **documents historiques**
+(rapports de session, journal, dÃ©cisions D1 Ã  D75, archive SynergyRx) gardent leur texte
+d'origine, avec une note et un renvoi vers la table de correspondance de
+`docs/journal/SESSION_REPORT_5.md`. Le journal de progression quitte le README pour
+`docs/journal/JOURNAL.md`. `photo.png` (source du logo) devient
+`docs/assets/logo-source.png`. Le fichier non suivi `weights/yolo26n.pt` (tÃ©lÃ©chargement
+automatique d'Ultralytics) rejoint les autres poids dans `module1_vision_mlops/training/`.

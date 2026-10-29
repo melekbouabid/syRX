@@ -9,11 +9,11 @@
 #
 #   docker compose down          # keeps the volumes; `down -v` deletes them
 #
-# Strictly local (docs/INFRA.md): every published port is bound to 127.0.0.1, so nothing is
+# Strictly local (docs/infra.md): every published port is bound to 127.0.0.1, so nothing is
 # reachable from another machine. Inside the containers, servers listen on 0.0.0.0 only on
 # the private Docker network, which is what the 127.0.0.1 host ports forward to.
 #
-# Before the first start, on the host (docs/INFRA.md):
+# Before the first start, on the host (docs/infra.md):
 #   - `dvc pull` or the data steps, so data/tujya/*.csv and data/vision/c3pi/images exist;
 #   - `python -m tujya_vision.publish` (vision venv) to fill models/ from the Model Registry.
 # `pharma-init` reloads the medicine tables from data/tujya on every start, then exits;
@@ -78,7 +78,7 @@ services:
     environment: &backend-env
       SYNERGYRX_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tujya}:${POSTGRES_PASSWORD:-tujya}@postgres:5432/${POSTGRES_DB:-tujya}
       SYNERGYRX_PHARMA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tujya}:${POSTGRES_PASSWORD:-tujya}@postgres:5432/${POSTGRES_DB:-tujya}
-      # Module 2: the agent's LLM and embeddings (docs/AGENT.md, docs/RAG.md)
+      # Module 2: the agent's LLM and embeddings (module2_ai_engineering/docs/agent.md, module2_ai_engineering/docs/rag.md)
       SYNERGYRX_OLLAMA_URL: http://ollama:11434
       SYNERGYRX_LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
     volumes: &backend-mounts

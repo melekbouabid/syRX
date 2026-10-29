@@ -1,7 +1,7 @@
 """Retrieval benchmark: Recall@k (k = 1, 3, 5, 10) and MRR for BM25, dense and hybrid.
 
 Each configuration is one MLflow run in the experiment `tujya-rag` (params, metrics, the
-per-question results as an artifact). Results: docs/BENCHMARK.md.
+per-question results as an artifact). Results: module2_ai_engineering/docs/benchmark.md.
 
     # from the repository root, backend venv (app/backend/.venv) active
     python -m module2_ai_engineering.benchmark.bench_retrieval

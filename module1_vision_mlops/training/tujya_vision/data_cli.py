@@ -110,7 +110,7 @@ def main(argv: list[str] | None = None) -> None:
         "--exclude-camera",
         action="append",
         default=[],
-        help="camera name to leave out (repeatable); see docs/DATASET_C3PI.md",
+        help="camera name to leave out (repeatable); see module1_vision_mlops/docs/dataset_c3pi.md",
     )
     p.set_defaults(func=cmd_select)
 

@@ -54,8 +54,8 @@ stages:
       size: 19017
     - path: module2_ai_engineering/corpus/corpus.py
       hash: md5
-      md5: 1d6c5bdf7adf235802c1234a47bf5361
-      size: 11664
+      md5: 5e12e51330514dd2f0589242b9be8ae8
+      size: 11687
     outs:
     - path: data/rag/corpus
       hash: md5

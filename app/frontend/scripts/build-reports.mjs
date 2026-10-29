@@ -1,19 +1,24 @@
-// Build the technical reports (docs/rapports/): Mermaid diagrams -> PNG, Markdown -> PDF.
+// Build the diagrams and the technical reports: Mermaid -> PNG, Markdown -> PDF.
 //
 //   cd app/frontend
 //   node scripts/build-reports.mjs            # all diagrams and reports
 //
 // No pandoc or LaTeX on this machine: Chromium (Playwright) renders everything. Mermaid and
 // marked are loaded from jsDelivr at pinned versions, so the build needs Internet access.
-// Diagrams: docs/rapports/diagrams/*.mmd -> docs/rapports/img/*.png.
-// Reports: docs/rapports/rapport_*.md -> docs/rapports/rapport_*.pdf (A4, page numbers).
+// In each documentation folder (docs/, module1_vision_mlops/docs/, module2_ai_engineering/docs/):
+// diagrams/*.mmd -> assets/*.png, and rapport_*.md -> rapport_*.pdf (A4, page numbers).
 // Fails if a diagram does not render or an image of a report does not load.
 import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium } from "playwright";
 
-const ROOT = resolve(process.env.REPORTS ?? "../../docs/rapports");
+// REPORTS: one folder, or several separated by ";" (default: the three documentation folders).
+const FOLDERS = (
+  process.env.REPORTS ?? "../../docs;../../module1_vision_mlops/docs;../../module2_ai_engineering/docs"
+)
+  .split(";")
+  .map((folder) => resolve(folder));
 const MERMAID = "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js";
 const MARKED = "https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js";
 
@@ -39,8 +44,10 @@ const CSS = `
   .caption { display: block; font-size: 8.5pt; font-style: italic; color: #555; }
 `;
 
-async function renderDiagrams(browser) {
-  const dir = join(ROOT, "diagrams");
+async function renderDiagrams(browser, root) {
+  const dir = join(root, "diagrams");
+  const files = await readdir(dir).catch(() => []);
+  if (!files.some((name) => name.endsWith(".mmd"))) return;
   const page = await browser.newPage({ deviceScaleFactor: 2, viewport: { width: 1400, height: 900 } });
   await page.setContent(`<html><body style="margin:0;background:white"><div id="out"></div></body></html>`);
   await page.addScriptTag({ url: MERMAID });
@@ -52,7 +59,7 @@ async function renderDiagrams(browser) {
       flowchart: { wrappingWidth: 260 },
     }),
   );
-  for (const file of (await readdir(dir)).filter((name) => name.endsWith(".mmd"))) {
+  for (const file of files.filter((name) => name.endsWith(".mmd"))) {
     const source = await readFile(join(dir, file), "utf8");
     await page.evaluate(async (text) => {
       const { svg } = await window.mermaid.render("diagram", text);
@@ -61,16 +68,16 @@ async function renderDiagrams(browser) {
       out.style.display = "inline-block";
       out.style.padding = "16px";
     }, source);
-    const png = join(ROOT, "img", `${basename(file, ".mmd")}.png`);
+    const png = join(root, "assets", `${basename(file, ".mmd")}.png`);
     await page.locator("#out").screenshot({ path: png });
     console.log("diagram", png);
   }
   await page.close();
 }
 
-async function renderReport(browser, file) {
-  const markdown = await readFile(join(ROOT, file), "utf8");
-  const html = join(ROOT, `.${basename(file, ".md")}.html`);
+async function renderReport(browser, root, file) {
+  const markdown = await readFile(join(root, file), "utf8");
+  const html = join(root, `.${basename(file, ".md")}.html`);
   await writeFile(
     html,
     `<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>${CSS}</style>
@@ -92,7 +99,7 @@ async function renderReport(browser, file) {
       [...document.images].filter((img) => !img.complete || img.naturalWidth === 0).map((img) => img.src),
     );
     if (broken.length) throw new Error(`${file}: images not loaded: ${broken.join(", ")}`);
-    const pdf = join(ROOT, `${basename(file, ".md")}.pdf`);
+    const pdf = join(root, `${basename(file, ".md")}.pdf`);
     await page.pdf({
       path: pdf,
       format: "A4",
@@ -113,9 +120,12 @@ async function renderReport(browser, file) {
 
 const browser = await chromium.launch();
 try {
-  await renderDiagrams(browser);
-  for (const file of (await readdir(ROOT)).filter((name) => /^rapport_.*\.md$/.test(name))) {
-    await renderReport(browser, file);
+  // Diagrams first: a report may show a diagram of another folder (the architecture).
+  for (const root of FOLDERS) await renderDiagrams(browser, root);
+  for (const root of FOLDERS) {
+    for (const file of (await readdir(root)).filter((name) => /^rapport_.*\.md$/.test(name))) {
+      await renderReport(browser, root, file);
+    }
   }
 } finally {
   await browser.close();

@@ -1,6 +1,7 @@
 """POST /api/toxicity (bonus): Tox21 in vitro assay probabilities for one or two molecules.
 
-"Prédiction d'un modèle sur des tests in vitro, pas une évaluation clinique" (docs/TOXICITY.md).
+"Prédiction d'un modèle sur des tests in vitro, pas une évaluation clinique"
+(bonus/docs/toxicity.md).
 Each molecule is predicted on its own; nothing is ever said about their combination.
 """
 

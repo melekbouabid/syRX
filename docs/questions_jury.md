@@ -1,7 +1,9 @@
 # Questions probables du jury (et réponses courtes, honnêtes)
 
-Réponses tirées des documents du dépôt (VISION.md, BENCHMARK.md, DECISIONS.md, RAG.md,
-AGENT.md) ; aucun chiffre n'est inventé. Les numéros Dxx renvoient à docs/DECISIONS.md.
+Réponses tirées des documents du dépôt ([vision.md](../module1_vision_mlops/docs/vision.md),
+[benchmark.md](../module2_ai_engineering/docs/benchmark.md), [decisions.md](decisions.md),
+[rag.md](../module2_ai_engineering/docs/rag.md), [agent.md](../module2_ai_engineering/docs/agent.md)) ;
+aucun chiffre n'est inventé. Les numéros Dxx renvoient à docs/decisions.md.
 
 ## Données
 

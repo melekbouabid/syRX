@@ -49,7 +49,7 @@ ingredient_rxcui, ingredient (lower case RxNorm IN), method (`ndc` or `name`).
 
 - Licence CC BY-NC-SA 4.0 (non-commercial, share-alike). Enabled for this academic project
   by the `ddinter` step, which runs the existing connector with `enabled=true`,
-  `terms_acknowledged=true` and all 14 files. The shared `config.yaml` keeps DDInter opt-in
+  `terms_acknowledged=true` and all 14 files. The shared `data_pipeline/config.yaml` keeps DDInter opt-in
   for the SynergyRx `update` run (two existing tests pin that default). Not redistributed:
   the tables stay under `data/`, git-ignored.
 - Citation: Tian Y, et al. DDInter 2.0: an enhanced drug interaction resource with expanded

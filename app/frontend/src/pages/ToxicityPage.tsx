@@ -3,7 +3,7 @@ import { api, errorMessage, type ToxicityResult, type ToxMolecule } from "../api
 import { Alert, Badge, SubmitButton, TextField, staggerIndex } from "../components";
 import { Icon } from "../icons";
 
-// Bonus tool (docs/TOXICITY.md). Safety texts exactly as the project rules write them.
+// Bonus tool (bonus/docs/toxicity.md). Safety texts exactly as the project rules write them.
 const DISCLAIMER = "Information uniquement, consultez un pharmacien ou un médecin.";
 const WORDING = "prédiction d'un modèle sur des tests in vitro, pas une évaluation clinique";
 const EXAMPLES: [string, string][] = [

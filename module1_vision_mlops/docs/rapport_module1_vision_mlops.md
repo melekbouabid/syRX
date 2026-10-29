@@ -2,8 +2,8 @@
 
 Projet étudiant solo. Dépôt : <https://github.com/melekbouabid/tujia-> (code et
 documentation ; données et modèles hors de git). Rapport rédigé le 2026-10-28 ; tous les
-chiffres viennent des documents du dépôt (docs/VISION.md, docs/API.md, docs/INFRA.md,
-docs/CD.md) et des runs MLflow ; aucun n'est estimé.
+chiffres viennent des documents du dépôt (module1_vision_mlops/docs/vision.md, docs/api.md, docs/infra.md,
+docs/cd.md) et des runs MLflow ; aucun n'est estimé.
 
 > Tujya est un outil d'information : il ne remplace pas un pharmacien ou un médecin, ne
 > donne jamais de dose et ne dit jamais qu'une association est « sûre ».
@@ -32,7 +32,7 @@ Exigences du module 1 et où elles sont traitées :
 | Docker Compose | 7 services, une commande | 5.3 |
 | GitHub Actions CI/CD | 4 jobs de CI, CD de build et test des images | 5.4 |
 
-![Architecture de Tujya (tous les ports publiés sur 127.0.0.1 ; GitHub ne reçoit que le code).](img/architecture.png)
+![Architecture de Tujya (tous les ports publiés sur 127.0.0.1 ; GitHub ne reçoit que le code).](../../docs/assets/architecture.png)
 
 ## 2. Données
 
@@ -40,7 +40,7 @@ Exigences du module 1 et où elles sont traitées :
 
 Les images viennent du jeu public de la NLM **C3PI** (Computational Photography Project for
 Pill Identification), licence ODbL, usage recherche et développement. Aucune photo
-personnelle n'est utilisée (règle du projet). L'exploration (docs/DATASET_C3PI.md) a
+personnelle n'est utilisée (règle du projet). L'exploration (module1_vision_mlops/docs/dataset_c3pi.md) a
 recensé 133 458 fichiers, dont **40 587 photos « consumer »** (prises avec des téléphones et
 appareils variés) de 2 400 comprimés ; 380 comprimés ont au moins 20 photos. C3PI ne fournit
 **aucune boîte englobante** pour ces photos.
@@ -64,7 +64,7 @@ appareils variés) de 2 400 comprimés ; 380 comprimés ont au moins 20 photos. 
 Sans boîtes dans C3PI, trois options ont été étudiées (D38) : annotations existantes (aucune
 pour ces photos), jeu de détection public (licences floues, autres images), ou **étiquetage
 automatique** des photos consumer, retenu car chaque photo montre un ou deux comprimés sur un
-fond assez uni. `vision/tujya_vision/autolabel.py` : surface de fond quadratique robuste dans
+fond assez uni. `module1_vision_mlops/training/tujya_vision/autolabel.py` : surface de fond quadratique robuste dans
 l'espace Lab (absorbe le vignettage), distance de couleur avec ombres atténuées, régions
 connexes ne touchant pas le bord, rejet des pièces de monnaie (référence de taille de C3PI),
 correction par GrabCut des régions en croissant (ombre à côté d'un comprimé pâle). Chaque
@@ -89,7 +89,7 @@ propre) ; détection 2 345 / 478 / 483 photos (côté long 640 px).
 
 ## 3. Modèles
 
-![Chaîne de vision : détecter, recadrer, identifier, confirmer sous le seuil, puis interactions.](img/vision_pipeline.png)
+![Chaîne de vision : détecter, recadrer, identifier, confirmer sous le seuil, puis interactions.](assets/vision_pipeline.png)
 
 ### 3.1 Détecteur
 
@@ -160,7 +160,7 @@ de test, puis enregistre le **modèle ONNX** dans le Model Registry :
   maximal 1,6e-6 ;
 - détecteur : même nombre de boîtes sur 100 % de 50 photos de test, IoU moyen 0,976.
 
-Le backend n'embarque **ni PyTorch ni Ultralytics** (D45) : `backend/app/scanner.py`
+Le backend n'embarque **ni PyTorch ni Ultralytics** (D45) : `module1_vision_mlops/serving/scanner.py`
 réécrit le letterbox, la NMS et le recadrage avec marge de 20 % en numpy/OpenCV et exécute
 les deux fichiers ONNX avec ONNX Runtime (CPU). Contrôle contre le prédicteur ONNX
 d'Ultralytics sur 40 photos de test : même nombre de boîtes 40/40, IoU moyen de la boîte
@@ -186,7 +186,7 @@ Routes asynchrones, schémas Pydantic, connexion requise (cookie de session, D46
 113 tests backend au total (dont 12 pour le scan avec de petits modèles ONNX factices
 construits dans le test, 16 pour les interactions, jamais le mot « safe »/« sûr »).
 
-![Swagger UI sur /docs.](../screenshots/07-swagger.jpg)
+![Swagger UI sur /docs.](../../docs/screenshots/07-swagger.jpg)
 
 ## 5. MLOps
 
@@ -200,7 +200,7 @@ Suivis par DVC (jamais par git) : images et métadonnées C3PI (`dvc add`), tabl
 GitHub, `dvc pull` (15 306 fichiers en 10 min 54), `dvc status` à jour, et comparaison SHA-256
 fichier par fichier avec l'original : **tous identiques** (seuls 5 caches Ultralytics,
 exclus par `.dvcignore`, ne sont pas suivis). Passage à Google Drive ou S3 documenté dans
-docs/INFRA.md (non configuré).
+docs/infra.md (non configuré).
 
 ### 5.2 MLflow : tracking et Model Registry
 
@@ -210,9 +210,9 @@ par époque, métriques de test, graphiques, poids et export ONNX. Registre :
 `tujya-pill-classifier` (v1 essai CPU, **v2 servie**) et `tujya-pill-detector` (**v1
 servie**).
 
-![Expérience tujya-vision : runs de classification, détection et évaluation de bout en bout.](../screenshots/12-mlflow-vision.jpg)
+![Expérience tujya-vision : runs de classification, détection et évaluation de bout en bout.](../../docs/screenshots/12-mlflow-vision.jpg)
 
-![Model Registry : les deux modèles servis par l'API.](../screenshots/14-mlflow-registry.jpg)
+![Model Registry : les deux modèles servis par l'API.](../../docs/screenshots/14-mlflow-registry.jpg)
 
 ### 5.3 Docker Compose
 
@@ -245,15 +245,15 @@ Page **Scanner** de l'application React (Vite, TypeScript) : upload par glisser-
 split de test ; boîtes et étiquettes en SVG sur la photo ; top-5 avec barres de probabilité ;
 badge « Please confirm » sous 0,85 avec recherche d'un autre comprimé ; liste « My pills » ;
 interactions par sévérité avec source, citation et avertissement. Le parcours est vérifié
-par des scripts Playwright sur les conteneurs (docs/DEMO.md).
+par des scripts Playwright sur les conteneurs (docs/demo.md).
 
-![Upload d'une photo de test : boîte, nom, top-5.](../screenshots/02-upload-result.jpg)
+![Upload d'une photo de test : boîte, nom, top-5.](../../docs/screenshots/02-upload-result.jpg)
 
-![Cas incertain (65 %) : boîte orange et demande de confirmation.](../screenshots/05-needs-confirmation.jpg)
+![Cas incertain (65 %) : boîte orange et demande de confirmation.](../../docs/screenshots/05-needs-confirmation.jpg)
 
-![Interactions entre trois comprimés confirmés : deux Major, une Moderate, avec sources.](../screenshots/04-interactions.jpg)
+![Interactions entre trois comprimés confirmés : deux Major, une Moderate, avec sources.](../../docs/screenshots/04-interactions.jpg)
 
-![Webcam (caméra factice de Chromium pendant les tests).](../screenshots/06-webcam.jpg)
+![Webcam (caméra factice de Chromium pendant les tests).](../../docs/screenshots/06-webcam.jpg)
 
 ## 7. Déploiement strictement local
 
@@ -297,5 +297,5 @@ des données (DDInter non commerciale, C3PI recherche), aucun coût d'hébergeme
 - RxNorm / RxNav (NLM) : <https://lhncbc.nlm.nih.gov/RxNav/APIs/>.
 - FastAPI <https://fastapi.tiangolo.com/>, MLflow <https://mlflow.org/>, DVC
   <https://dvc.org/>, Docker Compose, GitHub Actions.
-- Documents du dépôt : docs/VISION.md, docs/DATASET_C3PI.md, docs/API.md, docs/INFRA.md,
-  docs/CD.md, docs/DECISIONS.md (D38 à D72), docs/DEMO.md.
+- Documents du dépôt : module1_vision_mlops/docs/vision.md, module1_vision_mlops/docs/dataset_c3pi.md, docs/api.md, docs/infra.md,
+  docs/cd.md, docs/decisions.md (D38 à D72), docs/demo.md.

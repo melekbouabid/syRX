@@ -10,7 +10,7 @@ source-access policy; it is the part most easily eroded one "small exception" at
 2. **No API, but an official bulk file?** Download that, with a pinned version and a
    checksum where the publisher gives one.
 3. **Neither?** Stop and ask whether the source is needed. Parsing HTML is the last resort,
-   needs a written reason in `docs/DECISIONS.md`, and must go through
+   needs a written reason in `docs/decisions.md`, and must go through
    `client.fetch(..., kind="html")` so robots.txt is checked first.
 
 No connector parses HTML today. `tests/unit/test_policy.py` fails if one starts to.

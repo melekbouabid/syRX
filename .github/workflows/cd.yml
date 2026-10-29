@@ -3,7 +3,7 @@
 # Nothing is pushed: the app runs only on the owner's PC (CLAUDE.md, D69, D70).
 #
 # Publishing to GitHub Container Registry stays possible only by hand, as an explicit opt-in:
-#   gh workflow run cd -f push_images=true     (off by default; see docs/CD.md)
+#   gh workflow run cd -f push_images=true     (off by default; see docs/cd.md)
 # The images contain code only (no data, no model, no secret).
 name: cd
 
@@ -97,7 +97,7 @@ jobs:
         run: |
           {
             echo "### tujya-${{ matrix.image }}"
-            echo "Built and smoke-tested at $(git rev-parse --short HEAD). **Not pushed** (strictly local app, docs/CD.md)."
+            echo "Built and smoke-tested at $(git rev-parse --short HEAD). **Not pushed** (strictly local app, docs/cd.md)."
             docker image ls tujya-${{ matrix.image }}:ci --format 'Size: {{.Size}}'
           } >> "$GITHUB_STEP_SUMMARY"
 

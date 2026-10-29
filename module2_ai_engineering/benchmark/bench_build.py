@@ -4,7 +4,8 @@ Each item comes from a hand-written spec (`benchmark/spec.json`: question type, 
 language, question text) and gets, from data/rag/corpus/chunks.parquet:
 - `expected_chunks`: every chunk that answers it (rules per type below);
 - `reference`: an extractive reference answer (sentences of the expected label chunks).
-The candidates were then read one by one and corrected or dropped (docs/BENCHMARK.md).
+The candidates were then read one by one and corrected or dropped
+(module2_ai_engineering/docs/benchmark.md).
 
 Types and their expected chunks:
 - contraindications / boxed_warning / mechanism / adverse_reactions / warnings: the chunks of

@@ -4,7 +4,8 @@ PostgreSQL (docker compose): `embedding` is a pgvector `vector(dim)` and the ing
 lists are `text[]`; dense search runs in SQL (`<=>`, cosine distance) with the metadata
 filters in the WHERE clause. Exact search on purpose: at ~10^4 chunks it takes a few
 milliseconds and its recall is exact; an HNSW index is only worth it from ~10^5 chunks
-(docs/RAG.md). SQLite (tests): the same columns as JSON, dense search in numpy.
+(module2_ai_engineering/docs/rag.md). SQLite (tests): the same columns as JSON, dense search
+in numpy.
 """
 
 from __future__ import annotations

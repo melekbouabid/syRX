@@ -31,7 +31,7 @@ DrugComb CC BY 4.0; O'Neil rows are not used.
 
 ## Model
 
-`backend/scripts/train_synergy.py` (backend venv; 46 s on the laptop CPU):
+`bonus/synergy/train_synergy.py` (backend venv; 46 s on the laptop CPU):
 
 - Drug features: sum of the two drugs' Morgan fingerprints (radius 2, 1,024 bits; order of
   the pair does not matter), with the toxicity tool's standardisation (largest fragment).

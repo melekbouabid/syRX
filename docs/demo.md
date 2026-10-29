@@ -5,7 +5,7 @@ Chaque étape : **ce qu'on fait** (clic ou commande), **ce que le jury doit voir
 **une phrase à dire**. Les durées sont indicatives (total ≈ 14 min).
 
 Le parcours a été répété en entier sur les conteneurs le 2026-10-28 (session 4) : résultats
-et temps mesurés dans [SESSION_REPORT_4.md](SESSION_REPORT_4.md#tâche-4--script-de-démo-et-questions-du-jury).
+et temps mesurés dans [SESSION_REPORT_4.md](journal/SESSION_REPORT_4.md#tâche-4--script-de-démo-et-questions-du-jury).
 
 > Règle de sécurité à garder en tête pendant toute la démo : Tujya ne donne jamais de dose,
 > ne dit jamais qu'une association est « sûre » (au mieux « aucune interaction connue dans
@@ -47,9 +47,9 @@ et temps mesurés dans [SESSION_REPORT_4.md](SESSION_REPORT_4.md#tâche-4--scrip
    - <http://localhost:5000> (MLflow ; cliquer une fois « Model training » et fermer les
      fenêtres d'aide « Got it ») ;
    - <https://github.com/melekbouabid/tujia-/actions> (onglet Actions) ;
-   - [docs/rapports/img/architecture.png](rapports/img/architecture.png) (schéma) ;
-   - [docs/BENCHMARK.md](BENCHMARK.md) ou le tableau des résultats du README.
-5. Garder un terminal ouvert dans `backend/` avec les variables ci-dessus, et un autre à la
+   - [docs/assets/architecture.png](assets/architecture.png) (schéma) ;
+   - [module2_ai_engineering/docs/benchmark.md](../module2_ai_engineering/docs/benchmark.md) ou le tableau des résultats du README.
+5. Garder un terminal ouvert dans `app/backend/` avec les variables ci-dessus, et un autre à la
    racine pour DVC et `gh`.
 6. Préparer 1 ou 2 vraies boîtes de comprimés **parmi les 150 classes** si vous voulez
    montrer la webcam (fond uni, bonne lumière) ; sinon montrer la webcam sans conclure.
@@ -68,7 +68,7 @@ et temps mesurés dans [SESSION_REPORT_4.md](SESSION_REPORT_4.md#tâche-4--scrip
 
 ## 2. Architecture (1 min 30)
 
-- **Faire** : ouvrir [rapports/img/architecture.png](rapports/img/architecture.png).
+- **Faire** : ouvrir [rapports/img/architecture.png](assets/architecture.png).
 - **Le jury voit** : le site React (nginx), l'API FastAPI, les deux modèles ONNX, PostgreSQL
   + pgvector, Ollama sur le GPU, MLflow, DVC, GitHub Actions ; tout sur `127.0.0.1`.
 - **Dire** : « Deux modules : vision et MLOps d'un côté (YOLO détecte, un classifieur
@@ -193,7 +193,7 @@ et temps mesurés dans [SESSION_REPORT_4.md](SESSION_REPORT_4.md#tâche-4--scrip
 
 ## 13. Serveur MCP (45 s)
 
-- **Faire** (terminal `backend/`, variables de la préparation) :
+- **Faire** (terminal `app/backend/`, variables de la préparation) :
   `.venv/Scripts/python scripts/mcp_smoke.py`
 - **Le jury voit** (≈ 11 s) : `tools: ['identify_pills', 'check_interaction',
   'get_drug_info', 'search_documents']`, `check_interaction -> … Major`,
@@ -203,7 +203,7 @@ et temps mesurés dans [SESSION_REPORT_4.md](SESSION_REPORT_4.md#tâche-4--scrip
 
 ## 14. Résultats du benchmark (1 min)
 
-- **Faire** : tableau « Résultats du benchmark RAG » du README ou docs/BENCHMARK.md.
+- **Faire** : tableau « Résultats du benchmark RAG » du README ou module2_ai_engineering/docs/benchmark.md.
 - **Le jury voit** : récupération sur 83 questions : dense + filtre Recall@5 **0,928**, MRR
   **0,852** (hybride 0,904 / 0,796 ; BM25 0,783 / 0,660) ; génération : 94,0 % des phrases
   citées soutenues par leur source, 0 dose chiffrée, 0 « sûr », 2/2 questions de dose

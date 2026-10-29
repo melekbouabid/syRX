@@ -3,7 +3,7 @@
 ## Source access (see data_pipeline/docs/code_review.md)
 
 - [ ] No new HTML parsing. If there is: the API and bulk options were ruled out and the
-      reason is in `docs/DECISIONS.md`.
+      reason is in `docs/decisions.md`.
 - [ ] New hosts are declared in the connector's `SourceInfo.hosts` and have a rate limit.
 - [ ] Licence, terms URL and citation are filled in for any new source.
 - [ ] Nothing bypasses a login, CAPTCHA, paywall or robots.txt rule.

@@ -25,7 +25,7 @@ OUT = ROOT / "config" / "ingredient_smiles.csv"
 API = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{}/property/SMILES/JSON"
 PAGE = "https://pubchem.ncbi.nlm.nih.gov/compound/{}"
 # PubChem's best match for these names is an ion or a coenzyme; look up the form in the
-# pills instead (the same aliases as the openFDA label search, docs/RAG.md).
+# pills instead (the same aliases as the openFDA label search, module2_ai_engineering/docs/rag.md).
 LOOKUP_ALIASES = {
     "valproate": "valproic acid",
     "vitamin b12": "cyanocobalamin",

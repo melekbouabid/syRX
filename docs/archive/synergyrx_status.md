@@ -1,5 +1,8 @@
 # Status
 
+> Archive du projet SynergyRx (avant Tujya), gardée telle quelle : les chemins cités sont
+> ceux de l'époque. Le pipeline vit maintenant dans [data_pipeline/](../../data_pipeline/).
+
 Five lines per phase, newest last. Everything was run on Windows 11, Python 3.14.2, on
 2026-10-13. `make` is not installed on that machine, so the Makefile targets were run as
 their underlying commands (`python -m pytest tests/unit`, `python -m ruff check src tests`,

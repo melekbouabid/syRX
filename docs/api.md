@@ -1,6 +1,6 @@
 # Tujya API (scan, pills, interactions)
 
-FastAPI app in `backend/`. Swagger UI: `/docs`, schema: `/openapi.json` (D44). All routes
+FastAPI app in `app/backend/`. Swagger UI: `/docs`, schema: `/openapi.json` (D44). All routes
 below need a signed-in account (session cookie from `POST /api/auth/login`), like the
 catalog; the demo signs in with the demo account (D46).
 
@@ -15,7 +15,7 @@ Multipart form, one field `image`: JPEG, PNG or WebP, at most 10 MB and 50 megap
 too large, 415 not an image, 503 models or medicine tables missing (the message says which
 command fixes it).
 
-Pipeline (`backend/app/scanner.py`, ONNX Runtime, CPU by default, CUDA with
+Pipeline (`module1_vision_mlops/serving/scanner.py`, ONNX Runtime, CPU by default, CUDA with
 `SYNERGYRX_ONNX_PROVIDERS=auto`):
 
 1. decode (OpenCV, EXIF orientation applied), letterbox to 640 px, detector
@@ -51,7 +51,7 @@ Response (`ScanResult`):
 
 `needs_confirmation` is true when the top-1 probability is below `confirm_threshold`
 (0.85, `SYNERGYRX_SCAN_CONFIRM_THRESHOLD`); the app then asks the user to pick from the
-top-5 or search `GET /api/pills`. How 0.85 was chosen: docs/VISION.md, "Confirmation
+top-5 or search `GET /api/pills`. How 0.85 was chosen: module1_vision_mlops/docs/vision.md, "Confirmation
 threshold" (D47). With no pill found, `pills` is empty and `message` says so.
 
 ### Models
@@ -98,13 +98,13 @@ Pairs are sorted by severity (Major, Moderate, Minor, Unknown, then pairs withou
 interaction). "Unknown" is DDInter's ungraded level: an interaction exists. The top-level
 `message` counts the pairs with an interaction and the pairs that could not be checked.
 
-Data: the PostgreSQL tables loaded by `python -m app.pharma_loader` (docs/INFRA.md,
-docs/INTERACTIONS.md). Tests: `backend/tests/test_scan.py` (tiny fake ONNX models built in
-the test, `tests/fake_models.py`) and `backend/tests/test_medicines.py` (SQLite).
+Data: the PostgreSQL tables loaded by `python -m app.pharma_loader` (docs/infra.md,
+module2_ai_engineering/docs/interactions.md). Tests: `module1_vision_mlops/tests/test_scan.py` (tiny fake ONNX models built in
+the test, `tests/fake_models.py`) and `app/backend/tests/test_medicines.py` (SQLite).
 
 ## Measured on the real models
 
 `python scripts/evaluate_scan.py --split test` (backend venv) runs this exact pipeline on
 the 600 consumer photos of the test split: pill found 98.5 %, top-1 89.3 %, top-5 95.8 %,
-the same as the Ultralytics evaluation (docs/VISION.md); about 50 to 220 ms per photo on
+the same as the Ultralytics evaluation (module1_vision_mlops/docs/vision.md); about 50 to 220 ms per photo on
 the laptop CPU, depending on the load.

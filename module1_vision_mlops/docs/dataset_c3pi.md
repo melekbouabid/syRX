@@ -50,7 +50,7 @@ every image of its folder:
 **Identifiers available:** NDC11, NDC9, part, generic name, proprietary name, labeler.
 **Not available:** RxCUI or any RxNorm code, a normalised ingredient list, strengths as
 numbers. Ingredients therefore come from RxNav (NDC -> RxCUI -> ingredients), see
-[INTERACTIONS.md](INTERACTIONS.md).
+[INTERACTIONS.md](../../module2_ai_engineering/docs/interactions.md).
 
 ## Image types
 
@@ -105,7 +105,7 @@ capsule, and its `reference/` folder holds the two RxImage API images in six res
 - Consumer photos show **one pill**, roughly centred, on a fairly uniform background (see
   the example in `RxImageImageLayouts.docx` and the downloaded subset). A box can therefore
   be computed automatically (background subtraction / thresholding), which is the plan for
-  the detection stage (docs/DECISIONS.md).
+  the detection stage (docs/decisions.md).
 - The segmented reference PNGs carry a real pill mask in their alpha channel; they could be
   pasted onto backgrounds to synthesise multi-pill training images.
 
@@ -113,7 +113,7 @@ capsule, and its `reference/` folder holds the two RxImage API images in six res
 
 - Identification classes: the 150 products with the most consumer photos, after leaving
   out the two high-resolution cameras (Canon G10 and Nikon S3000: 28 % of the photos but
-  60 % of the bytes). See `config/pill_classes.csv` and docs/DECISIONS.md.
+  60 % of the bytes). See `config/pill_classes.csv` and docs/decisions.md.
 - Per class: up to 30 consumer photos (seeded random sample) + one RxNav reference JPG per
   package NDC when it exists. 4,206 files, 4.8 GB.
 - Splits by photo, stratified by class: 15 % test, 15 % val, the rest train; photos with

@@ -2,8 +2,8 @@
 
 The agent answers questions about the confirmed pills and their active ingredients, only
 from retrieved documents and tool results, with numbered citations. Code:
-`backend/app/rag/` (agent.py, tools.py, safety.py, names.py, runtime.py), route
-`backend/app/routers/chat.py`. Corpus and retrieval: docs/RAG.md. Decisions D57-D59, D63.
+`module2_ai_engineering/rag/` (agent.py, tools.py, safety.py, names.py, runtime.py), route
+`app/backend/app/routers/chat.py`. Corpus and retrieval: module2_ai_engineering/docs/rag.md. Decisions D57-D59, D63.
 
 ## Graph
 
@@ -30,11 +30,11 @@ If the planner call fails (model down, bad JSON), the rule-based calls still run
 | `check_interaction` | `drugs` (names, French or English), `pills` (class_ids) | the `/api/interactions` result: every pair, DDInter severity, description, source; "aucune interaction connue dans cette base de données" when nothing is listed |
 | `get_drug_info` | `drug`, optional `sections` | pill classes containing the ingredient, and the first chunk of each label section (boxed warning, indications, contraindications, warnings, interactions, mechanism) |
 | `search_documents` | `query`, `ingredients`, `doc_types`, `sections`, `k`, `exclude_retracted` | hybrid search hits with title, section, URL, source, date, licence, text |
-| `predict_toxicity` (bonus) | `molecules` (1 or 2 names or SMILES) | Tox21 in vitro assay probabilities per molecule, never about a mixture (docs/TOXICITY.md); added by rule to a toxicity question; its sentences in the answer are written by the code, not the LLM (D74) |
+| `predict_toxicity` (bonus) | `molecules` (1 or 2 names or SMILES) | Tox21 in vitro assay probabilities per molecule, never about a mixture (bonus/docs/toxicity.md); added by rule to a toxicity question; its sentences in the answer are written by the code, not the LLM (D74) |
 
 **Extension point.** A tool is one async method on `Toolbox` and one entry in
 `TOOL_SPECS`; it is then available to the agent (`CHAT_TOOLS`) and the MCP server. Two
-bonus tools were planned: `predict_toxicity` is implemented (session 4, docs/TOXICITY.md);
+bonus tools were planned: `predict_toxicity` is implemented (session 4, bonus/docs/toxicity.md);
 `predict_synergy(drug_a, drug_b)` (cancer synergy from the DrugComb data already in the
 pipeline) is not.
 
@@ -101,10 +101,10 @@ answer ~6 s).
 
 ## Tests (no Ollama, no real embeddings)
 
-`backend/tests/test_chat.py`: a scripted chat model (`tests/rag_fakes.py`, tool calls and
+`module2_ai_engineering/tests/test_chat.py`: a scripted chat model (`tests/rag_fakes.py`, tool calls and
 streamed answers) and hashed fake embeddings over a six-chunk corpus. Covers sign-in, tool
 choice + rule-added calls, unknown tools ignored, citations mapping, retracted excluded,
 unsafe answers rewritten (dose, "sans danger", bad citation), dose question refused without
 any LLM call, planner failure fallback, pills -> ingredients, SSE order (tool, token,
-final) with unsafe sentences held back, 503 without index. `backend/tests/test_safety.py`:
+final) with unsafe sentences held back, 503 without index. `module2_ai_engineering/tests/test_safety.py`:
 the rules and the name matcher.

@@ -1,11 +1,11 @@
 # RAG benchmark: retrieval and generation
 
 Measured on 2026-10-28 on the laptop (RTX 2050 4 GB, Docker Desktop), with the real corpus
-(8,661 chunks, docs/RAG.md), bge-m3 embeddings and qwen2.5:3b (docs/AGENT.md). Every run
+(8,661 chunks, module2_ai_engineering/docs/rag.md), bge-m3 embeddings and qwen2.5:3b (module2_ai_engineering/docs/agent.md). Every run
 is logged in MLflow, experiment **`tujya-rag`** (http://localhost:5000): parameters,
 metrics, per-question results as artefacts. Decisions: D65 to D68.
 
-## The benchmark set (`benchmark/`)
+## The benchmark set (`module2_ai_engineering/benchmark/`)
 
 **88 questions, 44 in French and 44 in English**, about the 82 class ingredients:
 
@@ -20,8 +20,8 @@ metrics, per-question results as artefacts. Decisions: D65 to D68.
 | `abstract` | 9 | the chunks of one PubMed article (case reports, a systematic review, a meta-analysis) |
 | `safety` | 5 | none: two dose requests, two "is it safe" questions, one timing question; scored on the answer only |
 
-How it was built (`backend/scripts/bench_build.py`, spec `benchmark/spec.json` written by
-`benchmark/make_spec.py`):
+How it was built (`module2_ai_engineering/benchmark/bench_build.py`, spec `module2_ai_engineering/benchmark/spec.json` written by
+`module2_ai_engineering/benchmark/make_spec.py`):
 
 1. Candidates from the corpus: interaction pairs where one label mentions the other
    ingredient in an interaction or warning section and DDInter grades the pair (178 such
@@ -51,7 +51,7 @@ expected article although other abstracts may be relevant. References are extrac
 
 ## Retrieval
 
-`backend/scripts/bench_retrieval.py`: the 83 questions with expected chunks, top 10, six
+`module2_ai_engineering/benchmark/bench_retrieval.py`: the 83 questions with expected chunks, top 10, six
 configurations (three modes x two filter settings). **Recall@k** = share of questions with
 at least one expected chunk in the top k (hit rate); **Coverage@10** = mean share of a
 question's expected chunks in the top 10; **MRR** = mean of 1 / rank of the first expected
@@ -91,7 +91,7 @@ ingredient filter helps every mode a little (+0.01 to +0.05 Recall@5).
 
 ## Generation
 
-`backend/scripts/bench_answers.py` runs the real agent (qwen2.5:3b, dense retrieval,
+`module2_ai_engineering/benchmark/bench_answers.py` runs the real agent (qwen2.5:3b, dense retrieval,
 safety node) on the 88 questions; `bench_generation.py` scores the answers. Judge:
 **gemma3:4b**, a different model from the generator (D67).
 
@@ -169,7 +169,7 @@ judge's generated questions were not parseable by RAGAS.
   answer. A larger model (7-8B) would need more than 4 GB of VRAM.
 
 All of this is in MLflow (`generation-qwen2.5:3b-dense`, `citation-judge-control`) with
-the per-question scores (`benchmark/generation_per_question.jsonl`, no source text).
+the per-question scores (`module2_ai_engineering/benchmark/generation_per_question.jsonl`, no source text).
 
 ## Reproduce
 

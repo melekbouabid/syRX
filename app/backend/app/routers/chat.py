@@ -76,7 +76,7 @@ def unavailable(exc: Exception) -> HTTPException:
     return HTTPException(
         status.HTTP_503_SERVICE_UNAVAILABLE,
         f"The agent is not available ({type(exc).__name__}). Is the ollama service running? "
-        "See docs/INFRA.md.",
+        "See docs/infra.md.",
     )
 
 

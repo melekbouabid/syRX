@@ -102,7 +102,7 @@ def default_toolbox(settings: Settings, embedder: Embedder | None = None) -> Too
     return Toolbox(settings, engine, retrievers, scanner, toxicity=toxicity)
 
 
-# Strictly local (docs/INFRA.md): the HTTP transport only ever listens on the loopback.
+# Strictly local (docs/infra.md): the HTTP transport only ever listens on the loopback.
 LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
 
 

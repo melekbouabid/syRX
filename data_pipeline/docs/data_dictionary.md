@@ -83,7 +83,7 @@ One row per distinct drug.
 | `smiles_issue` | string | Why the SMILES is invalid (`missing`, `unparseable SMILES`, ...) |
 | `smiles_note` | string | What standardisation changed (`salt or solvent removed`, `neutralised`, `metal complex: all fragments kept`) |
 | `resolution_method` | string | How the structure was chosen: `manual_override`, `source_smiles+pubchem`, `pubchem_name`, `source_smiles`, `pubchem_name_ambiguous`, `source_smiles_conflict`, `unresolved` |
-| `resolution_confidence` | float | 0 to 1, fixed per method (see docs/DECISIONS.md, D14) |
+| `resolution_confidence` | float | 0 to 1, fixed per method (see docs/decisions.md, D14) |
 | `needs_review` | bool | In the manual-review queue (`data/csv/drug_review_queue.csv`) |
 | `review_reason` | string | Why it needs review |
 | `sources` | list of string | Connectors in which the drug appears |

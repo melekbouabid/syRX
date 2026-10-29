@@ -4,7 +4,7 @@
 the probability that each molecule is **active** in the 12 Tox21 in vitro assays. Every
 output says it is a **"prédiction d'un modèle sur des tests in vitro, pas une évaluation
 clinique"**. Each molecule is predicted on its own: the tool never says anything about a
-mixture. Decisions: D73 (data and licence) and D74 (design and safety) in docs/DECISIONS.md.
+mixture. Decisions: D73 (data and licence) and D74 (design and safety) in docs/decisions.md.
 
 > Information uniquement, consultez un pharmacien ou un médecin.
 
@@ -17,7 +17,7 @@ mixture. Decisions: D73 (data and licence) and D74 (design and safety) in docs/D
 | Licence | **No explicit licence file was found** for the MoleculeNet copy or on the challenge page (checked 2026-10-28). The data were produced by US federal agencies and released publicly at no cost; DeepChem's code is MIT, which does not cover the data. Treated as public research data: cited, used for this non-commercial student project, **not redistributed** (DVC only, never in git) (D73) |
 | Citation | Huang R. et al., "Tox21 Challenge to Build Predictive Models of Nuclear Receptor and Stress Response Pathways as Mediated by Exposure to Environmental Chemicals and Drugs", Front. Environ. Sci. 2016; Wu Z. et al., "MoleculeNet: a benchmark for molecular machine learning", Chem. Sci. 2018 |
 | Versioning | `data/tox21/` (the file + `SOURCE.json`: URL, SHA-256 `45d09792…`, size, date) with `dvc add`, pushed to the DVC remote |
-| Ingredient structures | `config/ingredient_smiles.csv`: one PubChem SMILES per active ingredient (82/82), by `backend/scripts/fetch_ingredient_smiles.py`; PubChem is public domain. Aliases: valproate -> valproic acid, vitamin B12 -> cyanocobalamin, vitamin B6 -> pyridoxine |
+| Ingredient structures | `config/ingredient_smiles.csv`: one PubChem SMILES per active ingredient (82/82), by `bonus/toxicity/fetch_ingredient_smiles.py`; PubChem is public domain. Aliases: valproate -> valproic acid, vitamin B12 -> cyanocobalamin, vitamin B6 -> pyridoxine |
 
 The 12 assays: NR-AR, NR-AR-LBD (androgen receptor), NR-AhR (aryl hydrocarbon receptor),
 NR-Aromatase, NR-ER, NR-ER-LBD (estrogen receptor alpha), NR-PPAR-gamma, SR-ARE (oxidative
@@ -26,9 +26,9 @@ potential), SR-p53 (DNA damage).
 
 ## Model
 
-`backend/scripts/train_tox21.py` (backend venv: RDKit 2026.09, LightGBM 4.7, MLflow):
+`bonus/toxicity/train_tox21.py` (backend venv: RDKit 2026.09, LightGBM 4.7, MLflow):
 
-- **Features** (`backend/app/toxicity.py`, shared with the API): largest fragment (salts
+- **Features** (`bonus/toxicity/model.py`, shared with the API): largest fragment (salts
   removed), Morgan fingerprint radius 2, 2,048 bits. 7,823 of 7,831 molecules parse.
 - **Scaffold split** (Bemis-Murcko, largest scaffold groups first into train, as
   MoleculeNet / DeepChem): 6,258 train / 782 validation / 783 test, 2,285 scaffolds. Test
@@ -66,7 +66,7 @@ first run whose script crashed after registering (a Windows console encoding err
 MLflow log line); its run is marked FAILED with a note. `python scripts/train_tox21.py
 publish` copies the registered bundle to `models/tox21/` (git-ignored), which the API loads.
 
-![MLflow experiment tujya-tox](screenshots/17-mlflow-tox.jpg)
+![MLflow experiment tujya-tox](../../docs/screenshots/17-mlflow-tox.jpg)
 
 **Applicability domain** (heuristic): the highest Tanimoto similarity between the query
 and the 6,258 training fingerprints; below 0.3 the result says the molecule is far from the
@@ -83,7 +83,7 @@ training set (for those the model mostly reflects measured labels), 4 are below 
 | API | `POST /api/toxicity` `{"molecules": ["warfarin", "fluconazole"]}` (1 or 2, sign-in required): per molecule the 12 probabilities, the test ROC-AUC of each task, the similarity to the training set, plus `wording`, `mixture_note`, `low_probability_note`, model version, source, disclaimer; 503 without a published model |
 | Web | page **Toxicity** (menu): one or two molecules, one card per molecule, the wording and the disclaimer always visible |
 
-![Toxicity page](screenshots/16-toxicity.jpg)
+![Toxicity page](../../docs/screenshots/16-toxicity.jpg)
 
 ## Safety (D74)
 
@@ -112,7 +112,7 @@ interagissent-ils ? » -> no toxicity call (DDInter Major).
 
 ## Tests
 
-`backend/tests/test_toxicity.py` (fake predictors, no LightGBM needed except one test that
+`bonus/tests/test_toxicity.py` (fake predictors, no LightGBM needed except one test that
 builds a tiny real LightGBM bundle): featurisation and salt stripping, each molecule
 separate with the exact wording and no forbidden word, names and invalid input, two
 molecules at most, missing model message, real bundle loading, the route (sign-in, 422,

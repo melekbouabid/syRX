@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     onnx_providers: str = "cpu"
     onnx_threads: int = 0  # 0 = ONNX Runtime default (one per core)
     # Below this top-1 probability the app asks the user to confirm the pill. Chosen on the
-    # validation photos: docs/VISION.md, "Confirmation threshold" (decision D47).
+    # validation photos: module1_vision_mlops/docs/vision.md, "Confirmation threshold" (D47).
     scan_confirm_threshold: float = 0.85
     scan_detection_confidence: float = 0.25
     scan_max_bytes: int = 10 * 1024 * 1024
@@ -66,11 +66,12 @@ class Settings(BaseSettings):
     embedding_dim: int = 1024
     embedding_num_ctx: int = 2048  # chunks are at most ~400 tokens
     rag_top_k: int = 6
-    # Chosen on the benchmark (docs/BENCHMARK.md, D65): dense + ingredient filter is best;
-    # hybrid loses on French questions (BM25 only matches English words).
+    # Chosen on the benchmark (module2_ai_engineering/docs/benchmark.md, D65): dense +
+    # ingredient filter is best; hybrid loses on French questions (BM25 only matches English).
     rag_search_mode: str = "dense"
     # An uncited answer sentence gets the source closest in meaning (bge-m3 cosine) above
-    # this; calibrated on the first benchmark run (docs/BENCHMARK.md). 0 disables it.
+    # this; calibrated on the first benchmark run (module2_ai_engineering/docs/benchmark.md).
+    # 0 disables it.
     rag_attribution_threshold: float = 0.65
 
     # Bonus: single-molecule toxicity (bonus/docs/toxicity.md). The model bundle is published by

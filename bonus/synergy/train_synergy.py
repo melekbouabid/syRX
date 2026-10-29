@@ -4,7 +4,7 @@
 python -m bonus.synergy.train_synergy  # MLflow experiment tujya-synergy; bonus/docs/synergy.md
 
 Data: the SynergyRx pipeline tables in data/parquet (synergy_pairs, drugs, expression).
-Decisions in docs/DECISIONS.md (D75): DrugComb is the single source per experiment (TDC is
+Decisions in docs/decisions.md (D75): DrugComb is the single source per experiment (TDC is
 a copy of it, O'Neil disagrees), target ZIP, only drugs with a valid structure,
 leave-drug-out split (15 % of the drugs for test, 10 % for validation). Features: the sum
 of the two drugs' Morgan fingerprints (order-free, 1,024 bits), 30 principal components of

@@ -197,7 +197,8 @@ class PillScanner:
         if missing:
             raise ModelsMissing(
                 f"Model files missing in {directory}: {', '.join(missing)}. "
-                "Export them with `python -m tujya_vision.publish` (see docs/VISION.md)."
+                "Export them with `python -m tujya_vision.publish` "
+                "(see module1_vision_mlops/docs/vision.md)."
             )
         manifest_path = directory / MANIFEST_FILE
         manifest = json.loads(manifest_path.read_text("utf-8")) if manifest_path.is_file() else {}

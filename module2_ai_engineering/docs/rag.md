@@ -2,20 +2,20 @@
 
 Documents the Tujya agent answers from: what they are, how they were collected, how they
 are cut into chunks, what metadata each chunk carries, and how they are searched. Built on
-2026-10-28. Decisions: D59 to D62 in docs/DECISIONS.md.
+2026-10-28. Decisions: D59 to D62 in docs/decisions.md.
 
 ```
 config/pill_classes.csv (82 active ingredients of the 150 pill classes)
   -> openFDA drug labels      python -m synergyrx_data.tujya labels   -> data/rag/raw, interim
   -> PubMed abstracts         python -m synergyrx_data.tujya pubmed   -> data/rag/raw, interim
-  -> DDInter pairs            data/tujya/interactions_between_classes.csv (docs/INTERACTIONS.md)
+  -> DDInter pairs            data/tujya/interactions_between_classes.csv (docs/interactions.md)
   -> chunks + metadata        dvc repro rag_corpus  (= python -m synergyrx_data.tujya corpus)
                               -> data/rag/corpus/chunks.parquet, summary.json
   -> embeddings + index       python -m app.rag.index  (backend)  -> table rag_chunks (pgvector)
 ```
 
 Commands run from the repository root with the pipeline venv (`.venv-dev`); without a
-`.env` add `--set http.require_contact_email=false` (as in docs/INTERACTIONS.md). The two
+`.env` add `--set http.require_contact_email=false` (as in module2_ai_engineering/docs/interactions.md). The two
 fetch steps reuse the pipeline's connectors (PoliteClient: rate limits, retries, HTTP cache,
 manifest with SHA-256 and provenance), in their own data folder `data/rag/` with its own
 manifest `data/rag/manifest.json`, so they never mix with the SynergyRx files under
@@ -35,7 +35,7 @@ length 687 characters (labels 1,164, abstracts 627).
 
 ### openFDA labels (`openfda_label` connector)
 
-`src/synergyrx_data/connectors/openfda.py`, registered with the other connectors (off by
+`data_pipeline/src/synergyrx_data/connectors/openfda.py`, registered with the other connectors (off by
 default, so the SynergyRx `update` run does not fetch it). For each ingredient it asks
 `api.fda.gov/drug/label.json` for the 25 most recent labels (`sort=effective_time:desc`)
 whose `openfda.generic_name` or `openfda.substance_name` contains the ingredient (or a
@@ -73,7 +73,7 @@ before the raw file is written, the row schema refuses any section named "dosage
 "overdos", and the chunker refuses them a third time. The agent therefore cannot quote a
 dosing section. Limit: other sections still mention amounts (1,010 of 8,661 chunks contain
 "<number> mg", e.g. "patients receiving 200 mg" in adverse reactions); the agent's safety
-node removes any sentence with a dose from its answers (docs/AGENT.md).
+node removes any sentence with a dose from its answers (module2_ai_engineering/docs/agent.md).
 
 ### PubMed abstracts (existing `pubmed` connector, mode `ingredients`)
 
@@ -92,7 +92,7 @@ meta-analyses, 8 commentaries; **4 retracted** articles (17 chunks), kept with
 
 ### DDInter rows
 
-The 2,350 pairs where both ingredients belong to the pill classes (docs/INTERACTIONS.md),
+The 2,350 pairs where both ingredients belong to the pill classes (module2_ai_engineering/docs/interactions.md),
 one chunk each: "DDInter 2.0 lists an interaction with severity Major between fluconazole
 and warfarin. DDInter's bulk files give only the two drugs and the level, not the
 mechanism." "Unknown" is written as "an interaction whose severity DDInter does not grade",
@@ -100,7 +100,7 @@ never as "no interaction". The 40,508 pairs with any drug stay out of the text i
 would drown the other documents in near-identical sentences); the `check_interaction` tool
 reads all of them from the database (D62).
 
-## Chunking (`src/synergyrx_data/tujya/corpus.py`)
+## Chunking (`module2_ai_engineering/corpus/corpus.py`)
 
 - **Labels: by section.** One chunk per section; a section longer than 1,500 characters is
   split on sentence ends into pieces of at most 1,500 characters, repeating the last
@@ -150,10 +150,10 @@ reads all of them from the database (D62).
   chunker code to `data/rag/corpus` (`dvc.lock` records the hashes). `dvc repro rag_corpus`
   rebuilds the chunks when any input changes.
 - Pushed to the default DVC remote with the images (local folder outside the repository,
-  D71, docs/INFRA.md); a fresh clone gets the corpus with `dvc pull`.
+  D71, docs/infra.md); a fresh clone gets the corpus with `dvc pull`.
 - Nothing under `data/` is committed to git (some sources forbid redistribution).
 
-## Embeddings and index (backend, `backend/app/rag/`)
+## Embeddings and index (backend, `module2_ai_engineering/rag/`)
 
 - **Embeddings: bge-m3** (1,024 dimensions, multilingual) through Ollama's `/api/embed`
   (D59). Each chunk is embedded as `title + "\n" + text`.
@@ -167,7 +167,7 @@ reads all of them from the database (D62).
   embedding model rebuilds the table. Run on 2026-10-28: 8,661 chunks embedded in 364 s on
   the RTX 2050; second run `{"embedded": 0, "unchanged": 8661, "seconds": 0.1}`.
 
-## Retrieval (`backend/app/rag/retrieval.py`)
+## Retrieval (`module2_ai_engineering/rag/retrieval.py`)
 
 | Mode | How | Time per query (8,661 chunks, laptop) |
 |---|---|---:|
@@ -185,17 +185,17 @@ true). In SQL: `ingredients && :names OR mentioned_ingredients && :names`.
 Try it: `python scripts/search.py "warfarin bleeding" --ingredient fluconazole --doc-type
 label` (prints the three modes with their ranks and timings).
 
-Which mode is best is measured in docs/BENCHMARK.md: dense with the ingredient filter is the
+Which mode is best is measured in module2_ai_engineering/docs/benchmark.md: dense with the ingredient filter is the
 agent's default since D65 (`SYNERGYRX_RAG_SEARCH_MODE`).
 
-Tests (CI, no model): `backend/tests/test_rag.py` (SQLite, fake hashed embeddings: index
+Tests (CI, no model): `module2_ai_engineering/tests/test_rag.py` (SQLite, fake hashed embeddings: index
 idempotence, model change, BM25, the three modes, filters, reload) and
-`backend/tests/test_rag_pgvector.py` (the same on PostgreSQL + pgvector, in its own schema;
+`module2_ai_engineering/tests/test_rag_pgvector.py` (the same on PostgreSQL + pgvector, in its own schema;
 the CI backend job now has a `pgvector/pgvector:pg16` service).
 
 ## Tests
 
-`tests/unit/test_tujya_rag.py` (respx, no network): label selection rule, dosage never
+`module2_ai_engineering/tests/test_corpus.py` (respx, no network): label selection rule, dosage never
 stored, connector run (one label per ingredient, 404 handled, raw file reused), PubMed
 ingredient queries and their hits, chunk splitting and overlap, chunk metadata, stable ids,
 dosage refused by the chunker.

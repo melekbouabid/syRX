@@ -1,5 +1,8 @@
 # SynergyRx data pipeline: plan
 
+> Archive du projet SynergyRx (avant Tujya), gardée telle quelle : les chemins cités sont
+> ceux de l'époque. Le pipeline vit maintenant dans [data_pipeline/](../../data_pipeline/).
+
 Purpose: collect public drug-combination, cell-line, chemistry and literature data for
 SynergyRx AI in a polite, reproducible way. It is a set of source connectors, not a crawler.
 

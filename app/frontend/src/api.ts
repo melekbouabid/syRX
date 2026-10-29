@@ -75,7 +75,7 @@ export interface NewUser {
 
 export type UserChanges = Partial<Pick<User, "email" | "full_name" | "role" | "is_active">>;
 
-// --- Tujya: scan, pills, interactions (docs/API.md) ------------------------------------------
+// --- Tujya: scan, pills, interactions (docs/api.md) ------------------------------------------
 
 export interface Source {
   name: string;
@@ -238,7 +238,7 @@ export class ApiError extends Error {
   }
 }
 
-// Bonus toxicity tool (POST /api/toxicity, docs/TOXICITY.md): each molecule on its own.
+// Bonus toxicity tool (POST /api/toxicity, bonus/docs/toxicity.md): each molecule on its own.
 export interface ToxPrediction {
   task: string;
   assay: string;

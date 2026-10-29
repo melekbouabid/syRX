@@ -2993,7 +2993,7 @@ a.cite:hover {
   }
 }
 
-/* Toxicity page (bonus, docs/TOXICITY.md) */
+/* Toxicity page (bonus, bonus/docs/toxicity.md) */
 .tox-wording {
   border-color: var(--warn, #c58a00);
 }

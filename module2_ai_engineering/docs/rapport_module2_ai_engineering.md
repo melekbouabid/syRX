@@ -2,8 +2,8 @@
 
 Projet étudiant solo. Dépôt : <https://github.com/melekbouabid/tujia-> (code, documentation
 et historique des commits ; données hors de git). Rapport rédigé le 2026-10-28 ; tous les
-chiffres viennent des documents du dépôt (docs/RAG.md, docs/AGENT.md, docs/MCP.md,
-docs/BENCHMARK.md) et des runs MLflow de l'expérience `tujya-rag` ; aucun n'est estimé.
+chiffres viennent des documents du dépôt (module2_ai_engineering/docs/rag.md, module2_ai_engineering/docs/agent.md, module2_ai_engineering/docs/mcp.md,
+module2_ai_engineering/docs/benchmark.md) et des runs MLflow de l'expérience `tujya-rag` ; aucun n'est estimé.
 
 > Tujya ne donne jamais de dose, ne dit jamais qu'une association est « sûre » (au mieux
 > « aucune interaction connue dans cette base de données ») et cite toujours ses sources.
@@ -26,7 +26,7 @@ sécurité médicales appliquées dans le code.
 | Interface web | panneau de chat sur la page Scanner | 8 |
 | Dépôt documenté, commits réguliers | docs/, journal du README, historique git | — |
 
-![Architecture : l'agent, Ollama et pgvector dans la même pile Docker Compose, sur ce PC.](img/architecture.png)
+![Architecture : l'agent, Ollama et pgvector dans la même pile Docker Compose, sur ce PC.](../../docs/assets/architecture.png)
 
 ## 2. Corpus et métadonnées
 
@@ -91,7 +91,7 @@ Le corpus porte sur les **82 principes actifs** des 150 classes de comprimés.
 
 ## 5. Agent LangGraph
 
-![Graphe de l'agent : la question de dose va directement au nœud de sécurité, sans appel au LLM.](img/agent_graph.png)
+![Graphe de l'agent : la question de dose va directement au nœud de sécurité, sans appel au LLM.](assets/agent_graph.png)
 
 | Nœud | Rôle | LLM |
 |---|---|---|
@@ -129,7 +129,7 @@ des événements SSE `tool`, `token`, `final`.
 
 ## 6. Serveur MCP et LLM local
 
-- **MCP** : `backend/app/mcp_server.py`, SDK Python officiel (`mcp` 2.3), les **mêmes
+- **MCP** : `module2_ai_engineering/mcp_server/server.py`, SDK Python officiel (`mcp` 2.3), les **mêmes
   outils** que l'agent (même code ; 4, plus `predict_toxicity` en bonus), consignes de sécurité dans les `instructions` du serveur ;
   transports stdio et streamable HTTP (limité à `127.0.0.1`). Test de fumée réel
   (`scripts/mcp_smoke.py`, ≈ 11 s, avant le bonus) : 4 outils listés, warfarine + fluconazole -> Major,
@@ -199,7 +199,7 @@ prévus par RAGAS : ces scores servent à comparer des runs de ce système.
 Tous les runs sont dans MLflow (expérience `tujya-rag` : 6 runs de récupération, 2 de
 génération, 1 de contrôle du juge).
 
-![Expérience tujya-rag dans MLflow.](../screenshots/13-mlflow-rag.jpg)
+![Expérience tujya-rag dans MLflow.](../../docs/screenshots/13-mlflow-rag.jpg)
 
 ## 8. Interface de chat
 
@@ -211,11 +211,11 @@ avertissement toujours visible. Sur les conteneurs : réponse en **5,6 s** une f
 modèles chargés (la toute première question après un démarrage a pris 83,9 s, d'où une étape
 de préchauffage dans le script de démo).
 
-![Réponse réelle avec citations, appels d'outils et sources.](../screenshots/09-chat-answer.jpg)
+![Réponse réelle avec citations, appels d'outils et sources.](../../docs/screenshots/09-chat-answer.jpg)
 
-![Après un clic sur [1] : la source surlignée.](../screenshots/10-chat-citation.jpg)
+![Après un clic sur [1] : la source surlignée.](../../docs/screenshots/10-chat-citation.jpg)
 
-![Question de dose refusée.](../screenshots/11-chat-dose-refused.jpg)
+![Question de dose refusée.](../../docs/screenshots/11-chat-dose-refused.jpg)
 
 ## 9. Bonus : outil de toxicité (Tox21)
 
@@ -223,7 +223,7 @@ Cinquième outil, `predict_toxicity` (agent, serveur MCP, `POST /api/toxicity`, 
 « Toxicity ») : pour une ou deux molécules (nom de principe actif ou SMILES), probabilité
 d'activité dans les 12 tests in vitro de Tox21, toujours présentée comme une **« prédiction
 d'un modèle sur des tests in vitro, pas une évaluation clinique »**, chaque molécule
-séparément, jamais rien sur leur association (docs/TOXICITY.md).
+séparément, jamais rien sur leur association (bonus/docs/toxicity.md).
 
 - Données : Tox21, copie MoleculeNet (7 831 molécules) ; aucune licence explicite trouvée
   (données publiques d'agences fédérales américaines), citées, versionnées par DVC (D73).
@@ -236,13 +236,13 @@ séparément, jamais rien sur leur association (docs/TOXICITY.md).
   phrases sur la prédiction sont donc écrites par le code à partir du résultat de l'outil,
   et une règle retire toute affirmation « non toxique ». Vérifié ensuite sur les conteneurs.
 
-![Page Toxicity : une carte par molécule, formulation et avertissement toujours visibles.](../screenshots/16-toxicity.jpg)
+![Page Toxicity : une carte par molécule, formulation et avertissement toujours visibles.](../../docs/screenshots/16-toxicity.jpg)
 
 **Synergie (étudiée, pas d'outil).** Sur DrugComb (une source par expérience : TDC en est
 une copie, O'Neil diverge ; cible ZIP ; 323 339 expériences, 287 médicaments), un LightGBM
 évalué en laissant 15 % des médicaments de côté fait mieux que la moyenne (RMSE 5,189 contre
 5,597, r 0,377) mais seulement de 7,3 %, sous la règle de 10 % fixée avant l'entraînement
-(D75) : aucun outil `predict_synergy` n'a été ajouté (docs/SYNERGY.md).
+(D75) : aucun outil `predict_synergy` n'a été ajouté (bonus/docs/synergy.md).
 
 ## 10. Limites et suite
 
@@ -277,5 +277,5 @@ une copie, O'Neil diverge ; cible ZIP ; 323 339 expériences, 287 médicaments),
   benchmark for molecular machine learning », Chem. Sci. 2018 ; RDKit, LightGBM.
 - S. Es et al., « RAGAS: Automated Evaluation of Retrieval Augmented Generation »,
   arXiv:2309.15217.
-- Documents du dépôt : docs/RAG.md, docs/AGENT.md, docs/MCP.md, docs/BENCHMARK.md,
-  docs/DECISIONS.md (D57 à D72), docs/DEMO.md.
+- Documents du dépôt : module2_ai_engineering/docs/rag.md, module2_ai_engineering/docs/agent.md, module2_ai_engineering/docs/mcp.md, module2_ai_engineering/docs/benchmark.md,
+  docs/decisions.md (D57 à D72), docs/demo.md.

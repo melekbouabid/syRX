@@ -12,7 +12,7 @@
                    ingredient -> data/rag (raw, interim)
     corpus         labels + abstracts + DDInter pairs -> data/rag/corpus/chunks.parquet
 
-Docs: docs/INTERACTIONS.md, docs/RAG.md.
+Docs: module2_ai_engineering/docs/interactions.md, module2_ai_engineering/docs/rag.md.
 """
 
 from __future__ import annotations

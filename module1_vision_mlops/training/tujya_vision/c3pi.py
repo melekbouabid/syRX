@@ -6,7 +6,7 @@ and, for consumer photos, camera, lighting and background. This module turns tho
 into one flat table and builds the training subset from it. It only uses the standard
 library so that it runs (and is tested) without the vision venv.
 
-Docs: docs/DATASET_C3PI.md. Licence: ODbL, research and development use only.
+Docs: module1_vision_mlops/docs/dataset_c3pi.md. Licence: ODbL, research and development use only.
 """
 
 from __future__ import annotations
