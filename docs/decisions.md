@@ -719,3 +719,19 @@ d'origine, avec une note et un renvoi vers la table de correspondance de
 `docs/journal/JOURNAL.md`. `photo.png` (source du logo) devient
 `docs/assets/logo-source.png`. Le fichier non suivi `weights/yolo26n.pt` (tÃ©lÃ©chargement
 automatique d'Ultralytics) rejoint les autres poids dans `module1_vision_mlops/training/`.
+
+**D83. Langue des documents, MLflow vide dans la copie, captures inchangÃ©es.** Les README et
+les documents vivants sont en franÃ§ais (ceux des modules, du bonus, `api`, `infra`, `cd`,
+`roadmap`, `architecture`) ; le code, ses commentaires et ses messages restent en anglais.
+Restent dans leur langue d'origine : les documents historiques (rapports de session,
+dÃ©cisions D1 Ã  D75, archive SynergyRx) et les documents de rÃ©fÃ©rence du pipeline
+(`data_pipeline/docs/` : `sources.md` est gÃ©nÃ©rÃ© par `sources --check`,
+`data_dictionary.md` est lu par un test qui compare ses sections aux colonnes Ã©crites).
+Les volumes Docker de la copie (`tujia2_*`) sont neufs, comme demandÃ© : le serveur MLflow de
+la copie fonctionne mais ne contient aucune expÃ©rience ni aucun modÃ¨le enregistrÃ© (ils sont
+dans les volumes `tujya_*` de l'original, non partagÃ©s). Les modÃ¨les servis viennent du
+dossier `models/` copiÃ©, donc le scan et la toxicitÃ© marchent ; le script de captures MLflow
+Ã©choue logiquement (Â« experiment tujya-vision not found Â»). Les scripts Playwright ont Ã©tÃ©
+rejouÃ©s vers un dossier temporaire et les captures de `docs/screenshots/` n'ont pas Ã©tÃ©
+remplacÃ©es : les nouvelles montrent les mÃªmes Ã©crans, les remplacer n'aurait ajoutÃ© que du
+bruit binaire.
