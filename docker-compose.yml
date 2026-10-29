@@ -39,7 +39,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       # Runs once, on an empty volume: pgvector extension and the mlflow database.
-      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./infra/docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -48,7 +48,7 @@ services:
     restart: unless-stopped
 
   mlflow:
-    build: ./docker/mlflow
+    build: ./infra/docker/mlflow
     image: tujia2-mlflow:3.17.2
     depends_on:
       postgres:
@@ -125,7 +125,7 @@ services:
     restart: unless-stopped
 
   # Local LLM and embeddings (Module 2). GPU through Docker Desktop + WSL2 (NVIDIA); on a
-  # machine without one: `docker compose -f docker-compose.yml -f docker/ollama/cpu.yml up -d`.
+  # machine without one: `docker compose -f docker-compose.yml -f infra/docker/ollama/cpu.yml up -d`.
   # Models live in the `ollama` volume: `docker compose exec ollama ollama pull <model>`.
   ollama:
     image: ollama/ollama:0.40.12
