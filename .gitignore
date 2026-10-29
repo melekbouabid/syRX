@@ -40,10 +40,9 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# Tujya: extra virtual environments (dev pipeline venv, vision venv) and ML outputs
+# Tujya: extra virtual environments and ML outputs (training runs of module 1)
 .venv-*/
-vision/.venv/
-vision/runs/
+module1_vision_mlops/training/runs/
 mlruns/
 mlartifacts/
 *.onnx

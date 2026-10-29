@@ -41,8 +41,16 @@ jobs:
       DOCKER_BUILD_RECORD_UPLOAD: "false"
     strategy:
       fail-fast: false
+      # The backend imports the module packages: its build context is the repository root
+      # (allow-list app/backend/Dockerfile.dockerignore); the frontend builds from its folder.
       matrix:
-        image: [backend, frontend]
+        include:
+          - image: backend
+            context: .
+            file: app/backend/Dockerfile
+          - image: frontend
+            context: app/frontend
+            file: app/frontend/Dockerfile
     steps:
       - uses: actions/checkout@v4
         with:
@@ -54,7 +62,8 @@ jobs:
       - name: Build (local image only, never pushed)
         uses: docker/build-push-action@v6
         with:
-          context: app/${{ matrix.image }}
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
           load: true
           push: false
           tags: tujya-${{ matrix.image }}:ci
@@ -105,7 +114,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [backend, frontend]
+        include:
+          - image: backend
+            context: .
+            file: app/backend/Dockerfile
+          - image: frontend
+            context: app/frontend
+            file: app/frontend/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
@@ -128,7 +143,8 @@ jobs:
       - name: Push to GitHub Container Registry
         uses: docker/build-push-action@v6
         with:
-          context: app/${{ matrix.image }}
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
           push: true
           tags: ${{ steps.names.outputs.tags }}
           labels: |

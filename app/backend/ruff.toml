@@ -1,6 +1,8 @@
-# Rules shared with the whole repository; only the import root and the test exceptions differ.
+# Rules shared with the whole repository; only the import roots and the test exceptions differ.
 extend = "../../ruff.toml"
-src = ["."]
+# Package `app` (this folder) and the module packages it imports (repository root).
+src = [".", "../.."]
 
 [lint.per-file-ignores]
 "tests/**" = ["S105", "S106"]
+"tujya_testing/**" = ["S105", "S106"]

@@ -11,8 +11,8 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent  # app/backend
-# The repository root (data/, config/, models/). In the Docker image the backend folder is
-# /app, so this is "/", where docker-compose.yml mounts those folders.
+# The repository root (data/, config/, models/). The Docker image keeps the same layout under
+# /tujya (app/backend/Dockerfile), where docker-compose.yml mounts those folders.
 PROJECT_DIR = BACKEND_DIR.parent.parent
 
 DEFAULT_ADMIN_PASSWORD = "admin"  # noqa: S105  first-run default, meant to be changed

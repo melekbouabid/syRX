@@ -1,6 +1,6 @@
 """Command line for the C3PI subset: `python -m tujya_vision.data_cli <command>`.
 
-Run from the `vision/` folder. Paths default to the repository layout:
+Run from the `module1_vision_mlops/training/` folder. Paths default to the repository layout:
 metadata in data/vision/c3pi/metadata, images in data/vision/c3pi/images,
 class list in config/pill_classes.csv, split lists in config/splits/.
 """
@@ -14,7 +14,7 @@ from pathlib import Path
 
 from tujya_vision import c3pi
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]  # repository root
 META = ROOT / "data" / "vision" / "c3pi" / "metadata"
 IMAGES = ROOT / "data" / "vision" / "c3pi" / "images"
 CLASSES = ROOT / "config" / "pill_classes.csv"

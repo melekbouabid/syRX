@@ -1,13 +1,15 @@
-"""End-to-end check of the API's own scan pipeline (app/scanner.py) on C3PI photos.
+"""End-to-end check of the API's own scan pipeline (scanner.py) on C3PI photos.
 
-    python scripts/evaluate_scan.py --split val      # choose the confirmation threshold
-    python scripts/evaluate_scan.py --split test     # final numbers at that threshold
+From the repository root, with the backend venv (app/backend/.venv) active:
 
-Same protocol as `vision/tujya_vision/evaluate.py` (all consumer photos of the split, the
+    python -m module1_vision_mlops.serving.evaluate_scan --split val    # choose the threshold
+    python -m module1_vision_mlops.serving.evaluate_scan --split test   # final numbers
+
+Same protocol as `training/tujya_vision/evaluate.py` (all consumer photos of the split, the
 most confident box is identified, no box counts as wrong), but with the code the API runs.
 Prints top-1 / top-5 and, for candidate thresholds, the share of photos accepted without
-confirmation and the top-1 accuracy among them. Run from app/backend/ with the models published
-in SYNERGYRX_MODELS_DIR (default: models/ at the repository root).
+confirmation and the top-1 accuracy among them. The models are read from SYNERGYRX_MODELS_DIR
+(default: models/ at the repository root).
 """
 
 from __future__ import annotations
@@ -15,14 +17,11 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from app.config import PROJECT_DIR, Settings
-from app.scanner import PillScanner, decode_image
+from module1_vision_mlops.serving.scanner import PillScanner, decode_image
 
 THRESHOLDS = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95]
 

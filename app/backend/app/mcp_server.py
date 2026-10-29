@@ -24,8 +24,8 @@ from app.rag.embeddings import Embedder, OllamaEmbedder
 from app.rag.retrieval import RetrieverHolder
 from app.rag.store import ChunkStore
 from app.rag.tools import TOOL_SPECS, Toolbox
-from app.scanner import ScannerHolder
 from app.toxicity import ToxHolder
+from module1_vision_mlops.serving.scanner import ScannerHolder
 
 INSTRUCTIONS = (
     "Medicine information for the 150 Tujya pill classes and their 82 active ingredients: "

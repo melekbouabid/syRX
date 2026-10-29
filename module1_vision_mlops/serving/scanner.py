@@ -1,6 +1,8 @@
 """Pill scan with ONNX Runtime: detect every pill, crop it, identify it.
 
-Same two stages and the same pre- and post-processing as the training code in `vision/`
+Module 1 serving code, imported by the web API (app/backend) and by the agent tools.
+
+Same two stages and the same pre- and post-processing as the training code in `../training/`
 (Ultralytics YOLO11 letterbox and NMS for the detector, the 20 %-margin square crop of
 `tujya_vision.autolabel.square_crop` for the classifier), re-implemented with numpy and
 OpenCV so the API needs neither PyTorch nor Ultralytics.
@@ -38,7 +40,7 @@ DETECTOR_FILE = "detector.onnx"
 CLASSIFIER_FILE = "classifier.onnx"
 MANIFEST_FILE = "models.json"
 LETTERBOX_FILL = 114  # Ultralytics' padding grey
-CROP_MARGIN = 0.2  # same as the training crops (docs/VISION.md)
+CROP_MARGIN = 0.2  # same as the training crops (module1_vision_mlops/docs/vision.md)
 
 
 class ModelsMissing(RuntimeError):

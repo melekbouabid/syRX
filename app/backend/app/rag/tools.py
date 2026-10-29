@@ -27,8 +27,8 @@ from app.pharma import Ingredient
 from app.rag.names import NameIndex
 from app.rag.retrieval import Hit, RetrieverHolder
 from app.rag.store import Filters
-from app.scanner import ScannerHolder
 from app.toxicity import ToxHolder, ToxicityUnavailable, predict_molecules
+from module1_vision_mlops.serving.scanner import ScannerHolder
 
 DOC_TYPES = ("label", "abstract", "interaction")
 SNIPPET_CHARS = 700

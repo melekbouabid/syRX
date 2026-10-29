@@ -16,8 +16,8 @@ from app.db import Base, make_engine
 from app.limits import BodySizeLimit
 from app.rag.runtime import AgentHolder
 from app.routers import admin, auth, catalog, chat, demo, medicines, scan, toxicity
-from app.scanner import ScannerHolder
 from app.toxicity import ToxHolder
+from module1_vision_mlops.serving.scanner import ScannerHolder
 
 DESCRIPTION = (
     "Pill identification and interaction checks for the Tujya project. "

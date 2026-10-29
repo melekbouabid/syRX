@@ -14,8 +14,8 @@ from starlette.responses import PlainTextResponse
 from starlette.routing import Route
 
 from app.limits import BodySizeLimit
-from app.scanner import letterbox, nms, square_crop
-from tests.fake_models import write_models
+from module1_vision_mlops.serving.scanner import letterbox, nms, square_crop
+from module1_vision_mlops.tests.fake_models import write_models
 
 NAMES = ["005", "007", "009", "011", "013", "015"]
 # A 200 x 100 photo letterboxed to 64 x 64: scale 0.32, 16 px of padding above.

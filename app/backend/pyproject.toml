@@ -1,0 +1,18 @@
+# Import paths of the backend venv. `pip install -e .` (included in requirements-dev.txt)
+# adds two folders to sys.path: this one (package `app`, the FastAPI core) and the repository
+# root (packages `module1_vision_mlops`, `module2_ai_engineering` and `bonus`, which the API
+# imports). The dependencies stay in requirements.txt, also used by the Docker image, which
+# sets PYTHONPATH instead of installing this file.
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tujya-app"
+version = "0.2.0"
+description = "Tujya web API (FastAPI) and its import paths to the module packages."
+requires-python = ">=3.11"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+dev-mode-dirs = [".", "../.."]

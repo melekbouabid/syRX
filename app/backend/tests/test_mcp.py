@@ -13,8 +13,8 @@ from mcp import Client
 from app.config import Settings
 from app.mcp_server import build_server, default_toolbox, main
 from app.rag.embeddings import FakeEmbedder
-from tests.pharma_data import load_pharma
 from tests.rag_fakes import DIM, build_index
+from tujya_testing.pharma_data import load_pharma
 
 
 def _server(tmp_path: Path) -> Any:

@@ -1,4 +1,5 @@
-# Continuous integration: lint and unit tests of every Python package, frontend build.
+# Continuous integration: lint and unit tests of every Python package (data pipeline, web
+# app backend, module 1, module 2, bonus), frontend build.
 # No job touches the network beyond installing dependencies: all HTTP in the tests is mocked
 # (live tests are marked `live` and excluded), and no data is downloaded.
 name: ci
@@ -72,21 +73,24 @@ jobs:
       - run: python -m ruff format --check .
       - run: python -m pytest
 
-  vision:
-    name: vision (data preparation, no training)
+  module1:
+    name: module 1 (module1_vision_mlops, vision & MLOps, no training)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: vision
+        working-directory: module1_vision_mlops
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-      # Only what the unit tests import: training (ultralytics, mlflow) is not run in CI.
-      - run: pip install pytest ruff numpy opencv-python-headless
+          cache-dependency-path: app/backend/requirements*.txt
+      # The backend venv: the scan API tests call the web app; the training tests only need
+      # numpy and OpenCV (training itself, with ultralytics and mlflow, is not run in CI).
+      - run: pip install -r requirements-dev.txt ruff
+        working-directory: app/backend
       - run: python -m ruff check .
       - run: python -m ruff format --check .
       - run: python -m pytest

@@ -69,7 +69,11 @@ services:
   # One-shot: (re)build the medicine tables from config/ and data/tujya, then exit.
   pharma-init:
     image: ${BACKEND_IMAGE:-tujia2-backend:local}
-    build: ./app/backend
+    # The API imports the module packages, so its build context is the repository root
+    # (allow-list: app/backend/Dockerfile.dockerignore).
+    build: &backend-build
+      context: .
+      dockerfile: app/backend/Dockerfile
     command: ["python", "-m", "app.pharma_loader"]
     environment: &backend-env
       SYNERGYRX_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tujya}:${POSTGRES_PASSWORD:-tujya}@postgres:5432/${POSTGRES_DB:-tujya}
@@ -78,13 +82,13 @@ services:
       SYNERGYRX_OLLAMA_URL: http://ollama:11434
       SYNERGYRX_LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
     volumes: &backend-mounts
-      # The app's project root is "/" in the image: these are its default paths.
-      - ./config:/config:ro
-      - ./data/tujya:/data/tujya:ro
-      - ./data/parquet:/data/parquet:ro
-      - ./data/vision/c3pi/images:/data/vision/c3pi/images:ro
-      - ./data/rag/corpus:/data/rag/corpus:ro
-      - ./models:/models:ro
+      # The image keeps the repository layout under /tujya: these are the default paths.
+      - ./config:/tujya/config:ro
+      - ./data/tujya:/tujya/data/tujya:ro
+      - ./data/parquet:/tujya/data/parquet:ro
+      - ./data/vision/c3pi/images:/tujya/data/vision/c3pi/images:ro
+      - ./data/rag/corpus:/tujya/data/rag/corpus:ro
+      - ./models:/tujya/models:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -95,7 +99,7 @@ services:
   # (scan and interactions work without it; /api/chat answers 503 until the index exists).
   rag-init:
     image: ${BACKEND_IMAGE:-tujia2-backend:local}
-    build: ./app/backend
+    build: *backend-build
     command: ["python", "-m", "app.rag.index", "--pull"]
     environment: *backend-env
     volumes: *backend-mounts
@@ -108,7 +112,7 @@ services:
 
   backend:
     image: ${BACKEND_IMAGE:-tujia2-backend:local}
-    build: ./app/backend
+    build: *backend-build
     environment: *backend-env
     volumes: *backend-mounts
     ports:

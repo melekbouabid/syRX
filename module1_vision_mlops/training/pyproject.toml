@@ -4,14 +4,9 @@ version = "0.1.0"
 description = "Tujya pill detection and identification: C3PI subset, training, MLflow, ONNX export."
 requires-python = ">=3.11"
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["."]
-addopts = "-q"
+# Run from this folder (python -m tujya_vision.<step>) with its own venv (.venv, see
+# requirements.txt). The tests are in ../tests (module 1 test suite, ../pytest.ini).
 
 [tool.ruff]
-extend = "../ruff.toml"
+extend = "../../ruff.toml"
 src = ["."]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S105", "S106", "S108"]

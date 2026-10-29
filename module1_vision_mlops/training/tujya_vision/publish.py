@@ -2,7 +2,7 @@
 
     python -m tujya_vision.publish                          # latest registered versions (MLflow)
     python -m tujya_vision.publish --classifier-version 2 --detector-version 1
-    python -m tujya_vision.publish --from-runs              # newest vision/runs/*/best.onnx
+    python -m tujya_vision.publish --from-runs              # newest training/runs/*/best.onnx
 
 Writes `detector.onnx`, `classifier.onnx` and `models.json` (origin and SHA-256 of each file)
 into `--out` (default `models/` at the repository root, git-ignored; the API reads it from
@@ -77,7 +77,7 @@ def from_runs(task: str) -> tuple[Path, dict[str, Any]]:
     if not runs:
         raise SystemExit(f"no {task} run with weights/best.onnx under {RUNS}")
     path = runs[-1]
-    return path, {"source": "vision/runs", "run": path.parents[1].name}
+    return path, {"source": "module1_vision_mlops/training/runs", "run": path.parents[1].name}
 
 
 def publish(out: Path, *, use_runs: bool, versions: dict[str, int | None]) -> dict[str, Any]:
@@ -100,7 +100,7 @@ def publish(out: Path, *, use_runs: bool, versions: dict[str, int | None]) -> di
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m tujya_vision.publish")
     parser.add_argument("--out", type=Path, default=ROOT / "models")
-    parser.add_argument("--from-runs", action="store_true", help="skip MLflow, use vision/runs")
+    parser.add_argument("--from-runs", action="store_true", help="skip MLflow, use training/runs")
     parser.add_argument("--classifier-version", type=int, default=None)
     parser.add_argument("--detector-version", type=int, default=None)
     args = parser.parse_args(argv)

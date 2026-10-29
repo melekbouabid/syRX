@@ -28,7 +28,7 @@ import numpy as np
 
 from tujya_vision.autolabel import Box, detect_pills, detect_reference, read_image, square_crop
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]  # repository root
 VISION = ROOT / "data" / "vision"
 IMAGES = VISION / "c3pi" / "images"
 SELECTED = ROOT / "config" / "splits" / "selected_images.csv"

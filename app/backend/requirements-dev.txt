@@ -1,4 +1,6 @@
 -r requirements.txt
+# This folder and the repository root on sys.path (pyproject.toml); run pip from app/backend.
+-e .
 pytest>=8
 httpx2>=2.0
 onnx>=1.17

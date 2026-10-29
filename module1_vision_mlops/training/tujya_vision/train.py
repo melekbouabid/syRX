@@ -35,8 +35,8 @@ from ultralytics import YOLO, settings
 from tujya_vision.autolabel import read_image
 from tujya_vision.prepare import CLASSIFY, DETECT
 
-ROOT = Path(__file__).resolve().parents[2]
-RUNS = ROOT / "vision" / "runs"
+ROOT = Path(__file__).resolve().parents[3]  # repository root
+RUNS = ROOT / "module1_vision_mlops" / "training" / "runs"
 CLASSES = ROOT / "config" / "pill_classes.csv"
 REGISTERED = {"classify": "tujya-pill-classifier", "detect": "tujya-pill-detector"}
 EXPERIMENT = "tujya-vision"

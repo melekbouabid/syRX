@@ -13,8 +13,8 @@ from fastapi.testclient import TestClient
 from app.medicines import DISCLAIMER
 from app.rag.embeddings import FakeEmbedder
 from app.rag.runtime import AgentHolder
-from tests.conftest import USER, sign_in
 from tests.rag_fakes import DIM, FakeChatModel, build_index
+from tujya_testing.fixtures import USER, sign_in
 
 
 @pytest.fixture

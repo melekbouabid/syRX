@@ -644,3 +644,25 @@ auquel la copie ne touche pas. Correctifs : un `project_root` explicite l'emport
 fichier, et la fixture charge explicitement le `config.yaml` livrÃ© au lieu de dÃ©pendre du
 dossier de lancement de pytest (tests de non-rÃ©gression ; vÃ©rifiÃ© ensuite qu'aucun fichier
 hors des dossiers temporaires n'est Ã©crit).
+
+**D79. Paquets des modules importÃ©s depuis la racine, une seule installation pour l'API.**
+Les dossiers des modules sont des paquets Python (`module1_vision_mlops`,
+`module2_ai_engineering`, `bonus`) : chaque import dit Ã  quel module appartient le code
+(`from module1_vision_mlops.serving.scanner import PillScanner`). Le paquet FastAPI garde
+son nom `app` (`app/backend/app`, convention FastAPI, aucun import Ã  rÃ©Ã©crire dans le
+cÅ“ur). `app/backend/pyproject.toml` ne dÃ©clare aucune dÃ©pendance (elles restent dans
+`requirements.txt`, utilisÃ© aussi par l'image) : son installation Ã©ditable
+(`-e .` dans `requirements-dev.txt`, hatchling `dev-mode-dirs`) ajoute au `sys.path` du venv
+du backend le dossier `app/backend` et la racine du dÃ©pÃ´t, sans manipulation de `sys.path`
+dans les scripts. L'image Docker fait de mÃªme avec `PYTHONPATH` et reprend la disposition du
+dÃ©pÃ´t sous `/tujya` (les montages compose deviennent `/tujya/config`, `/tujya/data/...`,
+`/tujya/models`) ; son contexte de build est la racine, filtrÃ© par une liste blanche
+`app/backend/Dockerfile.dockerignore` (contexte de 200 Ko). Les fixtures du web
+(`app`, `user`, `pharma`, ...) passent dans le paquet `app/backend/tujya_testing/`, chargÃ©
+comme plugin pytest par chaque suite : le nom `tests` ne convient pas, car `python -m pytest`
+met le dossier courant en tÃªte du `sys.path` et chaque module a son propre dossier `tests`.
+Les tests de chaque module se lancent depuis son dossier avec le venv du backend
+(`pytest.ini` du module). Le code d'entraÃ®nement reste un projet sÃ©parÃ©
+(`module1_vision_mlops/training`, paquet `tujya_vision`, son venv avec PyTorch). Son
+`prepare.py` a changÃ© d'une ligne (racine du dÃ©pÃ´t un niveau plus haut) : `dvc commit -f
+prepare` met Ã  jour l'empreinte dans `dvc.lock` sans relancer l'Ã©tape, `dvc status` propre.

@@ -3,11 +3,11 @@ stages:
   prepare:
     cmd: python -m tujya_vision.prepare
     deps:
-    - path: ../config/splits/selected_images.csv
+    - path: ../../config/splits/selected_images.csv
       hash: md5
       md5: de21c22fc4a8b12ef6e410cea10f1f8b
       size: 543427
-    - path: ../data/vision/c3pi/images
+    - path: ../../data/vision/c3pi/images
       hash: md5
       md5: d578e15638468a663cfe3c2b418a75df.dir
       size: 4770826176
@@ -18,15 +18,15 @@ stages:
       size: 11308
     - path: tujya_vision/prepare.py
       hash: md5
-      md5: a92f1ced09de7b1e0fc7820cbac12cc5
-      size: 7884
+      md5: 7c9a7747d41ca89b63ea86eb7cae5aa4
+      size: 7903
     outs:
-    - path: ../data/vision/c3pi/labels
+    - path: ../../data/vision/c3pi/labels
       hash: md5
       md5: e1f992c2edc160b47053b0e938f9ebfd.dir
       size: 499067
       nfiles: 1
-    - path: ../data/vision/datasets
+    - path: ../../data/vision/datasets
       hash: md5
       md5: 955353297ec68253f1e925a7304ec275.dir
       size: 304693171
