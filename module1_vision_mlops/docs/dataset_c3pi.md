@@ -1,136 +1,143 @@
-# NLM C3PI pill images
+# Images de comprimés NLM C3PI
 
-What the Computational Photography Project for Pill Identification (C3PI) archive contains,
-and how Tujya uses it. Explored on 2026-10-28 from the files listed below; every number in
-this page was computed from the downloaded metadata (`data/vision/c3pi/metadata/images.csv`,
-built by `python -m tujya_vision.data_cli index`).
+Ce que contient l'archive du Computational Photography Project for Pill Identification
+(C3PI), et comment Tujya l'utilise. Exploré le 2026-10-28 à partir des fichiers listés
+ci-dessous ; chaque chiffre de cette page a été calculé à partir des métadonnées téléchargées
+(`data/vision/c3pi/metadata/images.csv`, construit par
+`python -m tujya_vision.data_cli index`).
 
-- Catalogue: https://catalog.data.gov/dataset/computational-photography-project-for-pill-identification-c3pi
-- Files: https://data.lhncbc.nlm.nih.gov/public/Pills/ (public S3 bucket, plain directory index,
-  no robots.txt)
-- Licence: **ODbL**, research and development use only. The project ended in 2018; the
-  archive will not change.
-- Reference benchmark built on these images: ePillID (Usuyama et al., 2020,
+- Catalogue : https://catalog.data.gov/dataset/computational-photography-project-for-pill-identification-c3pi
+- Fichiers : https://data.lhncbc.nlm.nih.gov/public/Pills/ (bucket S3 public, simple index
+  de dossiers, pas de robots.txt)
+- Licence : **ODbL**, usage de recherche et développement uniquement. Le projet s'est
+  terminé en 2018 ; l'archive ne changera plus.
+- Benchmark de référence construit sur ces images : ePillID (Usuyama et al., 2020,
   https://arxiv.org/abs/2005.14288).
 
-## Archive layout
+## Organisation de l'archive
 
 ```
 Pills/
-  AAREADME, README                  Q&A text (how to find a pill, image types)
-  RxImageImageLayouts.docx          one example image per image type
-  directory_of_images.txt / .xlsx   one line per image:  NDC11|part|path|type|name
-  directory_consumer_grade_images.* identical copy of the above (same bytes)
-  directory_reference_images.xls    list of the RxImage API reference images
-  rximage.zip (7.3 GB), rximage.MD5 the >4,000 RxImage API reference images in 6 resolutions
-  sampleData.zip (517 MB)           every file of one pill (fluoxetine 10 mg, NDC 00781-2823-13)
-  ALLXML/PillProjectDisc{1..110}.xml  metadata of every image in the matching folder
-  PillProjectDisc{1..110}/images/   the images themselves, random 30-character file names
+  AAREADME, README                  texte questions-réponses (trouver un comprimé, types d'images)
+  RxImageImageLayouts.docx          une image d'exemple par type d'image
+  directory_of_images.txt / .xlsx   une ligne par image :  NDC11|part|path|type|name
+  directory_consumer_grade_images.* copie identique du précédent (mêmes octets)
+  directory_reference_images.xls    liste des images de référence de l'API RxImage
+  rximage.zip (7,3 Go), rximage.MD5 les plus de 4 000 images de référence de l'API RxImage en 6 résolutions
+  sampleData.zip (517 Mo)           tous les fichiers d'un comprimé (fluoxétine 10 mg, NDC 00781-2823-13)
+  ALLXML/PillProjectDisc{1..110}.xml  métadonnées de chaque image du dossier correspondant
+  PillProjectDisc{1..110}/images/   les images elles-mêmes, noms aléatoires de 30 caractères
 ```
 
-Images of one pill are spread over many `PillProjectDiscN` folders, so the only way to
-find a pill's images is through the directory file or the XML. Each XML file lists, for
-every image of its folder:
+Les images d'un même comprimé sont réparties sur de nombreux dossiers `PillProjectDiscN` :
+le seul moyen de trouver les images d'un comprimé passe par le fichier d'index ou le XML.
+Chaque fichier XML liste, pour chaque image de son dossier :
 
-| XML field | Meaning |
+| Champ XML | Sens |
 |---|---|
-| `NDC9`, `NDC11` | National Drug Code: labeler + product (9 digits), + package (11 digits) |
-| `Part`, `Parts` | part number within a kit (most products have 1 part; 253 products have more) |
-| `MedicosConsultantsID` | photographer's internal id (not always present) |
-| `LabeledBy` | labeler (manufacturer or repackager) |
-| `GenericName` | active ingredient(s) as free text, e.g. `VALSARTAN and HYDROCHLOROTHIAZIDE`, `Warfarin Sodium Tablets, USP` |
-| `ProprietaryName` | product name, often with strength, e.g. `LIPITOR 10MG TABLETS` |
-| `File/Name`, `File/Type`, `File/Size`, `File/Sha1` | file name, extension, bytes, SHA-1 (used to verify every download) |
-| `Class` or `Layout` | image type (one of the two tags, see below) |
-| `Imprint`, `ImprintType`, `ImprintColor`, `Color` (repeated), `Shape`, `Score`, `Symbol`, `Size` | pill appearance; `Size` here is the pill length in mm |
-| `Camera`, `Illumination`, `Background`, `Polarizer` | consumer photos only: acquisition conditions |
-| `RatingImprint`, `RatingShape`, `RatingColor`, `RatingShadow`, `RatingBackground` | consumer photos only: quality ratings (Clear / Somewhat / Partial, Hard / Soft, Noisy...) |
-| `AcquisitionDate`, `Attribution` | date and photographer (Medicos Consultants LLC) |
+| `NDC9`, `NDC11` | National Drug Code : laboratoire + produit (9 chiffres), + conditionnement (11 chiffres) |
+| `Part`, `Parts` | numéro de la partie dans un kit (la plupart des produits ont 1 partie ; 253 produits en ont plus) |
+| `MedicosConsultantsID` | identifiant interne du photographe (pas toujours présent) |
+| `LabeledBy` | laboratoire (fabricant ou reconditionneur) |
+| `GenericName` | principe(s) actif(s) en texte libre, par exemple `VALSARTAN and HYDROCHLOROTHIAZIDE`, `Warfarin Sodium Tablets, USP` |
+| `ProprietaryName` | nom du produit, souvent avec le dosage, par exemple `LIPITOR 10MG TABLETS` |
+| `File/Name`, `File/Type`, `File/Size`, `File/Sha1` | nom de fichier, extension, octets, SHA-1 (sert à vérifier chaque téléchargement) |
+| `Class` ou `Layout` | type d'image (l'une des deux balises, voir plus bas) |
+| `Imprint`, `ImprintType`, `ImprintColor`, `Color` (répété), `Shape`, `Score`, `Symbol`, `Size` | apparence du comprimé ; `Size` est ici la longueur en mm |
+| `Camera`, `Illumination`, `Background`, `Polarizer` | photos « consumer » seulement : conditions de prise de vue |
+| `RatingImprint`, `RatingShape`, `RatingColor`, `RatingShadow`, `RatingBackground` | photos « consumer » seulement : notes de qualité (Clear / Somewhat / Partial, Hard / Soft, Noisy...) |
+| `AcquisitionDate`, `Attribution` | date et photographe (Medicos Consultants LLC) |
 
-**Identifiers available:** NDC11, NDC9, part, generic name, proprietary name, labeler.
-**Not available:** RxCUI or any RxNorm code, a normalised ingredient list, strengths as
-numbers. Ingredients therefore come from RxNav (NDC -> RxCUI -> ingredients), see
-[INTERACTIONS.md](../../module2_ai_engineering/docs/interactions.md).
+**Identifiants disponibles :** NDC11, NDC9, partie, nom générique, nom commercial,
+laboratoire. **Non disponibles :** RxCUI ou tout code RxNorm, liste normalisée des principes
+actifs, dosages sous forme de nombres. Les principes actifs viennent donc de RxNav (NDC ->
+RxCUI -> principes actifs), voir
+[interactions.md](../../module2_ai_engineering/docs/interactions.md).
 
-## Image types
+## Types d'images
 
-133,774 lines in the directory file; 133,458 distinct files (316 files are listed twice,
-always for the same pill). One pill product = NDC9 + part ("class key").
+133 774 lignes dans le fichier d'index ; 133 458 fichiers distincts (316 fichiers sont
+listés deux fois, toujours pour le même comprimé). Un produit = NDC9 + partie (« clé de
+classe »).
 
-| Type (`Class` / `Layout`) | Ext. | Files | Size | Products | What it is |
+| Type (`Class` / `Layout`) | Ext. | Fichiers | Taille | Produits | De quoi il s'agit |
 |---|---|---:|---:|---:|---|
-| `C3PI_Test` | JPG | 40,587 | 83 GB | 2,400 | **Consumer-grade photos**: one pill on a real background, phone / webcam / compact camera, varied light |
-| `C3PI_Test` | WMV | 2,483 | 31 GB | 2,260 | short videos of the same pills (not used) |
-| `C3PI_Test` | PNG | 158 | 2.7 GB | 145 | a few large PNG consumer images (not used) |
-| `C3PI_Reference` | CR2 | 10,334 | 236 GB | 4,974 | raw Canon files of the studio reference shots (not used: 23 MB each) |
-| `MC_COOKED_CALIBRATED_V1.2` | PNG | 20,034 | 2.2 TB | 4,974 | colour-calibrated 5616x3744 studio images, ~110 MB each (not used) |
-| `MC_C3PI_REFERENCE_SEG_V1.6` | PNG | 41,330 | 139 GB | 4,974 | **segmented** studio images, 2400x1920 RGBA: transparent background, so the alpha channel is a pill mask (an opaque NLM information banner sits at the bottom) |
-| `MC_API_RXNAV_V1.3` | JPG | 4,708 | 2.7 GB | 4,670 | RxImage API image with a metadata banner, ~0.6 MB |
-| `MC_API_NLMIMAGE_V1.3` | JPG | 4,708 | 2.0 GB | 4,670 | RxImage API image without metadata, ~0.4 MB |
-| `MC_SPL_SPLIMAGE_V3.0` | JPG | 4,708 | 0.7 GB | 4,670 | small image as used in DailyMed labels |
-| `MC_CHALLENGE_V1.0` | JPG | 4,408 | 2.2 GB | 2,139 | images of the 2016 NLM Pill Image Recognition Challenge |
+| `C3PI_Test` | JPG | 40 587 | 83 Go | 2 400 | **photos « consumer »** : un comprimé sur un vrai fond, téléphone / webcam / compact, lumière variée |
+| `C3PI_Test` | WMV | 2 483 | 31 Go | 2 260 | courtes vidéos des mêmes comprimés (non utilisées) |
+| `C3PI_Test` | PNG | 158 | 2,7 Go | 145 | quelques grandes images « consumer » en PNG (non utilisées) |
+| `C3PI_Reference` | CR2 | 10 334 | 236 Go | 4 974 | fichiers bruts Canon des prises de vue de référence en studio (non utilisés : 23 Mo chacun) |
+| `MC_COOKED_CALIBRATED_V1.2` | PNG | 20 034 | 2,2 To | 4 974 | images de studio calibrées en couleur, 5616x3744, ~110 Mo chacune (non utilisées) |
+| `MC_C3PI_REFERENCE_SEG_V1.6` | PNG | 41 330 | 139 Go | 4 974 | images de studio **segmentées**, 2400x1920 RGBA : fond transparent, le canal alpha est donc un masque du comprimé (un bandeau d'information NLM opaque en bas) |
+| `MC_API_RXNAV_V1.3` | JPG | 4 708 | 2,7 Go | 4 670 | image de l'API RxImage avec un bandeau de métadonnées, ~0,6 Mo |
+| `MC_API_NLMIMAGE_V1.3` | JPG | 4 708 | 2,0 Go | 4 670 | image de l'API RxImage sans métadonnées, ~0,4 Mo |
+| `MC_SPL_SPLIMAGE_V3.0` | JPG | 4 708 | 0,7 Go | 4 670 | petite image utilisée dans les notices DailyMed |
+| `MC_CHALLENGE_V1.0` | JPG | 4 408 | 2,2 Go | 2 139 | images du NLM Pill Image Recognition Challenge de 2016 |
 
-"Consumer" images in this page always means `C3PI_Test` JPGs. "Reference" images are the
-studio shots (CR2, calibrated, segmented, API). Note that `sampleData.zip` is misleading on
-this point: its `consumer/` folder contains no consumer photo at all, only the reference
-files (2 CR2, 8 segmented PNGs, 4 calibrated PNGs, 2 API JPGs, 1 SPL JPG) of the fluoxetine
-capsule, and its `reference/` folder holds the two RxImage API images in six resolutions
-(120 px to original).
+Dans cette page, les images « consumer » sont toujours les JPG `C3PI_Test`. Les images « de
+référence » sont les prises de vue en studio (CR2, calibrées, segmentées, API). Attention,
+`sampleData.zip` est trompeur sur ce point : son dossier `consumer/` ne contient aucune photo
+« consumer », seulement les fichiers de référence (2 CR2, 8 PNG segmentés, 4 PNG calibrés,
+2 JPG de l'API, 1 JPG SPL) de la gélule de fluoxétine, et son dossier `reference/` contient
+les deux images de l'API RxImage en six résolutions (de 120 px à l'original).
 
-### Consumer photos in numbers
+### Les photos « consumer » en chiffres
 
-- 40,587 photos of 2,400 products; median 16 photos per product.
-- Products with at least 20 photos: 380; at least 30: 255; at least 40: 81. Grouping by
-  NDC11 instead of NDC9 gives fewer large classes (364 with 20+), because repackaged
-  products (same pill, other package) are merged by NDC9.
-- 9 cameras, 27 backgrounds (grey card, white papers, laminate, counter tops, scrubs, a
-  hand, a pharmacist counting tray...), 11 lighting set-ups.
+- 40 587 photos de 2 400 produits ; médiane de 16 photos par produit.
+- Produits avec au moins 20 photos : 380 ; au moins 30 : 255 ; au moins 40 : 81. Regrouper
+  par NDC11 au lieu de NDC9 donne moins de grandes classes (364 avec 20 photos ou plus), car
+  les produits reconditionnés (même comprimé, autre conditionnement) sont réunis par le NDC9.
+- 9 appareils, 27 fonds (carte grise, papiers blancs, stratifié, plans de travail, tenue
+  médicale, une main, un plateau de comptage de pharmacien...), 11 éclairages.
 
-| Camera | Photos | Median file |
+| Appareil | Photos | Fichier médian |
 |---|---:|---:|
-| Nikon S3000 Coolpix (12 MP) | 6,304 | 4.9 MB |
-| Kodak M590 Easyshare (14 MP) | 6,217 | 1.6 MB |
-| Vivitar ViviCam 5022 (5.1 MP) | 6,145 | 0.9 MB |
-| Samsung Galaxy S | 5,645 | 1.5 MB |
-| Canon PowerShot G10 (14.7 MP) | 5,308 | 4.3 MB |
-| Apple iPhone 3GS | 3,072 | 1.1 MB |
-| RIM BlackBerry 9700 | 2,964 | 0.3 MB |
-| Microsoft HD webcam (crop) | 2,887 | 0.1 MB |
-| Microsoft HD webcam (widescreen) | 2,340 | 0.6 MB |
+| Nikon S3000 Coolpix (12 MP) | 6 304 | 4,9 Mo |
+| Kodak M590 Easyshare (14 MP) | 6 217 | 1,6 Mo |
+| Vivitar ViviCam 5022 (5,1 MP) | 6 145 | 0,9 Mo |
+| Samsung Galaxy S | 5 645 | 1,5 Mo |
+| Canon PowerShot G10 (14,7 MP) | 5 308 | 4,3 Mo |
+| Apple iPhone 3GS | 3 072 | 1,1 Mo |
+| RIM BlackBerry 9700 | 2 964 | 0,3 Mo |
+| Webcam Microsoft HD (recadrée) | 2 887 | 0,1 Mo |
+| Webcam Microsoft HD (grand écran) | 2 340 | 0,6 Mo |
 
-## Bounding boxes and masks
+## Boîtes englobantes et masques
 
-- **No bounding boxes and no masks for consumer photos.** Nothing in the XML, the
-  directory files or the zip gives a pill position.
-- Consumer photos show **one pill**, roughly centred, on a fairly uniform background (see
-  the example in `RxImageImageLayouts.docx` and the downloaded subset). A box can therefore
-  be computed automatically (background subtraction / thresholding), which is the plan for
-  the detection stage (docs/decisions.md).
-- The segmented reference PNGs carry a real pill mask in their alpha channel; they could be
-  pasted onto backgrounds to synthesise multi-pill training images.
+- **Aucune boîte englobante ni aucun masque pour les photos « consumer ».** Rien dans le XML,
+  les fichiers d'index ou le zip ne donne la position d'un comprimé.
+- Les photos « consumer » montrent **un comprimé**, à peu près centré, sur un fond assez
+  uniforme (voir l'exemple de `RxImageImageLayouts.docx` et le sous-ensemble téléchargé). Une
+  boîte peut donc être calculée automatiquement (soustraction du fond / seuillage) : c'est
+  la méthode retenue pour l'étape de détection ([vision.md](vision.md), D38).
+- Les PNG de référence segmentés portent un vrai masque du comprimé dans leur canal alpha ;
+  ils pourraient être collés sur des fonds pour synthétiser des images d'entraînement à
+  plusieurs comprimés.
 
-## What Tujya uses
+## Ce que Tujya utilise
 
-- Identification classes: the 150 products with the most consumer photos, after leaving
-  out the two high-resolution cameras (Canon G10 and Nikon S3000: 28 % of the photos but
-  60 % of the bytes). See `config/pill_classes.csv` and docs/decisions.md.
-- Per class: up to 30 consumer photos (seeded random sample) + one RxNav reference JPG per
-  package NDC when it exists. 4,206 files, 4.8 GB.
-- Splits by photo, stratified by class: 15 % test, 15 % val, the rest train; photos with
-  the same SHA-1 always share a split; reference images are train only.
-  List: `config/splits/selected_images.csv` (path, class_id, type, size, sha1, split).
-- Storage: `data/vision/c3pi/images/<disc>/<file>`, tracked by DVC, never by git.
+- Classes d'identification : les 150 produits ayant le plus de photos « consumer », après
+  avoir écarté les deux appareils haute résolution (Canon G10 et Nikon S3000 : 28 % des photos
+  mais 60 % des octets). Voir `config/pill_classes.csv` et
+  [docs/decisions.md](../../docs/decisions.md) (D32).
+- Par classe : jusqu'à 30 photos « consumer » (échantillon aléatoire à graine fixe) + une
+  image de référence RxNav par NDC de conditionnement quand elle existe. 4 206 fichiers,
+  4,8 Go.
+- Splits par photo, stratifiés par classe : 15 % test, 15 % validation, le reste en
+  entraînement ; les photos de même SHA-1 sont toujours dans le même split ; les images de
+  référence sont en entraînement seulement. Liste : `config/splits/selected_images.csv`
+  (chemin, class_id, type, taille, sha1, split).
+- Stockage : `data/vision/c3pi/images/<disque>/<fichier>`, suivi par DVC, jamais par git.
 
-## How to rebuild
+## Reconstruire
 
 ```bash
 cd module1_vision_mlops/training
-python -m tujya_vision.data_cli metadata         # READMEs, directory, ALLXML/*.xml (~130 MB)
+python -m tujya_vision.data_cli metadata         # READMEs, index, ALLXML/*.xml (~130 Mo)
 python -m tujya_vision.data_cli index            # ALLXML -> data/vision/c3pi/metadata/images.csv
 python -m tujya_vision.data_cli select --max-classes 150 --min-images 20 --max-per-class 30 \
     --exclude-camera "Canon PowerShot G10 [14.7 megapixel CCD]" \
     --exclude-camera "Nikon S3000 Coolpix (12.0 megapixel)"
-python -m tujya_vision.data_cli download --workers 6   # resumable, SHA-1 checked
+python -m tujya_vision.data_cli download --workers 6   # reprise possible, SHA-1 vérifié
 ```
 
-The first exploration fetched the same files with curl.
+La première exploration avait récupéré les mêmes fichiers avec curl.

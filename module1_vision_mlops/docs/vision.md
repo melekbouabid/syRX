@@ -1,179 +1,199 @@
-# Vision pipeline: detect, then identify
+# Chaîne de vision : détecter, puis identifier
 
-Module 1 vision axis. Two models, both Ultralytics YOLO11 fine-tuned from COCO / ImageNet
-weights (transfer learning), tracked in MLflow, exported to ONNX.
+Axe vision du module 1. Deux modèles, tous deux des YOLO11 d'Ultralytics affinés à partir
+de poids COCO / ImageNet (*transfer learning*), suivis dans MLflow, exportés en ONNX.
 
 ```
-photo ──> detector (YOLO11n, 1 class "pill") ──> one box per pill
-             └─ crop each box (square, +20 % margin, 224 px)
-                   └─> identifier (YOLO11s-cls, 150 classes) ──> top-5 pills + confidence
-                          └─> class -> active ingredients (RxNav) -> DDInter interactions
+photo ──> détecteur (YOLO11n, 1 classe « pill ») ──> une boîte par comprimé
+             └─ recadrage de chaque boîte (carré, marge de 20 %, 224 px)
+                   └─> identifieur (YOLO11s-cls, 150 classes) ──> top-5 + confiance
+                          └─> classe -> principes actifs (RxNav) -> interactions DDInter
 ```
 
-Code: `module1_vision_mlops/training/tujya_vision/` (`autolabel.py`, `prepare.py`, `train.py`), own venv
-`module1_vision_mlops/training/.venv` (`module1_vision_mlops/training/requirements.txt`). Data: module1_vision_mlops/docs/dataset_c3pi.md.
+![Chaîne de vision](assets/vision_pipeline.png)
 
-## Where the boxes come from (decision D38)
+Code : [`training/tujya_vision/`](../training/tujya_vision/) (`autolabel.py`, `prepare.py`,
+`train.py`), avec son propre venv `module1_vision_mlops/training/.venv`
+([`training/requirements.txt`](../training/requirements.txt)). Données :
+[dataset_c3pi.md](dataset_c3pi.md).
 
-C3PI has no boxes (module1_vision_mlops/docs/dataset_c3pi.md). Three options were considered:
+## D'où viennent les boîtes (décision D38)
 
-1. Existing annotations: none in C3PI; ePillID provides crops, not boxes on the photos.
-2. A public pill detection dataset (Roboflow and similar): licences are unclear or
-   per-uploader, the images are not the C3PI photos, and it adds a second data source to
-   document. Not used.
-3. **Automatic labelling of the consumer photos** (chosen): each photo shows one or two
-   pills on a fairly plain background, so classical computer vision finds them reliably
-   enough, and doubtful photos can be detected and left out.
+C3PI ne fournit aucune boîte ([dataset_c3pi.md](dataset_c3pi.md)). Trois options ont été
+étudiées :
 
-`autolabel.py`: robust quadratic background surface in Lab (absorbs vignetting), colour
-distance with shadows down-weighted, bounded threshold, connected regions not touching the
-border, coins (C3PI's size reference) rejected by their texture, crescent-shaped regions
-(a shadow next to a pale pill) refined with GrabCut, faint light blobs dropped. Each photo
-gets flags; a photo with a doubtful flag is excluded from **both** datasets.
+1. Des annotations existantes : aucune dans C3PI ; ePillID fournit des recadrages, pas des
+   boîtes sur les photos.
+2. Un jeu public de détection de comprimés (Roboflow et similaires) : licences floues ou
+   propres à chaque contributeur, images différentes des photos C3PI, et une seconde source
+   de données à documenter. Non retenu.
+3. **Étiquetage automatique des photos « consumer »** (retenu) : chaque photo montre un ou
+   deux comprimés sur un fond assez uni, la vision classique les trouve donc de façon assez
+   fiable, et les photos douteuses peuvent être repérées et écartées.
 
-The detector therefore learns from machine-made labels; it is evaluated against the same
-kind of labels on the test photos. Multi-pill scenes are learnt from photos with two pills
-(front and back) and from Ultralytics' mosaic augmentation, which pastes four photos
-together.
+[`autolabel.py`](../training/tujya_vision/autolabel.py) : surface de fond quadratique
+robuste en Lab (absorbe le vignettage), distance de couleur avec les ombres atténuées, seuil
+borné, régions connexes ne touchant pas le bord, pièces de monnaie (référence de taille de
+C3PI) rejetées par leur texture, régions en croissant (une ombre à côté d'un comprimé clair)
+affinées par GrabCut, petites taches claires abandonnées. Chaque photo reçoit des drapeaux ;
+une photo avec un drapeau douteux est exclue des **deux** jeux de données.
 
-## Datasets (DVC stage `prepare`)
+Le détecteur apprend donc sur des étiquettes produites par la machine ; il est évalué contre
+le même type d'étiquettes sur les photos de test. Les scènes à plusieurs comprimés sont
+apprises sur les photos à deux comprimés (recto et verso) et grâce à l'augmentation
+« mosaïque » d'Ultralytics, qui assemble quatre photos.
 
-`python -m tujya_vision.prepare` (or `dvc repro prepare`) writes, from
-`config/splits/selected_images.csv`:
+## Jeux de données (étape DVC `prepare`)
 
-- `data/vision/c3pi/labels/autolabel.csv`: per image, boxes, flags, ok
-- `data/vision/datasets/detect/`: YOLO format, long side 640 px, clean photos only
-- `data/vision/datasets/classify/<split>/<class_id:03d>/`: 224 px square crops, at most two
-  per photo (front and back), plus crops of the RxNav reference images (train only)
+`python -m tujya_vision.prepare` (ou `dvc repro prepare`) écrit, à partir de
+`config/splits/selected_images.csv` :
 
-A photo and all its crops stay in the split of `selected_images.csv`.
+- `data/vision/c3pi/labels/autolabel.csv` : par image, boîtes, drapeaux, ok
+- `data/vision/datasets/detect/` : format YOLO, grand côté 640 px, photos propres seulement
+- `data/vision/datasets/classify/<split>/<class_id:03d>/` : recadrages carrés de 224 px, deux
+  au plus par photo (recto et verso), plus des recadrages des images de référence RxNav
+  (entraînement seulement)
 
-## Training, evaluation, export, registry
+Une photo et tous ses recadrages restent dans le split de `selected_images.csv`.
+
+## Entraînement, évaluation, export, registre
 
 ```bash
-docker compose up -d                                   # MLflow on http://localhost:5000
+docker compose up -d                                   # MLflow sur http://localhost:5000
 cd module1_vision_mlops/training
 python -m tujya_vision.train classify --epochs 20
 python -m tujya_vision.train detect --epochs 10 --imgsz 640
 ```
 
-Each run logs to the MLflow experiment `tujya-vision`: parameters, hardware tags, image
-counts, per-epoch metrics (from Ultralytics' `results.csv`), test metrics, plots,
-`best.pt`; then it exports `best.onnx`, checks ONNX Runtime against PyTorch on test images,
-and registers the ONNX model as a new version of `tujya-pill-classifier` or
-`tujya-pill-detector`.
+Chaque exécution est journalisée dans l'expérience MLflow `tujya-vision` : paramètres,
+étiquettes du matériel, nombres d'images, métriques par époque (depuis le `results.csv`
+d'Ultralytics), métriques de test, graphiques, `best.pt` ; puis elle exporte `best.onnx`,
+vérifie ONNX Runtime contre PyTorch sur des images de test, et enregistre le modèle ONNX comme
+nouvelle version de `tujya-pill-classifier` ou de `tujya-pill-detector`.
 
-## Auto-labelling result (2026-10-28)
+## Résultat de l'étiquetage automatique (2026-10-28)
 
 | | Photos |
 |---|---:|
-| Consumer photos | 4,056 |
-| Clean (used) | 3,306 (81.5 %) |
-| Flag `irregular_region` (shadow or half a pill, GrabCut could not fix it) | 462 |
-| Flag `no_region` (pill too close to the background colour, textured granite) | 346 |
-| Other doubtful flags (elongated, too many regions, too large) | 73 |
-| Fixed by GrabCut (`refined`, kept) | 311 |
-| Coin present and ignored (kept) | 111 |
+| Photos « consumer » | 4 056 |
+| Propres (utilisées) | 3 306 (81,5 %) |
+| Drapeau `irregular_region` (ombre ou demi-comprimé, GrabCut n'a pas pu corriger) | 462 |
+| Drapeau `no_region` (comprimé trop proche de la couleur du fond, granit texturé) | 346 |
+| Autres drapeaux douteux (allongé, trop de régions, trop grand) | 73 |
+| Corrigées par GrabCut (`refined`, gardées) | 311 |
+| Pièce présente et ignorée (gardées) | 111 |
 
-Boxes per clean photo: 1 (2,862), 2 (775), 3 (43), 4 (30).
+Boîtes par photo propre : 1 (2 862), 2 (775), 3 (43), 4 (30).
 
-**Audit by eye** of a random sheet of 48 photos (`python -m tujya_vision.prepare --sheet`):
-40 passed the filters, 36 of them with every box correct (about 90 %). The errors are
-mostly a faint rectangle of uneven light near the bottom edge of beige paper, and once a
-missed second pill. Doubtful photos were correctly flagged. Improving the labels (hand
-check of the test split, or a second labelling pass with the trained detector) is listed
-in the next steps.
+**Contrôle à l'œil** d'une planche aléatoire de 48 photos
+(`python -m tujya_vision.prepare --sheet`) : 40 ont passé les filtres, dont 36 avec toutes
+leurs boîtes justes (environ 90 %). Les erreurs sont surtout un rectangle pâle de lumière
+inégale près du bord inférieur d'un papier beige, et une fois un second comprimé manqué. Les
+photos douteuses étaient bien signalées. Améliorer les étiquettes (vérification à la main du
+split de test, ou second passage d'étiquetage avec le détecteur entraîné) fait partie des
+étapes suivantes.
 
-Datasets: identification 2,962 train / 562 val / 589 test crops (150 / 150 / 148
-classes: two classes have no clean test photo); detection 2,345 / 478 / 483 photos.
+Jeux : identification 2 962 recadrages d'entraînement / 562 de validation / 589 de test
+(150 / 150 / 148 classes : deux classes n'ont aucune photo de test propre) ; détection
+2 345 / 478 / 483 photos.
 
-## Results
+## Résultats
 
-### Identification (classifier)
+### Identification (classifieur)
 
-| Run | Model | Device | Epochs | Test top-1 | Test top-5 | ONNX vs PyTorch |
+| Exécution | Modèle | Matériel | Époques | Top-1 test | Top-5 test | ONNX contre PyTorch |
 |---|---|---|---:|---:|---:|---|
-| smoke (pipeline check) | YOLO11n-cls | CPU | 3 | 19.4 % | 36.0 % | top-1 agree 100 %, max prob diff 1.5e-7 |
-| main | YOLO11s-cls | RTX 2050 | 40 | **93.5 %** | **98.1 %** | top-1 agree 100 %, max prob diff 1.6e-6 |
+| essai (vérification de la chaîne) | YOLO11n-cls | CPU | 3 | 19,4 % | 36,0 % | top-1 identique à 100 %, écart max de probabilité 1,5e-7 |
+| principale | YOLO11s-cls | RTX 2050 | 40 | **93,5 %** | **98,1 %** | top-1 identique à 100 %, écart max de probabilité 1,6e-6 |
 
-Main run: 14 min of training, validation top-1 92.2 % / top-5 97.9 % at the last epoch,
-MLflow run `7d2ce0ff7c53401aa42d2ef89c3aa794`, registered as `tujya-pill-classifier`
-version 2 (version 1 is the smoke run). Test = 589 crops of photos never seen in training.
+Exécution principale : 14 min d'entraînement, validation top-1 92,2 % / top-5 97,9 % à la
+dernière époque, run MLflow `7d2ce0ff7c53401aa42d2ef89c3aa794`, enregistrée comme
+`tujya-pill-classifier` version 2 (la version 1 est l'essai). Test = 589 recadrages de photos
+jamais vues à l'entraînement.
 
-### Detection
+### Détection
 
-| Run | Model | Device | Epochs | Test mAP50 | Test mAP50-95 | Precision | Recall | ONNX vs PyTorch |
+| Exécution | Modèle | Matériel | Époques | mAP50 test | mAP50-95 test | Précision | Rappel | ONNX contre PyTorch |
 |---|---|---|---:|---:|---:|---:|---:|---|
-| main | YOLO11n, 640 px, batch 8 | RTX 2050 | 30 | **0.972** | **0.861** | 0.957 | 0.936 | same box count on 100 % of 50 test photos, mean IoU 0.976 |
+| principale | YOLO11n, 640 px, batch 8 | RTX 2050 | 30 | **0,972** | **0,861** | 0,957 | 0,936 | même nombre de boîtes sur 100 % de 50 photos de test, IoU moyen 0,976 |
 
-MLflow run `5c6db57a144b483aaf37b94e74f5e2cb`, registered as `tujya-pill-detector` version 1.
-Test = 483 clean test photos, scored against the automatic boxes (whose own precision is
-about 90 %, see above), so these numbers measure agreement with the auto-labeller.
+Run MLflow `5c6db57a144b483aaf37b94e74f5e2cb`, enregistré comme `tujya-pill-detector`
+version 1. Test = 483 photos de test propres, notées contre les boîtes automatiques (dont la
+précision propre est d'environ 90 %, voir plus haut) : ces chiffres mesurent donc l'accord
+avec l'étiqueteur automatique.
 
-### End to end (what the app would do)
+### De bout en bout (ce que ferait l'application)
 
-`python -m tujya_vision.evaluate` on **all 600 consumer photos of the test split** (also
-the 117 the auto-labeller rejected), with the two **ONNX** exports: the detector runs on
-the full photo, the most confident box is cropped and classified.
+`python -m tujya_vision.evaluate` sur **les 600 photos « consumer » du split de test**
+(y compris les 117 que l'étiqueteur a rejetées), avec les deux exports **ONNX** : le
+détecteur tourne sur la photo entière, la boîte la plus sûre est recadrée et classée.
 
-| Photos | Pill detected | Top-1 | Top-5 |
+| Photos | Comprimé détecté | Top-1 | Top-5 |
 |---:|---:|---:|---:|
-| 600 | 98.5 % | **89.2 %** | **95.8 %** |
+| 600 | 98,5 % | **89,2 %** | **95,8 %** |
 
-MLflow run `9bfa9d81a606472892fbf67efe7036e1` (`evaluate-end-to-end`). Slower than needed
-(25 min on CPU) because Ultralytics installed `onnxruntime-gpu` on the fly during this run;
-auto-install is now disabled in `tujya_vision/__init__.py` (D42).
+Run MLflow `9bfa9d81a606472892fbf67efe7036e1` (`evaluate-end-to-end`). Plus lent que
+nécessaire (25 min sur CPU) parce qu'Ultralytics a installé `onnxruntime-gpu` à la volée
+pendant cette exécution ; l'installation automatique est désactivée depuis dans
+`tujya_vision/__init__.py` (D42).
 
-### Notes on the scores
+### À propos de ces scores
 
-What these numbers mean: train and test contain **different photos of the same physical
-pills** (C3PI photographed each pill many times, under several cameras, lights and
-backgrounds), and the test crops come from the automatic boxes, not from the detector. The
-end-to-end score (detector boxes -> classifier) and a test on photos of other pill
-instances would be lower; both are next steps.
+Ce que signifient ces chiffres : l'entraînement et le test contiennent **des photos
+différentes des mêmes comprimés physiques** (C3PI a photographié chaque comprimé de
+nombreuses fois, avec plusieurs appareils, éclairages et fonds), et les recadrages de test
+viennent des boîtes automatiques, pas du détecteur. Le score de bout en bout (boîtes du
+détecteur -> classifieur) et un test sur des photos d'autres exemplaires des comprimés
+seraient plus bas ; ce sont deux étapes suivantes.
 
-## Comparison with ePillID
+## Comparaison avec ePillID
 
-ePillID (Usuyama et al., 2020) is built from the same C3PI images but solves a harder
-problem: thousands of appearance classes (pill product and side), few-shot, retrieval of
-consumer photos against reference images. Tujya's identifier is a closed-set classifier
-over 150 products with 20+ photos each, trained and tested on consumer photos of the same
-products. The numbers are therefore **not comparable** to ePillID's; a fair comparison would
-retrain on ePillID's split and metrics (MAP, GAP, top-k on the holdout), which is a later
-step.
+ePillID (Usuyama et al., 2020) est construit sur les mêmes images C3PI mais résout un
+problème plus difficile : des milliers de classes d'apparence (produit et face du comprimé),
+peu d'exemples par classe, recherche des photos « consumer » parmi des images de référence.
+L'identifieur de Tujya est un classifieur à ensemble fermé sur 150 produits ayant chacun plus
+de 20 photos, entraîné et testé sur des photos « consumer » des mêmes produits. Les chiffres ne
+sont donc **pas comparables** à ceux d'ePillID ; une comparaison honnête demanderait de
+réentraîner sur le split et les métriques d'ePillID (MAP, GAP, top-k sur le jeu réservé),
+étape ultérieure.
 
-## Serving: the API's own pipeline and the confirmation threshold
+## Service : la chaîne propre à l'API et le seuil de confirmation
 
-`POST /api/scan` (docs/api.md) does not use Ultralytics: `module1_vision_mlops/serving/scanner.py`
-re-implements the letterbox, NMS and 20 %-margin crop with numpy and OpenCV and runs the two
-ONNX files with ONNX Runtime (D45). Checks:
+`POST /api/scan` ([docs/api.md](../../docs/api.md)) n'utilise pas Ultralytics :
+[`serving/scanner.py`](../serving/scanner.py) réimplémente le letterbox, la NMS et le
+recadrage à 20 % de marge avec numpy et OpenCV, et fait tourner les deux fichiers ONNX avec
+ONNX Runtime (D45). Vérifications :
 
-- on 40 test photos, against Ultralytics' ONNX predictor: same number of boxes on 40/40,
-  mean IoU of the main box 0.9999, same top-1 class on 39/39 (one photo without a box);
-- on all 600 test photos (`python -m module1_vision_mlops.serving.evaluate_scan --split test`): pill found
-  98.5 %, top-1 **89.3 %**, top-5 **95.8 %**, as in the end-to-end evaluation above.
+- sur 40 photos de test, contre le prédicteur ONNX d'Ultralytics : même nombre de boîtes sur
+  40/40, IoU moyen de la boîte principale 0,9999, même classe top-1 sur 39/39 (une photo sans
+  boîte) ;
+- sur les 600 photos de test
+  (`python -m module1_vision_mlops.serving.evaluate_scan --split test`) : comprimé trouvé
+  98,5 %, top-1 **89,3 %**, top-5 **95,8 %**, comme l'évaluation de bout en bout ci-dessus.
 
-### Confirmation threshold
+### Seuil de confirmation
 
-The app asks the user to confirm a pill when its top-1 probability is below a threshold
-(`needs_confirmation`). Chosen on the **validation** photos (600, never used for training),
-with `python -m module1_vision_mlops.serving.evaluate_scan --split val`: rule = the lowest threshold at which at
-most 1 % of all photos would be accepted with a wrong pill.
+L'application demande à l'utilisateur de confirmer un comprimé quand sa probabilité top-1 est
+sous un seuil (`needs_confirmation`). Choisi sur les photos de **validation** (600, jamais
+utilisées pour l'entraînement), avec
+`python -m module1_vision_mlops.serving.evaluate_scan --split val` : règle = le plus petit
+seuil pour lequel au plus 1 % de toutes les photos serait accepté avec un mauvais comprimé.
 
-| Threshold | Accepted without confirmation | Top-1 among accepted | Wrong and accepted (share of all photos) |
+| Seuil | Acceptées sans confirmation | Top-1 parmi les acceptées | Fausses et acceptées (part de toutes les photos) |
 |---:|---:|---:|---:|
-| 0.5 | 87.2 % | 91.2 % | 7.7 % |
-| 0.7 | 77.7 % | 95.3 % | 3.7 % |
-| 0.8 | 71.7 % | 97.7 % | 1.7 % |
-| **0.85** | **67.2 %** | **98.5 %** | **1.0 %** |
-| 0.9 | 60.3 % | 98.9 % | 0.7 % |
-| 0.95 | 48.5 % | 99.7 % | 0.2 % |
+| 0,5 | 87,2 % | 91,2 % | 7,7 % |
+| 0,7 | 77,7 % | 95,3 % | 3,7 % |
+| 0,8 | 71,7 % | 97,7 % | 1,7 % |
+| **0,85** | **67,2 %** | **98,5 %** | **1,0 %** |
+| 0,9 | 60,3 % | 98,9 % | 0,7 % |
+| 0,95 | 48,5 % | 99,7 % | 0,2 % |
 
-Validation overall: pill found 98.5 %, top-1 84.2 %, top-5 94.8 %. **Threshold 0.85**
-(D47). On the test photos at 0.85: 70.5 % accepted, 99.3 % of them correct, 0.5 % of all
-photos accepted with a wrong pill. A confirmed or corrected pill is always shown with its
-probability, and the identification stays a suggestion.
+Validation au total : comprimé trouvé 98,5 %, top-1 84,2 %, top-5 94,8 %. **Seuil 0,85**
+(D47). Sur les photos de test à 0,85 : 70,5 % acceptées, dont 99,3 % justes, et 0,5 % de
+toutes les photos acceptées avec un mauvais comprimé. Un comprimé confirmé ou corrigé est
+toujours affiché avec sa probabilité, et l'identification reste une suggestion.
 
-Serving speed: ONNX Runtime's busy-waiting threads made OpenCV (and the whole process) about
-30 times slower on the shared laptop CPU; spinning is now disabled in the sessions (D49),
-giving about 50-220 ms per photo for decode, detection and identification.
+Vitesse du service : les threads en attente active d'ONNX Runtime rendaient OpenCV (et tout
+le processus) environ 30 fois plus lents sur le CPU partagé du portable ; l'attente active est
+désactivée dans les sessions (D49), soit environ 50 à 220 ms par photo pour le décodage, la
+détection et l'identification.

@@ -1,110 +1,121 @@
-# Tujya agent (LangGraph) and POST /api/chat
+# Agent de Tujya (LangGraph) et POST /api/chat
 
-The agent answers questions about the confirmed pills and their active ingredients, only
-from retrieved documents and tool results, with numbered citations. Code:
-`module2_ai_engineering/rag/` (agent.py, tools.py, safety.py, names.py, runtime.py), route
-`app/backend/app/routers/chat.py`. Corpus and retrieval: module2_ai_engineering/docs/rag.md. Decisions D57-D59, D63.
+L'agent répond aux questions sur les comprimés confirmés et leurs principes actifs, à partir
+des seuls documents retrouvés et résultats d'outils, avec des citations numérotées. Code :
+[`agent/`](../agent/) ([graph.py](../agent/graph.py), [tools.py](../agent/tools.py),
+[safety.py](../agent/safety.py), [runtime.py](../agent/runtime.py)) et
+[`rag/names.py`](../rag/names.py) ; route
+[`app/backend/app/routers/chat.py`](../../app/backend/app/routers/chat.py). Corpus et
+recherche : [rag.md](rag.md). Décisions D57 à D59 et D63 ([docs/decisions.md](../../docs/decisions.md)).
 
-## Graph
+## Graphe
 
 ```
-START -> understand --(dose question)--------------------------> safety -> END
+START -> understand --(question de dose)-----------------------> safety -> END
              \--> tools -> retrieve -> answer -> safety -> END
 ```
 
-| Node | What it does | LLM |
+![Graphe de l'agent](assets/agent_graph.png)
+
+| Nœud | Rôle | LLM |
 |---|---|---|
-| `understand` | drug names in the question (French or English: "warfarine" -> warfarin, "paracétamol" -> acetaminophen) and the confirmed pills' ingredients; language (fr / en); dose question? | no |
-| `tools` | the LLM chooses tool calls (Ollama tool calling with the three chat tools); the graph adds the calls a question always needs if the model forgot them (`check_interaction` for two or more drugs, `search_documents` always), runs every call, and records it (`chosen_by`: `llm` or `rule`) | yes (planner) |
-| `retrieve` | numbered sources [1], [2] ...: DDInter results of `check_interaction` first, then label excerpts of `get_drug_info`, then the `search_documents` hits (dense with the ingredient filter by default, D65; retracted excluded); at most 8 | no |
-| `answer` | the LLM answers from the numbered sources only, with the rules in the system prompt (French or English); streamed sentence by sentence through the safety filter | yes |
-| `safety` | the rules below on the whole answer: rewrite, or refuse | no |
+| `understand` | noms de médicaments dans la question (français ou anglais : « warfarine » -> warfarin, « paracétamol » -> acetaminophen) et principes actifs des comprimés confirmés ; langue (fr / en) ; question de dose ? | non |
+| `tools` | le LLM choisit les appels d'outils (appel d'outils d'Ollama avec les trois outils du chat) ; le graphe ajoute les appels qu'une question exige toujours si le modèle les a oubliés (`check_interaction` dès deux médicaments, `search_documents` toujours), exécute chaque appel et l'enregistre (`chosen_by` : `llm` ou `rule`) | oui (planificateur) |
+| `retrieve` | sources numérotées [1], [2]... : d'abord les résultats DDInter de `check_interaction`, puis les extraits de notice de `get_drug_info`, puis les résultats de `search_documents` (dense avec filtre par principe actif par défaut, D65 ; articles rétractés exclus) ; 8 au plus | non |
+| `answer` | le LLM répond à partir des seules sources numérotées, avec les règles dans le prompt système (français ou anglais) ; réponse diffusée phrase par phrase à travers le filtre de sécurité | oui |
+| `safety` | les règles ci-dessous sur toute la réponse : réécrire, ou refuser | non |
 
-If the planner call fails (model down, bad JSON), the rule-based calls still run.
+Si l'appel au planificateur échoue (modèle indisponible, JSON invalide), les appels ajoutés
+par règle s'exécutent quand même.
 
-## Tools (`module2_ai_engineering/agent/tools.py`, shared with the MCP server)
+## Outils ([`agent/tools.py`](../agent/tools.py), partagés avec le serveur MCP)
 
-| Tool | Arguments | Returns |
+| Outil | Arguments | Renvoie |
 |---|---|---|
-| `identify_pills` | `image_path` or `image_base64` | the `/api/scan` result: boxes, top-5, `needs_confirmation` (not given to the chat LLM: a chat question has no image; MCP clients have it) |
-| `check_interaction` | `drugs` (names, French or English), `pills` (class_ids) | the `/api/interactions` result: every pair, DDInter severity, description, source; "aucune interaction connue dans cette base de données" when nothing is listed |
-| `get_drug_info` | `drug`, optional `sections` | pill classes containing the ingredient, and the first chunk of each label section (boxed warning, indications, contraindications, warnings, interactions, mechanism) |
-| `search_documents` | `query`, `ingredients`, `doc_types`, `sections`, `k`, `exclude_retracted` | hybrid search hits with title, section, URL, source, date, licence, text |
-| `predict_toxicity` (bonus) | `molecules` (1 or 2 names or SMILES) | Tox21 in vitro assay probabilities per molecule, never about a mixture (bonus/docs/toxicity.md); added by rule to a toxicity question; its sentences in the answer are written by the code, not the LLM (D74) |
+| `identify_pills` | `image_path` ou `image_base64` | le résultat de `/api/scan` : boîtes, top-5, `needs_confirmation` (pas proposé au LLM du chat, une question n'a pas d'image ; les clients MCP l'ont) |
+| `check_interaction` | `drugs` (noms, français ou anglais), `pills` (class_id) | le résultat de `/api/interactions` : chaque paire, sévérité DDInter, description, source ; « aucune interaction connue dans cette base de données » quand rien n'est listé |
+| `get_drug_info` | `drug`, `sections` en option | classes de comprimés contenant le principe actif et le premier chunk de chaque section de la notice (encadré, indications, contre-indications, mises en garde, interactions, mécanisme) |
+| `search_documents` | `query`, `ingredients`, `doc_types`, `sections`, `k`, `exclude_retracted` | résultats de recherche avec titre, section, URL, source, date, licence, texte |
+| `predict_toxicity` (bonus) | `molecules` (1 ou 2 noms ou SMILES) | probabilités des tests in vitro de Tox21 par molécule, jamais sur un mélange ([bonus/docs/toxicity.md](../../bonus/docs/toxicity.md)) ; ajouté par règle à une question de toxicité ; ses phrases dans la réponse sont écrites par le code, pas par le LLM (D74) |
 
-**Extension point.** A tool is one async method on `Toolbox` and one entry in
-`TOOL_SPECS`; it is then available to the agent (`CHAT_TOOLS`) and the MCP server. Two
-bonus tools were planned: `predict_toxicity` is implemented (session 4, bonus/docs/toxicity.md);
-`predict_synergy(drug_a, drug_b)` (cancer synergy from the DrugComb data already in the
-pipeline) is not.
+**Point d'extension.** Un outil est une méthode asynchrone de `Toolbox` et une entrée de
+`TOOL_SPECS` ; il est alors disponible pour l'agent (`CHAT_TOOLS`) et le serveur MCP. Deux
+outils bonus étaient prévus : `predict_toxicity` est implémenté (session 4) ;
+`predict_synergy(drug_a, drug_b)` ne l'est pas, l'étude n'ayant pas atteint la règle fixée
+d'avance ([bonus/docs/synergy.md](../../bonus/docs/synergy.md), D75).
 
-## Safety rules (`module2_ai_engineering/agent/safety.py`, D63)
+## Règles de sécurité ([`agent/safety.py`](../agent/safety.py), D63)
 
-Applied to every answer, sentence by sentence:
+Appliquées à chaque réponse, phrase par phrase :
 
-1. **No dose.** A question asking for a dose ("quelle dose", "posologie", "how much") is
-   refused before any LLM call. A sentence with an amount of medicine ("50 mg", "2
-   comprimés", "deux fois par jour", "mg/kg") is removed; lab values ("eGFR 30 mL/min",
-   "200 mg/dL") are not doses.
-2. **Never "safe".** A sentence with "sûr", "sans danger", "sans risque", "safe" is removed;
-   if no interaction was found, "Aucune interaction connue dans cette base de données." is
-   written instead.
-3. **No invented timing advice.** A sentence about spacing or meals ("2 heures
-   d'intervalle", "avant le repas", "hours apart") is kept only if it cites a source.
-4. **Citations.** `[n]` must point to a numbered source (others are removed). A sentence the
-   model forgot to cite gets the source containing at least 60 % of its content words (it
-   is then really in that source); an answer that still cites nothing gets "Sources
-   consultées : [1] ...". No source at all: the answer says so and does not answer.
-   Label cross-references ("[see Contraindications (4)]") are removed from the sources
-   given to the model and from the answer.
-5. **Disclaimer.** Every answer ends with "Information uniquement, consultez un pharmacien
-   ou un médecin."
+1. **Pas de dose.** Une question qui demande une dose (« quelle dose », « posologie »,
+   « how much ») est refusée avant tout appel au LLM. Une phrase avec une quantité de
+   médicament (« 50 mg », « 2 comprimés », « deux fois par jour », « mg/kg ») est retirée ;
+   les valeurs biologiques (« eGFR 30 mL/min », « 200 mg/dL ») ne sont pas des doses.
+2. **Jamais « sûr ».** Une phrase avec « sûr », « sans danger », « sans risque », « safe »
+   est retirée ; si aucune interaction n'a été trouvée, la réponse écrit à la place
+   « Aucune interaction connue dans cette base de données. »
+3. **Pas de conseil d'horaire inventé.** Une phrase sur l'espacement des prises ou les
+   repas (« 2 heures d'intervalle », « avant le repas », « hours apart ») n'est gardée que si
+   elle cite une source.
+4. **Citations.** `[n]` doit renvoyer à une source numérotée (les autres sont retirés). Une
+   phrase que le modèle a oublié de citer reçoit la source qui contient au moins 60 % de ses
+   mots pleins (elle y est donc vraiment) ; une réponse qui ne cite toujours rien reçoit
+   « Sources consultées : [1] ... ». Aucune source du tout : la réponse le dit et ne répond
+   pas. Les renvois internes des notices (« [see Contraindications (4)] ») sont retirés des
+   sources données au modèle et de la réponse.
+5. **Avertissement.** Chaque réponse se termine par « Information uniquement, consultez un
+   pharmacien ou un médecin. »
 
-While streaming, a sentence that breaks rules 1-3 is held back, so it never reaches the
-screen; the `final` event carries the checked answer, which the app displays.
+Pendant la diffusion, une phrase qui enfreint les règles 1 à 3 est retenue et n'atteint donc
+jamais l'écran ; l'événement `final` porte la réponse vérifiée, que le site affiche.
 
 ## POST /api/chat
 
-Signed-in users only. Body:
+Réservé aux utilisateurs connectés. Corps :
 
 ```json
 {"question": "La warfarine interagit-elle avec le fluconazole ?", "pills": [9], "stream": false}
 ```
 
-Response (`ChatResult`): `answer` (checked, ends with the disclaimer), `language`,
+Réponse (`ChatResult`) : `answer` (vérifiée, terminée par l'avertissement), `language`,
 `ingredients`, `citations` (n, title, url, section, snippet, source_name, doc_type, date,
 `cited`), `tool_calls` (name, args, chosen_by, ok, summary), `safety` (action `ok` /
-`rewritten` / `refused`, violations, cited numbers), `model`, `timings` (per node and
+`rewritten` / `refused`, violations, numéros cités), `model`, `timings` (par nœud et au
 total), `disclaimer`.
 
-With `"stream": true` the answer is Server-Sent Events: `tool` (each call, as it happens),
-`token` (answer text, one checked sentence at a time), then `final` (the `ChatResult`) or
-`error`. nginx passes the stream through unbuffered (`X-Accel-Buffering: no`).
+Avec `"stream": true`, la réponse est un flux Server-Sent Events : `tool` (chaque appel, au
+moment où il a lieu), `token` (texte de la réponse, une phrase vérifiée à la fois), puis
+`final` (le `ChatResult`) ou `error`. nginx transmet le flux sans tampon
+(`X-Accel-Buffering: no`).
 
-Errors: 401 not signed in; 503 when the index is empty ("run `python -m module2_ai_engineering.rag.index`") or
-Ollama is not reachable.
+Erreurs : 401 si non connecté ; 503 si l'index est vide (« run
+`python -m module2_ai_engineering.rag.index` ») ou si Ollama est injoignable.
 
-Configuration (`SYNERGYRX_*`): `OLLAMA_URL` (compose: `http://ollama:11434`), `LLM_MODEL`
-(`qwen2.5:3b`), `LLM_TEMPERATURE` (0.1), `LLM_NUM_CTX` (4096, D68), `LLM_MAX_TOKENS` (450), `EMBEDDING_MODEL`
-(`bge-m3`), `RAG_TOP_K` (6).
+Configuration (`SYNERGYRX_*`) : `OLLAMA_URL` (compose : `http://ollama:11434`), `LLM_MODEL`
+(`qwen2.5:3b`), `LLM_TEMPERATURE` (0.1), `LLM_NUM_CTX` (4096, D68), `LLM_MAX_TOKENS` (450),
+`EMBEDDING_MODEL` (`bge-m3`), `RAG_TOP_K` (6).
 
-From the command line: `python -m module2_ai_engineering.agent.ask "question" [--pills 9 120]` (backend venv).
+En ligne de commande (venv du backend) :
+`python -m module2_ai_engineering.agent.ask "question" [--pills 9 120]`.
 
-## Example (real models, 2026-10-28)
+## Exemple (vrais modèles, 2026-10-28)
 
-`What are the contraindications of metformin?` -> planner: `get_drug_info` and
-`search_documents`; answer: "Metformin hydrochloride tablets are contraindicated in
+`What are the contraindications of metformin?` -> planificateur : `get_drug_info` et
+`search_documents` ; réponse : « Metformin hydrochloride tablets are contraindicated in
 patients with severe renal impairment (eGFR below 30 mL/min/1.73 m²), hypersensitivity to
 metformin, and acute or chronic metabolic acidosis, including diabetic ketoacidosis with or
-without coma [1]." + disclaimer; about 15 s in total on the RTX 2050 (planner ~7 s,
-answer ~6 s).
+without coma [1]. » + avertissement ; environ 15 s au total sur la RTX 2050 (planificateur
+~7 s, réponse ~6 s).
 
-## Tests (no Ollama, no real embeddings)
+## Tests (sans Ollama ni vrais embeddings)
 
-`module2_ai_engineering/tests/test_chat.py`: a scripted chat model (`tests/rag_fakes.py`, tool calls and
-streamed answers) and hashed fake embeddings over a six-chunk corpus. Covers sign-in, tool
-choice + rule-added calls, unknown tools ignored, citations mapping, retracted excluded,
-unsafe answers rewritten (dose, "sans danger", bad citation), dose question refused without
-any LLM call, planner failure fallback, pills -> ingredients, SSE order (tool, token,
-final) with unsafe sentences held back, 503 without index. `module2_ai_engineering/tests/test_safety.py`:
-the rules and the name matcher.
+[`tests/test_chat.py`](../tests/test_chat.py) : un modèle de chat scénarisé
+([`tests/rag_fakes.py`](../tests/rag_fakes.py), appels d'outils et réponses diffusées) et
+des embeddings factices par hachage sur un corpus de six chunks. Couvre : connexion
+obligatoire, choix des outils et appels ajoutés par règle, outils inconnus ignorés,
+correspondance des citations, articles rétractés exclus, réponses dangereuses réécrites
+(dose, « sans danger », mauvaise citation), question de dose refusée sans appel au LLM,
+repli si le planificateur échoue, comprimés -> principes actifs, ordre du flux SSE (tool,
+token, final) avec les phrases dangereuses retenues, 503 sans index.
+[`tests/test_safety.py`](../tests/test_safety.py) : les règles et le rapprochement des noms.

@@ -1,71 +1,77 @@
-# Bonus: drug-combination synergy (DrugComb) — not turned into a tool
+# Bonus : synergie des associations de médicaments (DrugComb), sans outil
 
-Question: from the DrugComb data already collected by the SynergyRx pipeline, can a model
-predict the synergy of a combination **involving a drug it has never seen**, well enough
-to justify a `predict_synergy` tool? The rule was fixed **before training** (D75): add the
-tool only if the model's test RMSE is at least 10 % below the mean baseline **and** its
-Pearson r is at least 0.3, on a leave-drug-out test set.
+Question : à partir des données DrugComb déjà collectées par le pipeline SynergyRx
+([data_pipeline/](../../data_pipeline/)), un modèle peut-il prédire la synergie d'une
+association **comprenant un médicament qu'il n'a jamais vu**, assez bien pour justifier un
+outil `predict_synergy` ? La règle a été fixée **avant l'entraînement** (D75) : n'ajouter
+l'outil que si le RMSE de test du modèle est au moins 10 % sous celui de la moyenne **et**
+si son r de Pearson est d'au moins 0,3, sur un jeu de test qui laisse des médicaments de côté.
 
-**Result: no.** The model beats the mean baseline (RMSE −7.3 %, r 0.377) but not by the
-required margin, so no tool was added, and the model was not tuned further against the
-test set. Cancer cell-line synergy is research data, not information about a patient's
-medicines; Tujya says nothing about it in the app.
+**Résultat : non.** Le modèle bat la moyenne (RMSE −7,3 %, r 0,377) mais pas de la marge
+exigée : aucun outil n'a été ajouté, et le modèle n'a pas été réglé davantage contre le jeu
+de test. La synergie sur lignées de cellules cancéreuses est une donnée de recherche, pas une
+information sur les médicaments d'un patient ; Tujya n'en dit rien dans l'application.
 
-## Data (2026-10-28)
+## Données (2026-10-28)
 
-`data/parquet/` from the SynergyRx pipeline, now versioned with DVC (`data/parquet.dvc`,
-6 files, 38 MB, pushed to the local remote).
+`data/parquet/` du pipeline SynergyRx, désormais versionné par DVC (`data/parquet.dvc`,
+6 fichiers, 38 Mo, envoyés sur le remote local).
 
-| | Rows / experiments |
+| | Lignes / expériences |
 |---|---:|
-| Rows in `synergy_pairs.parquet` | 689,081 (DrugComb 379,670, TDC 286,674, O'Neil 22,737) |
-| Distinct experiments (unordered pair + cell line) | 379,670 |
-| Experiments by source | DrugComb + TDC 281,760; DrugComb only 75,173; DrugComb + O'Neil 17,823; all three 4,914 |
-| Agreement with DrugComb | TDC: r = 1.00 on Loewe and ZIP (286,674 shared: a copy); O'Neil: r = 0.415 on Loewe (22,737 shared; no ZIP) |
-| **Kept: one source per experiment = DrugComb** | 379,670 (every experiment is in DrugComb; no replicate rows within it) |
-| Both drugs with a valid structure (289 drugs have one) | **323,339 experiments, 287 drugs, 110 cell lines** |
+| Lignes de `synergy_pairs.parquet` | 689 081 (DrugComb 379 670, TDC 286 674, O'Neil 22 737) |
+| Expériences distinctes (paire non ordonnée + lignée) | 379 670 |
+| Expériences par source | DrugComb + TDC 281 760 ; DrugComb seul 75 173 ; DrugComb + O'Neil 17 823 ; les trois 4 914 |
+| Accord avec DrugComb | TDC : r = 1,00 sur Loewe et ZIP (286 674 en commun : une copie) ; O'Neil : r = 0,415 sur Loewe (22 737 en commun ; pas de ZIP) |
+| **Gardé : une source par expérience = DrugComb** | 379 670 (chaque expérience est dans DrugComb ; aucune ligne répétée à l'intérieur) |
+| Les deux médicaments avec une structure valide (289 médicaments en ont une) | **323 339 expériences, 287 médicaments, 110 lignées** |
 
-**Target: ZIP** (DrugComb's score, combining the Loewe and Bliss references; on the kept
-experiments mean −0.77, sd 5.55; Loewe is skewed, mean −9.05, sd 14.76). Licences:
-DrugComb CC BY 4.0; O'Neil rows are not used.
+**Cible : ZIP** (le score de DrugComb, qui combine les références de Loewe et de Bliss ; sur
+les expériences gardées, moyenne −0,77, écart-type 5,55 ; Loewe est asymétrique, moyenne
+−9,05, écart-type 14,76). Licences : DrugComb CC BY 4.0 ; les lignes O'Neil ne sont pas
+utilisées.
 
-## Model
+## Modèle
 
-`bonus/synergy/train_synergy.py` (backend venv; 46 s on the laptop CPU):
+[`synergy/train_synergy.py`](../synergy/train_synergy.py) (venv du backend avec MLflow ; 46 s
+sur le CPU du portable) :
 
-- Drug features: sum of the two drugs' Morgan fingerprints (radius 2, 1,024 bits; order of
-  the pair does not matter), with the toxicity tool's standardisation (largest fragment).
-- Cell line features: 30 principal components of the standardised expression matrix
-  (86 cell lines; missing for the others, which LightGBM handles) and the tissue.
-- **Leave-drug-out split**: a random 15 % of the 287 drugs held out for the test set (every
-  experiment containing at least one of them), another 10 % for validation (early stopping):
-  178,307 train / 51,435 validation / 93,597 test (86,135 with one unseen drug, 7,462 with
-  two).
-- LightGBM regression (63 leaves, learning rate 0.05, feature fraction 0.5), early stopping
-  at 79 rounds.
+- Variables des médicaments : somme des empreintes de Morgan des deux médicaments (rayon 2,
+  1 024 bits ; l'ordre de la paire ne compte pas), avec la standardisation de l'outil de
+  toxicité (plus grand fragment).
+- Variables des lignées : 30 composantes principales de la matrice d'expression standardisée
+  (86 lignées ; manquantes pour les autres, ce que LightGBM gère) et le tissu.
+- **Split en laissant des médicaments de côté** : 15 % des 287 médicaments tirés au hasard
+  réservés au test (chaque expérience contenant au moins l'un d'eux), 10 % de plus pour la
+  validation (arrêt anticipé) : 178 307 entraînement / 51 435 validation / 93 597 test
+  (86 135 avec un médicament inconnu, 7 462 avec deux).
+- Régression LightGBM (63 feuilles, taux d'apprentissage 0,05, fraction de variables 0,5),
+  arrêt anticipé à 79 itérations.
 
-| Test set (leave-drug-out) | Mean baseline RMSE | Per-cell-line mean RMSE (r) | **LightGBM RMSE (r)** |
+| Jeu de test (médicaments laissés de côté) | RMSE de la moyenne | RMSE de la moyenne par lignée (r) | **RMSE de LightGBM (r)** |
 |---|---:|---:|---:|
-| All test (93,597) | 5.597 | 5.472 (0.215) | **5.189 (0.377)** |
-| One unseen drug (86,135) | 5.582 | 5.448 (0.221) | 5.165 (0.381) |
-| Two unseen drugs (7,462) | 5.777 | 5.734 (0.142) | 5.455 (0.328) |
-| Validation (51,435) | 5.479 | 5.286 (0.263) | 5.075 (0.376) |
+| Tout le test (93 597) | 5,597 | 5,472 (0,215) | **5,189 (0,377)** |
+| Un médicament inconnu (86 135) | 5,582 | 5,448 (0,221) | 5,165 (0,381) |
+| Deux médicaments inconnus (7 462) | 5,777 | 5,734 (0,142) | 5,455 (0,328) |
+| Validation (51 435) | 5,479 | 5,286 (0,263) | 5,075 (0,376) |
 
-RMSE gain over the mean baseline on the test set: **7.3 %** (rule: ≥ 10 %) ; Pearson 0.377
-(rule: ≥ 0.3). **Rule not met → no `predict_synergy` tool.**
+Gain de RMSE sur la moyenne pour le test : **7,3 %** (règle : ≥ 10 %) ; Pearson 0,377
+(règle : ≥ 0,3). **Règle non atteinte -> pas d'outil `predict_synergy`.**
 
-MLflow: experiment **`tujya-synergy`**, run `lgbm-leave-drug-out-zip`
-(`77af603c48c54b06bcdb016286f7de43`): parameters, dataset counts, every metric above, tag
-`clearly_better_than_mean_baseline = False`, `results.json`. No model registered.
+MLflow : expérience **`tujya-synergy`**, run `lgbm-leave-drug-out-zip`
+(`77af603c48c54b06bcdb016286f7de43`) : paramètres, effectifs, toutes les métriques
+ci-dessus, étiquette `clearly_better_than_mean_baseline = False`, `results.json`. Aucun
+modèle enregistré.
 
-## Why it is hard, and what would be next
+## Pourquoi c'est difficile, et la suite
 
-- Leave-drug-out is the honest setting for a tool (a user asks about any drug), and it is
-  much harder than a random split where both drugs were seen in training; published
-  synergy models usually report random or leave-pair-out splits, which are not comparable.
-- 323,339 experiments but only 287 drugs: for generalising to a new drug, the number of
-  distinct drugs is what counts, and it is small.
-- Next steps if the bonus is pursued: drug-target or monotherapy-response features instead
-  of fingerprints only, per-study normalisation, a different target (Loewe, or a
-  synergistic / antagonistic class), and a fresh held-out set of drugs to evaluate them,
-  since this test set has now been looked at.
+- Laisser des médicaments de côté est le cadre honnête pour un outil (un utilisateur peut
+  demander n'importe quel médicament), et c'est bien plus difficile qu'un split aléatoire où
+  les deux médicaments ont été vus à l'entraînement ; les modèles de synergie publiés
+  rapportent en général des splits aléatoires ou par paire, qui ne sont pas comparables.
+- 323 339 expériences mais seulement 287 médicaments : pour généraliser à un nouveau
+  médicament, c'est le nombre de médicaments distincts qui compte, et il est faible.
+- Suite si le bonus est poursuivi : variables de cibles ou de réponse en monothérapie au lieu
+  des seules empreintes, normalisation par étude, une autre cible (Loewe, ou une classe
+  synergique / antagoniste), et un nouveau jeu de médicaments réservés pour les évaluer,
+  puisque ce jeu de test a maintenant été regardé.

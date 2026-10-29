@@ -1,30 +1,42 @@
-# Tujya API (scan, pills, interactions)
+# API de Tujya
 
-FastAPI app in `app/backend/`. Swagger UI: `/docs`, schema: `/openapi.json` (D44). All routes
-below need a signed-in account (session cookie from `POST /api/auth/login`), like the
-catalog; the demo signs in with the demo account (D46).
+Application FastAPI dans [`app/backend/`](../app/backend/). Swagger UI : `/docs`, schéma :
+`/openapi.json` (D44). Toutes les routes ci-dessous demandent un compte connecté (cookie de
+session obtenu par `POST /api/auth/login`), comme le catalogue ; la démonstration se connecte
+avec le compte de démonstration (D46).
 
-Every answer about medicines carries `sources` (name, title, URL, licence, citation) and
-`disclaimer` = "Information uniquement, consultez un pharmacien ou un médecin.". No route
-ever returns a dose, and none ever calls a combination safe.
+| Route | Rôle | Documentation |
+|---|---|---|
+| `POST /api/scan` | identifier les comprimés d'une photo (module 1) | ci-dessous |
+| `GET /api/pills` | chercher parmi les 150 classes | ci-dessous |
+| `POST /api/interactions` | vérifier les interactions entre comprimés et principes actifs | ci-dessous |
+| `POST /api/chat` | question à l'agent, réponse citée (module 2) | [module2_ai_engineering/docs/agent.md](../module2_ai_engineering/docs/agent.md#post-apichat) |
+| `POST /api/toxicity` | probabilités Tox21 d'une ou deux molécules (bonus) | [bonus/docs/toxicity.md](../bonus/docs/toxicity.md#où-il-est-utilisé) |
+| `GET /api/demo/images` | galerie de photos du split de test (lecture seule) | [demo.md](demo.md) |
+| `/api/auth/*`, `/api/admin/*`, `/api/catalog/*` | comptes, sessions, administration, catalogue SynergyRx | [app/README.md](../app/README.md#comptes) |
+
+Chaque réponse sur des médicaments porte `sources` (nom, titre, URL, licence, citation) et
+`disclaimer` = « Information uniquement, consultez un pharmacien ou un médecin. ». Aucune
+route ne renvoie jamais de dose, et aucune ne dit jamais qu'une association est sûre.
 
 ## POST /api/scan
 
-Multipart form, one field `image`: JPEG, PNG or WebP, at most 10 MB and 50 megapixels
-(`SYNERGYRX_SCAN_MAX_BYTES`, `SYNERGYRX_SCAN_MAX_PIXELS`). Errors: 401 not signed in, 413
-too large, 415 not an image, 503 models or medicine tables missing (the message says which
-command fixes it).
+Formulaire multipart, un champ `image` : JPEG, PNG ou WebP, 10 Mo et 50 mégapixels au plus
+(`SYNERGYRX_SCAN_MAX_BYTES`, `SYNERGYRX_SCAN_MAX_PIXELS`). Erreurs : 401 non connecté, 413
+trop grand, 415 pas une image, 503 modèles ou tables de médicaments absents (le message dit
+quelle commande corrige le problème).
 
-Pipeline (`module1_vision_mlops/serving/scanner.py`, ONNX Runtime, CPU by default, CUDA with
-`SYNERGYRX_ONNX_PROVIDERS=auto`):
+Chaîne ([`module1_vision_mlops/serving/scanner.py`](../module1_vision_mlops/serving/scanner.py),
+ONNX Runtime, CPU par défaut, CUDA avec `SYNERGYRX_ONNX_PROVIDERS=auto`) :
 
-1. decode (OpenCV, EXIF orientation applied), letterbox to 640 px, detector
-   (`tujya-pill-detector`, YOLO11n), confidence >= 0.25, NMS IoU 0.7, at most 20 pills;
-2. each box: square crop with a 20 % margin, 224 px (exactly the training crops),
-   classifier (`tujya-pill-classifier`, YOLO11s-cls), top-5;
-3. class_id -> pill name, generic name and active ingredients from the medicine tables.
+1. décodage (OpenCV, orientation EXIF appliquée), letterbox à 640 px, détecteur
+   (`tujya-pill-detector`, YOLO11n), confiance >= 0,25, NMS à IoU 0,7, 20 comprimés au plus ;
+2. pour chaque boîte : recadrage carré avec 20 % de marge, 224 px (exactement les recadrages
+   de l'entraînement), classifieur (`tujya-pill-classifier`, YOLO11s-cls), top-5 ;
+3. class_id -> nom du comprimé, nom générique et principes actifs depuis les tables des
+   médicaments.
 
-Response (`ScanResult`):
+Réponse (`ScanResult`), ici sur une photo du split de test :
 
 ```json
 {
@@ -49,33 +61,35 @@ Response (`ScanResult`):
 }
 ```
 
-`needs_confirmation` is true when the top-1 probability is below `confirm_threshold`
-(0.85, `SYNERGYRX_SCAN_CONFIRM_THRESHOLD`); the app then asks the user to pick from the
-top-5 or search `GET /api/pills`. How 0.85 was chosen: module1_vision_mlops/docs/vision.md, "Confirmation
-threshold" (D47). With no pill found, `pills` is empty and `message` says so.
+`needs_confirmation` est vrai quand la probabilité top-1 est sous `confirm_threshold` (0,85,
+`SYNERGYRX_SCAN_CONFIRM_THRESHOLD`) ; le site demande alors de choisir dans le top-5 ou de
+chercher avec `GET /api/pills`. Choix de 0,85 :
+[module1_vision_mlops/docs/vision.md](../module1_vision_mlops/docs/vision.md#seuil-de-confirmation)
+(D47). Sans comprimé trouvé, `pills` est vide et `message` le dit.
 
-### Models
+### Modèles
 
-The API loads `detector.onnx`, `classifier.onnx` and `models.json` from
-`SYNERGYRX_MODELS_DIR` (default `models/` at the repository root, git-ignored), on the first
-scan. Fill it from the MLflow Model Registry (vision venv, MLflow server running):
+L'API charge `detector.onnx`, `classifier.onnx` et `models.json` depuis
+`SYNERGYRX_MODELS_DIR` (par défaut `models/` à la racine du dépôt, ignoré par git), au premier
+scan. On le remplit depuis le Model Registry de MLflow (venv d'entraînement, serveur MLflow
+lancé) :
 
 ```bash
 cd module1_vision_mlops/training
-python -m tujya_vision.publish                 # latest registered versions
-python -m tujya_vision.publish --from-runs     # or the newest vision/runs exports
+python -m tujya_vision.publish                 # dernières versions enregistrées
+python -m tujya_vision.publish --from-runs     # ou les exports les plus récents de training/runs
 ```
 
-The registered ONNX files keep their weights as MLflow external data; `publish` writes each
-model as one self-contained file and records its registry version, run id and SHA-256 in
-`models.json`, which `/api/scan` returns as `models`.
+Les fichiers ONNX enregistrés gardent leurs poids en données externes MLflow ; `publish`
+écrit chaque modèle en un seul fichier autonome et note dans `models.json` sa version du
+registre, son run et son SHA-256, que `/api/scan` renvoie sous `models`.
 
 ## GET /api/pills?q=&limit=
 
-Search the 150 identification classes (name, generic name, imprint, maker, ingredient;
-every word must match; a number also matches the class_id). `limit` 1-150, default 20.
-Returns `items` (class_id, name, generic_name, labeled_by, imprint, color, shape,
-active_ingredients), `total`, `sources`.
+Recherche parmi les 150 classes d'identification (nom, nom générique, empreinte, fabricant,
+principe actif ; chaque mot doit correspondre ; un nombre correspond aussi au class_id).
+`limit` de 1 à 150, 20 par défaut. Renvoie `items` (class_id, name, generic_name,
+labeled_by, imprint, color, shape, active_ingredients), `total`, `sources`.
 
 ## POST /api/interactions
 
@@ -83,28 +97,35 @@ active_ingredients), `total`, `sources`.
 {"pills": [12, 87], "ingredients": ["fluconazole"]}
 ```
 
-Two to ten items in total: pill class_ids (from a scan or `/api/pills`) and/or ingredient
-names. Every pair of items is checked (pill ingredients against the other item's
-ingredients; the ingredients inside one combination product are not compared with each
-other). For each pair: `interactions` (ingredient_a, ingredient_b, severity, description,
-source), `highest_severity`, `shared_ingredients` (the same substance in both), and
-`message` when nothing is listed:
+De deux à dix éléments au total : des class_id de comprimés (issus d'un scan ou de
+`/api/pills`) et/ou des noms de principes actifs. Chaque paire d'éléments est vérifiée (les
+principes actifs d'un comprimé contre ceux de l'autre élément ; ceux d'une même association
+ne sont pas comparés entre eux). Pour chaque paire : `interactions` (ingredient_a,
+ingredient_b, severity, description, source), `highest_severity`, `shared_ingredients` (la
+même substance des deux côtés), et `message` quand rien n'est listé :
 
-- "Aucune interaction connue dans cette base de données." when both items are known;
-- a "aucune vérification n'est possible" message when an item is unknown, or is a pill
-  without known active ingredients (class 104, the multivitamin).
+- « Aucune interaction connue dans cette base de données. » quand les deux éléments sont
+  connus ;
+- un message « aucune vérification n'est possible » quand un élément est inconnu, ou est un
+  comprimé sans principe actif connu (classe 104, la multivitamine).
 
-Pairs are sorted by severity (Major, Moderate, Minor, Unknown, then pairs without
-interaction). "Unknown" is DDInter's ungraded level: an interaction exists. The top-level
-`message` counts the pairs with an interaction and the pairs that could not be checked.
+Les paires sont triées par sévérité (Major, Moderate, Minor, Unknown, puis les paires sans
+interaction). « Unknown » est le niveau non gradué de DDInter : une interaction existe. Le
+`message` général compte les paires avec une interaction et celles qui n'ont pas pu être
+vérifiées.
 
-Data: the PostgreSQL tables loaded by `python -m app.pharma_loader` (docs/infra.md,
-module2_ai_engineering/docs/interactions.md). Tests: `module1_vision_mlops/tests/test_scan.py` (tiny fake ONNX models built in
-the test, `tests/fake_models.py`) and `app/backend/tests/test_medicines.py` (SQLite).
+Données : les tables PostgreSQL chargées par `python -m app.pharma_loader` ([infra.md](infra.md),
+[module2_ai_engineering/docs/interactions.md](../module2_ai_engineering/docs/interactions.md)).
+Tests : [`module1_vision_mlops/tests/test_scan.py`](../module1_vision_mlops/tests/test_scan.py)
+(petits modèles ONNX factices construits dans le test,
+[`fake_models.py`](../module1_vision_mlops/tests/fake_models.py)) et
+[`app/backend/tests/test_medicines.py`](../app/backend/tests/test_medicines.py) (SQLite).
 
-## Measured on the real models
+## Mesuré sur les vrais modèles
 
-`python -m module1_vision_mlops.serving.evaluate_scan --split test` (backend venv) runs this exact pipeline on
-the 600 consumer photos of the test split: pill found 98.5 %, top-1 89.3 %, top-5 95.8 %,
-the same as the Ultralytics evaluation (module1_vision_mlops/docs/vision.md); about 50 to 220 ms per photo on
-the laptop CPU, depending on the load.
+`python -m module1_vision_mlops.serving.evaluate_scan --split test` (venv du backend) fait
+tourner exactement cette chaîne sur les 600 photos « consumer » du split de test : comprimé
+trouvé 98,5 %, top-1 89,3 %, top-5 95,8 %, comme l'évaluation d'Ultralytics
+([vision.md](../module1_vision_mlops/docs/vision.md)) ; environ 50 à 220 ms par photo sur le
+CPU du portable, selon la charge. Vérifié à nouveau sur les conteneurs de la copie
+restructurée (2026-10-29) : la même photo de test donne la classe 0 à 0,982, en 59 ms.

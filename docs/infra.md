@@ -1,74 +1,86 @@
 # Infrastructure (Docker Compose)
 
-`docker-compose.yml` at the repository root runs the whole app with one command, including
-Ollama (local LLM and embeddings for the Module 2 agent, on the GPU).
+[`docker-compose.yml`](../docker-compose.yml), à la racine du dépôt, lance toute
+l'application en une commande, y compris Ollama (LLM local et embeddings de l'agent du
+module 2, sur le GPU). Les fichiers des services sont dans [infra/](../infra/).
 
 ```bash
-docker compose up -d --build        # first start builds the images (a few minutes)
-docker compose ps                   # postgres, backend, frontend healthy; pharma-init exited (0)
-# web app http://localhost:8080   API http://localhost:8000/docs   MLflow http://localhost:5000
-docker compose down                 # stops; volumes are kept (down -v deletes them)
+docker compose up -d --build        # le premier démarrage construit les images (quelques minutes)
+docker compose ps                   # postgres, backend, frontend sains ; pharma-init terminé (0)
+# site http://localhost:8080   API http://localhost:8000/docs   MLflow http://localhost:5000
+docker compose down                 # arrête ; les volumes sont gardés (down -v les supprime)
 ```
 
-| Service | Image | Host port (127.0.0.1 only) | Role |
+| Service | Image | Port hôte (127.0.0.1 seulement) | Rôle |
 |---|---|---|---|
-| `postgres` | `pgvector/pgvector:pg16` | 5432 | volume `pgdata`; database `tujya` (accounts, medicine tables, pgvector) and `mlflow` |
-| `mlflow` | built from `infra/docker/mlflow/Dockerfile` (MLflow 3.17.2 + psycopg2) | 5000 | tracking store in PostgreSQL, artefacts in volume `mlartifacts`, Model Registry |
-| `pharma-init` | `tujya-backend` | none | one-shot: `python -m app.pharma_loader` rebuilds the medicine tables from `config/` and `data/tujya/`, then exits; the backend waits for it |
-| `rag-init` | `tujya-backend` | none | one-shot: `python -m module2_ai_engineering.rag.index --pull` pulls the Ollama models if missing, then indexes `data/rag/corpus` into the `rag_chunks` table (idempotent; module2_ai_engineering/docs/rag.md); the backend does not wait for it |
-| `backend` | built from `app/backend/Dockerfile` (Python 3.12, FastAPI, ONNX Runtime CPU, LangGraph) | 8000 | the API and the agent (`/api/chat`, talks to `ollama`); Swagger at `/docs` |
-| `frontend` | built from `app/frontend/Dockerfile` (Node 22 build, nginx 1.27) | 8080 | the React app; nginx forwards `/api`, `/docs`, `/openapi.json` to `backend` (`app/frontend/nginx.conf`) |
-| `ollama` | `ollama/ollama:0.40.12` | 11434 | local LLM (`qwen2.5:3b`) and embeddings (`bge-m3`); models in volume `ollama`; NVIDIA GPU reserved (D57) |
+| `postgres` | `pgvector/pgvector:pg16` | 5432 | volume `pgdata` ; base `tujya` (comptes, tables des médicaments, pgvector) et base `mlflow` |
+| `mlflow` | construite depuis [`infra/docker/mlflow/Dockerfile`](../infra/docker/mlflow/Dockerfile) (MLflow 3.17.2 + psycopg2) | 5000 | stockage du tracking dans PostgreSQL, artefacts dans le volume `mlartifacts`, Model Registry |
+| `pharma-init` | image du backend | aucun | ponctuel : `python -m app.pharma_loader` reconstruit les tables des médicaments depuis `config/` et `data/tujya/`, puis s'arrête ; le backend l'attend |
+| `rag-init` | image du backend | aucun | ponctuel : `python -m module2_ai_engineering.rag.index --pull` télécharge les modèles Ollama s'ils manquent, puis indexe `data/rag/corpus` dans la table `rag_chunks` (idempotent ; [rag.md](../module2_ai_engineering/docs/rag.md)) ; le backend ne l'attend pas |
+| `backend` | construite depuis [`app/backend/Dockerfile`](../app/backend/Dockerfile) (Python 3.12, FastAPI, ONNX Runtime CPU, LangGraph) | 8000 | l'API et l'agent (`/api/chat`, parle à `ollama`) ; Swagger sur `/docs` |
+| `frontend` | construite depuis [`app/frontend/Dockerfile`](../app/frontend/Dockerfile) (build Node 22, nginx 1.27) | 8080 | le site React ; nginx transmet `/api`, `/docs`, `/openapi.json` à `backend` ([`nginx.conf`](../app/frontend/nginx.conf)) |
+| `ollama` | `ollama/ollama:0.40.12` | 11434 | LLM local (`qwen2.5:3b`) et embeddings (`bge-m3`) ; modèles dans le volume `ollama` ; GPU NVIDIA réservé (D57) |
 
-**Before the first start** (the images contain no data and no model, D55):
+L'image de l'API se construit depuis la racine du dépôt (elle importe les paquets des
+modules) avec une liste blanche, [`app/backend/Dockerfile.dockerignore`](../app/backend/Dockerfile.dockerignore) :
+seuls le code de l'API, `module1_vision_mlops/serving`, `module2_ai_engineering/{rag,agent,mcp_server}`
+et `bonus/toxicity/model.py` y entrent (contexte d'environ 200 Ko), dans la même disposition
+que le dépôt sous `/tujya` (D79).
 
-1. Data under `data/` (DVC, module1_vision_mlops/docs/dataset_c3pi.md, module2_ai_engineering/docs/interactions.md): `dvc pull` from
-   the default remote (section "DVC remote" below) gives `data/tujya/*.csv` (medicine
-   tables), `data/vision/c3pi/images/` (demo gallery) and `data/rag/corpus` (RAG index);
-   `data/parquet/` (SynergyRx tables, used by the synergy bonus) is tracked by DVC too.
-2. Models: `cd module1_vision_mlops/training && python -m tujya_vision.publish` fills `models/` from the MLflow
-   Model Registry (MLflow must be running: `docker compose up -d mlflow` first).
+**Avant le premier démarrage** (les images ne contiennent ni données ni modèles, D55) :
 
-These folders are mounted **read-only** into the backend (`/tujya/config`,
-`/tujya/data/...`, `/tujya/models`; the image keeps the repository layout under `/tujya`, so
-the default paths of `app/config.py` need no setting). Without
-models, `/api/scan` answers 503 and says how to publish them; without the CSV files,
-`pharma-init` fails and the backend does not start.
+1. Les données sous `data/` (DVC, [dataset_c3pi.md](../module1_vision_mlops/docs/dataset_c3pi.md),
+   [interactions.md](../module2_ai_engineering/docs/interactions.md)) : `dvc pull` depuis le
+   remote par défaut (section « Remote DVC » plus bas) donne `data/tujya/*.csv` (tables des
+   médicaments), `data/vision/c3pi/images/` (galerie de démonstration) et `data/rag/corpus`
+   (index RAG) ; `data/parquet/` (tables SynergyRx, utilisées par le bonus synergie) est
+   aussi suivi par DVC.
+2. Les modèles : `cd module1_vision_mlops/training && python -m tujya_vision.publish` remplit
+   `models/` depuis le Model Registry de MLflow (MLflow doit tourner :
+   `docker compose up -d mlflow` d'abord).
 
-Accounts: in Docker the accounts tables live in the same PostgreSQL database `tujya` (not in
-`app/backend/app.db`, which only the local development server uses). The first start creates the
-default administrator and the demo account (`user@gmail.com` / `user`); change the
-administrator password before the server is reachable by anyone else.
+Ces dossiers sont montés **en lecture seule** dans le backend (`/tujya/config`,
+`/tujya/data/...`, `/tujya/models` ; l'image garde la disposition du dépôt sous `/tujya`, donc
+les chemins par défaut de `app/config.py` n'ont besoin d'aucun réglage). Sans modèles,
+`/api/scan` répond 503 et dit comment les publier ; sans les fichiers CSV, `pharma-init`
+échoue et le backend ne démarre pas.
 
-Images are always built locally by `docker compose up -d --build`. The CD workflow builds and
-smoke-tests the same images on GitHub but no longer publishes them (D70, docs/cd.md).
+Comptes : dans Docker, les tables des comptes sont dans la même base PostgreSQL `tujya` (pas
+dans `app/backend/app.db`, qui ne sert qu'au serveur de développement local). Le premier
+démarrage crée l'administrateur par défaut et le compte de démonstration (`user@gmail.com` /
+`user`) ; changer le mot de passe administrateur avant que quiconque d'autre puisse joindre
+le serveur.
 
-`infra/docker/postgres/init/01-init.sql` runs once, on an empty volume: it enables `vector` in
-the `tujya` database and creates the `mlflow` database. Credentials are development
-defaults (`tujya` / `tujya`); override `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`,
-`POSTGRES_PORT`, `MLFLOW_PORT`, `BACKEND_PORT`, `WEB_PORT` in the shell or a compose `.env`
-file.
+Les images sont toujours construites en local par `docker compose up -d --build`. Le workflow
+de CD construit et teste les mêmes images sur GitHub mais ne les publie plus (D70,
+[cd.md](cd.md)).
 
-## Strictly local usage (since 2026-10-28)
+[`infra/docker/postgres/init/01-init.sql`](../infra/docker/postgres/init/01-init.sql) s'exécute
+une fois, sur un volume vide : il active `vector` dans la base `tujya` et crée la base
+`mlflow`. Les identifiants sont des valeurs de développement (`tujya` / `tujya`) ; on peut
+surcharger `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`,
+`MLFLOW_PORT`, `BACKEND_PORT`, `WEB_PORT` dans le shell ou un fichier `.env` de compose.
 
-The project runs **only on this PC** (rule in CLAUDE.md): no public deployment, no tunnel
-(ngrok, Cloudflare Tunnel...), no published Docker image of the app (docs/cd.md), and no
-service bound to `0.0.0.0` on the host. The GitHub repository stays public (code and docs
-only).
+## Usage strictement local (depuis le 2026-10-28)
 
-| What | Where it listens | How |
+Le projet tourne **uniquement sur ce PC** (règle de CLAUDE.md) : pas de déploiement public,
+pas de tunnel (ngrok, Cloudflare Tunnel...), pas d'image Docker de l'application publiée
+([cd.md](cd.md)), et aucun service lié à `0.0.0.0` sur la machine. Le dépôt GitHub reste
+public (code et documentation seulement).
+
+| Quoi | Écoute sur | Comment |
 |---|---|---|
-| postgres, mlflow, backend, ollama, frontend (Docker) | `127.0.0.1:<port>` | `ports: ["127.0.0.1:${WEB_PORT:-8080}:80"]` etc. in `docker-compose.yml` |
-| Vite dev server / `vite preview` | `127.0.0.1:5173` / `127.0.0.1:4173` | `server.host` and `preview.host` in `app/frontend/vite.config.ts` |
-| uvicorn (local development) | `127.0.0.1:8000` | `uvicorn app.main:app --host 127.0.0.1 --reload` (also uvicorn's default) |
-| MCP server, HTTP transport | `127.0.0.1:8765` | `--host` only accepts `127.0.0.1`, `localhost` or `::1` (`module2_ai_engineering/mcp_server/server.py`, tested) |
-| MLflow UI | `127.0.0.1:5000` | the compose port; never run `mlflow ui --host 0.0.0.0` on the host |
+| postgres, mlflow, backend, ollama, frontend (Docker) | `127.0.0.1:<port>` | `ports: ["127.0.0.1:${WEB_PORT:-8080}:80"]` etc. dans `docker-compose.yml` |
+| serveur Vite / `vite preview` | `127.0.0.1:5173` / `127.0.0.1:4173` | `server.host` et `preview.host` dans [`app/frontend/vite.config.ts`](../app/frontend/vite.config.ts) |
+| uvicorn (développement local) | `127.0.0.1:8000` | `uvicorn app.main:app --host 127.0.0.1 --reload` (aussi le défaut d'uvicorn) |
+| serveur MCP, transport HTTP | `127.0.0.1:8765` | `--host` n'accepte que `127.0.0.1`, `localhost` ou `::1` ([`mcp_server/server.py`](../module2_ai_engineering/mcp_server/server.py), testé) |
+| interface MLflow | `127.0.0.1:5000` | le port de compose ; ne jamais lancer `mlflow ui --host 0.0.0.0` sur la machine |
 
-Inside the containers, uvicorn, MLflow and nginx still listen on `0.0.0.0`: that is the
-container's private network interface, reachable only through Docker's port forwarding,
-which itself only listens on the host's loopback.
+Dans les conteneurs, uvicorn, MLflow et nginx écoutent toujours sur `0.0.0.0` : c'est
+l'interface réseau privée du conteneur, joignable seulement par la redirection de port de
+Docker, qui n'écoute elle-même que sur la boucle locale de la machine.
 
-Check (2026-10-28, after `docker compose up -d --build`):
+Vérification (2026-10-28, après `docker compose up -d --build`) :
 
 ```
 $ docker compose ps --format "table {{.Name}}	{{.Ports}}"
@@ -78,7 +90,7 @@ tujya-mlflow-1     127.0.0.1:5000->5000/tcp
 tujya-ollama-1     127.0.0.1:11434->11434/tcp
 tujya-postgres-1   127.0.0.1:5432->5432/tcp
 
-$ netstat -ano | findstr LISTENING     (the five ports)
+$ netstat -ano | findstr LISTENING     (les cinq ports)
   TCP    127.0.0.1:5000         0.0.0.0:0              LISTENING
   TCP    127.0.0.1:5432         0.0.0.0:0              LISTENING
   TCP    127.0.0.1:8000         0.0.0.0:0              LISTENING
@@ -86,116 +98,128 @@ $ netstat -ano | findstr LISTENING     (the five ports)
   TCP    127.0.0.1:11434        0.0.0.0:0              LISTENING
 ```
 
-No `0.0.0.0:<port>` or `[::]:<port>` line any more (before: `0.0.0.0:8080->80/tcp,
-[::]:8080->80/tcp`). `http://localhost:8080`, `/docs`, `/api/health` and MLflow `/health`
-answer 200; the same ports on the PC's LAN and WSL addresses (192.168.1.6, 172.x) refuse
-the connection. The Vite dev server listens on `127.0.0.1:5173` only.
+Plus aucune ligne `0.0.0.0:<port>` ni `[::]:<port>` (avant : `0.0.0.0:8080->80/tcp,
+[::]:8080->80/tcp`). `http://localhost:8080`, `/docs`, `/api/health` et `/health` de MLflow
+répondent 200 ; les mêmes ports sur les adresses réseau local et WSL du PC (192.168.1.6,
+172.x) refusent la connexion. Le serveur Vite n'écoute que sur `127.0.0.1:5173`.
 
-**Use `127.0.0.1`, not `localhost`, in connection strings of host-side tools** (D72). On this
-PC `localhost` resolves to `::1` first, and Docker now listens on IPv4 only: browsers and
-curl fall back to `127.0.0.1` at once, but libpq (psycopg) waited **65 to 100 s** per
-connection (`mcp_server/smoke.py` took 2 min 34 s instead of 5 s). Defaults and docs now
-use `127.0.0.1` (`SYNERGYRX_OLLAMA_URL`, `MLFLOW_TRACKING_URI`, the PostgreSQL URLs);
-`http://localhost:8080` in a browser is fine.
+**Utiliser `127.0.0.1`, pas `localhost`, dans les chaînes de connexion des outils lancés
+sur la machine** (D72). Sur ce PC, `localhost` se résout d'abord en `::1`, et Docker n'écoute
+plus qu'en IPv4 : navigateurs et curl repassent aussitôt en `127.0.0.1`, mais libpq (psycopg)
+attendait **65 à 100 s** par connexion (`mcp_server/smoke.py` prenait 2 min 34 s au lieu de
+5 s). Les valeurs par défaut et la documentation utilisent donc `127.0.0.1`
+(`SYNERGYRX_OLLAMA_URL`, `MLFLOW_TRACKING_URI`, les URL PostgreSQL) ;
+`http://localhost:8080` dans un navigateur ne pose aucun problème.
 
-## DVC remote (since 2026-10-28)
+## Remote DVC (depuis le 2026-10-28)
 
-Default remote `localstore`: a folder on this PC, outside the repository (D71).
+Remote par défaut `localstore` : un dossier de ce PC, hors du dépôt (D71).
 
 ```bash
-dvc remote add -d localstore C:\Users\msi\dvc-storage\tujya   # already in .dvc/config
-dvc push            # cache -> remote (15,306 files, 5.0 GB on 2026-10-28)
-dvc pull            # remote -> cache -> workspace (fresh clone)
-dvc status -c       # "Cache and remote 'localstore' are in sync."
+dvc remote add -d localstore C:\Users\msi\dvc-storage\tujya   # déjà dans .dvc/config
+dvc push            # cache -> remote (15 306 fichiers, 5,0 Go le 2026-10-28)
+dvc pull            # remote -> cache -> espace de travail (nouveau clone)
+dvc status -c       # « Cache and remote 'localstore' are in sync. »
 dvc remote list     # localstore  C:\Users\msi\dvc-storage\tujya  (default)
 ```
 
-DVC is installed in the vision venv (`module1_vision_mlops/training/.venv/Scripts/dvc.exe`, DVC 3.67.1). What is
-tracked: `data/vision/c3pi/images` and `metadata` (`dvc add`), `data/tujya`,
-`data/rag/raw`, `data/rag/interim`, `data/rag/manifest.json` (`dvc add`), and the outputs
-of the `prepare` (labels, YOLO datasets) and `rag_corpus` (chunks) stages of `dvc.yaml`.
+DVC est installé dans le venv d'entraînement
+(`module1_vision_mlops/training/.venv/Scripts/dvc.exe`, DVC 3.67.1). Ce qui est suivi :
+`data/vision/c3pi/images` et `metadata` (`dvc add`), `data/tujya`, `data/rag/raw`,
+`data/rag/interim`, `data/rag/manifest.json`, `data/tox21`, `data/parquet` (`dvc add`), et les
+sorties des étapes `prepare` (étiquettes, jeux YOLO) et `rag_corpus` (chunks) de
+[`dvc.yaml`](../dvc.yaml).
 
-The remote holds C3PI (ODbL, research use), DDInter (CC BY-NC-SA, no redistribution beyond
-its terms) and openFDA/PubMed data: it must stay private. The folder is not a backup: copy
-it to an external disk if the PC is the only copy.
+Le remote contient des données C3PI (ODbL, usage de recherche), DDInter (CC BY-NC-SA, aucune
+redistribution hors de ses conditions) et openFDA/PubMed : il doit rester privé. Ce dossier
+n'est pas une sauvegarde : le copier sur un disque externe si le PC en est la seule copie.
 
-**Switching later to Google Drive or S3** (commands only, not configured):
+**Passer plus tard à Google Drive ou S3** (commandes seulement, rien n'est configuré) :
 
 ```bash
-# Google Drive (pip install "dvc[gdrive]"): folder ID from the folder's URL
-dvc remote add gdrive gdrive://<folder-id>
+# Google Drive (pip install "dvc[gdrive]") : identifiant pris dans l'URL du dossier
+dvc remote add gdrive gdrive://<id-du-dossier>
 dvc remote default gdrive
-dvc push                                                         # opens a browser for OAuth once
+dvc push                                                         # ouvre un navigateur pour OAuth, une fois
 
-# Amazon S3 (pip install "dvc[s3]"): credentials from the AWS CLI profile, never in git
+# Amazon S3 (pip install "dvc[s3]") : identifiants du profil AWS CLI, jamais dans git
 dvc remote add s3store s3://<bucket>/tujya
 dvc remote modify s3store region eu-west-3
-dvc remote modify --local s3store profile <aws-profile>          # .dvc/config.local, git-ignored
+dvc remote modify --local s3store profile <profil-aws>           # .dvc/config.local, ignoré par git
 dvc remote default s3store
 dvc push
 ```
 
-Credentials always go in `.dvc/config.local` (`--local`, git-ignored), never in
-`.dvc/config`. Keep the data private on either service (licences above).
+Les identifiants vont toujours dans `.dvc/config.local` (`--local`, ignoré par git), jamais
+dans `.dvc/config`. Garder les données privées sur l'un ou l'autre service (licences plus
+haut).
 
-## Smoke test (2026-10-28)
+## Test de fumée (2026-10-28)
 
-After `docker compose up -d --build`, through nginx on port 8080: `/api/health` 200,
-`/docs` 200 (Swagger UI), `/openapi.json` 18 paths, `/api/docs` 307 to `/docs`,
-`/api/public/summary` 200, `/api/scan` 401 without sign-in; signed in as the demo user,
-`/api/scan` on a 2560 x 1920 C3PI test photo of fluconazole: one pill, top-1 class 9
-FLUCONAZOLE 100MG TABLETS, probability 0.996, 59 ms, models detector v1 / classifier v2;
-`/api/interactions` fluconazole + citalopram: Major (DDInter); demo gallery 8 photos. The
-Playwright script (`BASE=http://localhost:8080 node scripts/screenshots.mjs`) runs the whole
-browser flow against the containers.
+Après `docker compose up -d --build`, par nginx sur le port 8080 : `/api/health` 200, `/docs`
+200 (Swagger UI), `/openapi.json` 18 chemins, `/api/docs` 307 vers `/docs`,
+`/api/public/summary` 200, `/api/scan` 401 sans connexion ; connecté avec le compte de
+démonstration, `/api/scan` sur une photo de test C3PI de 2560 x 1920 de fluconazole : un
+comprimé, classe top-1 9 FLUCONAZOLE 100MG TABLETS, probabilité 0,996, 59 ms, modèles
+détecteur v1 / classifieur v2 ; `/api/interactions` fluconazole + citalopram : Major
+(DDInter) ; galerie de démonstration de 8 photos. Le script Playwright
+(`BASE=http://localhost:8080 node scripts/screenshots.mjs`, depuis `app/frontend`) rejoue tout
+le parcours du navigateur sur les conteneurs. Le même contrôle sur la copie restructurée est
+dans [journal/SESSION_REPORT_5.md](journal/SESSION_REPORT_5.md).
 
-## Medicine tables
+## Tables des médicaments
 
-Defined in `app/backend/app/pharma.py` with their own SQLAlchemy base, so they never touch the
-accounts database `app/backend/app.db`:
+Définies dans [`app/backend/app/pharma.py`](../app/backend/app/pharma.py) avec leur propre
+base SQLAlchemy, pour ne jamais toucher la base des comptes `app/backend/app.db` :
 
 ```
-sources (name, title, url, license, citation)          one row per data source, used as citation
+sources (name, title, url, license, citation)          une ligne par source, sert de citation
 pills (class_id, class_key, ndc9, part, ndc11_list, name, labeled_by, imprint, color, shape, n_images)
-ingredients (name, rxcui, ddinter_id)                  RxNorm base ingredient, lower case
+ingredients (name, rxcui, ddinter_id)                  principe actif de base RxNorm, en minuscules
 pill_ingredients (pill_id, ingredient_id, source_id)   RxNav
 interactions (ingredient_a_id < ingredient_b_id, severity, description, source_id)   DDInter
 ```
 
-In Docker, `pharma-init` loads them on every start. By hand (full refresh, safe to rerun):
+Dans Docker, `pharma-init` les charge à chaque démarrage. À la main (rechargement complet,
+relançable sans risque) :
 
 ```bash
 cd app/backend
 python -m app.pharma_loader --database-url postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
 ```
 
-Without `--database-url` the loader uses `SYNERGYRX_PHARMA_DATABASE_URL`, default
-`sqlite:///data/tujya.db`. Result on 2026-10-28: 150 pills, 1,716 ingredients (82 from the
-pills, the rest are DDInter partners), 161 pill-ingredient links, 40,508 interactions.
-Tests: `app/backend/tests/test_pharma.py` (SQLite).
+Sans `--database-url`, le chargeur utilise `SYNERGYRX_PHARMA_DATABASE_URL`, par défaut
+`sqlite:///data/tujya.db`. Résultat du 2026-10-28 : 150 comprimés, 1 716 principes actifs
+(82 venant des comprimés, les autres sont des partenaires DDInter), 161 liens
+comprimé-principe actif, 40 508 interactions. Tests :
+[`app/backend/tests/test_pharma.py`](../app/backend/tests/test_pharma.py) (SQLite).
 
 ## MLflow
 
-Training scripts read `MLFLOW_TRACKING_URI` (default `http://127.0.0.1:5000`). The UI at
-http://localhost:5000 shows the `tujya-vision` experiment and the registered models
-`tujya-pill-classifier` and `tujya-pill-detector`.
+Les scripts d'entraînement lisent `MLFLOW_TRACKING_URI` (par défaut
+`http://127.0.0.1:5000`). L'interface sur http://localhost:5000 montre les expériences
+(`tujya-vision`, `tujya-rag`, `tujya-tox`, `tujya-synergy`) et les modèles enregistrés
+`tujya-pill-classifier`, `tujya-pill-detector` et `tujya-tox21`. Le tracking et les artefacts
+vivent dans les volumes `pgdata` et `mlartifacts` du projet compose.
 
-## Ollama (local LLM, Module 2)
+## Ollama (LLM local, module 2)
 
-Ollama is not installed on the host: it only runs as the `ollama` service (D57).
+Ollama n'est pas installé sur la machine : il ne tourne que comme service `ollama` (D57).
 
 ```bash
 docker compose up -d ollama
-docker compose exec ollama nvidia-smi            # the GPU is visible in the container
+docker compose exec ollama nvidia-smi            # le GPU est visible dans le conteneur
 docker compose logs ollama | grep "inference compute"   # library=CUDA ... total="4.0 GiB"
 docker compose exec ollama ollama pull qwen2.5:3b       # LLM (D58)
 docker compose exec ollama ollama pull bge-m3           # embeddings (D59)
-docker compose exec ollama ollama ps                    # what is loaded, GPU or CPU
+docker compose exec ollama ollama ps                    # ce qui est chargé, GPU ou CPU
 ```
 
-Without an NVIDIA GPU: `docker compose -f docker-compose.yml -f docker/ollama/cpu.yml up -d`
-(same service, no device reservation; answers are then several times slower).
+Sans GPU NVIDIA : `docker compose -f docker-compose.yml -f infra/docker/ollama/cpu.yml up -d`
+(même service, sans réservation de périphérique ; les réponses sont alors plusieurs fois plus
+lentes).
 
-Measured on 2026-10-28 (RTX 2050 4 GB, Docker Desktop + WSL2), short French question,
-temperature 0, model already loaded: **qwen2.5:3b 1.7 s** (76 tokens, 47 tok/s, 100 % GPU,
-2.2 GB); llama3.2:3b 3.2 s; gemma3:4b 12.1 s; qwen3:4b 90 s (thinking). Choice and table: D58.
+Mesuré le 2026-10-28 (RTX 2050 4 Go, Docker Desktop + WSL2), courte question en français,
+température 0, modèle déjà chargé : **qwen2.5:3b 1,7 s** (76 jetons, 47 jetons/s, 100 % GPU,
+2,2 Go) ; llama3.2:3b 3,2 s ; gemma3:4b 12,1 s ; qwen3:4b 90 s (raisonnement). Choix et
+tableau : D58.

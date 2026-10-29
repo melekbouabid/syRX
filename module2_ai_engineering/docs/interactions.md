@@ -1,19 +1,22 @@
-# Pill ingredients and interactions
+# Principes actifs des comprimés et interactions
 
-How each identification class gets its active ingredient(s), and how the interactions
-between those ingredients are built. Run on 2026-10-28.
+Comment chaque classe d'identification reçoit son ou ses principes actifs, et comment sont
+construites les interactions entre ces principes actifs. Exécuté le 2026-10-28. Code :
+[`corpus/ingredients.py`](../corpus/ingredients.py),
+[`corpus/interactions.py`](../corpus/interactions.py),
+[`corpus/__main__.py`](../corpus/__main__.py).
 
 ```
-config/pill_classes.csv (NDC11 list per class)
-  -> RxNav ndcstatus      NDC11 -> product RxCUI (also obsolete NDCs, via their history)
-  -> RxNav historystatus  RxCUI -> base ingredients (RxNorm IN), strengths dropped
-  -> data/tujya/pill_ingredients.csv  + ingredient columns in config/pill_classes.csv
-  -> DDInter 2.0 (14 ATC files, `python -m module2_ai_engineering.corpus ddinter`)
-  -> config/ingredient_aliases.csv (3 DDInter names that differ from RxNorm)
+config/pill_classes.csv (liste des NDC11 par classe)
+  -> RxNav ndcstatus      NDC11 -> RxCUI du produit (NDC obsolètes compris, par leur historique)
+  -> RxNav historystatus  RxCUI -> principes actifs de base (RxNorm IN), dosages retirés
+  -> data/tujya/pill_ingredients.csv  + colonnes de principes actifs dans config/pill_classes.csv
+  -> DDInter 2.0 (14 fichiers ATC, `python -m module2_ai_engineering.corpus ddinter`)
+  -> config/ingredient_aliases.csv (3 noms DDInter différents de RxNorm)
   -> data/tujya/interactions_between_classes.csv, data/tujya/interactions_with_any_drug.csv
 ```
 
-Commands (pipeline venv `data_pipeline/.venv`, from the repository root):
+Commandes (venv du pipeline `data_pipeline/.venv`, depuis la racine du dépôt) :
 
 ```bash
 python -m module2_ai_engineering.corpus --set http.require_contact_email=false ddinter
@@ -21,63 +24,66 @@ python -m module2_ai_engineering.corpus --set http.require_contact_email=false i
 python -m module2_ai_engineering.corpus interactions
 ```
 
-`http.require_contact_email=false` was used because no `.env` exists on this machine (same
-situation as D1); with `CONTACT_EMAIL` in `.env` the flag is not needed.
+`http.require_contact_email=false` a servi parce qu'aucun `.env` n'existait sur cette machine
+(même situation que D1) ; avec `CONTACT_EMAIL` dans `.env`, l'option est inutile.
 
-## Ingredients (source: RxNav / RxNorm, NLM)
+## Principes actifs (source : RxNav / RxNorm, NLM)
 
-- API: https://lhncbc.nlm.nih.gov/RxNav/APIs/ (`ndcstatus`, `rxcui/{id}/historystatus`,
-  `approximateTerm` as a fallback). Rate limited to 10 requests/s (NLM allows 20/s per IP).
-- The base ingredient (`baseName`, e.g. "cyclobenzaprine") is kept, not the salt
-  ("cyclobenzaprine hydrochloride"), because DDInter is keyed by the base name.
-- Strengths are present in the RxNav answer but are **never stored** (no doses in Tujya).
+- API : https://lhncbc.nlm.nih.gov/RxNav/APIs/ (`ndcstatus`, `rxcui/{id}/historystatus`,
+  `approximateTerm` en secours). Débit limité à 10 requêtes/s (la NLM autorise 20/s par IP).
+- Le principe actif de base (`baseName`, par exemple « cyclobenzaprine ») est gardé, pas le
+  sel (« cyclobenzaprine hydrochloride »), car DDInter est indexé par le nom de base.
+- Les dosages figurent dans la réponse de RxNav mais ne sont **jamais stockés** (aucune
+  dose dans Tujya).
 
-Result: **149 of 150 classes mapped through their NDCs, 82 distinct ingredients**, no class
-needed the name fallback. 11 classes are combination products (e.g. losartan +
-hydrochlorothiazide, glyburide + metformin, folic acid + vitamins B12 and B6). Divalproex and
-valproic acid both map to RxNorm "valproate".
+Résultat : **149 classes sur 150 associées par leurs NDC, 82 principes actifs distincts** ;
+aucune classe n'a eu besoin du secours par le nom. 11 classes sont des associations (par
+exemple losartan + hydrochlorothiazide, glyburide + metformine, acide folique + vitamines B12
+et B6). Le divalproex et l'acide valproïque correspondent tous deux au « valproate » de RxNorm.
 
-Not mapped: class 104, "FORMULA B PLUS TAB" (vitamins and minerals, NDC 00904-7929-60). RxNav
-knows the NDC only as "ALIEN" (from a non-RxNorm source) with no ingredient list. The class
-stays in the vision model; the app must say that no ingredient information is available.
+Non associée : la classe 104, « FORMULA B PLUS TAB » (vitamines et minéraux, NDC
+00904-7929-60). RxNav ne connaît ce NDC que comme « ALIEN » (source hors RxNorm), sans liste
+de principes actifs. La classe reste dans le modèle de vision ; l'application doit dire
+qu'aucune information sur les principes actifs n'est disponible.
 
-`data/tujya/pill_ingredients.csv` columns: class_id, class_key, ndc11, ndc_status
-(ACTIVE / OBSOLETE / ALIEN / UNKNOWN), product_rxcui, product_name (RxNorm name),
-ingredient_rxcui, ingredient (lower case RxNorm IN), method (`ndc` or `name`).
+Colonnes de `data/tujya/pill_ingredients.csv` : class_id, class_key, ndc11, ndc_status
+(ACTIVE / OBSOLETE / ALIEN / UNKNOWN), product_rxcui, product_name (nom RxNorm),
+ingredient_rxcui, ingredient (RxNorm IN en minuscules), method (`ndc` ou `name`).
 
-## Interactions (source: DDInter 2.0)
+## Interactions (source : DDInter 2.0)
 
-- Licence CC BY-NC-SA 4.0 (non-commercial, share-alike). Enabled for this academic project
-  by the `ddinter` step, which runs the existing connector with `enabled=true`,
-  `terms_acknowledged=true` and all 14 files. The shared `data_pipeline/config.yaml` keeps DDInter opt-in
-  for the SynergyRx `update` run (two existing tests pin that default). Not redistributed:
-  the tables stay under `data/`, git-ignored.
-- Citation: Tian Y, et al. DDInter 2.0: an enhanced drug interaction resource with expanded
+- Licence CC BY-NC-SA 4.0 (non commerciale, partage à l'identique). Activée pour ce projet
+  académique par l'étape `ddinter`, qui lance le connecteur existant du pipeline avec
+  `enabled=true`, `terms_acknowledged=true` et les 14 fichiers. Le
+  [`data_pipeline/config.yaml`](../../data_pipeline/config.yaml) partagé garde DDInter
+  désactivé par défaut pour l'exécution `update` de SynergyRx (deux tests existants fixent
+  ce défaut). Pas de redistribution : les tables restent sous `data/`, ignoré par git.
+- Citation : Tian Y, et al. DDInter 2.0: an enhanced drug interaction resource with expanded
   data coverage, new interaction types, and improved user interface. Nucleic Acids Res.
   2025;53(D1):D1356-62. doi:10.1093/nar/gkae726
-- The connector downloaded only 8 of the 14 ATC files by default (A, B, D, H, L, P, R, V).
-  The other six (C cardiovascular, G, J, M, N nervous system, S) are published at the same
-  address with the same date; the `ddinter` step requests all 14 (234,981 unique rows
-  instead of 160,235).
-- Name matching: case-insensitive, after three aliases in `config/ingredient_aliases.csv`
-  (valproate = Valproic acid, vitamin b12 = Cyanocobalamin, vitamin b6 = Pyridoxine).
-  **All 82 ingredients are found in DDInter.**
+- Par défaut, le connecteur ne téléchargeait que 8 des 14 fichiers ATC (A, B, D, H, L, P, R,
+  V). Les six autres (C cardiovasculaire, G, J, M, N système nerveux, S) sont publiés à la
+  même adresse et à la même date ; l'étape `ddinter` demande les 14 (234 981 lignes uniques
+  au lieu de 160 235).
+- Rapprochement des noms : sans tenir compte de la casse, après trois alias de
+  `config/ingredient_aliases.csv` (valproate = Valproic acid, vitamin b12 = Cyanocobalamin,
+  vitamin b6 = Pyridoxine). **Les 82 principes actifs sont tous trouvés dans DDInter.**
 
-| Table | Pairs | Major | Moderate | Minor | Unknown |
+| Table | Paires | Major | Moderate | Minor | Unknown |
 |---|---:|---:|---:|---:|---:|
-| `interactions_between_classes.csv` (both ingredients belong to the 150 classes) | 2,350 | 125 | 826 | 72 | 1,327 |
-| `interactions_with_any_drug.csv` (at least one does) | 40,508 | 4,124 | 20,352 | 1,446 | 14,586 |
+| `interactions_between_classes.csv` (les deux principes actifs appartiennent aux 150 classes) | 2 350 | 125 | 826 | 72 | 1 327 |
+| `interactions_with_any_drug.csv` (au moins l'un des deux) | 40 508 | 4 124 | 20 352 | 1 446 | 14 586 |
 
-Columns: ingredient_a, ingredient_b (alphabetical, so each pair appears once), pair
-("a + b"), severity (DDInter level: Major, Moderate, Minor, Unknown), description, conflict
-(DDInter lists the pair twice with different levels; the most severe is kept; 0 cases
-here), ddinter_id_a, ddinter_id_b, source, source_url, license.
+Colonnes : ingredient_a, ingredient_b (ordre alphabétique, chaque paire n'apparaît qu'une
+fois), pair (« a + b »), severity (niveau DDInter : Major, Moderate, Minor, Unknown),
+description, conflict (DDInter liste la paire deux fois avec des niveaux différents ; le plus
+grave est gardé ; 0 cas ici), ddinter_id_a, ddinter_id_b, source, source_url, license.
 
-**About `description`.** DDInter's bulk files contain only the two drugs and the level; the
-mechanism and management text is only on DDInter's web pages, which this project does not
-scrape. The description therefore only restates what DDInter says ("DDInter 2.0 lists an
-interaction between fluconazole and warfarin with severity Major."). Explanations will come
-from the RAG corpus (openFDA labels), always with their citation. "Unknown" means DDInter
-records an interaction whose severity it does not grade; it must never be shown as "no
-interaction". A pair absent from the table is "no known interaction in this database",
-never "safe".
+**À propos de `description`.** Les fichiers en bloc de DDInter ne contiennent que les deux
+médicaments et le niveau ; le mécanisme et la conduite à tenir ne sont que sur les pages web
+de DDInter, que ce projet ne moissonne pas. La description reprend donc seulement ce que dit
+DDInter (« DDInter 2.0 lists an interaction between fluconazole and warfarin with severity
+Major. »). Les explications viennent du corpus RAG (notices openFDA), toujours avec leur
+citation. « Unknown » signifie que DDInter enregistre une interaction sans en noter la
+gravité ; elle ne doit jamais être présentée comme « pas d'interaction ». Une paire absente
+de la table donne « aucune interaction connue dans cette base de données », jamais « sûr ».

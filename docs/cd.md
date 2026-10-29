@@ -1,70 +1,81 @@
-# Continuous delivery without publishing (GitHub Actions)
+# Livraison continue sans publication (GitHub Actions)
 
-Tujya runs **only on the owner's PC** (CLAUDE.md, D69): no public deployment and no
-published image of the app. The GitHub repository stays public (code and docs only), which
-keeps GitHub Actions free. Since 2026-10-28 (D70) the CD workflow therefore **builds and
-smoke-tests** the images on every green push to `main`, but **does not push them** anywhere.
+Tujya ne tourne **que sur le PC du propriétaire** (CLAUDE.md, D69) : aucun déploiement
+public et aucune image de l'application publiée. Le dépôt GitHub reste public (code et
+documentation seulement), ce qui garde GitHub Actions gratuit. Depuis le 2026-10-28 (D70),
+le workflow de CD **construit et teste** donc les images à chaque push vert sur `main`, mais
+**ne les envoie** nulle part.
 
-Two workflows in `.github/workflows/`:
+Deux workflows dans [`.github/workflows/`](../.github/workflows/) :
 
-| Workflow | When | What |
+| Workflow | Quand | Quoi |
 |---|---|---|
-| `ci.yml` | every push and pull request | lint and unit tests of the pipeline, backend and vision packages; frontend type check and build (unchanged) |
-| `cd.yml` | when `ci` **succeeds on a push to `main`** (`workflow_run`), or started by hand | builds the backend and frontend images of the commit CI tested and smoke-tests them; **no push** |
+| [`ci.yml`](../.github/workflows/ci.yml) | chaque push et pull request | lint et tests unitaires de chaque paquet Python, un job par dossier : `pipeline` (data_pipeline, avec mypy), `backend` (app/backend), `module1`, `module2` (avec un service PostgreSQL + pgvector), `bonus` ; typage et build du site (`frontend`) |
+| [`cd.yml`](../.github/workflows/cd.yml) | quand `ci` **réussit sur un push vers `main`** (`workflow_run`), ou lancé à la main | construit les images du backend et du frontend du commit testé par la CI et les teste ; **aucun envoi** |
 
-How `cd.yml` works, per image (job `images`, a matrix of two jobs):
+Fonctionnement de `cd.yml`, par image (job `images`, une matrice de deux jobs) :
 
-1. checks out `workflow_run.head_sha`, the exact commit that passed CI;
-2. builds the image with Buildx into the runner's local Docker (`load: true`,
-   `push: false`; layer cache in the GitHub Actions cache);
-3. smoke test, with the container port published on the runner's `127.0.0.1` only: the
-   backend must answer `/api/health`, serve `/docs` and list `/api/scan` and `/api/chat` in
-   `/openapi.json` (accounts in a throw-away SQLite file, no data mounted); the frontend
-   must serve the app and its `/scan` route;
-4. writes a summary ("Built and smoke-tested ... Not pushed") to the run page.
+1. récupère `workflow_run.head_sha`, le commit exact qui a passé la CI ;
+2. construit l'image avec Buildx dans le Docker local du runner (`load: true`,
+   `push: false` ; cache des couches dans le cache de GitHub Actions). Le backend se construit
+   depuis la racine du dépôt avec `app/backend/Dockerfile` (il importe les paquets des
+   modules ; liste blanche `app/backend/Dockerfile.dockerignore`), le frontend depuis
+   `app/frontend` ;
+3. test de fumée, avec le port du conteneur publié seulement sur le `127.0.0.1` du runner :
+   le backend doit répondre à `/api/health`, servir `/docs` et lister `/api/scan` et
+   `/api/chat` dans `/openapi.json` (comptes dans un fichier SQLite jetable, aucune donnée
+   montée) ; le frontend doit servir le site et sa route `/scan` ;
+4. écrit un résumé (« Built and smoke-tested ... Not pushed ») sur la page de l'exécution.
 
-The workflow has `permissions: contents: read` only: on a push it cannot write packages
-at all. A CI failure means no CD job.
+Le workflow n'a que `permissions: contents: read` : sur un push, il ne peut pas écrire de
+paquets du tout. Un échec de la CI signifie aucun job de CD.
 
-## Manual opt-in to push (off by default)
+## Envoi manuel, sur demande explicite (désactivé par défaut)
 
-The old behaviour (push to GitHub Container Registry) is kept as a second job, `publish`,
-that only runs when the workflow is **started by hand with `push_images` ticked**. It is the
-only job with `packages: write`. Do not use it while the app must stay local (CLAUDE.md).
+L'ancien comportement (envoi sur GitHub Container Registry) est gardé comme second job,
+`publish`, qui ne s'exécute que si le workflow est **lancé à la main avec `push_images`
+coché**. C'est le seul job avec `packages: write`. Ne pas l'utiliser tant que l'application
+doit rester locale (CLAUDE.md).
 
 ```bash
-gh workflow run cd                         # build + smoke test only (push_images=false)
-gh workflow run cd -f push_images=true     # opt-in: also push ghcr.io/<owner>/tujya-*:latest and :sha-<commit>
+gh workflow run cd                         # construction + test seulement (push_images=false)
+gh workflow run cd -f push_images=true     # sur demande : envoie aussi ghcr.io/<owner>/tujya-*:latest et :sha-<commit>
 ```
 
-## Images published before 2026-10-28
+## Images publiées avant le 2026-10-28
 
-Until D70, every green push published `ghcr.io/melekbouabid/tujya-backend` and
-`ghcr.io/melekbouabid/tujya-frontend` (tags `latest` and `sha-<commit>`, private packages).
-They contain code only (no data, no model, no secret), but they should be deleted. The
-local `gh` login has no `delete:packages` scope (`gh api -X DELETE
-user/packages/container/tujya-backend` answers 403), so this is a manual step:
+Jusqu'à D70, chaque push vert publiait `ghcr.io/melekbouabid/tujya-backend` et
+`ghcr.io/melekbouabid/tujya-frontend` (étiquettes `latest` et `sha-<commit>`, paquets
+privés). Elles ne contiennent que du code (ni données, ni modèle, ni secret), mais elles
+devraient être supprimées. La connexion `gh` locale n'a pas le droit `delete:packages`
+(`gh api -X DELETE user/packages/container/tujya-backend` répond 403) : c'est donc une étape
+manuelle.
 
-- **On the web**: github.com, your profile, **Packages** tab, `tujya-backend`, **Package
-  settings** (bottom right), **Danger zone**, **Delete this package**, type the name to
-  confirm. Same for `tujya-frontend`.
-- **Or with gh** (asks for the scopes in the browser once):
+- **Sur le web** : github.com, votre profil, onglet **Packages**, `tujya-backend`,
+  **Package settings** (en bas à droite), **Danger zone**, **Delete this package**, taper le
+  nom pour confirmer. Pareil pour `tujya-frontend`.
+- **Ou avec gh** (demande les droits dans le navigateur une fois) :
 
   ```bash
   gh auth refresh -h github.com -s read:packages,delete:packages
   gh api 'user/packages?package_type=container' --jq '.[].name'  # tujya-backend, tujya-frontend
   gh api -X DELETE user/packages/container/tujya-backend
   gh api -X DELETE user/packages/container/tujya-frontend
-  gh auth refresh -h github.com -r read:packages,delete:packages  # drop the scopes again
+  gh auth refresh -h github.com -r read:packages,delete:packages  # retirer de nouveau les droits
   ```
 
-## Check a run
+## Vérifier une exécution
 
 ```bash
-gh run list --workflow ci --limit 3        # CI status
-gh run list --workflow cd --limit 3        # CD status (build + smoke test)
-gh run view <run id>                       # jobs; "publish" shows as skipped
-gh run view <run id> --log-failed          # what failed
+gh run list --workflow ci --limit 3        # état de la CI
+gh run list --workflow cd --limit 3        # état de la CD (construction + test)
+gh run view <id d'exécution>               # jobs ; « publish » apparaît comme ignoré
+gh run view <id d'exécution> --log-failed  # ce qui a échoué
 ```
 
-or on GitHub: the Actions tab (workflows "ci" and "cd"); the CD run summary says "Not pushed".
+ou sur GitHub : l'onglet Actions (workflows « ci » et « cd ») ; le résumé de la CD indique
+« Not pushed ».
+
+Dans la copie locale `tujia2`, rien n'est envoyé sur GitHub : les workflows y sont validés
+(YAML) et leurs commandes rejouées en local (rapport
+[journal/SESSION_REPORT_5.md](journal/SESSION_REPORT_5.md)).

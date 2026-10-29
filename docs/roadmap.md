@@ -1,96 +1,97 @@
-# Tujya roadmap
+# Feuille de route de Tujya
 
-Steps in order. Tick a box when it is done. Context and rules: [CLAUDE.md](../CLAUDE.md).
-The professor requirements are the "Exigences des modules" checklist in the README.
+Étapes dans l'ordre. Cocher une case quand l'étape est faite. Contexte et règles :
+[CLAUDE.md](../CLAUDE.md). Les exigences du professeur sont les tableaux « Exigences des
+modules » du [README](../README.md#exigences-des-modules).
 
-## Already done (from SynergyRx)
-- [x] Data pipeline `data_pipeline/src/synergyrx_data` (14 connectors incl. DDInter and PubMed, 270 tests)
-- [x] FastAPI backend: accounts, sessions, admin, drug and cell-line catalog
-- [x] React + Vite frontend shell branded Tujya (mock predictions)
-- [x] Planning of the new direction (two modules, scope, tech choices)
+## Déjà fait (hérité de SynergyRx)
+- [x] Pipeline de données `data_pipeline/src/synergyrx_data` (14 connecteurs dont DDInter et PubMed, 270 tests)
+- [x] Backend FastAPI : comptes, sessions, administration, catalogue des médicaments et des lignées
+- [x] Ébauche de frontend React + Vite à l'image de Tujya (prédictions factices)
+- [x] Planification de la nouvelle orientation (deux modules, périmètre, choix techniques)
 
-## 0. Git and project rules
-- [x] First commit and push to https://github.com/melekbouabid/tujia-.git (9398f0c)
-- [x] README with the module requirements, data sources and progress journal
-- [x] Mandatory session rules in CLAUDE.md
-- [ ] Change the default admin password (admin@gmail.com / admin)
+## 0. Git et règles du projet
+- [x] Premier commit et push vers https://github.com/melekbouabid/tujia-.git (9398f0c)
+- [x] README avec les exigences des modules, les sources de données et le journal de progression
+- [x] Règles obligatoires des sessions dans CLAUDE.md
+- [ ] Changer le mot de passe administrateur par défaut (admin@gmail.com / admin)
 
-## 1. Pill data (C3PI, no personal photos)
-- [x] Explore the C3PI sample and the full archive layout (module1_vision_mlops/docs/dataset_c3pi.md)
-- [x] `config/pill_classes.csv`: 150 classes with the most consumer images (D32)
-- [x] Download the images of these classes only (4.8 GB, SHA-1 checked)
-- [x] Train / val / test split with no photo in two splits (`config/splits/`)
-- [x] DVC set up; `data/vision/c3pi` images and metadata tracked (local cache)
-- [x] DVC remote configured and pushed (local folder outside the repo, D71; fresh-clone `dvc pull` checked)
-- [x] Each class mapped to its active ingredient(s) (RxNav, 149/150)
-- [x] DDInter enabled; interactions for these ingredients in a clean table (module2_ai_engineering/docs/interactions.md)
+## 1. Données des comprimés (C3PI, aucune photo personnelle)
+- [x] Explorer l'échantillon C3PI et l'organisation complète de l'archive ([dataset_c3pi.md](../module1_vision_mlops/docs/dataset_c3pi.md))
+- [x] `config/pill_classes.csv` : les 150 classes ayant le plus d'images « consumer » (D32)
+- [x] Télécharger les images de ces classes seulement (4,8 Go, SHA-1 vérifié)
+- [x] Split entraînement / validation / test sans photo dans deux splits (`config/splits/`)
+- [x] DVC en place ; images et métadonnées de `data/vision/c3pi` suivies (cache local)
+- [x] Remote DVC configuré et alimenté (dossier local hors du dépôt, D71 ; `dvc pull` vérifié sur un clone neuf)
+- [x] Chaque classe reliée à ses principes actifs (RxNav, 149/150)
+- [x] DDInter activé ; interactions entre ces principes actifs dans une table propre ([interactions.md](../module2_ai_engineering/docs/interactions.md))
 
-## 2. Vision model
-- [x] Hardware checked, `module1_vision_mlops/training/` package with its own venv (RTX 2050, CUDA 13.0)
-- [x] Identification: classifier trained by transfer learning (YOLO11s-cls, test top-1 93.5 %)
-- [x] Detection: pill bounding boxes (automatic labels, D38; YOLO11n, test mAP50 0.972)
-- [x] MLflow runs (params, metrics, artefacts)
-- [x] Best model registered in the MLflow Model Registry
-- [x] ONNX export, inference with ONNX Runtime, outputs match PyTorch
-- [x] Measure top-1 / top-5 (identification) and mAP (detection)
-- [ ] Compare with ePillID on its own split and metrics (module1_vision_mlops/docs/vision.md)
-- [ ] Hand-check the test boxes; second labelling pass with the trained detector
+## 2. Modèles de vision
+- [x] Matériel vérifié, projet `module1_vision_mlops/training/` avec son propre venv (RTX 2050, CUDA 13.0)
+- [x] Identification : classifieur entraîné par transfer learning (YOLO11s-cls, top-1 test 93,5 %)
+- [x] Détection : boîtes englobantes des comprimés (étiquettes automatiques, D38 ; YOLO11n, mAP50 test 0,972)
+- [x] Runs MLflow (paramètres, métriques, artefacts)
+- [x] Meilleur modèle enregistré dans le Model Registry de MLflow
+- [x] Export ONNX, inférence avec ONNX Runtime, sorties identiques à PyTorch
+- [x] Mesurer top-1 / top-5 (identification) et mAP (détection)
+- [ ] Comparer avec ePillID sur son propre split et ses métriques ([vision.md](../module1_vision_mlops/docs/vision.md))
+- [ ] Vérifier à la main les boîtes de test ; second passage d'étiquetage avec le détecteur entraîné
 
 ## 3. API
-- [x] SQL schema (pills, ingredients, pill_ingredients, interactions, sources) + loader
-- [x] Async `POST /api/scan` (image -> boxes, top-5, confidence; confirm below 0.85, docs/api.md)
-- [x] `python -m tujya_vision.publish`: registered models -> `models/` for the API
-- [x] Async `POST /api/interactions` (DDInter severity, description, source; never "safe")
-- [x] `GET /api/pills?q=` search of the 150 classes (manual confirmation)
-- [x] Swagger at `/docs` and schema at `/openapi.json` (`/api/docs` redirects, D44)
-- [x] Pydantic schemas for scan and interactions
-- [x] Tests (fake ONNX models, SQLite medicine tables; 69 backend tests)
+- [x] Schéma SQL (pills, ingredients, pill_ingredients, interactions, sources) + chargeur
+- [x] `POST /api/scan` asynchrone (image -> boîtes, top-5, confiance ; confirmation sous 0,85, [api.md](api.md))
+- [x] `python -m tujya_vision.publish` : modèles enregistrés -> `models/` pour l'API
+- [x] `POST /api/interactions` asynchrone (sévérité DDInter, description, source ; jamais « sûr »)
+- [x] `GET /api/pills?q=` : recherche parmi les 150 classes (confirmation manuelle)
+- [x] Swagger sur `/docs` et schéma sur `/openapi.json` (`/api/docs` redirige, D44)
+- [x] Schémas Pydantic du scan et des interactions
+- [x] Tests (modèles ONNX factices, tables de médicaments en SQLite ; 69 tests backend à l'époque)
 
-## 4. RAG corpus
-- [x] openFDA drug labels for the 82 ingredients (connector `openfda_label`, D60)
-- [x] PubMed abstracts: up to 20 per ingredient on interactions and adverse effects (D61)
-- [x] Chunking with metadata (source, drug, section, URL, date, licence, retraction; module2_ai_engineering/docs/rag.md)
-- [x] bge-m3 embeddings in PostgreSQL + pgvector, BM25 hybrid search (RRF), filters (D59)
-- [x] Corpus versioned with DVC (`data/rag/*.dvc`, stage `rag_corpus`)
+## 4. Corpus RAG
+- [x] Notices openFDA des 82 principes actifs (connecteur `openfda_label`, D60)
+- [x] Résumés PubMed : jusqu'à 20 par principe actif sur les interactions et les effets indésirables (D61)
+- [x] Découpage avec métadonnées (source, médicament, section, URL, date, licence, rétractation ; [rag.md](../module2_ai_engineering/docs/rag.md))
+- [x] Embeddings bge-m3 dans PostgreSQL + pgvector, recherche hybride BM25 (RRF), filtres (D59)
+- [x] Corpus versionné par DVC (`data/rag/*.dvc`, étape `rag_corpus`)
 
 ## 5. Agent
-- [x] LangGraph graph: understand -> tools -> retrieve -> answer with citations -> safety check (module2_ai_engineering/docs/agent.md)
-- [x] Tools: identify_pills, check_interaction, get_drug_info, search_documents (extension point for more)
-- [x] Async `POST /api/chat` (JSON or SSE stream), answer + citations + tool calls; tests with a fake LLM
-- [x] Ollama local LLM: qwen2.5:3b in the `ollama` service, on the GPU (D57, D58)
-- [x] Benchmark set: 88 questions FR/EN built from the corpus, checked by hand (D66)
-- [x] Retrieval benchmark (Recall@k, MRR) and generation benchmark (safety, citations, RAGAS); MLflow `tujya-rag`
-- [x] MCP server exposing the same tools (official SDK, stdio + HTTP; module2_ai_engineering/docs/mcp.md)
+- [x] Graphe LangGraph : comprendre -> outils -> récupérer -> répondre avec citations -> contrôle de sécurité ([agent.md](../module2_ai_engineering/docs/agent.md))
+- [x] Outils : identify_pills, check_interaction, get_drug_info, search_documents (point d'extension pour d'autres)
+- [x] `POST /api/chat` asynchrone (JSON ou flux SSE), réponse + citations + appels d'outils ; tests avec un LLM factice
+- [x] LLM local Ollama : qwen2.5:3b dans le service `ollama`, sur le GPU (D57, D58)
+- [x] Jeu de benchmark : 88 questions FR/EN construites à partir du corpus, relues à la main (D66)
+- [x] Benchmark de la récupération (Recall@k, MRR) et de la génération (sécurité, citations, RAGAS) ; MLflow `tujya-rag`
+- [x] Serveur MCP exposant les mêmes outils (SDK officiel, stdio + HTTP ; [mcp.md](../module2_ai_engineering/docs/mcp.md))
 
-## 6. Web
-- [x] Scan page: upload + webcam (live predictions) + bounding boxes + demo gallery (D52)
-- [x] Result (interaction, severity, source) on the Scanner page; screenshots in docs/screenshots/
-- [x] Chat panel with streamed answer, clickable citations, tool calls (Scanner page)
-- [x] Disclaimer on the Scanner page, every interaction report, the chat panel and every answer
+## 6. Site web
+- [x] Page Scanner : upload + webcam (prédictions en direct) + boîtes + galerie de démonstration (D52)
+- [x] Résultat (interaction, sévérité, source) sur la page Scanner ; captures dans [screenshots/](screenshots/)
+- [x] Panneau de chat avec réponse diffusée, citations cliquables, appels d'outils (page Scanner)
+- [x] Avertissement sur la page Scanner, chaque rapport d'interactions, le panneau de chat et chaque réponse
 
-## 7. Delivery
-- [x] Docker Compose: postgres + pgvector, mlflow (docs/infra.md)
-- [x] Docker Compose: backend, frontend (nginx), one-shot loader; one command (docs/infra.md)
-- [x] Docker Compose: ollama service with the NVIDIA GPU (docs/infra.md)
-- [x] GitHub Actions CI (lint, tests, frontend build)
-- [x] GitHub Actions CD: images built and smoke-tested after a green CI, not pushed (D70, docs/cd.md)
-- [ ] Delete the two old packages on ghcr.io (manual: no `delete:packages` scope, docs/cd.md)
-- [x] Strictly local usage: every port on 127.0.0.1, checked with netstat (D69, docs/infra.md)
-- No deployment to a server, by design: the project runs only on this PC (D69)
-- [x] README updated for Tujya
-- [x] Report Module 1 (Vision & MLOps): module1_vision_mlops/docs/rapport_module1_vision_mlops.pdf
-- [x] Report Module 2 (AI Engineering): module2_ai_engineering/docs/rapport_module2_ai_engineering.pdf
-- [x] Demo script (docs/demo.md, rehearsed on the containers) and jury questions (docs/questions_jury.md)
-- [ ] Backup video of the demo (to record by hand)
+## 7. Livraison
+- [x] Docker Compose : postgres + pgvector, mlflow ([infra.md](infra.md))
+- [x] Docker Compose : backend, frontend (nginx), chargeur ponctuel ; une seule commande
+- [x] Docker Compose : service ollama avec le GPU NVIDIA
+- [x] CI GitHub Actions (lint, tests, build du site)
+- [x] CD GitHub Actions : images construites et testées après une CI verte, non publiées (D70, [cd.md](cd.md))
+- [ ] Supprimer les deux anciens paquets sur ghcr.io (manuel : pas de droit `delete:packages`, [cd.md](cd.md))
+- [x] Usage strictement local : chaque port sur 127.0.0.1, vérifié avec netstat (D69, [infra.md](infra.md))
+- Pas de déploiement sur un serveur, par choix : le projet ne tourne que sur ce PC (D69)
+- [x] README mis à jour pour Tujya
+- [x] Rapport du module 1 (Vision & MLOps) : [rapport_module1_vision_mlops.pdf](../module1_vision_mlops/docs/rapport_module1_vision_mlops.pdf)
+- [x] Rapport du module 2 (AI Engineering) : [rapport_module2_ai_engineering.pdf](../module2_ai_engineering/docs/rapport_module2_ai_engineering.pdf)
+- [x] Script de démonstration ([demo.md](demo.md), répété sur les conteneurs) et questions du jury ([questions_jury.md](questions_jury.md))
+- [ ] Vidéo de secours de la démonstration (à enregistrer à la main)
 
-## 8. Repository structure (local copy tujia2, 2026-10-29)
-- [x] Two top-level folders for the graded modules, each with a README mapping every requirement to its files (D79 to D82)
-- [x] Shared web app in `app/`, bonus in `bonus/`, SynergyRx pipeline in `data_pipeline/`, infrastructure in `infra/`
-- [x] Docs by module, lowercase names, journal and archive (docs/journal/SESSION_REPORT_5.md)
-- [ ] Bring the restructuring into the original repository (docs/journal/SESSION_REPORT_5.md, last section)
+## 8. Structure du dépôt (copie locale tujia2, 2026-10-29)
+- [x] Deux dossiers de premier niveau pour les modules notés, chacun avec un README qui relie chaque exigence à ses fichiers (D79 à D82)
+- [x] Application web commune dans `app/`, bonus dans `bonus/`, pipeline SynergyRx dans `data_pipeline/`, infrastructure dans `infra/`
+- [x] Documentation rangée par module, noms en minuscules, journal et archive ([journal/SESSION_REPORT_5.md](journal/SESSION_REPORT_5.md))
+- [ ] Reporter la restructuration dans le dépôt d'origine ([journal/SESSION_REPORT_5.md](journal/SESSION_REPORT_5.md), dernière section)
 
-## Bonus (only if time remains)
-- [x] Tool `predict_toxicity`: Tox21 in vitro assays, LightGBM on Morgan fingerprints, scaffold split, mean test ROC-AUC 0.725 (bonus/docs/toxicity.md)
-- [x] `predict_synergy` studied (DrugComb, leave-drug-out, bonus/docs/synergy.md): RMSE −7.3 % vs the mean, below the 10 % rule (D75), so **no tool added**
-- [ ] OCR of pill imprints
-- [ ] Cancer synergy data page
+## Bonus (seulement s'il reste du temps)
+- [x] Outil `predict_toxicity` : tests in vitro Tox21, LightGBM sur empreintes de Morgan, split par scaffold, ROC-AUC test moyen 0,725 ([toxicity.md](../bonus/docs/toxicity.md))
+- [x] `predict_synergy` étudié (DrugComb, médicaments laissés de côté, [synergy.md](../bonus/docs/synergy.md)) : RMSE −7,3 % contre la moyenne, sous la règle des 10 % (D75), donc **aucun outil ajouté**
+- [ ] OCR des empreintes des comprimés
+- [ ] Page des données de synergie anticancéreuse
