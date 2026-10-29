@@ -83,6 +83,12 @@ The professor requirements are the "Exigences des modules" checklist in the READ
 - [x] Demo script (docs/demo.md, rehearsed on the containers) and jury questions (docs/questions_jury.md)
 - [ ] Backup video of the demo (to record by hand)
 
+## 8. Repository structure (local copy tujia2, 2026-10-29)
+- [x] Two top-level folders for the graded modules, each with a README mapping every requirement to its files (D79 to D82)
+- [x] Shared web app in `app/`, bonus in `bonus/`, SynergyRx pipeline in `data_pipeline/`, infrastructure in `infra/`
+- [x] Docs by module, lowercase names, journal and archive (docs/journal/SESSION_REPORT_5.md)
+- [ ] Bring the restructuring into the original repository (docs/journal/SESSION_REPORT_5.md, last section)
+
 ## Bonus (only if time remains)
 - [x] Tool `predict_toxicity`: Tox21 in vitro assays, LightGBM on Morgan fingerprints, scaffold split, mean test ROC-AUC 0.725 (bonus/docs/toxicity.md)
 - [x] `predict_synergy` studied (DrugComb, leave-drug-out, bonus/docs/synergy.md): RMSE −7.3 % vs the mean, below the 10 % rule (D75), so **no tool added**

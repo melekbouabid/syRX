@@ -1,18 +1,34 @@
 flowchart TB
-  NAV["Navigateur<br/>localhost : 8080 (127.0.0.1)"] --> FE["frontend<br/>nginx + React"]
-  FE -- "/api, /docs" --> BE["backend<br/>FastAPI asynchrone, Pydantic"]
-  MCP["serveur MCP<br/>stdio ou HTTP local"] --> AG
-  BE --> SCAN["ONNX Runtime<br/>YOLO11n (détection)<br/>YOLO11s-cls (identification)"]
-  BE --> AG["agent LangGraph<br/>outils + sécurité"]
+  NAV["Navigateur<br/>localhost : 8080 (127.0.0.1)"] --> FE
+  subgraph APP["app/ : application web"]
+    FE["frontend<br/>nginx + React"] -- "/api, /docs" --> BE["backend<br/>FastAPI asynchrone, Pydantic"]
+  end
+  subgraph M1["module1_vision_mlops/ : Module 1"]
+    TR["training/<br/>YOLO11n + YOLO11s-cls (Ultralytics)"]
+    SCAN["serving/<br/>ONNX Runtime"]
+  end
+  subgraph M2["module2_ai_engineering/ : Module 2"]
+    CORP["corpus/<br/>openFDA, PubMed, DDInter"]
+    RAG["rag/<br/>BM25 + dense, filtres"]
+    AG["agent/<br/>LangGraph, outils, sécurité"]
+    MCP["mcp_server/<br/>stdio ou HTTP local"]
+  end
+  BE --> SCAN
+  BE --> AG
+  MCP --> AG
+  AG --> SCAN
+  AG --> RAG
+  RAG --> PG[("PostgreSQL + pgvector<br/>médicaments, interactions,<br/>8 661 chunks")]
+  BE --> PG
   AG --> OL["Ollama (GPU)<br/>qwen2.5:3b + bge-m3"]
-  BE --> PG[("PostgreSQL + pgvector<br/>médicaments, interactions,<br/>8 661 chunks")]
-  AG --> PG
-  DATA["data/ (DVC)<br/>C3PI, DDInter, corpus"] --> TR["vision/<br/>entraînement Ultralytics"]
+  DATA["data/ (DVC)<br/>C3PI, DDInter, corpus"] --> TR
+  PIPE["data_pipeline/<br/>connecteurs SynergyRx"] --> CORP
+  CORP --> DATA
+  DATA --> RAG
   TR --> MLF["MLflow<br/>tracking + Model Registry"]
-  MLF -- "publish (ONNX)" --> SCAN
-  DATA --> PG
+  MLF -- "publish (ONNX) -> models/" --> SCAN
   DATA <--> DVC["remote DVC local"]
   classDef ops fill:#eef6ee,stroke:#5a8f5a
   classDef app fill:#eef3f8,stroke:#4a6f8f
-  class DATA,TR,MLF,DVC ops
-  class NAV,FE,BE,SCAN,AG,OL,PG,MCP app
+  class DATA,TR,MLF,DVC,PIPE,CORP ops
+  class NAV,FE,BE,SCAN,AG,OL,PG,MCP,RAG app
