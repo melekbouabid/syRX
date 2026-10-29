@@ -38,12 +38,12 @@ jobs:
       - run: python -m pytest tests/unit
 
   backend:
-    name: backend (FastAPI)
+    name: backend (app/backend, FastAPI)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: backend
+        working-directory: app/backend
     # PostgreSQL + pgvector for the RAG store tests (tests/test_rag_pgvector.py). The tests
     # use fake embeddings and a fake LLM: CI never needs Ollama or a real model.
     services:
@@ -66,7 +66,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: backend/requirements*.txt
+          cache-dependency-path: app/backend/requirements*.txt
       - run: pip install -r requirements-dev.txt ruff
       - run: python -m ruff check .
       - run: python -m ruff format --check .
@@ -92,18 +92,18 @@ jobs:
       - run: python -m pytest
 
   frontend:
-    name: frontend (type check and build)
+    name: frontend (app/frontend, type check and build)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: frontend
+        working-directory: app/frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: app/frontend/package-lock.json
       - run: npm ci
       - run: npm run build

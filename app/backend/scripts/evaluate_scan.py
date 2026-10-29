@@ -6,8 +6,8 @@
 Same protocol as `vision/tujya_vision/evaluate.py` (all consumer photos of the split, the
 most confident box is identified, no box counts as wrong), but with the code the API runs.
 Prints top-1 / top-5 and, for candidate thresholds, the share of photos accepted without
-confirmation and the top-1 accuracy among them. Run from backend/ with the models published
-in SYNERGYRX_MODELS_DIR (default ../models).
+confirmation and the top-1 accuracy among them. Run from app/backend/ with the models published
+in SYNERGYRX_MODELS_DIR (default: models/ at the repository root).
 """
 
 from __future__ import annotations

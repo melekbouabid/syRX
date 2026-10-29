@@ -3,7 +3,7 @@
 Each configuration is one MLflow run in the experiment `tujya-rag` (params, metrics, the
 per-question results as an artifact). Results: docs/BENCHMARK.md.
 
-    cd backend
+    cd app/backend
     python scripts/bench_retrieval.py          # SYNERGYRX_PHARMA_DATABASE_URL, MLFLOW_TRACKING_URI
 
 Metrics, over the questions that have expected chunks (benchmark/rag_questions.jsonl):
@@ -38,7 +38,7 @@ from app.rag.names import NameIndex
 from app.rag.retrieval import Retriever
 from app.rag.store import ChunkStore, Filters
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 QUESTIONS = ROOT / "benchmark" / "rag_questions.jsonl"
 KS = (1, 3, 5, 10)
 EXPERIMENT = "tujya-rag"

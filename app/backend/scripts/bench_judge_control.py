@@ -2,7 +2,7 @@
 claim? Pairs cited answer sentences with the first source of another question (another
 drug) and counts the judge's "yes" (its false-positive rate). Logged to MLflow.
 
-    cd backend
+    cd app/backend
     python scripts/bench_judge_control.py [--judge gemma3:4b] [--n 40]
 """
 
@@ -24,7 +24,7 @@ from langchain_ollama import ChatOllama
 
 from app.rag.safety import CITATION
 
-OUT = Path(__file__).resolve().parents[2] / "benchmark" / "results_judge_control.json"
+OUT = Path(__file__).resolve().parents[3] / "benchmark" / "results_judge_control.json"
 
 
 async def main() -> None:

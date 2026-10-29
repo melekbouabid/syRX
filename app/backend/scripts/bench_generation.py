@@ -9,7 +9,7 @@
 Logged to MLflow (experiment `tujya-rag`); aggregates in benchmark/results_generation.json,
 per-question scores (no source text) in benchmark/generation_per_question.jsonl.
 
-    cd backend
+    cd app/backend
     python scripts/bench_generation.py [--judge gemma3:4b] [--ragas 30]
 """
 
@@ -39,7 +39,7 @@ from app.rag.safety import (
     split_sentences,
 )
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 ANSWERS = ROOT / "data" / "rag" / "bench" / "answers.jsonl"
 OUT = ROOT / "benchmark" / "results_generation.json"
 PER_QUESTION = ROOT / "benchmark" / "generation_per_question.jsonl"

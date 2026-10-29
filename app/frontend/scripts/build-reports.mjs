@@ -1,6 +1,6 @@
 // Build the technical reports (docs/rapports/): Mermaid diagrams -> PNG, Markdown -> PDF.
 //
-//   cd frontend
+//   cd app/frontend
 //   node scripts/build-reports.mjs            # all diagrams and reports
 //
 // No pandoc or LaTeX on this machine: Chromium (Playwright) renders everything. Mermaid and
@@ -13,7 +13,7 @@ import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium } from "playwright";
 
-const ROOT = resolve(process.env.REPORTS ?? "../docs/rapports");
+const ROOT = resolve(process.env.REPORTS ?? "../../docs/rapports");
 const MERMAID = "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js";
 const MARKED = "https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js";
 

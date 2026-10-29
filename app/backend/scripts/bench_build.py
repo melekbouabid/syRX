@@ -14,7 +14,7 @@ Types and their expected chunks:
 - abstract: the chunks of the given PubMed article(s) (`pmids` in the spec);
 - safety: no expected chunk (dose requests, "is it safe"), scored on the answer only.
 
-    cd backend
+    cd app/backend
     python scripts/bench_build.py            # writes benchmark/rag_questions.jsonl
 """
 
@@ -32,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.rag.safety import CROSS_REFERENCE, sentence_problems
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 CHUNKS = ROOT / "data" / "rag" / "corpus" / "chunks.parquet"
 SPEC = ROOT / "benchmark" / "spec.json"
 OUT = ROOT / "benchmark" / "rag_questions.jsonl"

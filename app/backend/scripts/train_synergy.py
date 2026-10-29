@@ -1,6 +1,6 @@
 """Bonus: can drug-combination synergy (DrugComb, ZIP) be predicted for unseen drugs?
 
-cd backend                       # backend venv (rdkit, lightgbm, mlflow)
+cd app/backend                       # backend venv (rdkit, lightgbm, mlflow)
 python scripts/train_synergy.py  # MLflow experiment tujya-synergy; docs/SYNERGY.md
 
 Data: the SynergyRx pipeline tables in data/parquet (synergy_pairs, drugs, expression).
@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.toxicity import standardise
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 PARQUET = ROOT / "data" / "parquet"
 EXPERIMENT = "tujya-synergy"
 TARGET = "synergy_zip"

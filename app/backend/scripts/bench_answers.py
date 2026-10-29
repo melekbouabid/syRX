@@ -4,7 +4,7 @@ Writes data/rag/bench/answers.jsonl (git-ignored: it holds the source texts, som
 PubMed abstracts): question, draft (before the safety node), answer, sources with their
 text, tool calls, safety report, timings. Step 2 is scripts/bench_generation.py.
 
-    cd backend
+    cd app/backend
     python scripts/bench_answers.py            # SYNERGYRX_PHARMA_DATABASE_URL, Ollama running
 """
 
@@ -22,7 +22,7 @@ from app.config import Settings
 from app.db import make_engine
 from app.rag.runtime import AgentHolder
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 QUESTIONS = ROOT / "benchmark" / "rag_questions.jsonl"
 OUT = ROOT / "data" / "rag" / "bench" / "answers.jsonl"
 

@@ -1,6 +1,6 @@
 """Ask the Tujya agent one question from the command line (real index and Ollama).
 
-cd backend
+cd app/backend
 python scripts/ask.py "La warfarine interagit-elle avec le fluconazole ?"
 python scripts/ask.py "Effets indésirables ?" --pills 9 120 --database-url postgresql+psycopg://...
 """

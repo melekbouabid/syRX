@@ -1,6 +1,6 @@
 """Search the RAG index from the command line and time each mode (real bge-m3 embeddings).
 
-cd backend
+cd app/backend
 python scripts/search.py "fluconazole warfarin bleeding" --ingredient warfarin --k 5
 """
 

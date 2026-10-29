@@ -54,7 +54,7 @@ jobs:
       - name: Build (local image only, never pushed)
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.image }}
+          context: app/${{ matrix.image }}
           load: true
           push: false
           tags: tujya-${{ matrix.image }}:ci
@@ -128,7 +128,7 @@ jobs:
       - name: Push to GitHub Container Registry
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.image }}
+          context: app/${{ matrix.image }}
           push: true
           tags: ${{ steps.names.outputs.tags }}
           labels: |

@@ -1,6 +1,6 @@
 # Tujya web app: the React build served by nginx, which also forwards /api, /docs and
 # /openapi.json to the backend service (nginx.conf).
-#   docker build -t tujya-frontend frontend
+#   docker build -t tujya-frontend app/frontend
 FROM node:22-alpine AS build
 WORKDIR /web
 COPY package.json package-lock.json ./

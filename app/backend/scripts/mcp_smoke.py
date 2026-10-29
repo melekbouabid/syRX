@@ -1,6 +1,6 @@
 """Start the MCP server as a subprocess (stdio), list its tools and call two of them.
 
-cd backend
+cd app/backend
 python scripts/mcp_smoke.py            # uses the SYNERGYRX_* environment of this shell
 """
 

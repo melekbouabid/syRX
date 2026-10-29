@@ -1,6 +1,6 @@
 """Write config/ingredient_smiles.csv: a structure (SMILES) for each active ingredient.
 
-cd backend
+cd app/backend
 python scripts/fetch_ingredient_smiles.py      # PubChem PUG-REST, 4 requests/s at most
 
 Used by the toxicity tool to accept ingredient names (docs/TOXICITY.md). One PubChem lookup
@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 INGREDIENTS = ROOT / "data" / "tujya" / "pill_ingredients.csv"
 OUT = ROOT / "config" / "ingredient_smiles.csv"
 API = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{}/property/SMILES/JSON"

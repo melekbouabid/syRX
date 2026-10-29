@@ -13,7 +13,7 @@ import { join, resolve } from "node:path";
 import { chromium } from "playwright";
 
 const BASE = process.env.BASE ?? "http://localhost:5173";
-const OUT = resolve(process.env.OUT ?? "../docs/screenshots");
+const OUT = resolve(process.env.OUT ?? "../../docs/screenshots");
 const EMAIL = process.env.DEMO_EMAIL ?? "user@gmail.com";
 const PASSWORD = process.env.DEMO_PASSWORD ?? "user";
 // Gallery positions (config/demo_gallery.csv): 2 fluconazole, 1 citalopram, 0 tramadol,

@@ -1,6 +1,6 @@
 # Tujya API: FastAPI + ONNX Runtime (CPU). No model, data or secret is baked in: the
 # models (/models), config (/config) and data (/data) are mounted by docker-compose.yml.
-#   docker build -t tujya-backend backend
+#   docker build -t tujya-backend app/backend
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \

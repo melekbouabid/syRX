@@ -1,6 +1,6 @@
 """Settings of the web API.
 
-Every value can be overridden in `backend/.env` or the environment with the `SYNERGYRX_`
+Every value can be overridden in `app/backend/.env` or the environment with the `SYNERGYRX_`
 prefix, for example `SYNERGYRX_ADMIN_PASSWORD=...`.
 """
 
@@ -10,8 +10,10 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-BACKEND_DIR = Path(__file__).resolve().parent.parent
-PROJECT_DIR = BACKEND_DIR.parent
+BACKEND_DIR = Path(__file__).resolve().parent.parent  # app/backend
+# The repository root (data/, config/, models/). In the Docker image the backend folder is
+# /app, so this is "/", where docker-compose.yml mounts those folders.
+PROJECT_DIR = BACKEND_DIR.parent.parent
 
 DEFAULT_ADMIN_PASSWORD = "admin"  # noqa: S105  first-run default, meant to be changed
 

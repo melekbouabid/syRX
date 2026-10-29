@@ -1,6 +1,6 @@
 """Train, log and publish the Tox21 toxicity model (bonus tool, docs/TOXICITY.md).
 
-cd backend                                    # backend venv (rdkit, lightgbm, mlflow)
+cd app/backend                                    # backend venv (rdkit, lightgbm, mlflow)
 python scripts/train_tox21.py download        # MoleculeNet tox21.csv.gz -> data/tox21/
 python scripts/train_tox21.py train           # scaffold split, 12 LightGBM models, MLflow tujya-tox
 python scripts/train_tox21.py publish         # registered version -> models/tox21/ for the API
@@ -33,7 +33,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.toxicity import FP_BITS, FP_RADIUS, TASKS, fingerprint, scaffold, standardise
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 DATA = ROOT / "data" / "tox21"
 RAW = DATA / "tox21.csv.gz"
 URL = "https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/tox21.csv.gz"

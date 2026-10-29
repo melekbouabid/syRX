@@ -1,5 +1,5 @@
 # Rules shared with the whole repository; only the import root and the test exceptions differ.
-extend = "../ruff.toml"
+extend = "../../ruff.toml"
 src = ["."]
 
 [lint.per-file-ignores]

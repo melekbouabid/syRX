@@ -69,7 +69,7 @@ services:
   # One-shot: (re)build the medicine tables from config/ and data/tujya, then exit.
   pharma-init:
     image: ${BACKEND_IMAGE:-tujia2-backend:local}
-    build: ./backend
+    build: ./app/backend
     command: ["python", "-m", "app.pharma_loader"]
     environment: &backend-env
       SYNERGYRX_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tujya}:${POSTGRES_PASSWORD:-tujya}@postgres:5432/${POSTGRES_DB:-tujya}
@@ -95,7 +95,7 @@ services:
   # (scan and interactions work without it; /api/chat answers 503 until the index exists).
   rag-init:
     image: ${BACKEND_IMAGE:-tujia2-backend:local}
-    build: ./backend
+    build: ./app/backend
     command: ["python", "-m", "app.rag.index", "--pull"]
     environment: *backend-env
     volumes: *backend-mounts
@@ -108,7 +108,7 @@ services:
 
   backend:
     image: ${BACKEND_IMAGE:-tujia2-backend:local}
-    build: ./backend
+    build: ./app/backend
     environment: *backend-env
     volumes: *backend-mounts
     ports:
@@ -148,7 +148,7 @@ services:
 
   frontend:
     image: ${FRONTEND_IMAGE:-tujia2-frontend:local}
-    build: ./frontend
+    build: ./app/frontend
     ports:
       - "127.0.0.1:${WEB_PORT:-8080}:80"
     depends_on:
