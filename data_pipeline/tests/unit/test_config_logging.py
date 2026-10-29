@@ -18,7 +18,7 @@ from synergyrx_data.logging_utils import (
     register_secrets,
     setup_logging,
 )
-from tests.conftest import FAKE_API_KEY, TEST_EMAIL
+from synergyrx_data.testing import FAKE_API_KEY, TEST_EMAIL
 
 REPO = Path(__file__).resolve().parents[3]  # the repository; the pipeline is REPO/data_pipeline
 SHIPPED = REPO / "data_pipeline" / "config.yaml"

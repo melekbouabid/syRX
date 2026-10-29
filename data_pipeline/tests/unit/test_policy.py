@@ -14,6 +14,9 @@ from synergyrx_data.quality.linkcheck import ENDPOINTS
 
 SRC = Path(__file__).resolve().parents[2] / "src" / "synergyrx_data"
 CONNECTOR_FILES = sorted((SRC / "connectors").glob("*.py"))
+# The module 2 corpus steps run on this pipeline and follow the same network policy.
+CORPUS = Path(__file__).resolve().parents[3] / "module2_ai_engineering" / "corpus"
+NETWORK_CHECKED = sorted(SRC.rglob("*.py")) + sorted(CORPUS.rglob("*.py"))
 BRIEF_LINKS = [
     "https://drugcomb.org/",
     "https://zenodo.org/records/11102665",
@@ -60,7 +63,7 @@ def test_no_connector_fetches_or_parses_html(path: Path) -> None:
     )
 
 
-@pytest.mark.parametrize("path", sorted(SRC.rglob("*.py")), ids=lambda p: p.name)
+@pytest.mark.parametrize("path", NETWORK_CHECKED, ids=lambda p: p.name)
 def test_all_network_access_goes_through_the_polite_client(path: Path) -> None:
     if path.parent.name == "http":
         return  # the client itself is the one place allowed to use httpx

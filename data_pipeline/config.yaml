@@ -110,7 +110,7 @@ sources:
   pubtator:
     enabled: false               # optional
   openfda_label:
-    enabled: false               # Tujya RAG corpus: `python -m synergyrx_data.tujya labels`
+    enabled: false               # Tujya RAG corpus: `python -m module2_ai_engineering.corpus labels`
 
 cleaning:
   manual_overrides: config/manual_drug_overrides.csv

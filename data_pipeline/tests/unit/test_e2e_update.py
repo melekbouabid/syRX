@@ -17,7 +17,7 @@ from synergyrx_data import cli
 from synergyrx_data.cli import app
 from synergyrx_data.connectors import all_links
 from synergyrx_data.quality.linkcheck import ENDPOINTS
-from tests.conftest import TEST_EMAIL
+from synergyrx_data.testing import TEST_EMAIL
 from tests.unit.test_connectors_lookup import PUBMED_XML
 
 runner = CliRunner()

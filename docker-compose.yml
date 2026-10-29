@@ -100,7 +100,7 @@ services:
   rag-init:
     image: ${BACKEND_IMAGE:-tujia2-backend:local}
     build: *backend-build
-    command: ["python", "-m", "app.rag.index", "--pull"]
+    command: ["python", "-m", "module2_ai_engineering.rag.index", "--pull"]
     environment: *backend-env
     volumes: *backend-mounts
     depends_on:

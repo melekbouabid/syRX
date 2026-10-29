@@ -13,9 +13,9 @@ from starlette.concurrency import run_in_threadpool
 
 from app.deps import get_current_user
 from app.pharma import Ingredient
-from app.rag.names import NameIndex
 from app.schemas import ToxicityIn, ToxicityResult
 from app.toxicity import ToxHolder, ToxicityUnavailable, predict_molecules
+from module2_ai_engineering.rag.names import NameIndex
 
 router = APIRouter(prefix="/api", tags=["toxicity"], dependencies=[Depends(get_current_user)])
 

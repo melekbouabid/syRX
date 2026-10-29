@@ -5,8 +5,8 @@
 # (module1_vision_mlops/training/.venv).
 # `rag_corpus`: from the repository root with the pipeline venv active (data_pipeline/.venv);
 # its inputs, the openFDA labels and PubMed abstracts under data/rag/raw and data/rag/interim,
-# are fetched by
-# `python -m synergyrx_data.tujya labels` / `pubmed` and tracked with `dvc add` (docs/RAG.md).
+# are fetched by `python -m module2_ai_engineering.corpus labels` / `pubmed` and tracked with
+# `dvc add` (module2_ai_engineering/docs/rag.md).
 stages:
   prepare:
     wdir: module1_vision_mlops/training
@@ -20,12 +20,12 @@ stages:
       - ../../data/vision/c3pi/labels
       - ../../data/vision/datasets
   rag_corpus:
-    cmd: python -m synergyrx_data.tujya corpus
+    cmd: python -m module2_ai_engineering.corpus corpus
     deps:
       - data/rag/interim
       - data/rag/raw/pubmed
       - data/tujya/interactions_between_classes.csv
       - data/tujya/pill_ingredients.csv
-      - data_pipeline/src/synergyrx_data/tujya/corpus.py
+      - module2_ai_engineering/corpus/corpus.py
     outs:
       - data/rag/corpus

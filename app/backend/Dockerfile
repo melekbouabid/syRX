@@ -23,6 +23,7 @@ COPY app/backend/requirements.txt ./
 RUN pip install -r requirements.txt
 
 COPY module1_vision_mlops /tujya/module1_vision_mlops
+COPY module2_ai_engineering /tujya/module2_ai_engineering
 COPY app/backend/app ./app
 
 RUN useradd --create-home --uid 1000 tujya

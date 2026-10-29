@@ -20,7 +20,7 @@ from synergyrx_data.config import Settings, SourceConfig
 from synergyrx_data.connectors._synergy import synergy_frame
 from synergyrx_data.provenance import has_provenance, write_parquet
 from synergyrx_data.state import MANUAL_STEP, NEEDS_ATTENTION
-from tests.conftest import FAKE_API_KEY, TEST_EMAIL
+from synergyrx_data.testing import FAKE_API_KEY, TEST_EMAIL
 
 PUG = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound"
 CHEMBL = "https://www.ebi.ac.uk/chembl/api/data/molecule.json"

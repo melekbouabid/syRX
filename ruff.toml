@@ -19,3 +19,5 @@ ignore = [
 
 [lint.per-file-ignores]
 "**/tests/**" = ["S105", "S106", "S108"]
+# One-off generator of the benchmark spec: its long lines are question and reference texts.
+"module2_ai_engineering/benchmark/make_spec.py" = ["E501"]

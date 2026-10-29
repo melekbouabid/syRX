@@ -15,7 +15,7 @@ from synergyrx_data.http.errors import (
 )
 from synergyrx_data.http.retry import backoff_delay, is_retryable, parse_retry_after, wait_seconds
 from synergyrx_data.http.robots import RobotsChecker, RobotsPolicy
-from tests.conftest import FakeClock
+from synergyrx_data.testing import FakeClock
 
 # ------------------------------------------------------------------- retry
 

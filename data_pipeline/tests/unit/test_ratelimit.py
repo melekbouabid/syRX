@@ -10,7 +10,7 @@ import pytest
 
 from synergyrx_data.config import HostLimit
 from synergyrx_data.http.ratelimit import HostRateLimiter, TokenBucket
-from tests.conftest import FakeClock
+from synergyrx_data.testing import FakeClock
 
 
 def max_in_any_window(times: list[float], window: float) -> int:

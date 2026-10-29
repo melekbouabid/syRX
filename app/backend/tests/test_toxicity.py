@@ -15,10 +15,7 @@ from fastapi.testclient import TestClient
 from mcp import Client
 
 from app.config import Settings
-from app.mcp_server import build_server, default_toolbox
 from app.medicines import DISCLAIMER
-from app.rag.embeddings import FakeEmbedder
-from app.rag.runtime import AgentHolder
 from app.toxicity import (
     FP_BITS,
     MIXTURE_NOTE,
@@ -33,7 +30,10 @@ from app.toxicity import (
     standardise,
     tanimoto_max,
 )
-from tests.rag_fakes import DIM, FakeChatModel, build_index
+from module2_ai_engineering.agent.runtime import AgentHolder
+from module2_ai_engineering.mcp_server.server import build_server, default_toolbox
+from module2_ai_engineering.rag.embeddings import FakeEmbedder
+from module2_ai_engineering.tests.rag_fakes import DIM, FakeChatModel, build_index
 from tujya_testing.fixtures import USER, sign_in
 
 WARFARIN = "CC(=O)CC(C1=CC=CC=C1)C2=C(C3=CC=CC=C3OC2=O)O"

@@ -18,11 +18,11 @@ from fastapi.responses import StreamingResponse
 
 from app.deps import get_current_user
 from app.medicines import DISCLAIMER, PharmaUnavailable
-from app.rag.agent import AgentState, TujyaAgent
-from app.rag.embeddings import EmbeddingError
-from app.rag.runtime import AgentHolder
-from app.rag.safety import redact_doses
 from app.schemas import ChatIn, ChatResult, CitationOut, ToolCallOut
+from module2_ai_engineering.agent.graph import AgentState, TujyaAgent
+from module2_ai_engineering.agent.runtime import AgentHolder
+from module2_ai_engineering.agent.safety import redact_doses
+from module2_ai_engineering.rag.embeddings import EmbeddingError
 
 router = APIRouter(prefix="/api", tags=["chat"], dependencies=[Depends(get_current_user)])
 
@@ -33,7 +33,8 @@ def get_agent(request: Request) -> tuple[AgentHolder, TujyaAgent]:
     if holder.toolbox().retrievers.get() is None:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
-            "The document index is empty. Run `python -m app.rag.index` (docs/RAG.md).",
+            "The document index is empty. Run `python -m module2_ai_engineering.rag.index`"
+            " (module2_ai_engineering/docs/rag.md).",
         )
     return holder, agent
 

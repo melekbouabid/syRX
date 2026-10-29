@@ -666,3 +666,26 @@ Les tests de chaque module se lancent depuis son dossier avec le venv du backend
 (`module1_vision_mlops/training`, paquet `tujya_vision`, son venv avec PyTorch). Son
 `prepare.py` a changÃ© d'une ligne (racine du dÃ©pÃ´t un niveau plus haut) : `dvc commit -f
 prepare` met Ã  jour l'empreinte dans `dvc.lock` sans relancer l'Ã©tape, `dvc status` propre.
+
+**D80. Module 2 : ce qui a bougÃ©, ce qui reste dans le pipeline.** `corpus/` reÃ§oit les
+Ã©tapes Tujya du pipeline (`synergyrx_data.tujya` : principes actifs RxNav, interactions
+DDInter, notices openFDA, rÃ©sumÃ©s PubMed, dÃ©coupage en chunks), lancÃ©es par
+`python -m module2_ai_engineering.corpus` ; `rag/` reÃ§oit l'index, le stockage pgvector, la
+recherche, les embeddings et le rapprochement des noms ; `agent/` le graphe LangGraph
+(`agent.py` renommÃ© `graph.py`, le paquet s'appelant dÃ©jÃ  `agent`), les outils, les rÃ¨gles
+de sÃ©curitÃ© et leur cÃ¢blage ; `mcp_server/` le serveur MCP (`server.py`, lancÃ© par
+`python -m module2_ai_engineering.mcp_server`) ; `benchmark/` le jeu de questions, les
+rÃ©sultats et les scripts `bench_*.py`, devenus des modules (`python -m
+module2_ai_engineering.benchmark.bench_retrieval`, plus de `sys.path.insert`). Les
+**connecteurs** openFDA et PubMed restent dans le pipeline (`data_pipeline/src/
+synergyrx_data/connectors/`) : ils sont enregistrÃ©s dans son registre de sources et
+configurÃ©s par son `config.yaml`, au mÃªme titre que les douze autres ; les dÃ©placer ferait
+dÃ©pendre le pipeline du module 2. Le corpus dÃ©pend donc du pipeline, jamais l'inverse ; il
+est typÃ© par le mypy du pipeline et soumis au mÃªme test de politique rÃ©seau
+(`test_policy.py` couvre aussi `module2_ai_engineering/corpus`, sinon ce contrÃ´le aurait Ã©tÃ©
+perdu au dÃ©mÃ©nagement). Les fixtures du pipeline deviennent le plugin
+`synergyrx_data.testing` (mÃªme raison que `tujya_testing`, D79). Les tests du module 2
+tournent avec le venv du backend, oÃ¹ le pipeline est installÃ© en Ã©ditable. Les tests
+pgvector passent dans un job CI `module2` qui a le service PostgreSQL. `make_spec.py`
+Ã©crivait dans un chemin absolu du dossier d'origine : il Ã©crit maintenant Ã  cÃ´tÃ© de lui
+(rÃ©gÃ©nÃ©rÃ© Ã  l'identique).

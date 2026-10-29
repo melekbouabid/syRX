@@ -23,7 +23,7 @@ from synergyrx_data.http.errors import (
     RobotsDisallowedError,
 )
 from synergyrx_data.http.guardrails import build_user_agent, strip_secret_params
-from tests.conftest import TEST_EMAIL, ClientFactory, FakeClock
+from synergyrx_data.testing import TEST_EMAIL, ClientFactory, FakeClock
 
 API = "https://example.org/api/item"
 JSON = {"content-type": "application/json"}

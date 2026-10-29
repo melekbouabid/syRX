@@ -22,7 +22,7 @@ from synergyrx_data.provenance import PROVENANCE_COLUMNS, has_provenance, write_
 from synergyrx_data.quality.drift import DriftTracker, compare, snapshot
 from synergyrx_data.quality.licenses import render_licenses
 from synergyrx_data.quality.reports import coverage_table, missingness_table
-from tests.conftest import TEST_EMAIL
+from synergyrx_data.testing import TEST_EMAIL
 
 FU = "O=c1[nH]cc(F)c(=O)[nH]1"
 VELIPARIB = "CC1(c2nc3c(C(N)=O)cccc3[nH]2)CCCN1"
