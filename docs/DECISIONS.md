@@ -593,3 +593,19 @@ Decision rule, written before any training: `predict_synergy` is added **only if
 LightGBM model has a test RMSE at least 10 % below the mean baseline (training mean) and a
 Pearson r of at least 0.3 on the leave-drug-out test set; otherwise the result is
 documented and no tool is added.
+
+## Restructuration en deux modules (copie locale tujia2, 2026-10-29)
+
+Les dÃ©cisions D1 Ã  D75 sont gardÃ©es telles qu'elles ont Ã©tÃ© Ã©crites (en anglais) ; les
+suivantes, prises pendant la restructuration, sont en franÃ§ais.
+
+**D76. Copie locale isolÃ©e de l'original.** La restructuration se fait dans une copie
+(`C:\Users\msi\Desktop\tujia2`, robocopy sans les environnements virtuels ni les caches),
+sans remote git (`git remote remove origin`), pour ne rien changer au dÃ©pÃ´t GitHub ni au
+dossier d'origine. Le projet Docker Compose s'appelle `tujia2` (conteneurs et volumes
+sÃ©parÃ©s) et les images sont Ã©tiquetÃ©es `tujia2-*` : sans ce second point, un
+`docker compose up --build` dans la copie aurait remplacÃ© les images `tujya-backend:local`
+et `tujya-frontend:local` de l'original, qui ne correspondent pas au mÃªme code. MÃªmes ports,
+liÃ©s Ã  `127.0.0.1` : un seul des deux projets tourne Ã  la fois. Le remote DVC est partagÃ©
+avec l'original : `dvc push` est interdit dans la copie (`dvc pull` et `dvc status` sont
+permis). Tag local `v1.0-avant-restructuration` posÃ© avant tout changement.
