@@ -124,7 +124,7 @@ capsule, and its `reference/` folder holds the two RxImage API images in six res
 ## How to rebuild
 
 ```bash
-cd vision
+cd module1_vision_mlops/training
 python -m tujya_vision.data_cli metadata         # READMEs, directory, ALLXML/*.xml (~130 MB)
 python -m tujya_vision.data_cli index            # ALLXML -> data/vision/c3pi/metadata/images.csv
 python -m tujya_vision.data_cli select --max-classes 150 --min-images 20 --max-per-class 30 \

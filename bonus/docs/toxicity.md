@@ -63,7 +63,7 @@ MLflow: experiment **`tujya-tox`**, run `lgbm-morgan2048-scaffold`
 per-task validation and test ROC-AUC, the bundle; registered model **`tujya-tox21`**
 version **2** (pyfunc: SMILES column -> one probability per task). Version 1 is an identical
 first run whose script crashed after registering (a Windows console encoding error in an
-MLflow log line); its run is marked FAILED with a note. `python scripts/train_tox21.py
+MLflow log line); its run is marked FAILED with a note. `python -m bonus.toxicity.train_tox21
 publish` copies the registered bundle to `models/tox21/` (git-ignored), which the API loads.
 
 ![MLflow experiment tujya-tox](../../docs/screenshots/17-mlflow-tox.jpg)
@@ -78,7 +78,7 @@ training set (for those the model mostly reflects measured labels), 4 are below 
 
 | Place | What |
 |---|---|
-| Agent tool (`app/rag/tools.py`) | `predict_toxicity(molecules)`, in `CHAT_TOOLS`; the planner may call it; the graph adds it by rule when the question talks about toxicity / Tox21 / in vitro |
+| Agent tool (`module2_ai_engineering/agent/tools.py`) | `predict_toxicity(molecules)`, in `CHAT_TOOLS`; the planner may call it; the graph adds it by rule when the question talks about toxicity / Tox21 / in vitro |
 | MCP server | fifth tool `predict_toxicity`; the server instructions repeat the wording and "never conclude about a mixture" |
 | API | `POST /api/toxicity` `{"molecules": ["warfarin", "fluconazole"]}` (1 or 2, sign-in required): per molecule the 12 probabilities, the test ROC-AUC of each task, the similarity to the training set, plus `wording`, `mixture_note`, `low_probability_note`, model version, source, disclaimer; 503 without a published model |
 | Web | page **Toxicity** (menu): one or two molecules, one card per molecule, the wording and the disclaimer always visible |
@@ -123,11 +123,11 @@ summary, summary alone when nothing else is left), the MCP tool with a French na
 ## Reproduce
 
 ```bash
-cd backend
+cd app/backend
 pip install -r requirements.txt                      # rdkit, lightgbm
-python scripts/train_tox21.py download               # or: dvc pull data/tox21.dvc
-python scripts/train_tox21.py train                  # MLflow on 127.0.0.1:5000
-python scripts/train_tox21.py publish                # -> models/tox21/
-python scripts/fetch_ingredient_smiles.py            # only to refresh config/ingredient_smiles.csv
+python -m bonus.toxicity.train_tox21 download               # or: dvc pull data/tox21.dvc
+python -m bonus.toxicity.train_tox21 train                  # MLflow on 127.0.0.1:5000
+python -m bonus.toxicity.train_tox21 publish                # -> models/tox21/
+python -m bonus.toxicity.fetch_ingredient_smiles            # only to refresh config/ingredient_smiles.csv
 cd ../frontend && BASE=http://localhost:8080 node scripts/toxicity-screenshots.mjs
 ```

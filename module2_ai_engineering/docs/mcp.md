@@ -26,12 +26,12 @@ docs/infra.md and module2_ai_engineering/docs/rag.md), Ollama for the query embe
 ```bash
 # PowerShell: $env:SYNERGYRX_PHARMA_DATABASE_URL = "postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya"
 export SYNERGYRX_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
-python -m app.mcp_server                                     # stdio transport
-python -m app.mcp_server --transport streamable-http --port 8765   # http://127.0.0.1:8765/mcp
-python scripts/mcp_smoke.py                                  # starts it over stdio, lists, calls
+python -m module2_ai_engineering.mcp_server                                     # stdio transport
+python -m module2_ai_engineering.mcp_server --transport streamable-http --port 8765   # http://127.0.0.1:8765/mcp
+python -m module2_ai_engineering.mcp_server.smoke                                  # starts it over stdio, lists, calls
 ```
 
-Smoke test on 2026-10-28 (`scripts/mcp_smoke.py`):
+Smoke test on 2026-10-28 (`mcp_server/smoke.py`):
 
 ```
 tools: ['identify_pills', 'check_interaction', 'get_drug_info', 'search_documents']
@@ -49,9 +49,8 @@ search_documents -> ['Metformin label (METFORMIN HYDROCHLORIDE): Warnings and pr
 {
   "mcpServers": {
     "tujya": {
-      "command": "C:/path/to/Proj/backend/.venv/Scripts/python.exe",
-      "args": ["-m", "app.mcp_server"],
-      "cwd": "C:/path/to/Proj/backend",
+      "command": "C:/path/to/tujya/app/backend/.venv/Scripts/python.exe",
+      "args": ["-m", "module2_ai_engineering.mcp_server"],
       "env": {
         "SYNERGYRX_PHARMA_DATABASE_URL": "postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya",
         "SYNERGYRX_OLLAMA_URL": "http://127.0.0.1:11434"
@@ -65,10 +64,11 @@ search_documents -> ['Metformin label (METFORMIN HYDROCHLORIDE): Warnings and pr
 
 ```bash
 claude mcp add tujya --env SYNERGYRX_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya \
-  -- C:/path/to/Proj/backend/.venv/Scripts/python.exe -m app.mcp_server
+  -- C:/path/to/tujya/app/backend/.venv/Scripts/python.exe -m module2_ai_engineering.mcp_server
 ```
 
-(run it from `app/backend/`, or the client must start the server with `cwd` = `app/backend/`).
+(no working directory needed: the editable install of the backend venv, app/backend/pyproject.toml,
+puts the module packages on its path).
 
 **HTTP clients** (MCP Inspector, remote agents): start the streamable HTTP transport and
 connect to `http://127.0.0.1:8765/mcp`. It listens on localhost only by default; there is no

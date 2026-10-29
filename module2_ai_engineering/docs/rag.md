@@ -6,15 +6,15 @@ are cut into chunks, what metadata each chunk carries, and how they are searched
 
 ```
 config/pill_classes.csv (82 active ingredients of the 150 pill classes)
-  -> openFDA drug labels      python -m synergyrx_data.tujya labels   -> data/rag/raw, interim
-  -> PubMed abstracts         python -m synergyrx_data.tujya pubmed   -> data/rag/raw, interim
+  -> openFDA drug labels      python -m module2_ai_engineering.corpus labels   -> data/rag/raw, interim
+  -> PubMed abstracts         python -m module2_ai_engineering.corpus pubmed   -> data/rag/raw, interim
   -> DDInter pairs            data/tujya/interactions_between_classes.csv (docs/interactions.md)
-  -> chunks + metadata        dvc repro rag_corpus  (= python -m synergyrx_data.tujya corpus)
+  -> chunks + metadata        dvc repro rag_corpus  (= python -m module2_ai_engineering.corpus corpus)
                               -> data/rag/corpus/chunks.parquet, summary.json
-  -> embeddings + index       python -m app.rag.index  (backend)  -> table rag_chunks (pgvector)
+  -> embeddings + index       python -m module2_ai_engineering.rag.index  (backend)  -> table rag_chunks (pgvector)
 ```
 
-Commands run from the repository root with the pipeline venv (`.venv-dev`); without a
+Commands run from the repository root with the pipeline venv (`data_pipeline/.venv`); without a
 `.env` add `--set http.require_contact_email=false` (as in module2_ai_engineering/docs/interactions.md). The two
 fetch steps reuse the pipeline's connectors (PoliteClient: rate limits, retries, HTTP cache,
 manifest with SHA-256 and provenance), in their own data folder `data/rag/` with its own
@@ -145,7 +145,7 @@ reads all of them from the database (D62).
   labels and PubMed XML, the parsed tables, and the manifest (URL, SHA-256, size, licence,
   retrieval time of every raw file), tracked with `dvc add` (they come from the network, so
   they are not a pipeline stage).
-- `dvc.yaml` stage `rag_corpus`: `python -m synergyrx_data.tujya corpus`, from
+- `dvc.yaml` stage `rag_corpus`: `python -m module2_ai_engineering.corpus corpus`, from
   `data/rag/interim`, `data/rag/raw/pubmed`, the two DDInter / ingredient tables and the
   chunker code to `data/rag/corpus` (`dvc.lock` records the hashes). `dvc repro rag_corpus`
   rebuilds the chunks when any input changes.
@@ -161,7 +161,7 @@ reads all of them from the database (D62).
   the metadata columns of the schema above, `content_hash`, and `embedding vector(1024)`
   (pgvector); ingredient lists are `text[]`. Table `rag_index_meta` keeps the model, the
   dimension, the chunk count and `indexed_at`.
-- **Indexing:** `python -m app.rag.index` (backend venv; `--database-url`, `--chunks`,
+- **Indexing:** `python -m module2_ai_engineering.rag.index` (backend venv; `--database-url`, `--chunks`,
   `--pull` to pull the Ollama models first). Idempotent: a chunk is embedded again only if
   its hash (text, metadata, model) changed, chunks gone from the corpus are deleted, a new
   embedding model rebuilds the table. Run on 2026-10-28: 8,661 chunks embedded in 364 s on
@@ -182,7 +182,7 @@ when `indexed_at` changes. No HNSW index: at this size the exact scan is fast an
 `doc_types` (label, abstract, interaction), `sections`, `exclude_retracted` (default
 true). In SQL: `ingredients && :names OR mentioned_ingredients && :names`.
 
-Try it: `python scripts/search.py "warfarin bleeding" --ingredient fluconazole --doc-type
+Try it: `python -m module2_ai_engineering.rag.search "warfarin bleeding" --ingredient fluconazole --doc-type
 label` (prints the three modes with their ranks and timings).
 
 Which mode is best is measured in module2_ai_engineering/docs/benchmark.md: dense with the ingredient filter is the

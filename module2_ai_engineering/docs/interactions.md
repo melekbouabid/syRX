@@ -8,17 +8,17 @@ config/pill_classes.csv (NDC11 list per class)
   -> RxNav ndcstatus      NDC11 -> product RxCUI (also obsolete NDCs, via their history)
   -> RxNav historystatus  RxCUI -> base ingredients (RxNorm IN), strengths dropped
   -> data/tujya/pill_ingredients.csv  + ingredient columns in config/pill_classes.csv
-  -> DDInter 2.0 (14 ATC files, `python -m synergyrx_data.tujya ddinter`)
+  -> DDInter 2.0 (14 ATC files, `python -m module2_ai_engineering.corpus ddinter`)
   -> config/ingredient_aliases.csv (3 DDInter names that differ from RxNorm)
   -> data/tujya/interactions_between_classes.csv, data/tujya/interactions_with_any_drug.csv
 ```
 
-Commands (pipeline venv `.venv-dev`, from the repository root):
+Commands (pipeline venv `data_pipeline/.venv`, from the repository root):
 
 ```bash
-python -m synergyrx_data.tujya --set http.require_contact_email=false ddinter
-python -m synergyrx_data.tujya --set http.require_contact_email=false ingredients
-python -m synergyrx_data.tujya interactions
+python -m module2_ai_engineering.corpus --set http.require_contact_email=false ddinter
+python -m module2_ai_engineering.corpus --set http.require_contact_email=false ingredients
+python -m module2_ai_engineering.corpus interactions
 ```
 
 `http.require_contact_email=false` was used because no `.env` exists on this machine (same

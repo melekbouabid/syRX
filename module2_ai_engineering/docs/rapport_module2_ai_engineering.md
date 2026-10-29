@@ -81,7 +81,7 @@ Le corpus porte sur les **82 principes actifs** des 150 classes de comprimés.
   anglaise : cosinus 0,87 ; une phrase sans rapport : 0,53.
 - **Stockage** : table `rag_chunks` dans PostgreSQL + **pgvector** (`vector(1024)`),
   métadonnées en colonnes, listes de principes actifs en `text[]`. Indexation idempotente
-  (`python -m app.rag.index`) : 8 661 chunks en **364 s** sur la RTX 2050 ; deuxième passage :
+  (`python -m module2_ai_engineering.rag.index`) : 8 661 chunks en **364 s** sur la RTX 2050 ; deuxième passage :
   0 recalculé en 0,1 s.
 - **Trois modes** : **BM25** (en mémoire, ≈ 6 ms), **dense** (cosinus exact en SQL,
   130-190 ms, surtout l'embedding de la question), **hybride** RRF k = 60 (≈ 170 ms).
@@ -132,7 +132,7 @@ des événements SSE `tool`, `token`, `final`.
 - **MCP** : `module2_ai_engineering/mcp_server/server.py`, SDK Python officiel (`mcp` 2.3), les **mêmes
   outils** que l'agent (même code ; 4, plus `predict_toxicity` en bonus), consignes de sécurité dans les `instructions` du serveur ;
   transports stdio et streamable HTTP (limité à `127.0.0.1`). Test de fumée réel
-  (`scripts/mcp_smoke.py`, ≈ 11 s, avant le bonus) : 4 outils listés, warfarine + fluconazole -> Major,
+  (`mcp_server/smoke.py`, ≈ 11 s, avant le bonus) : 4 outils listés, warfarine + fluconazole -> Major,
   « metformin lactic acidosis » -> notices de la metformine. 3 tests (liste et schémas,
   appels, refus d'une adresse non locale).
 - **Choix du LLM** (D58), sur une RTX 2050 de 4 Go, même question courte en français :

@@ -31,10 +31,10 @@ et temps mesurés dans [SESSION_REPORT_4.md](journal/SESSION_REPORT_4.md#tâche-
    GPU), les suivantes **5 à 7 s**. Poser une question une fois avant l'arrivée du jury :
 
    ```bash
-   cd backend
+   cd app/backend
    export SYNERGYRX_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
    export SYNERGYRX_DATABASE_URL=$SYNERGYRX_PHARMA_DATABASE_URL PYTHONIOENCODING=utf-8
-   .venv/Scripts/python scripts/ask.py "What are the contraindications of metformin?"
+   .venv/Scripts/python -m module2_ai_engineering.agent.ask "What are the contraindications of metformin?"
    docker compose exec ollama ollama ps     # qwen2.5:3b et bge-m3 : "100% GPU"
    ```
 
@@ -171,10 +171,10 @@ et temps mesurés dans [SESSION_REPORT_4.md](journal/SESSION_REPORT_4.md#tâche-
 - **Faire** (terminal à la racine) :
 
   ```bash
-  vision/.venv/Scripts/dvc.exe status        # Data and pipelines are up to date.
-  vision/.venv/Scripts/dvc.exe status -c     # Cache and remote 'localstore' are in sync.
-  vision/.venv/Scripts/dvc.exe remote list   # localstore  C:\Users\msi\dvc-storage\tujya  (default)
-  vision/.venv/Scripts/dvc.exe dag           # étapes prepare et rag_corpus
+  module1_vision_mlops/training/.venv/Scripts/dvc.exe status        # Data and pipelines are up to date.
+  module1_vision_mlops/training/.venv/Scripts/dvc.exe status -c     # Cache and remote 'localstore' are in sync.
+  module1_vision_mlops/training/.venv/Scripts/dvc.exe remote list   # localstore  C:\Users\msi\dvc-storage\tujya  (default)
+  module1_vision_mlops/training/.venv/Scripts/dvc.exe dag           # étapes prepare et rag_corpus
   ```
 
 - **Le jury voit** : données et pipelines à jour, remote synchronisé, le graphe des étapes.
@@ -194,7 +194,7 @@ et temps mesurés dans [SESSION_REPORT_4.md](journal/SESSION_REPORT_4.md#tâche-
 ## 13. Serveur MCP (45 s)
 
 - **Faire** (terminal `app/backend/`, variables de la préparation) :
-  `.venv/Scripts/python scripts/mcp_smoke.py`
+  `.venv/Scripts/python -m module2_ai_engineering.mcp_server.smoke`
 - **Le jury voit** (≈ 11 s) : `tools: ['identify_pills', 'check_interaction',
   'get_drug_info', 'search_documents']`, `check_interaction -> … Major`,
   `search_documents -> ['Metformin label …']`.
@@ -248,14 +248,14 @@ et temps mesurés dans [SESSION_REPORT_4.md](journal/SESSION_REPORT_4.md#tâche-
 | La webcam ne reconnaît rien | Le dire (modèle entraîné sur C3PI uniquement) et revenir aux photos de démo |
 | `/docs` reste blanc | Pas d'Internet (Swagger UI vient d'un CDN) : montrer <http://localhost:8080/openapi.json> et la capture [07](screenshots/07-swagger.jpg) |
 | Un conteneur n'est pas « healthy » | `docker compose logs <service> --tail 30`, puis `docker compose up -d` |
-| Scan en 503 | `models/` vide : `cd vision && .venv/Scripts/python -m tujya_vision.publish` (MLflow démarré) |
+| Scan en 503 | `models/` vide : `cd module1_vision_mlops/training && .venv/Scripts/python -m tujya_vision.publish` (MLflow démarré) |
 | Pas d'Internet pour GitHub | `gh run list` ne marchera pas : montrer `.github/workflows/` et le rapport de session 4 |
 | Le script MCP met plus d'une minute | une adresse contient `localhost` : la remplacer par `127.0.0.1` |
 
 ## Rejouer la démo automatiquement
 
 ```bash
-cd frontend
+cd app/frontend
 BASE=http://localhost:8080 node scripts/screenshots.mjs        # scan, interactions, webcam, Swagger
 BASE=http://localhost:8080 node scripts/chat-screenshots.mjs   # chat, citation, dose refusée
 node scripts/mlflow-screenshots.mjs                            # MLflow (expériences, registre)

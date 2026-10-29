@@ -15,7 +15,7 @@ docker compose down                 # stops; volumes are kept (down -v deletes t
 | `postgres` | `pgvector/pgvector:pg16` | 5432 | volume `pgdata`; database `tujya` (accounts, medicine tables, pgvector) and `mlflow` |
 | `mlflow` | built from `infra/docker/mlflow/Dockerfile` (MLflow 3.17.2 + psycopg2) | 5000 | tracking store in PostgreSQL, artefacts in volume `mlartifacts`, Model Registry |
 | `pharma-init` | `tujya-backend` | none | one-shot: `python -m app.pharma_loader` rebuilds the medicine tables from `config/` and `data/tujya/`, then exits; the backend waits for it |
-| `rag-init` | `tujya-backend` | none | one-shot: `python -m app.rag.index --pull` pulls the Ollama models if missing, then indexes `data/rag/corpus` into the `rag_chunks` table (idempotent; module2_ai_engineering/docs/rag.md); the backend does not wait for it |
+| `rag-init` | `tujya-backend` | none | one-shot: `python -m module2_ai_engineering.rag.index --pull` pulls the Ollama models if missing, then indexes `data/rag/corpus` into the `rag_chunks` table (idempotent; module2_ai_engineering/docs/rag.md); the backend does not wait for it |
 | `backend` | built from `app/backend/Dockerfile` (Python 3.12, FastAPI, ONNX Runtime CPU, LangGraph) | 8000 | the API and the agent (`/api/chat`, talks to `ollama`); Swagger at `/docs` |
 | `frontend` | built from `app/frontend/Dockerfile` (Node 22 build, nginx 1.27) | 8080 | the React app; nginx forwards `/api`, `/docs`, `/openapi.json` to `backend` (`app/frontend/nginx.conf`) |
 | `ollama` | `ollama/ollama:0.40.12` | 11434 | local LLM (`qwen2.5:3b`) and embeddings (`bge-m3`); models in volume `ollama`; NVIDIA GPU reserved (D57) |
@@ -25,12 +25,13 @@ docker compose down                 # stops; volumes are kept (down -v deletes t
 1. Data under `data/` (DVC, module1_vision_mlops/docs/dataset_c3pi.md, module2_ai_engineering/docs/interactions.md): `dvc pull` from
    the default remote (section "DVC remote" below) gives `data/tujya/*.csv` (medicine
    tables), `data/vision/c3pi/images/` (demo gallery) and `data/rag/corpus` (RAG index);
-   `data/parquet/` (SynergyRx tables) is optional and not in DVC.
-2. Models: `cd vision && python -m tujya_vision.publish` fills `models/` from the MLflow
+   `data/parquet/` (SynergyRx tables, used by the synergy bonus) is tracked by DVC too.
+2. Models: `cd module1_vision_mlops/training && python -m tujya_vision.publish` fills `models/` from the MLflow
    Model Registry (MLflow must be running: `docker compose up -d mlflow` first).
 
-These folders are mounted **read-only** into the backend (`/config`, `/data/...`, `/models`;
-the app's project root is `/` in the image, so its default paths need no setting). Without
+These folders are mounted **read-only** into the backend (`/tujya/config`,
+`/tujya/data/...`, `/tujya/models`; the image keeps the repository layout under `/tujya`, so
+the default paths of `app/config.py` need no setting). Without
 models, `/api/scan` answers 503 and says how to publish them; without the CSV files,
 `pharma-init` fails and the backend does not start.
 
@@ -93,7 +94,7 @@ the connection. The Vite dev server listens on `127.0.0.1:5173` only.
 **Use `127.0.0.1`, not `localhost`, in connection strings of host-side tools** (D72). On this
 PC `localhost` resolves to `::1` first, and Docker now listens on IPv4 only: browsers and
 curl fall back to `127.0.0.1` at once, but libpq (psycopg) waited **65 to 100 s** per
-connection (`scripts/mcp_smoke.py` took 2 min 34 s instead of 5 s). Defaults and docs now
+connection (`mcp_server/smoke.py` took 2 min 34 s instead of 5 s). Defaults and docs now
 use `127.0.0.1` (`SYNERGYRX_OLLAMA_URL`, `MLFLOW_TRACKING_URI`, the PostgreSQL URLs);
 `http://localhost:8080` in a browser is fine.
 
@@ -164,7 +165,7 @@ interactions (ingredient_a_id < ingredient_b_id, severity, description, source_i
 In Docker, `pharma-init` loads them on every start. By hand (full refresh, safe to rerun):
 
 ```bash
-cd backend
+cd app/backend
 python -m app.pharma_loader --database-url postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
 ```
 

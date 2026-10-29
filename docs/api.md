@@ -61,7 +61,7 @@ The API loads `detector.onnx`, `classifier.onnx` and `models.json` from
 scan. Fill it from the MLflow Model Registry (vision venv, MLflow server running):
 
 ```bash
-cd vision
+cd module1_vision_mlops/training
 python -m tujya_vision.publish                 # latest registered versions
 python -m tujya_vision.publish --from-runs     # or the newest vision/runs exports
 ```
@@ -104,7 +104,7 @@ the test, `tests/fake_models.py`) and `app/backend/tests/test_medicines.py` (SQL
 
 ## Measured on the real models
 
-`python scripts/evaluate_scan.py --split test` (backend venv) runs this exact pipeline on
+`python -m module1_vision_mlops.serving.evaluate_scan --split test` (backend venv) runs this exact pipeline on
 the 600 consumer photos of the test split: pill found 98.5 %, top-1 89.3 %, top-5 95.8 %,
 the same as the Ultralytics evaluation (module1_vision_mlops/docs/vision.md); about 50 to 220 ms per photo on
 the laptop CPU, depending on the load.

@@ -174,12 +174,12 @@ the per-question scores (`module2_ai_engineering/benchmark/generation_per_questi
 ## Reproduce
 
 ```bash
-cd backend                                # backend venv; stack running (postgres, ollama, mlflow)
+cd app/backend                                # backend venv; stack running (postgres, ollama, mlflow)
 export SYNERGYRX_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
-python scripts/bench_build.py             # benchmark/rag_questions.jsonl from the corpus
-python scripts/bench_retrieval.py         # six retrieval runs -> MLflow, results_retrieval.json
-python scripts/bench_answers.py           # the agent on the 88 questions -> data/rag/bench/
-python scripts/bench_generation.py        # safety, citations, RAGAS -> MLflow, results_generation.json
+python -m module2_ai_engineering.benchmark.bench_build             # benchmark/rag_questions.jsonl from the corpus
+python -m module2_ai_engineering.benchmark.bench_retrieval         # six retrieval runs -> MLflow, results_retrieval.json
+python -m module2_ai_engineering.benchmark.bench_answers           # the agent on the 88 questions -> data/rag/bench/
+python -m module2_ai_engineering.benchmark.bench_generation        # safety, citations, RAGAS -> MLflow, results_generation.json
 ```
 
 RAGAS and the MLflow client are not in `requirements.txt` (benchmark only):

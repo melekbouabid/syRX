@@ -52,7 +52,7 @@ A photo and all its crops stay in the split of `selected_images.csv`.
 
 ```bash
 docker compose up -d                                   # MLflow on http://localhost:5000
-cd vision
+cd module1_vision_mlops/training
 python -m tujya_vision.train classify --epochs 20
 python -m tujya_vision.train detect --epochs 10 --imgsz 640
 ```
@@ -150,14 +150,14 @@ ONNX files with ONNX Runtime (D45). Checks:
 
 - on 40 test photos, against Ultralytics' ONNX predictor: same number of boxes on 40/40,
   mean IoU of the main box 0.9999, same top-1 class on 39/39 (one photo without a box);
-- on all 600 test photos (`backend/scripts/evaluate_scan.py --split test`): pill found
+- on all 600 test photos (`python -m module1_vision_mlops.serving.evaluate_scan --split test`): pill found
   98.5 %, top-1 **89.3 %**, top-5 **95.8 %**, as in the end-to-end evaluation above.
 
 ### Confirmation threshold
 
 The app asks the user to confirm a pill when its top-1 probability is below a threshold
 (`needs_confirmation`). Chosen on the **validation** photos (600, never used for training),
-with `python scripts/evaluate_scan.py --split val`: rule = the lowest threshold at which at
+with `python -m module1_vision_mlops.serving.evaluate_scan --split val`: rule = the lowest threshold at which at
 most 1 % of all photos would be accepted with a wrong pill.
 
 | Threshold | Accepted without confirmation | Top-1 among accepted | Wrong and accepted (share of all photos) |
