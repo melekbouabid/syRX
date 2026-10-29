@@ -12,7 +12,7 @@ from langchain_core.language_models import BaseChatModel
 from sqlalchemy import Engine
 
 from app.config import Settings
-from app.toxicity import ToxHolder
+from bonus.toxicity.model import ToxHolder
 from module1_vision_mlops.serving.scanner import ScannerHolder
 from module2_ai_engineering.agent.graph import TujyaAgent
 from module2_ai_engineering.agent.tools import Toolbox

@@ -10,6 +10,9 @@
 !module2_ai_engineering/rag/
 !module2_ai_engineering/agent/
 !module2_ai_engineering/mcp_server/
+!bonus/__init__.py
+!bonus/toxicity/__init__.py
+!bonus/toxicity/model.py
 **/__pycache__/
 **/.env
 **/.env.*

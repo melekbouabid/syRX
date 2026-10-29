@@ -689,3 +689,15 @@ tournent avec le venv du backend, oÃ¹ le pipeline est installÃ© en Ã©ditab
 pgvector passent dans un job CI `module2` qui a le service PostgreSQL. `make_spec.py`
 Ã©crivait dans un chemin absolu du dossier d'origine : il Ã©crit maintenant Ã  cÃ´tÃ© de lui
 (rÃ©gÃ©nÃ©rÃ© Ã  l'identique).
+
+**D81. Le bonus dans `bonus/`, hors des deux modules notÃ©s.** L'outil de toxicitÃ©
+(`app/toxicity.py` devient `bonus/toxicity/model.py`, avec `train_tox21.py` et
+`fetch_ingredient_smiles.py`) et l'Ã©tude de synergie (`bonus/synergy/train_synergy.py`)
+quittent l'API et ses scripts. La route `/api/toxicity` reste dans `app/backend` (elle
+importe `bonus.toxicity.model`), comme l'outil `predict_toxicity` dans l'agent et le
+serveur MCP. Les scripts deviennent des modules (`python -m bonus.toxicity.train_tox21
+train`) ; le modÃ¨le MLflow journalise dÃ©sormais le dossier `bonus` comme code
+(`code_paths`). Les versions dÃ©jÃ  enregistrÃ©es (`tujya-tox21` v2) et le paquet publiÃ©
+`models/tox21` (fichiers texte LightGBM, aucun pickle) ne dÃ©pendent pas de ce chemin. Le
+message Â« aucun modÃ¨le publiÃ© Â» donne la nouvelle commande, et le test qui le vÃ©rifie suit.
+Un job CI `bonus` lance ses tests.

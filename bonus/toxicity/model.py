@@ -1,12 +1,12 @@
 """Single-molecule toxicity: one LightGBM model per Tox21 assay on RDKit Morgan fingerprints.
 
-Bonus tool of the agent and the MCP server (docs/TOXICITY.md). The model predicts the
+Bonus tool of the agent and the MCP server (bonus/docs/toxicity.md). The model predicts the
 probability that a molecule is *active* in each of the 12 Tox21 in vitro assays; it is
 "prédiction d'un modèle sur des tests in vitro, pas une évaluation clinique". Each molecule
 is predicted on its own: nothing is ever said about a mixture.
 
-Training: `python scripts/train_tox21.py train` (scaffold split, MLflow `tujya-tox`,
-registered model `tujya-tox21`); `python scripts/train_tox21.py publish` copies the
+Training: `python -m bonus.toxicity.train_tox21 train` (scaffold split, MLflow `tujya-tox`,
+registered model `tujya-tox21`); `python -m bonus.toxicity.train_tox21 publish` copies the
 registered bundle to `models/tox21/`, which this module loads on first use:
 
     models/tox21/model.json        tasks, fingerprint settings, test ROC-AUC per task, version
@@ -65,7 +65,7 @@ MAX_MOLECULES = 2
 
 
 class ToxicityUnavailable(RuntimeError):
-    """No published model (run `python scripts/train_tox21.py publish`)."""
+    """No published model (run `python -m bonus.toxicity.train_tox21 publish`)."""
 
 
 def standardise(smiles: str) -> Any | None:
@@ -132,7 +132,7 @@ class ToxModel:
         if not meta_file.is_file():
             raise ToxicityUnavailable(
                 f"no toxicity model in {directory}: run "
-                "`python scripts/train_tox21.py publish` (backend venv, MLflow running)"
+                "`python -m bonus.toxicity.train_tox21 publish` (backend venv, MLflow running)"
             )
         import lightgbm as lgb
 

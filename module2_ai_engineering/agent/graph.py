@@ -30,7 +30,7 @@ from langgraph.graph import END, START, StateGraph
 from sqlalchemy.orm import Session
 
 from app.medicines import DISCLAIMER, pill_infos
-from app.toxicity import LOW_NOTE, MIXTURE_NOTE, WORDING
+from bonus.toxicity.model import LOW_NOTE, MIXTURE_NOTE, WORDING
 from module2_ai_engineering.agent.safety import (
     CROSS_REFERENCE,
     REFUSAL_DOSE,

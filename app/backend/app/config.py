@@ -73,8 +73,8 @@ class Settings(BaseSettings):
     # this; calibrated on the first benchmark run (docs/BENCHMARK.md). 0 disables it.
     rag_attribution_threshold: float = 0.65
 
-    # Bonus: single-molecule toxicity (docs/TOXICITY.md). The model bundle is published by
-    # `python scripts/train_tox21.py publish`; ingredient names -> SMILES from PubChem.
+    # Bonus: single-molecule toxicity (bonus/docs/toxicity.md). The model bundle is published by
+    # `python -m bonus.toxicity.train_tox21 publish`; ingredient names -> SMILES from PubChem.
     tox_model_dir: Path = PROJECT_DIR / "models" / "tox21"
     ingredient_smiles_file: Path = PROJECT_DIR / "config" / "ingredient_smiles.csv"
 

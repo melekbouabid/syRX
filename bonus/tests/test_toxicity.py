@@ -16,7 +16,7 @@ from mcp import Client
 
 from app.config import Settings
 from app.medicines import DISCLAIMER
-from app.toxicity import (
+from bonus.toxicity.model import (
     FP_BITS,
     MIXTURE_NOTE,
     TASKS,
@@ -112,7 +112,7 @@ def test_names_resolver_invalid_input_and_at_most_two() -> None:
 
 def test_missing_model_says_how_to_publish(tmp_path: Path) -> None:
     holder = ToxHolder(tmp_path / "none", tmp_path / "none.csv")
-    with pytest.raises(ToxicityUnavailable, match=r"train_tox21\.py publish"):
+    with pytest.raises(ToxicityUnavailable, match=r"bonus\.toxicity\.train_tox21 publish"):
         predict_molecules(holder, ["CCO"])
 
 

@@ -1,11 +1,11 @@
-"""Train, log and publish the Tox21 toxicity model (bonus tool, docs/TOXICITY.md).
+"""Train, log and publish the Tox21 toxicity model (bonus tool, bonus/docs/toxicity.md).
 
-cd app/backend                                    # backend venv (rdkit, lightgbm, mlflow)
-python scripts/train_tox21.py download        # MoleculeNet tox21.csv.gz -> data/tox21/
-python scripts/train_tox21.py train           # scaffold split, 12 LightGBM models, MLflow tujya-tox
-python scripts/train_tox21.py publish         # registered version -> models/tox21/ for the API
+# from the repository root, backend venv (rdkit, lightgbm, mlflow)
+python -m bonus.toxicity.train_tox21 download   # MoleculeNet tox21.csv.gz -> data/tox21/
+python -m bonus.toxicity.train_tox21 train      # scaffold split, 12 LightGBM, MLflow tujya-tox
+python -m bonus.toxicity.train_tox21 publish    # registered version -> models/tox21/ (API)
 
-Featurisation is the API's own (app/toxicity.py): largest fragment, Morgan radius 2, 2,048
+Featurisation is the API's own (bonus/toxicity/model.py): largest fragment, Morgan radius 2, 2,048
 bits. Split: Bemis-Murcko scaffolds, largest groups first into train until 80 %, then
 validation (10 %) and test (10 %), as in MoleculeNet / DeepChem's scaffold splitter, so the
 test molecules have scaffolds never seen in training. Early stopping on validation AUC.
@@ -18,7 +18,6 @@ import hashlib
 import json
 import os
 import shutil
-import sys
 import tempfile
 import time
 import urllib.request
@@ -29,11 +28,9 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from bonus.toxicity.model import FP_BITS, FP_RADIUS, TASKS, fingerprint, scaffold, standardise
 
-from app.toxicity import FP_BITS, FP_RADIUS, TASKS, fingerprint, scaffold, standardise
-
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "data" / "tox21"
 RAW = DATA / "tox21.csv.gz"
 URL = "https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/tox21.csv.gz"
@@ -81,7 +78,7 @@ def download() -> None:
                 "sha256": digest,
                 "bytes": RAW.stat().st_size,
                 "retrieved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                "licence": "see docs/TOXICITY.md (Tox21: US federal data; MoleculeNet copy)",
+                "licence": "see bonus/docs/toxicity.md (Tox21: US federal data; MoleculeNet copy)",
             },
             indent=2,
         ),
@@ -225,7 +222,7 @@ def train(args: argparse.Namespace) -> None:
             """pyfunc wrapper: SMILES column -> one probability column per Tox21 task."""
 
             def load_context(self, context: Any) -> None:
-                from app.toxicity import ToxModel
+                from bonus.toxicity.model import ToxModel
 
                 self.model = ToxModel.from_dir(Path(context.artifacts["bundle"]))
 
@@ -241,7 +238,7 @@ def train(args: argparse.Namespace) -> None:
             name="model",
             python_model=Tox21Bundle(),
             artifacts={"bundle": str(out)},
-            code_paths=[str(Path(__file__).resolve().parent.parent / "app")],
+            code_paths=[str(ROOT / "bonus")],  # the model code (bonus/toxicity/model.py)
             registered_model_name=REGISTERED,
         )
         version = getattr(info, "registered_model_version", None)
