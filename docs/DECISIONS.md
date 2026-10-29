@@ -609,3 +609,38 @@ et `tujya-frontend:local` de l'original, qui ne correspondent pas au mÃªme cod
 liÃ©s Ã  `127.0.0.1` : un seul des deux projets tourne Ã  la fois. Le remote DVC est partagÃ©
 avec l'original : `dvc push` est interdit dans la copie (`dvc pull` et `dvc status` sont
 permis). Tag local `v1.0-avant-restructuration` posÃ© avant tout changement.
+
+**D77. Le pipeline SynergyRx dans `data_pipeline/`, racine du projet inchangÃ©e.** Le code
+(`src/`), ses tests, `pyproject.toml`, `config.yaml`, `manifest.json`, `LICENSES.md`, son
+`Dockerfile` et son `Makefile` passent dans `data_pipeline/`, mais `data/` (DVC) et
+`config/` restent Ã  la racine, partagÃ©s avec l'application et les modules. Le
+`config.yaml` livrÃ© dÃ©clare donc `project_root: ..`, dÃ©sormais **rÃ©solu par rapport au
+fichier** et non au dossier courant (changement de `load_settings`, testÃ©), et range les
+registres du pipeline dans son dossier (`manifest_path`, `licenses_path`,
+`sources_doc_path`). On lance le pipeline depuis `data_pipeline/` ; les Ã©tapes Tujya
+retrouvent sa configuration depuis la racine (Ã©tape DVC `rag_corpus`). Les docs encore
+vivantes du pipeline (dictionnaire des donnÃ©es, vÃ©rifiÃ© par un test ; sources, rÃ©Ã©crit par
+`sources --check` ; rÃ¨gles d'accÃ¨s, citÃ©es par un test) vont dans `data_pipeline/docs/` ;
+seuls le plan et l'Ã©tat de SynergyRx vont dans `docs/archive/`. Les rÃ¨gles ruff communes
+passent dans un `ruff.toml` Ã  la racine (seul ajout Ã  la racine hors de la liste prÃ©vue),
+que chaque paquet Ã©tend. L'image du pipeline se construit depuis la racine
+(`docker build -f data_pipeline/Dockerfile .`) avec une liste blanche
+`data_pipeline/Dockerfile.dockerignore`.
+
+**D78. Incident pendant la restructuration : des tests ont Ã©crit dans `data/` de la copie.**
+Premier passage des tests du pipeline aprÃ¨s D77 : la fixture `settings` passe
+`project_root=tmp_path`, mais `load_settings` donnait la prioritÃ© Ã  la valeur du fichier
+trouvÃ© dans le dossier courant (le nouveau `config.yaml` avec `project_root: ..`) : 47 tests
+ont Ã©chouÃ© et ont Ã©crit des donnÃ©es de test dans le vrai `data/` de la copie. RÃ©paration :
+fichiers suivis par git (`config/pill_classes.csv`, `manifest.json`, `LICENSES.md`) remis
+depuis HEAD ; `data/parquet` (DVC) remis depuis le cache DVC local (`dvc checkout`,
+`dvc status` propre) ; les 164 fichiers non versionnÃ©s touchÃ©s (32 fichiers de travail du
+pipeline SynergyRx dont l'empreinte ne correspond plus au manifeste, 132 fichiers d'Ã©tat, de
+cache HTTP et de test) **dÃ©placÃ©s**, pas supprimÃ©s, dans `data/_quarantine_2026-10-29/`
+(liste et raison dans son `README.txt`) : le pipeline les retÃ©lÃ©chargera au lieu de lire des
+donnÃ©es de test. Aucune donnÃ©e utilisÃ©e par l'application ou les modules n'est perdue (tout
+est suivi par DVC ou git). Les originaux des 32 fichiers sont dans le dossier d'origine,
+auquel la copie ne touche pas. Correctifs : un `project_root` explicite l'emporte sur le
+fichier, et la fixture charge explicitement le `config.yaml` livrÃ© au lieu de dÃ©pendre du
+dossier de lancement de pytest (tests de non-rÃ©gression ; vÃ©rifiÃ© ensuite qu'aucun fichier
+hors des dossiers temporaires n'est Ã©crit).

@@ -49,18 +49,10 @@ markers = [
 ]
 filterwarnings = ["ignore::DeprecationWarning:rdkit.*"]
 
+# Lint rules shared with the rest of the repository: ../ruff.toml.
 [tool.ruff]
-line-length = 100
-target-version = "py311"
+extend = "../ruff.toml"
 src = ["src", "tests"]
-
-[tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "S", "ASYNC", "PTH", "C4"]
-ignore = [
-    "S101",   # assert is fine in tests and for internal invariants
-    "S311",   # random is used for jitter and sampling, not for security
-    "S324",   # md5 is only used to verify publisher-supplied checksums
-]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S105", "S106", "S108", "ASYNC240"]  # blocking file reads are fine in tests

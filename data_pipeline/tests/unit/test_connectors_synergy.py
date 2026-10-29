@@ -535,7 +535,7 @@ def test_manifest_json_is_stable_and_complete(settings: Settings, tmp_path: Path
         file, source="x", layer="raw", url="https://example.org/a.csv", version="1", license="CC0"
     )
     manifest.save()
-    payload = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
+    payload = json.loads(settings.resolve(settings.manifest_path).read_text(encoding="utf-8"))
     stored = payload["files"]["data/raw/x/a.csv"]
     assert {"sha256", "size_bytes", "url", "version", "retrieved_at", "license"} <= set(stored)
     assert stored["sha256"] == hashlib.sha256(b"a,b\n1,2\n").hexdigest()

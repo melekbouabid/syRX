@@ -455,7 +455,9 @@ def build_quality_report(ctx: dict[str, Any]) -> ReportDoc:
         sections.append(
             Section(
                 "Link check",
-                paragraphs=[f"Last run {ctx['links_checked_at']}. Details: `docs/SOURCES.md`."],
+                paragraphs=[
+                    f"Last run {ctx['links_checked_at']}. Details: `data_pipeline/docs/sources.md`."
+                ],
                 tables=[frame_table(links)],
             )
         )

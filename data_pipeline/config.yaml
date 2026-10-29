@@ -1,7 +1,16 @@
 # SynergyRx data pipeline configuration.
 # Any value can be overridden on the command line:  synergyrx --set http.cache_ttl_seconds=0 fetch
 # Keys that contain dots go in brackets:            --set "http.hosts[zenodo.org].rate=0.05"
-# Secrets (CONTACT_EMAIL, NCBI_API_KEY) live in .env, never in this file.
+# Secrets (CONTACT_EMAIL, NCBI_API_KEY) live in .env at the repository root, never in this file.
+# Run the pipeline from this folder (data_pipeline/), where this file is found.
+
+# The project root is the repository root, one level up (relative to this file, not to the
+# working directory): data/ and config/ are shared with the Tujya app and the two modules.
+# The pipeline's own records (manifest, licence registry, source report) stay in this folder.
+project_root: ..
+manifest_path: data_pipeline/manifest.json
+licenses_path: data_pipeline/LICENSES.md
+sources_doc_path: data_pipeline/docs/sources.md
 
 # Everything the pipeline produces lives under this one folder, grouped by format:
 #   data/parquet   the processed tables          data/csv      every CSV output
@@ -33,7 +42,7 @@ http:
     rate_with_key: 10.0
     hosts: [eutils.ncbi.nlm.nih.gov]
 
-  # Requests per second per host. See docs/SOURCES.md for what each provider documents.
+  # Requests per second per host. See docs/sources.md for what each provider documents.
   hosts:
     pubchem.ncbi.nlm.nih.gov: {rate: 5.0, burst: 1, max_concurrency: 2}
     www.ncbi.nlm.nih.gov: {rate: 2.0, burst: 1, max_concurrency: 1}     # PubTator 3: max 3/s
@@ -62,7 +71,7 @@ sources:
   oneil:
     enabled: true
   nci_almanac:
-    enabled: true                # needs a manual download: see docs/SOURCES.md
+    enabled: true                # needs a manual download: see docs/sources.md
   depmap:
     enabled: true
     version: "24Q4"

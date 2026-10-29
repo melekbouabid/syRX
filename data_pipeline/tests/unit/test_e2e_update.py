@@ -21,7 +21,7 @@ from tests.conftest import TEST_EMAIL
 from tests.unit.test_connectors_lookup import PUBMED_XML
 
 runner = CliRunner()
-REPO = Path(__file__).resolve().parents[2]
+PIPELINE = Path(__file__).resolve().parents[2]
 FU = "O=c1[nH]cc(F)c(=O)[nH]1"
 VELIPARIB = "CC1(c2nc3c(C(N)=O)cccc3[nH]2)CCCN1"
 ONLY_ONEIL = [
@@ -37,10 +37,12 @@ FAST = ["--set", "http.safety_factor=1.0", "--set", "http.default_limit.rate=100
 
 @pytest.fixture
 def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    (tmp_path / "config.yaml").write_text(
-        (REPO / "config.yaml").read_text(encoding="utf-8"), encoding="utf-8"
+    """A temporary repository laid out like the real one; the pipeline runs from data_pipeline/."""
+    (tmp_path / "data_pipeline").mkdir()
+    (tmp_path / "data_pipeline" / "config.yaml").write_text(
+        (PIPELINE / "config.yaml").read_text(encoding="utf-8"), encoding="utf-8"
     )
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.chdir(tmp_path / "data_pipeline")
     monkeypatch.setattr(cli, "console", Console(width=250))
     monkeypatch.setenv("CONTACT_EMAIL", TEST_EMAIL)
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
@@ -140,7 +142,7 @@ def test_update_builds_everything_and_a_second_run_is_free(project: Path) -> Non
         "data/json/citations.json", "data/reports/data_quality.md",
         "data/reports/data_quality.html", "data/csv/coverage.csv",
         "data/csv/conflicts.csv", "data/csv/sample_sentences.csv",
-        "LICENSES.md", "manifest.json",
+        "data_pipeline/LICENSES.md", "data_pipeline/manifest.json",
     ):  # fmt: skip
         assert (project / relative).is_file(), relative
     # Everything generated is under data/: nothing is left at the project root.
@@ -162,7 +164,7 @@ def test_update_builds_everything_and_a_second_run_is_free(project: Path) -> Non
 
     summary = runner.invoke(app, ["summary"])
     assert "Distinct drugs across all sources: 2" in summary.output
-    manifest = json.loads((project / "manifest.json").read_text(encoding="utf-8"))
+    manifest = json.loads((project / "data_pipeline" / "manifest.json").read_text(encoding="utf-8"))
     layers = {entry["layer"] for entry in manifest["files"].values()}
     assert layers == {"raw", "interim", "processed", "report", "export"}
     for entry in manifest["files"].values():
@@ -202,7 +204,7 @@ def test_sources_check_records_every_status_and_writes_the_document(project: Pat
     assert result.exit_code == 0, result.output
     assert not blocked.called  # robots.txt disallows it, so it was not even probed
 
-    document = (project / "docs" / "SOURCES.md").read_text(encoding="utf-8")
+    document = (project / "data_pipeline" / "docs" / "sources.md").read_text(encoding="utf-8")
     for _, link in all_links():
         assert f"]({link.url})" in document  # every link is listed...
     for _, _, url, _ in ENDPOINTS:

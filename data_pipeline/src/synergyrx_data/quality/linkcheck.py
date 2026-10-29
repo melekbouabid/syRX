@@ -1,4 +1,4 @@
-"""Link check and generation of `docs/SOURCES.md`.
+"""Link check and generation of `data_pipeline/docs/sources.md`.
 
 `synergyrx sources --check` probes every URL from the project brief plus the data endpoint
 each connector really uses, then rewrites the document with the HTTP status it got. Pages

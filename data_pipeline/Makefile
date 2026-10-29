@@ -1,4 +1,5 @@
-# SynergyRx data pipeline. Run `make help` for the list of targets.
+# SynergyRx data pipeline. Run `make help` for the list of targets, from this folder
+# (data_pipeline/): config.yaml is found here and sets the project root to the repository.
 # On Windows, use Git Bash / WSL, or run the underlying commands shown here directly.
 
 PYTHON ?= python
@@ -61,14 +62,14 @@ export:  ## Frontend JSON files
 update:  ## Incremental end-to-end run (what the scheduler calls)
 	synergyrx update
 
-sources:  ## Probe every link and rewrite docs/SOURCES.md
+sources:  ## Probe every link and rewrite data_pipeline/docs/sources.md
 	synergyrx sources --check
 
 summary:  ## Final report of everything collected
 	synergyrx summary
 
 docker-build:  ## Build the container image
-	docker build -t synergyrx-data .
+	docker build -f Dockerfile -t synergyrx-data ..
 
-docker-run:  ## Run `synergyrx update` in the container (everything stays in ./data on the host)
-	docker run --rm --env-file .env -v "$(CURDIR)/data:/app/data" synergyrx-data update
+docker-run:  ## Run `synergyrx update` in the container (everything stays in the repository data/ folder)
+	docker run --rm --env-file ../.env -v "$(CURDIR)/../data:/app/data" synergyrx-data update

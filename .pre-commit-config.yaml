@@ -14,7 +14,9 @@ repos:
 
   - repo: local
     hooks:
-      # Tools run from the project environment, so their versions match pyproject.toml.
+      # Tools run from the active environment, so their versions match data_pipeline/pyproject.toml.
+      # Ruff picks the closest configuration of each file (ruff.toml at the root and the
+      # package-level files that extend it).
       - id: ruff
         name: ruff (lint)
         entry: python -m ruff check --fix
@@ -28,10 +30,11 @@ repos:
         types: [python]
 
       - id: mypy
-        name: mypy
-        entry: python -m mypy
+        name: mypy (data pipeline)
+        entry: python -m mypy --config-file data_pipeline/pyproject.toml data_pipeline/src
         language: system
         types: [python]
+        files: ^data_pipeline/src/
         pass_filenames: false
 
       - id: no-secrets-or-data
@@ -42,8 +45,8 @@ repos:
         exclude: '^\.env\.example$'
 
       - id: unit-tests
-        name: unit tests (mocked HTTP)
-        entry: python -m pytest tests/unit -q
+        name: data pipeline unit tests (mocked HTTP)
+        entry: python -m pytest data_pipeline/tests/unit -q
         language: system
         pass_filenames: false
         stages: [pre-push]

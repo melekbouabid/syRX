@@ -20,11 +20,18 @@ from synergyrx_data.logging_utils import (
 )
 from tests.conftest import FAKE_API_KEY, TEST_EMAIL
 
-REPO = Path(__file__).resolve().parents[2]
+REPO = Path(__file__).resolve().parents[3]  # the repository; the pipeline is REPO/data_pipeline
+SHIPPED = REPO / "data_pipeline" / "config.yaml"
 
 
 def test_shipped_config_is_valid_and_matches_documented_limits() -> None:
-    settings = load_settings(REPO / "config.yaml", environ={})
+    settings = load_settings(SHIPPED, environ={})
+    # data/ and config/ are the repository-level folders; the pipeline keeps its records.
+    assert settings.project_root == REPO.resolve()
+    assert (
+        settings.resolve(settings.manifest_path)
+        == REPO.resolve() / "data_pipeline" / "manifest.json"
+    )
     assert settings.http.ncbi.rate_without_key == 3.0
     assert settings.http.ncbi.rate_with_key == 10.0
     assert settings.http.hosts["pubchem.ncbi.nlm.nih.gov"].rate == 5.0
@@ -33,6 +40,22 @@ def test_shipped_config_is_valid_and_matches_documented_limits() -> None:
     for name in ("drugbank", "ddinter", "gdsc", "pubmed_baseline", "pubtator"):
         assert settings.sources[name].enabled is False
     assert settings.sources["ddinter"].options["terms_acknowledged"] is False
+
+
+def test_relative_project_root_is_relative_to_the_config_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = tmp_path / "pipeline" / "config.yaml"
+    config.parent.mkdir()
+    config.write_text("project_root: ..\n", encoding="utf-8")
+    monkeypatch.chdir(config.parent)
+    assert load_settings(config, environ={}).project_root == tmp_path.resolve()
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)  # same answer whatever the working directory
+    assert load_settings(config, environ={}).project_root == tmp_path.resolve()
+    # An explicit root wins over the file (the test fixtures depend on it).
+    assert load_settings(config, project_root=elsewhere, environ={}).project_root == elsewhere
 
 
 def test_overrides_including_dotted_host_names(tmp_path: Path) -> None:
@@ -139,5 +162,5 @@ def test_no_secret_in_tracked_files() -> None:
             return {str(k) for k in node} | {k for v in node.values() for k in keys(v)}
         return set()
 
-    config = yaml.safe_load((REPO / "config.yaml").read_text(encoding="utf-8"))
+    config = yaml.safe_load(SHIPPED.read_text(encoding="utf-8"))
     assert not (keys(config) & forbidden)

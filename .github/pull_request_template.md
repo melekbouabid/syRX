@@ -1,6 +1,6 @@
 ## What changed and why
 
-## Source access (see docs/CODE_REVIEW.md)
+## Source access (see data_pipeline/docs/code_review.md)
 
 - [ ] No new HTML parsing. If there is: the API and bulk options were ruled out and the
       reason is in `docs/DECISIONS.md`.

@@ -149,7 +149,7 @@ class Settings(_Model):
     reports_dir: Path | None = None
     manifest_path: Path = Path("manifest.json")
     licenses_path: Path = Path("LICENSES.md")
-    sources_doc_path: Path = Path("docs/SOURCES.md")
+    sources_doc_path: Path = Path("docs/sources.md")
 
     sample: int | None = Field(None, ge=1)
     dry_run: bool = False
@@ -290,12 +290,22 @@ def load_settings(
         loaded = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         if not isinstance(loaded, dict):
             raise ConfigError(f"{path} must contain a YAML mapping")
+        # A relative project root written in the file is relative to the file itself, so
+        # data_pipeline/config.yaml can say `project_root: ..` whatever the working directory.
+        declared = loaded.get("project_root")
+        if declared is not None and not Path(str(declared)).is_absolute():
+            loaded["project_root"] = str((path.parent / str(declared)).resolve())
         raw = loaded
     if "secrets" in raw:
         raise ConfigError("secrets must live in .env, not in the YAML configuration")
     raw = apply_overrides(raw, overrides or [])
-    root = project_root or (path.parent if path is not None else Path.cwd())
-    raw.setdefault("project_root", str(raw.pop("project_root", root)))
+    if project_root is not None:
+        # An explicit root always wins over the file: tests rely on it to stay in their
+        # temporary folder even when the shipped config.yaml is in the working directory.
+        raw["project_root"] = str(project_root)
+    else:
+        root = path.parent if path is not None else Path.cwd()
+        raw.setdefault("project_root", str(raw.pop("project_root", root)))
     try:
         settings = Settings.model_validate(raw)
     except ValueError as exc:

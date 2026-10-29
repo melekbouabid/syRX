@@ -26,7 +26,7 @@ from pathlib import Path
 import pandas as pd
 
 from synergyrx_data import pipeline
-from synergyrx_data.config import Settings, load_settings
+from synergyrx_data.config import Settings, find_config, load_settings
 from synergyrx_data.http.client import PoliteClient
 from synergyrx_data.provenance import read_parquet, write_parquet
 from synergyrx_data.tujya import corpus
@@ -53,6 +53,10 @@ PUBMED_OVERRIDES = [
     "sources.pubmed.options.start_date=2000/01/01",
 ]
 CLASS_COLUMNS = ["rxcui", "active_ingredients", "ingredient_rxcuis", "ingredient_method"]
+# The pipeline configuration (rate limits, sources), used when the steps run from the
+# repository root, as the DVC stage does; SYNERGYRX_CONFIG or a config.yaml in the working
+# directory still wins.
+PIPELINE_CONFIG = Path(__file__).resolve().parents[3] / "config.yaml"
 
 
 def _paths(settings: Settings) -> dict[str, Path]:
@@ -166,7 +170,7 @@ def main(argv: list[str] | None = None) -> None:
         "labels": RAG_OVERRIDES + LABEL_OVERRIDES,
         "pubmed": RAG_OVERRIDES + PUBMED_OVERRIDES,
     }.get(args.command, [])
-    settings = load_settings(None, [*overrides, *args.set])
+    settings = load_settings(find_config(None) or PIPELINE_CONFIG, [*overrides, *args.set])
     if args.command == "ddinter":
         run_ddinter(settings)
     elif args.command == "ingredients":

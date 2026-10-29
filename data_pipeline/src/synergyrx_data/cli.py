@@ -144,7 +144,8 @@ def main(
 def sources(
     ctx: typer.Context,
     check: Annotated[
-        bool, typer.Option("--check", help="Probe every link and rewrite docs/SOURCES.md.")
+        bool,
+        typer.Option("--check", help="Probe every link and rewrite data_pipeline/docs/sources.md."),
     ] = False,
 ) -> None:
     """List the sources, their licence and state. With --check, test every link."""

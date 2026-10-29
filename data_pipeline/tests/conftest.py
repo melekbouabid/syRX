@@ -14,6 +14,9 @@ from synergyrx_data.http.client import PoliteClient
 
 # example.org is reserved for documentation (RFC 2606): this is not a real mailbox.
 TEST_EMAIL = "pipeline-tests@example.org"
+# The shipped configuration, loaded explicitly: the fixtures must not depend on the folder
+# pytest is started from (a config.yaml in the working directory would otherwise be used).
+SHIPPED_CONFIG = Path(__file__).resolve().parents[1] / "config.yaml"
 FAKE_API_KEY = "0123456789abcdef0123456789abcdef0000"
 
 
@@ -41,7 +44,7 @@ def clock() -> FakeClock:
 def settings(tmp_path: Path) -> Settings:
     """Default settings rooted in a temporary project, with fast limits and a test identity."""
     built = load_settings(
-        None,
+        SHIPPED_CONFIG,
         [
             "http.default_limit.rate=1000",
             "http.ncbi.rate_without_key=1000",

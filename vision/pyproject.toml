@@ -10,7 +10,7 @@ pythonpath = ["."]
 addopts = "-q"
 
 [tool.ruff]
-extend = "../pyproject.toml"
+extend = "../ruff.toml"
 src = ["."]
 
 [tool.ruff.lint.per-file-ignores]

@@ -1,18 +1,17 @@
-# Keep secrets and collected data out of the build context and the image.
+# Fallback for builds whose context is the repository root. The images of this repository
+# each have their own allow-list next to their Dockerfile (<Dockerfile>.dockerignore), which
+# replaces this file: app/backend/Dockerfile.dockerignore, data_pipeline/Dockerfile.dockerignore.
+# Never send secrets, collected data, models or local environments to a build.
 .env
 .env.*
 data/
-reports/
-exports/
-annotation/
-logs/
-manifest.json
+models/
+weights/
 .git/
-.venv/
-# The image is the data pipeline only; the web app is not part of it.
-backend/
-frontend/
-tests/
+.dvc/cache/
+**/.venv/
+**/.venv-*/
+**/node_modules/
 **/__pycache__/
 .mypy_cache/
 .ruff_cache/

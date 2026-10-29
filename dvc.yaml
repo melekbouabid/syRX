@@ -2,8 +2,9 @@
 # (data/vision/c3pi/*.dvc); the datasets built from them are a pipeline stage, so
 # `dvc repro` rebuilds them when the images, the split list or the labelling code change.
 # `prepare`: run from the repository root with the vision venv active (vision/.venv).
-# `rag_corpus`: with the pipeline venv active (.venv-dev); its inputs, the openFDA labels and
-# PubMed abstracts under data/rag/raw and data/rag/interim, are fetched by
+# `rag_corpus`: from the repository root with the pipeline venv active (data_pipeline/.venv);
+# its inputs, the openFDA labels and PubMed abstracts under data/rag/raw and data/rag/interim,
+# are fetched by
 # `python -m synergyrx_data.tujya labels` / `pubmed` and tracked with `dvc add` (docs/RAG.md).
 stages:
   prepare:
@@ -24,6 +25,6 @@ stages:
       - data/rag/raw/pubmed
       - data/tujya/interactions_between_classes.csv
       - data/tujya/pill_ingredients.csv
-      - src/synergyrx_data/tujya/corpus.py
+      - data_pipeline/src/synergyrx_data/tujya/corpus.py
     outs:
       - data/rag/corpus

@@ -52,7 +52,7 @@ stages:
       hash: md5
       md5: 6051d52004ad0d914547068491a20339
       size: 19017
-    - path: src/synergyrx_data/tujya/corpus.py
+    - path: data_pipeline/src/synergyrx_data/tujya/corpus.py
       hash: md5
       md5: 1d6c5bdf7adf235802c1234a47bf5361
       size: 11664

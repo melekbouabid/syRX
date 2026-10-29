@@ -269,7 +269,7 @@ def test_coverage_reports_distinct_drugs_and_cell_lines_per_source(built: Settin
 
 
 def test_license_registry_lists_every_source(built: Settings) -> None:
-    text = built.resolve("LICENSES.md").read_text(encoding="utf-8")
+    text = built.resolve(built.licenses_path).read_text(encoding="utf-8")
     for name, connector in REGISTRY.items():
         assert f"**{name}**" in text
         assert connector.info.license.split(" (")[0] in text
@@ -417,12 +417,18 @@ runner = CliRunner()
 
 @pytest.fixture
 def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """A temporary project folder with the shipped config.yaml, used as the working directory."""
-    repo = Path(__file__).resolve().parents[2]
-    (tmp_path / "config.yaml").write_text(
-        (repo / "config.yaml").read_text(encoding="utf-8"), encoding="utf-8"
+    """A temporary repository with the shipped data_pipeline/config.yaml.
+
+    As in the real repository, the pipeline runs from its data_pipeline folder and the project
+    root is one level up: data/ is there, the manifest and licence registry stay in
+    data_pipeline/.
+    """
+    shipped = Path(__file__).resolve().parents[2] / "config.yaml"
+    (tmp_path / "data_pipeline").mkdir()
+    (tmp_path / "data_pipeline" / "config.yaml").write_text(
+        shipped.read_text(encoding="utf-8"), encoding="utf-8"
     )
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.chdir(tmp_path / "data_pipeline")
     monkeypatch.setattr(cli, "console", Console(width=250))  # no line wrapping in assertions
     monkeypatch.setenv("CONTACT_EMAIL", TEST_EMAIL)
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
@@ -450,7 +456,8 @@ def test_cli_dry_run_prints_the_plan_and_touches_nothing(project: Path) -> None:
         assert source in result.output
     assert "drugbank" not in result.output  # disabled sources are not part of the plan
     assert tree(project) == before
-    assert not (project / "data").exists() and not (project / "manifest.json").exists()
+    assert not (project / "data").exists()
+    assert not (project / "data_pipeline" / "manifest.json").exists()
 
 
 def test_cli_fetch_runs_a_source_and_reports_failures_with_exit_code(project: Path) -> None:
@@ -494,7 +501,7 @@ def test_cli_overrides_and_bad_config(project: Path) -> None:
 def test_cli_offline_commands_on_built_data(project: Path) -> None:
     from synergyrx_data.config import load_settings
 
-    seed_interim(load_settings(project / "config.yaml"))
+    seed_interim(load_settings(project / "data_pipeline" / "config.yaml"))
     for command in ("clean", "literature", "report", "export"):
         result = runner.invoke(app, [command])
         assert result.exit_code == 0, f"{command}: {result.output}"
@@ -530,7 +537,10 @@ def test_generated_files_are_grouped_by_format_under_the_data_folder(built: Sett
     """One folder per format, all inside `data/`: the extension tells you the folder."""
     root = built.project_root
     produced = {p.relative_to(root).parts[0] for p in root.rglob("*") if p.is_file()}
-    assert produced == {"data", "manifest.json", "LICENSES.md"}  # nothing else at the root
+    assert produced == {"data", "data_pipeline"}  # nothing else at the root...
+    # ...and only the pipeline's own records next to it (paths of the shipped config.yaml).
+    records = {p.name for p in (root / "data_pipeline").rglob("*") if p.is_file()}
+    assert records == {"manifest.json", "LICENSES.md"}
 
     for folder, extensions in FORMATS.items():
         files = [p for p in (built.data_root / folder).iterdir() if p.is_file()]

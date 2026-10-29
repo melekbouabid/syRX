@@ -19,14 +19,14 @@ from synergyrx_data.http.client import PoliteClient
 from synergyrx_data.literature.abstracts import parse_pubmed_xml
 
 pytestmark = pytest.mark.live
-REPO = Path(__file__).resolve().parents[2]
+PIPELINE = Path(__file__).resolve().parents[2]
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
 
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
     """Real rate limits and the real identity from `.env`, but a throwaway data directory."""
-    built = load_settings(REPO / "config.yaml", [f"data_dir={(tmp_path / 'data').as_posix()}"])
+    built = load_settings(PIPELINE / "config.yaml", [f"data_dir={(tmp_path / 'data').as_posix()}"])
     if not built.secrets.contact_email and os.environ.get("SYNERGYRX_ALLOW_ANONYMOUS") != "1":
         pytest.skip("CONTACT_EMAIL is not set in .env: live requests are refused without it")
     if not built.secrets.contact_email:

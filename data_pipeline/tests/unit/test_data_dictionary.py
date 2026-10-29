@@ -1,4 +1,4 @@
-"""Every column the pipeline writes must be explained in docs/DATA_DICTIONARY.md."""
+"""Every column the pipeline writes must be explained in docs/data_dictionary.md."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from synergyrx_data.manifest import ManifestEntry
 from synergyrx_data.provenance import PROVENANCE_COLUMNS
 from tests.unit.test_build_cli import seed_interim
 
-DICTIONARY = Path(__file__).resolve().parents[2] / "docs" / "DATA_DICTIONARY.md"
+DICTIONARY = Path(__file__).resolve().parents[2] / "docs" / "data_dictionary.md"
 GENE_COLUMN = re.compile(r"^.+ \(\d+\)$")
 
 
@@ -77,7 +77,7 @@ def columns_of(path: Path) -> set[str]:
 )
 def test_every_output_column_is_documented(outputs: Settings, relative: str) -> None:
     sections = documented()
-    assert relative in sections, f"no section for {relative} in DATA_DICTIONARY.md"
+    assert relative in sections, f"no section for {relative} in data_dictionary.md"
     described = set(sections[relative])
     if relative.startswith("data/parquet/"):
         described |= set(PROVENANCE_COLUMNS)  # explained once, at the top of the document

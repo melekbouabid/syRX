@@ -1,4 +1,4 @@
-"""Guards for the source-access and compliance policy (docs/CODE_REVIEW.md)."""
+"""Guards for the source-access and compliance policy (data_pipeline/docs/code_review.md)."""
 
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ def test_no_connector_fetches_or_parses_html(path: Path) -> None:
         for keyword in call.keywords:
             if keyword.arg in ("kind", "expect"):
                 assert "html" not in ast.unparse(keyword.value), (
-                    f"{path.name} requests HTML: see docs/CODE_REVIEW.md"
+                    f"{path.name} requests HTML: see data_pipeline/docs/code_review.md"
                 )
     assert not re.search(
         r"\b(bs4|BeautifulSoup|lxml\.html|html\.parser|selenium|playwright)\b", source
