@@ -1,9 +1,15 @@
-# Install once with:  pre-commit install
+# Install once with:  pre-commit install --hook-type pre-commit --hook-type commit-msg
+# Check the whole repository:  pre-commit run --all-files
+# Conventions (branches, commit messages, tags): docs/git_workflow.md.
+default_install_hook_types: [pre-commit, commit-msg]
+default_stages: [pre-commit]
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: check-yaml
+        # Docker Compose's own `!reset` tag is not plain YAML.
+        exclude: ^infra/docker/ollama/cpu\.yml$
       - id: check-toml
       - id: end-of-file-fixer
       - id: trailing-whitespace
@@ -11,6 +17,36 @@ repos:
       - id: detect-private-key
       - id: check-added-large-files
         args: ["--maxkb=500"]   # data never belongs in the repository
+
+  # Notebooks are committed without their outputs (results belong in MLflow).
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.9.1
+    hooks:
+      - id: nbstripout
+
+  # Custom hooks of this repository (tools/hooks, tests in tools/tests).
+  - repo: local
+    hooks:
+      - id: check-secrets
+        name: no hard-coded secret (API key sk-..., AWS key AKIA..., password)
+        entry: python tools/hooks/check_secrets.py
+        language: system
+        types_or: [python, yaml, toml, shell]
+        # Test fixtures hold fake credentials on purpose (same exception as ruff's S105/S106).
+        exclude: (^|/)tests/
+
+      - id: commit-msg
+        name: commit message follows Conventional Commits, type(scope) description
+        entry: python tools/hooks/check_commit_msg.py
+        language: system
+        stages: [commit-msg]
+
+      - id: eslint
+        name: eslint (app/frontend)
+        entry: npm --prefix app/frontend run lint --silent
+        language: system
+        files: ^app/frontend/(src/.*\.tsx?|scripts/.*\.mjs|vite\.config\.ts|eslint/eslint\.config\.js)$
+        pass_filenames: false
 
   - repo: local
     hooks:
@@ -42,7 +78,8 @@ repos:
         entry: Refusing to commit secrets or collected data
         language: fail
         files: '^(\.env(\..*)?|data/.*|exports/.*|annotation/.*)$'
-        exclude: '^\.env\.example$'
+        # The template, and the DVC pointer files that version the data (the data stays out).
+        exclude: '^(\.env\.example|data/.*\.dvc)$'
 
       - id: unit-tests
         name: data pipeline unit tests (mocked HTTP)
