@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "node eslint/node_modules/eslint/bin/eslint.js -c eslint/eslint.config.js --max-warnings 0 ."
   },
   "dependencies": {
     "react": "^19.3.0",
