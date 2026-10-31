@@ -75,4 +75,3 @@ gh run view <id d'exécution> --log-failed  # ce qui a échoué
 
 ou sur GitHub : l'onglet Actions (workflows « ci » et « cd ») ; le résumé de la CD indique
 « Not pushed ».
-

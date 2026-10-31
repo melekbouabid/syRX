@@ -31,6 +31,7 @@ export function useQuery<T>(load: (signal: AbortSignal) => Promise<T>, deps: Dep
     );
     return () => controller.abort();
     // `load` is a fresh closure on every render; `deps` says when it really changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, version]);
 
   const reload = useCallback(() => setVersion((current) => current + 1), []);

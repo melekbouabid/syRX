@@ -1,5 +1,6 @@
 # Continuous integration: lint and unit tests of every Python package (data pipeline, web
-# app backend, module 1, module 2, bonus), frontend build.
+# app backend, module 1, module 2, bonus, git hooks), frontend lint and build, and the commit
+# messages of the pushed commits.
 # No job touches the network beyond installing dependencies: all HTTP in the tests is mocked
 # (live tests are marked `live` and excluded), and no data is downloaded.
 name: ci
@@ -137,8 +138,42 @@ jobs:
       - run: python -m ruff format --check .
       - run: python -m pytest
 
+  hooks:
+    name: git hooks (tools/hooks, secrets and commit messages)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: tools
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the commit messages of the whole pushed range are checked
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest ruff
+      - run: python -m ruff check .
+      - run: python -m ruff format --check .
+      - run: python -m pytest
+      # The server-side half of the commit-msg hook: a local hook can be skipped with
+      # `git commit --no-verify`, this check cannot (docs/git_workflow.md).
+      - name: commit messages follow Conventional Commits
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          # A manual run, or the first push of a branch, has no range to check.
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then exit 0; fi
+          status=0
+          for sha in $(git rev-list --no-merges "$BASE..$HEAD"); do
+            git log -1 --format=%B "$sha" > "$RUNNER_TEMP/message"
+            python hooks/check_commit_msg.py "$RUNNER_TEMP/message" || { echo "in commit $sha"; status=1; }
+          done
+          exit $status
+
   frontend:
-    name: frontend (app/frontend, type check and build)
+    name: frontend (app/frontend, lint, type check and build)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -150,6 +185,10 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: app/frontend/package-lock.json
+          cache-dependency-path: |
+            app/frontend/package-lock.json
+            app/frontend/eslint/package-lock.json
       - run: npm ci
+      - run: npm ci --prefix eslint
+      - run: npm run lint
       - run: npm run build

@@ -596,142 +596,158 @@ documented and no tool is added.
 
 ## Restructuration en deux modules (copie locale tujia2, 2026-10-29)
 
-Les dÃ©cisions D1 Ã  D75 sont gardÃ©es telles qu'elles ont Ã©tÃ© Ã©crites (en anglais) ; les
-suivantes, prises pendant la restructuration, sont en franÃ§ais.
+Les décisions D1 à D75 sont gardées telles qu'elles ont été écrites (en anglais) ; les
+suivantes, prises pendant la restructuration, sont en français.
 
-**D76. Copie locale isolÃ©e de l'original.** La restructuration se fait dans une copie
+**D76. Copie locale isolée de l'original.** La restructuration se fait dans une copie
 (`C:\Users\msi\Desktop\tujia2`, robocopy sans les environnements virtuels ni les caches),
-sans remote git (`git remote remove origin`), pour ne rien changer au dÃ©pÃ´t GitHub ni au
+sans remote git (`git remote remove origin`), pour ne rien changer au dépôt GitHub ni au
 dossier d'origine. Le projet Docker Compose s'appelle `tujia2` (conteneurs et volumes
-sÃ©parÃ©s) et les images sont Ã©tiquetÃ©es `tujia2-*` : sans ce second point, un
-`docker compose up --build` dans la copie aurait remplacÃ© les images `tujya-backend:local`
-et `tujya-frontend:local` de l'original, qui ne correspondent pas au mÃªme code. MÃªmes ports,
-liÃ©s Ã  `127.0.0.1` : un seul des deux projets tourne Ã  la fois. Le remote DVC est partagÃ©
+séparés) et les images sont étiquetées `tujia2-*` : sans ce second point, un
+`docker compose up --build` dans la copie aurait remplacé les images `tujya-backend:local`
+et `tujya-frontend:local` de l'original, qui ne correspondent pas au même code. Mêmes ports,
+liés à `127.0.0.1` : un seul des deux projets tourne à la fois. Le remote DVC est partagé
 avec l'original : `dvc push` est interdit dans la copie (`dvc pull` et `dvc status` sont
-permis). Tag local `v1.0-avant-restructuration` posÃ© avant tout changement.
+permis). Tag local `v1.0-avant-restructuration` posé avant tout changement.
 
-**D77. Le pipeline SynergyRx dans `data_pipeline/`, racine du projet inchangÃ©e.** Le code
+**D77. Le pipeline SynergyRx dans `data_pipeline/`, racine du projet inchangée.** Le code
 (`src/`), ses tests, `pyproject.toml`, `config.yaml`, `manifest.json`, `LICENSES.md`, son
 `Dockerfile` et son `Makefile` passent dans `data_pipeline/`, mais `data/` (DVC) et
-`config/` restent Ã  la racine, partagÃ©s avec l'application et les modules. Le
-`config.yaml` livrÃ© dÃ©clare donc `project_root: ..`, dÃ©sormais **rÃ©solu par rapport au
-fichier** et non au dossier courant (changement de `load_settings`, testÃ©), et range les
+`config/` restent à la racine, partagés avec l'application et les modules. Le
+`config.yaml` livré déclare donc `project_root: ..`, désormais **résolu par rapport au
+fichier** et non au dossier courant (changement de `load_settings`, testé), et range les
 registres du pipeline dans son dossier (`manifest_path`, `licenses_path`,
-`sources_doc_path`). On lance le pipeline depuis `data_pipeline/` ; les Ã©tapes Tujya
-retrouvent sa configuration depuis la racine (Ã©tape DVC `rag_corpus`). Les docs encore
-vivantes du pipeline (dictionnaire des donnÃ©es, vÃ©rifiÃ© par un test ; sources, rÃ©Ã©crit par
-`sources --check` ; rÃ¨gles d'accÃ¨s, citÃ©es par un test) vont dans `data_pipeline/docs/` ;
-seuls le plan et l'Ã©tat de SynergyRx vont dans `docs/archive/`. Les rÃ¨gles ruff communes
-passent dans un `ruff.toml` Ã  la racine (seul ajout Ã  la racine hors de la liste prÃ©vue),
-que chaque paquet Ã©tend. L'image du pipeline se construit depuis la racine
+`sources_doc_path`). On lance le pipeline depuis `data_pipeline/` ; les étapes Tujya
+retrouvent sa configuration depuis la racine (étape DVC `rag_corpus`). Les docs encore
+vivantes du pipeline (dictionnaire des données, vérifié par un test ; sources, réécrit par
+`sources --check` ; règles d'accès, citées par un test) vont dans `data_pipeline/docs/` ;
+seuls le plan et l'état de SynergyRx vont dans `docs/archive/`. Les règles ruff communes
+passent dans un `ruff.toml` à la racine (seul ajout à la racine hors de la liste prévue),
+que chaque paquet étend. L'image du pipeline se construit depuis la racine
 (`docker build -f data_pipeline/Dockerfile .`) avec une liste blanche
 `data_pipeline/Dockerfile.dockerignore`.
 
-**D78. Incident pendant la restructuration : des tests ont Ã©crit dans `data/` de la copie.**
-Premier passage des tests du pipeline aprÃ¨s D77 : la fixture `settings` passe
-`project_root=tmp_path`, mais `load_settings` donnait la prioritÃ© Ã  la valeur du fichier
-trouvÃ© dans le dossier courant (le nouveau `config.yaml` avec `project_root: ..`) : 47 tests
-ont Ã©chouÃ© et ont Ã©crit des donnÃ©es de test dans le vrai `data/` de la copie. RÃ©paration :
+**D78. Incident pendant la restructuration : des tests ont écrit dans `data/` de la copie.**
+Premier passage des tests du pipeline après D77 : la fixture `settings` passe
+`project_root=tmp_path`, mais `load_settings` donnait la priorité à la valeur du fichier
+trouvé dans le dossier courant (le nouveau `config.yaml` avec `project_root: ..`) : 47 tests
+ont échoué et ont écrit des données de test dans le vrai `data/` de la copie. Réparation :
 fichiers suivis par git (`config/pill_classes.csv`, `manifest.json`, `LICENSES.md`) remis
 depuis HEAD ; `data/parquet` (DVC) remis depuis le cache DVC local (`dvc checkout`,
-`dvc status` propre) ; les 164 fichiers non versionnÃ©s touchÃ©s (32 fichiers de travail du
-pipeline SynergyRx dont l'empreinte ne correspond plus au manifeste, 132 fichiers d'Ã©tat, de
-cache HTTP et de test) **dÃ©placÃ©s**, pas supprimÃ©s, dans `data/_quarantine_2026-10-29/`
-(liste et raison dans son `README.txt`) : le pipeline les retÃ©lÃ©chargera au lieu de lire des
-donnÃ©es de test. Aucune donnÃ©e utilisÃ©e par l'application ou les modules n'est perdue (tout
+`dvc status` propre) ; les 164 fichiers non versionnés touchés (32 fichiers de travail du
+pipeline SynergyRx dont l'empreinte ne correspond plus au manifeste, 132 fichiers d'état, de
+cache HTTP et de test) **déplacés**, pas supprimés, dans `data/_quarantine_2026-10-29/`
+(liste et raison dans son `README.txt`) : le pipeline les retéléchargera au lieu de lire des
+données de test. Aucune donnée utilisée par l'application ou les modules n'est perdue (tout
 est suivi par DVC ou git). Les originaux des 32 fichiers sont dans le dossier d'origine,
 auquel la copie ne touche pas. Correctifs : un `project_root` explicite l'emporte sur le
-fichier, et la fixture charge explicitement le `config.yaml` livrÃ© au lieu de dÃ©pendre du
-dossier de lancement de pytest (tests de non-rÃ©gression ; vÃ©rifiÃ© ensuite qu'aucun fichier
-hors des dossiers temporaires n'est Ã©crit).
+fichier, et la fixture charge explicitement le `config.yaml` livré au lieu de dépendre du
+dossier de lancement de pytest (tests de non-régression ; vérifié ensuite qu'aucun fichier
+hors des dossiers temporaires n'est écrit).
 
-**D79. Paquets des modules importÃ©s depuis la racine, une seule installation pour l'API.**
+**D79. Paquets des modules importés depuis la racine, une seule installation pour l'API.**
 Les dossiers des modules sont des paquets Python (`module1_vision_mlops`,
-`module2_ai_engineering`, `bonus`) : chaque import dit Ã  quel module appartient le code
+`module2_ai_engineering`, `bonus`) : chaque import dit à quel module appartient le code
 (`from module1_vision_mlops.serving.scanner import PillScanner`). Le paquet FastAPI garde
-son nom `app` (`app/backend/app`, convention FastAPI, aucun import Ã  rÃ©Ã©crire dans le
-cÅ“ur). `app/backend/pyproject.toml` ne dÃ©clare aucune dÃ©pendance (elles restent dans
-`requirements.txt`, utilisÃ© aussi par l'image) : son installation Ã©ditable
+son nom `app` (`app/backend/app`, convention FastAPI, aucun import à réécrire dans le
+cœur). `app/backend/pyproject.toml` ne déclare aucune dépendance (elles restent dans
+`requirements.txt`, utilisé aussi par l'image) : son installation éditable
 (`-e .` dans `requirements-dev.txt`, hatchling `dev-mode-dirs`) ajoute au `sys.path` du venv
-du backend le dossier `app/backend` et la racine du dÃ©pÃ´t, sans manipulation de `sys.path`
-dans les scripts. L'image Docker fait de mÃªme avec `PYTHONPATH` et reprend la disposition du
-dÃ©pÃ´t sous `/tujya` (les montages compose deviennent `/tujya/config`, `/tujya/data/...`,
-`/tujya/models`) ; son contexte de build est la racine, filtrÃ© par une liste blanche
+du backend le dossier `app/backend` et la racine du dépôt, sans manipulation de `sys.path`
+dans les scripts. L'image Docker fait de même avec `PYTHONPATH` et reprend la disposition du
+dépôt sous `/tujya` (les montages compose deviennent `/tujya/config`, `/tujya/data/...`,
+`/tujya/models`) ; son contexte de build est la racine, filtré par une liste blanche
 `app/backend/Dockerfile.dockerignore` (contexte de 200 Ko). Les fixtures du web
-(`app`, `user`, `pharma`, ...) passent dans le paquet `app/backend/tujya_testing/`, chargÃ©
+(`app`, `user`, `pharma`, ...) passent dans le paquet `app/backend/tujya_testing/`, chargé
 comme plugin pytest par chaque suite : le nom `tests` ne convient pas, car `python -m pytest`
-met le dossier courant en tÃªte du `sys.path` et chaque module a son propre dossier `tests`.
+met le dossier courant en tête du `sys.path` et chaque module a son propre dossier `tests`.
 Les tests de chaque module se lancent depuis son dossier avec le venv du backend
-(`pytest.ini` du module). Le code d'entraÃ®nement reste un projet sÃ©parÃ©
+(`pytest.ini` du module). Le code d'entraînement reste un projet séparé
 (`module1_vision_mlops/training`, paquet `tujya_vision`, son venv avec PyTorch). Son
-`prepare.py` a changÃ© d'une ligne (racine du dÃ©pÃ´t un niveau plus haut) : `dvc commit -f
-prepare` met Ã  jour l'empreinte dans `dvc.lock` sans relancer l'Ã©tape, `dvc status` propre.
+`prepare.py` a changé d'une ligne (racine du dépôt un niveau plus haut) : `dvc commit -f
+prepare` met à jour l'empreinte dans `dvc.lock` sans relancer l'étape, `dvc status` propre.
 
-**D80. Module 2 : ce qui a bougÃ©, ce qui reste dans le pipeline.** `corpus/` reÃ§oit les
-Ã©tapes Tujya du pipeline (`synergyrx_data.tujya` : principes actifs RxNav, interactions
-DDInter, notices openFDA, rÃ©sumÃ©s PubMed, dÃ©coupage en chunks), lancÃ©es par
-`python -m module2_ai_engineering.corpus` ; `rag/` reÃ§oit l'index, le stockage pgvector, la
+**D80. Module 2 : ce qui a bougé, ce qui reste dans le pipeline.** `corpus/` reçoit les
+étapes Tujya du pipeline (`synergyrx_data.tujya` : principes actifs RxNav, interactions
+DDInter, notices openFDA, résumés PubMed, découpage en chunks), lancées par
+`python -m module2_ai_engineering.corpus` ; `rag/` reçoit l'index, le stockage pgvector, la
 recherche, les embeddings et le rapprochement des noms ; `agent/` le graphe LangGraph
-(`agent.py` renommÃ© `graph.py`, le paquet s'appelant dÃ©jÃ  `agent`), les outils, les rÃ¨gles
-de sÃ©curitÃ© et leur cÃ¢blage ; `mcp_server/` le serveur MCP (`server.py`, lancÃ© par
+(`agent.py` renommé `graph.py`, le paquet s'appelant déjà `agent`), les outils, les règles
+de sécurité et leur câblage ; `mcp_server/` le serveur MCP (`server.py`, lancé par
 `python -m module2_ai_engineering.mcp_server`) ; `benchmark/` le jeu de questions, les
-rÃ©sultats et les scripts `bench_*.py`, devenus des modules (`python -m
+résultats et les scripts `bench_*.py`, devenus des modules (`python -m
 module2_ai_engineering.benchmark.bench_retrieval`, plus de `sys.path.insert`). Les
 **connecteurs** openFDA et PubMed restent dans le pipeline (`data_pipeline/src/
-synergyrx_data/connectors/`) : ils sont enregistrÃ©s dans son registre de sources et
-configurÃ©s par son `config.yaml`, au mÃªme titre que les douze autres ; les dÃ©placer ferait
-dÃ©pendre le pipeline du module 2. Le corpus dÃ©pend donc du pipeline, jamais l'inverse ; il
-est typÃ© par le mypy du pipeline et soumis au mÃªme test de politique rÃ©seau
-(`test_policy.py` couvre aussi `module2_ai_engineering/corpus`, sinon ce contrÃ´le aurait Ã©tÃ©
-perdu au dÃ©mÃ©nagement). Les fixtures du pipeline deviennent le plugin
-`synergyrx_data.testing` (mÃªme raison que `tujya_testing`, D79). Les tests du module 2
-tournent avec le venv du backend, oÃ¹ le pipeline est installÃ© en Ã©ditable. Les tests
+synergyrx_data/connectors/`) : ils sont enregistrés dans son registre de sources et
+configurés par son `config.yaml`, au même titre que les douze autres ; les déplacer ferait
+dépendre le pipeline du module 2. Le corpus dépend donc du pipeline, jamais l'inverse ; il
+est typé par le mypy du pipeline et soumis au même test de politique réseau
+(`test_policy.py` couvre aussi `module2_ai_engineering/corpus`, sinon ce contrôle aurait été
+perdu au déménagement). Les fixtures du pipeline deviennent le plugin
+`synergyrx_data.testing` (même raison que `tujya_testing`, D79). Les tests du module 2
+tournent avec le venv du backend, où le pipeline est installé en éditable. Les tests
 pgvector passent dans un job CI `module2` qui a le service PostgreSQL. `make_spec.py`
-Ã©crivait dans un chemin absolu du dossier d'origine : il Ã©crit maintenant Ã  cÃ´tÃ© de lui
-(rÃ©gÃ©nÃ©rÃ© Ã  l'identique).
+écrivait dans un chemin absolu du dossier d'origine : il écrit maintenant à côté de lui
+(régénéré à l'identique).
 
-**D81. Le bonus dans `bonus/`, hors des deux modules notÃ©s.** L'outil de toxicitÃ©
+**D81. Le bonus dans `bonus/`, hors des deux modules notés.** L'outil de toxicité
 (`app/toxicity.py` devient `bonus/toxicity/model.py`, avec `train_tox21.py` et
-`fetch_ingredient_smiles.py`) et l'Ã©tude de synergie (`bonus/synergy/train_synergy.py`)
+`fetch_ingredient_smiles.py`) et l'étude de synergie (`bonus/synergy/train_synergy.py`)
 quittent l'API et ses scripts. La route `/api/toxicity` reste dans `app/backend` (elle
 importe `bonus.toxicity.model`), comme l'outil `predict_toxicity` dans l'agent et le
 serveur MCP. Les scripts deviennent des modules (`python -m bonus.toxicity.train_tox21
-train`) ; le modÃ¨le MLflow journalise dÃ©sormais le dossier `bonus` comme code
-(`code_paths`). Les versions dÃ©jÃ  enregistrÃ©es (`tujya-tox21` v2) et le paquet publiÃ©
-`models/tox21` (fichiers texte LightGBM, aucun pickle) ne dÃ©pendent pas de ce chemin. Le
-message Â« aucun modÃ¨le publiÃ© Â» donne la nouvelle commande, et le test qui le vÃ©rifie suit.
+train`) ; le modèle MLflow journalise désormais le dossier `bonus` comme code
+(`code_paths`). Les versions déjà enregistrées (`tujya-tox21` v2) et le paquet publié
+`models/tox21` (fichiers texte LightGBM, aucun pickle) ne dépendent pas de ce chemin. Le
+message « aucun modèle publié » donne la nouvelle commande, et le test qui le vérifie suit.
 Un job CI `bonus` lance ses tests.
 
 **D82. Rangement de la documentation.** Chaque module a son dossier `docs/` (ses documents
-techniques et son rapport, Markdown + PDF) ; `docs/` Ã  la racine garde ce qui concerne tout
-le projet (architecture, API, infra, CD, dÃ©mo, questions du jury, feuille de route,
-dÃ©cisions, captures). Noms en minuscules partout, sauf `README.md` et les rapports datÃ©s de
-`docs/journal/` (`NIGHT_REPORT.md`, `SESSION_REPORT_N.md`, `JOURNAL.md`), noms donnÃ©s dans la
-consigne de restructuration et cohÃ©rents entre eux. Chaque dossier de documentation range
-ses sources Mermaid dans `diagrams/` et ses images dans `assets/` (le schÃ©ma d'architecture,
+techniques et son rapport, Markdown + PDF) ; `docs/` à la racine garde ce qui concerne tout
+le projet (architecture, API, infra, CD, démo, questions du jury, feuille de route,
+décisions, captures). Noms en minuscules partout, sauf `README.md` et les rapports datés de
+`docs/journal/` (`NIGHT_REPORT.md`, `SESSION_REPORT_N.md`, `JOURNAL.md`), noms donnés dans la
+consigne de restructuration et cohérents entre eux. Chaque dossier de documentation range
+ses sources Mermaid dans `diagrams/` et ses images dans `assets/` (le schéma d'architecture,
 commun aux deux rapports, est dans `docs/`) ; `build-reports.mjs` traite les trois dossiers.
-Les liens de tous les documents ont Ã©tÃ© recalculÃ©s (chaque lien rÃ©solu depuis l'ancien
-emplacement du fichier, puis rÃ©Ã©crit depuis le nouveau ; aucun lien cassÃ©). Dans les
-documents vivants, les chemins citÃ©s sont aussi mis Ã  jour ; les **documents historiques**
-(rapports de session, journal, dÃ©cisions D1 Ã  D75, archive SynergyRx) gardent leur texte
+Les liens de tous les documents ont été recalculés (chaque lien résolu depuis l'ancien
+emplacement du fichier, puis réécrit depuis le nouveau ; aucun lien cassé). Dans les
+documents vivants, les chemins cités sont aussi mis à jour ; les **documents historiques**
+(rapports de session, journal, décisions D1 à D75, archive SynergyRx) gardent leur texte
 d'origine, avec une note et un renvoi vers la table de correspondance de
 `docs/journal/SESSION_REPORT_5.md`. Le journal de progression quitte le README pour
 `docs/journal/JOURNAL.md`. `photo.png` (source du logo) devient
-`docs/assets/logo-source.png`. Le fichier non suivi `weights/yolo26n.pt` (tÃ©lÃ©chargement
+`docs/assets/logo-source.png`. Le fichier non suivi `weights/yolo26n.pt` (téléchargement
 automatique d'Ultralytics) rejoint les autres poids dans `module1_vision_mlops/training/`.
 
-**D83. Langue des documents, MLflow vide dans la copie, captures inchangÃ©es.** Les README et
-les documents vivants sont en franÃ§ais (ceux des modules, du bonus, `api`, `infra`, `cd`,
+**D83. Langue des documents, MLflow vide dans la copie, captures inchangées.** Les README et
+les documents vivants sont en français (ceux des modules, du bonus, `api`, `infra`, `cd`,
 `roadmap`, `architecture`) ; le code, ses commentaires et ses messages restent en anglais.
 Restent dans leur langue d'origine : les documents historiques (rapports de session,
-dÃ©cisions D1 Ã  D75, archive SynergyRx) et les documents de rÃ©fÃ©rence du pipeline
-(`data_pipeline/docs/` : `sources.md` est gÃ©nÃ©rÃ© par `sources --check`,
-`data_dictionary.md` est lu par un test qui compare ses sections aux colonnes Ã©crites).
-Les volumes Docker de la copie (`tujia2_*`) sont neufs, comme demandÃ© : le serveur MLflow de
-la copie fonctionne mais ne contient aucune expÃ©rience ni aucun modÃ¨le enregistrÃ© (ils sont
-dans les volumes `tujya_*` de l'original, non partagÃ©s). Les modÃ¨les servis viennent du
-dossier `models/` copiÃ©, donc le scan et la toxicitÃ© marchent ; le script de captures MLflow
-Ã©choue logiquement (Â« experiment tujya-vision not found Â»). Les scripts Playwright ont Ã©tÃ©
-rejouÃ©s vers un dossier temporaire et les captures de `docs/screenshots/` n'ont pas Ã©tÃ©
-remplacÃ©es : les nouvelles montrent les mÃªmes Ã©crans, les remplacer n'aurait ajoutÃ© que du
+décisions D1 à D75, archive SynergyRx) et les documents de référence du pipeline
+(`data_pipeline/docs/` : `sources.md` est généré par `sources --check`,
+`data_dictionary.md` est lu par un test qui compare ses sections aux colonnes écrites).
+Les volumes Docker de la copie (`tujia2_*`) sont neufs, comme demandé : le serveur MLflow de
+la copie fonctionne mais ne contient aucune expérience ni aucun modèle enregistré (ils sont
+dans les volumes `tujya_*` de l'original, non partagés). Les modèles servis viennent du
+dossier `models/` copié, donc le scan et la toxicité marchent ; le script de captures MLflow
+échoue logiquement (« experiment tujya-vision not found »). Les scripts Playwright ont été
+rejoués vers un dossier temporaire et les captures de `docs/screenshots/` n'ont pas été
+remplacées : les nouvelles montrent les mêmes écrans, les remplacer n'aurait ajouté que du
 bruit binaire.
+
+## Conventions Git et outillage (2026-10-31)
+
+**D84. ESLint dans un paquet à part, portée du hook de secrets.** Le frontend se construit
+avec TypeScript 7, qui ne fournit plus d'API JavaScript ; typescript-eslint en a besoin pour
+lire le code et n'accepte que TypeScript < 6.1 (dernière version et canary au 31/10). ESLint
+est donc installé dans son propre paquet, `app/frontend/eslint/` (TypeScript 6.0 pour
+l'analyse seulement), lancé par `npm run lint` depuis `app/frontend` ; la vérification des
+types reste `tsc`, et le build ne change pas. Ce dossier est exclu de l'image Docker. Le hook
+de secrets (`tools/hooks/check_secrets.py`) suit le TP Git avancé (fichiers Python), étendu
+aux fichiers YAML, TOML et shell ; il ignore les dossiers `tests/`, dont les identifiants
+factices sont voulus (même exception que les règles S105/S106 de ruff), et une ligne marquée
+`pragma: allowlist secret`. Il n'est pas lancé sur le TypeScript : ses libellés de formulaire
+(`password: "Password"`) seraient pris pour des mots de passe. Le contrôle des messages de
+commit est refait par la CI sur les commits poussés, qu'un `git commit --no-verify` ne peut
+pas contourner.

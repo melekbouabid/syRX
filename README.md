@@ -107,6 +107,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | MLflow : Model Registry | ✅ | `tujya-pill-detector`, `tujya-pill-classifier` |
 | Export ONNX et inférence ONNX Runtime | ✅ | [serving/scanner.py](module1_vision_mlops/serving/scanner.py) |
 | Docker Compose | ✅ | [docker-compose.yml](docker-compose.yml) |
+| Git avancé : branches, tags annotés, hooks (secrets, messages de commit) | ✅ | [docs/git_workflow.md](docs/git_workflow.md), [tools/hooks/](tools/hooks/) |
 | GitHub Actions CI/CD | ✅ | [.github/workflows/](.github/workflows/), [docs/cd.md](docs/cd.md) |
 | Soutenance pratique (démonstration technique en direct) | ⬜ | [docs/demo.md](docs/demo.md) |
 
@@ -119,7 +120,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | LangChain et/ou LangGraph | ✅ | [agent/graph.py](module2_ai_engineering/agent/graph.py) |
 | Benchmark de la récupération et de la génération | ✅ | [benchmark/](module2_ai_engineering/benchmark/) |
 | Interface web | ✅ | chat dans [app/frontend/](app/frontend/) |
-| Dépôt GitHub documenté avec commits réguliers | ✅ | `git log`, tags git |
+| Dépôt GitHub documenté avec commits réguliers | ✅ | `git log`, tags git, [docs/git_workflow.md](docs/git_workflow.md) (branches, Conventional Commits, hooks) |
 | Rapport technique | ✅ | [rapport du module 2](module2_ai_engineering/docs/rapport_module2_ai_engineering.pdf) |
 | Démonstration | ⬜ | [docs/demo.md](docs/demo.md) |
 
@@ -159,8 +160,9 @@ config/                   listes tenues à la main : 150 classes, split, alias, 
 data/  models/            données (DVC) et modèles servis : jamais dans git
 docker-compose.yml        toute l'application en une commande
 dvc.yaml  dvc.lock        étapes DVC : prepare (module 1), rag_corpus (module 2)
+tools/                    hooks Git du dépôt (secrets, messages de commit) et leurs tests
 ruff.toml                 règles de lint communes à tout le code Python
-.github/workflows/        CI (lint et tests de chaque paquet, build du site) et CD (images testées, non publiées)
+.github/workflows/        CI (lint et tests de chaque paquet, messages de commit, lint et build du site) et CD (images testées, non publiées)
 ```
 
 ## Technologies
@@ -172,7 +174,7 @@ ruff.toml                 règles de lint communes à tout le code Python
 | LLM et RAG | LangGraph, LangChain, Ollama (qwen2.5:3b, bge-m3), PostgreSQL 16 + pgvector, BM25, MCP (SDK officiel), RAGAS |
 | Application | FastAPI, Pydantic, SQLAlchemy, React 19, Vite, TypeScript, nginx, Playwright (captures) |
 | Données | NLM C3PI, RxNav, DDInter 2, openFDA, PubMed, Tox21, DrugComb |
-| Qualité | pytest (plus de 400 tests), ruff, mypy, pre-commit |
+| Qualité | pytest (plus de 400 tests), ruff, mypy, ESLint, pre-commit (hooks de secrets et de messages de commit) |
 
 ## Usage local et sécurité
 
