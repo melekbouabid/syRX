@@ -735,3 +735,19 @@ dossier `models/` copié, donc le scan et la toxicité marchent ; le script de c
 rejoués vers un dossier temporaire et les captures de `docs/screenshots/` n'ont pas été
 remplacées : les nouvelles montrent les mêmes écrans, les remplacer n'aurait ajouté que du
 bruit binaire.
+
+## Conventions Git et outillage (2026-10-31)
+
+**D84. ESLint dans un paquet à part, portée du hook de secrets.** Le frontend se construit
+avec TypeScript 7, qui ne fournit plus d'API JavaScript ; typescript-eslint en a besoin pour
+lire le code et n'accepte que TypeScript < 6.1 (dernière version et canary au 31/10). ESLint
+est donc installé dans son propre paquet, `app/frontend/eslint/` (TypeScript 6.0 pour
+l'analyse seulement), lancé par `npm run lint` depuis `app/frontend` ; la vérification des
+types reste `tsc`, et le build ne change pas. Ce dossier est exclu de l'image Docker. Le hook
+de secrets (`tools/hooks/check_secrets.py`) suit le TP Git avancé (fichiers Python), étendu
+aux fichiers YAML, TOML et shell ; il ignore les dossiers `tests/`, dont les identifiants
+factices sont voulus (même exception que les règles S105/S106 de ruff), et une ligne marquée
+`pragma: allowlist secret`. Il n'est pas lancé sur le TypeScript : ses libellés de formulaire
+(`password: "Password"`) seraient pris pour des mots de passe. Le contrôle des messages de
+commit est refait par la CI sur les commits poussés, qu'un `git commit --no-verify` ne peut
+pas contourner.
