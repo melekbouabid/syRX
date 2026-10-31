@@ -1,7 +1,7 @@
 """Read access to the Tujya medicine tables (app/pharma.py): pill classes, their active
 ingredients, and the interactions between ingredients, each with its source.
 
-Safety wording (CLAUDE.md): a pair absent from the table is "aucune interaction connue dans
+Safety wording (docs/project_rules.md): a pair absent from the table is "aucune interaction connue dans
 cette base de données", never "safe"; DDInter's "Unknown" severity is an interaction whose
 level is not graded, and is always reported as an interaction.
 """

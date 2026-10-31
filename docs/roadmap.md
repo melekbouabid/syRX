@@ -1,7 +1,7 @@
 # Feuille de route de Tujya
 
-Étapes dans l'ordre. Cocher une case quand l'étape est faite. Contexte et règles :
-[CLAUDE.md](../CLAUDE.md). Les exigences du professeur sont les tableaux « Exigences des
+Étapes dans l'ordre. Cocher une case quand l'étape est faite. Règles du projet :
+[project_rules.md](project_rules.md). Les exigences du professeur sont les tableaux « Exigences des
 modules » du [README](../README.md#exigences-des-modules).
 
 ## Déjà fait (hérité de SynergyRx)
@@ -13,7 +13,7 @@ modules » du [README](../README.md#exigences-des-modules).
 ## 0. Git et règles du projet
 - [x] Premier commit et push vers https://github.com/melekbouabid/tujia-.git (9398f0c)
 - [x] README avec les exigences des modules, les sources de données et le journal de progression
-- [x] Règles obligatoires des sessions dans CLAUDE.md
+- [x] Règles du projet (sécurité des réponses, usage local) dans [project_rules.md](project_rules.md)
 - [ ] Changer le mot de passe administrateur par défaut (admin@gmail.com / admin)
 
 ## 1. Données des comprimés (C3PI, aucune photo personnelle)
@@ -84,11 +84,10 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Script de démonstration ([demo.md](demo.md), répété sur les conteneurs) et questions du jury ([questions_jury.md](questions_jury.md))
 - [ ] Vidéo de secours de la démonstration (à enregistrer à la main)
 
-## 8. Structure du dépôt (copie locale tujia2, 2026-10-29)
+## 8. Structure du dépôt (2026-10-29)
 - [x] Deux dossiers de premier niveau pour les modules notés, chacun avec un README qui relie chaque exigence à ses fichiers (D79 à D82)
 - [x] Application web commune dans `app/`, bonus dans `bonus/`, pipeline SynergyRx dans `data_pipeline/`, infrastructure dans `infra/`
-- [x] Documentation rangée par module, noms en minuscules, journal et archive ([journal/SESSION_REPORT_5.md](journal/SESSION_REPORT_5.md))
-- [ ] Reporter la restructuration dans le dépôt d'origine ([journal/SESSION_REPORT_5.md](journal/SESSION_REPORT_5.md), dernière section)
+- [x] Documentation rangée par module, noms en minuscules, archive
 
 ## Bonus (seulement s'il reste du temps)
 - [x] Outil `predict_toxicity` : tests in vitro Tox21, LightGBM sur empreintes de Morgan, split par scaffold, ROC-AUC test moyen 0,725 ([toxicity.md](../bonus/docs/toxicity.md))

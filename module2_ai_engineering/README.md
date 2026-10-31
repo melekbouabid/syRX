@@ -30,7 +30,7 @@ Rapport technique : [docs/rapport_module2_ai_engineering.pdf](docs/rapport_modul
 | Benchmark de la génération | réponses, sécurité, citations vérifiées par un juge local, RAGAS : [benchmark/bench_answers.py](benchmark/bench_answers.py), [bench_generation.py](benchmark/bench_generation.py), [bench_judge_control.py](benchmark/bench_judge_control.py) ; jeu de 88 questions : [benchmark/rag_questions.jsonl](benchmark/rag_questions.jsonl) ; [docs/benchmark.md](docs/benchmark.md) |
 | Interface web | panneau « Ask about your pills » : [../app/frontend/src/pages/ChatPanel.tsx](../app/frontend/src/pages/ChatPanel.tsx) ; `POST /api/chat` (JSON ou flux SSE) : [../app/backend/app/routers/chat.py](../app/backend/app/routers/chat.py) ; captures [08](../docs/screenshots/08-chat-empty.jpg) à [11](../docs/screenshots/11-chat-dose-refused.jpg) |
 | Sécurité des réponses | jamais de dose, jamais « sûr », horaires seulement si la source les donne, avertissement : [agent/safety.py](agent/safety.py), [tests/test_safety.py](tests/test_safety.py) |
-| Dépôt GitHub documenté, commits réguliers | ce README, [../README.md](../README.md), [../docs/journal/JOURNAL.md](../docs/journal/JOURNAL.md), `git log` |
+| Dépôt GitHub documenté, commits réguliers | ce README, [../README.md](../README.md), `git log`, tags git |
 | Rapport technique | [docs/rapport_module2_ai_engineering.pdf](docs/rapport_module2_ai_engineering.pdf) |
 | Démonstration | [../docs/demo.md](../docs/demo.md) (étapes chat, dose refusée, MCP, benchmark) |
 | Tests | [tests/](tests/) : corpus et connecteurs (HTTP simulé), recherche (SQLite et pgvector), API de chat et agent avec un LLM factice, sécurité, MCP |

@@ -3,7 +3,7 @@ import { api, errorMessage, type ChatCitation, type ChatResult, type ChatToolCal
 import { Alert, Badge } from "../components";
 import { Icon } from "../icons";
 
-// Shown exactly as the project rules write it (CLAUDE.md, D53); always visible.
+// Shown exactly as the project rules write it (docs/project_rules.md, D53); always visible.
 const DISCLAIMER = "Information uniquement, consultez un pharmacien ou un médecin.";
 
 export interface ChatPill {

@@ -63,7 +63,7 @@ surcharger `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`,
 
 ## Usage strictement local (depuis le 2026-10-28)
 
-Le projet tourne **uniquement sur ce PC** (règle de CLAUDE.md) : pas de déploiement public,
+Le projet tourne **uniquement sur ce PC** (règle de [project_rules.md](project_rules.md)) : pas de déploiement public,
 pas de tunnel (ngrok, Cloudflare Tunnel...), pas d'image Docker de l'application publiée
 ([cd.md](cd.md)), et aucun service lié à `0.0.0.0` sur la machine. Le dépôt GitHub reste
 public (code et documentation seulement).
@@ -164,8 +164,7 @@ comprimé, classe top-1 9 FLUCONAZOLE 100MG TABLETS, probabilité 0,996, 59 ms, 
 détecteur v1 / classifieur v2 ; `/api/interactions` fluconazole + citalopram : Major
 (DDInter) ; galerie de démonstration de 8 photos. Le script Playwright
 (`BASE=http://localhost:8080 node scripts/screenshots.mjs`, depuis `app/frontend`) rejoue tout
-le parcours du navigateur sur les conteneurs. Le même contrôle sur la copie restructurée est
-dans [journal/SESSION_REPORT_5.md](journal/SESSION_REPORT_5.md).
+le parcours du navigateur sur les conteneurs.
 
 ## Tables des médicaments
 

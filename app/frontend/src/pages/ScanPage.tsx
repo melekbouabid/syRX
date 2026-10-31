@@ -16,7 +16,7 @@ import { useDebounced, useQuery } from "../hooks";
 import { Icon, type IconName } from "../icons";
 import ChatPanel from "./ChatPanel";
 
-// Safety texts are shown exactly as the project rules write them (CLAUDE.md, D53).
+// Safety texts are shown exactly as the project rules write them (docs/project_rules.md, D53).
 const DISCLAIMER = "Information uniquement, consultez un pharmacien ou un médecin.";
 const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp";
 const MAX_BYTES = 10 * 1024 * 1024;

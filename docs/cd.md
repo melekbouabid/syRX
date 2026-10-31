@@ -1,6 +1,6 @@
 # Livraison continue sans publication (GitHub Actions)
 
-Tujya ne tourne **que sur le PC du propriétaire** (CLAUDE.md, D69) : aucun déploiement
+Tujya ne tourne **que sur le PC du propriétaire** (docs/project_rules.md, D69) : aucun déploiement
 public et aucune image de l'application publiée. Le dépôt GitHub reste public (code et
 documentation seulement), ce qui garde GitHub Actions gratuit. Depuis le 2026-10-28 (D70),
 le workflow de CD **construit et teste** donc les images à chaque push vert sur `main`, mais
@@ -35,7 +35,7 @@ paquets du tout. Un échec de la CI signifie aucun job de CD.
 L'ancien comportement (envoi sur GitHub Container Registry) est gardé comme second job,
 `publish`, qui ne s'exécute que si le workflow est **lancé à la main avec `push_images`
 coché**. C'est le seul job avec `packages: write`. Ne pas l'utiliser tant que l'application
-doit rester locale (CLAUDE.md).
+doit rester locale ([project_rules.md](project_rules.md)).
 
 ```bash
 gh workflow run cd                         # construction + test seulement (push_images=false)
@@ -76,6 +76,3 @@ gh run view <id d'exécution> --log-failed  # ce qui a échoué
 ou sur GitHub : l'onglet Actions (workflows « ci » et « cd ») ; le résumé de la CD indique
 « Not pushed ».
 
-Dans la copie locale `tujia2`, rien n'est envoyé sur GitHub : les workflows y sont validés
-(YAML) et leurs commandes rejouées en local (rapport
-[journal/SESSION_REPORT_5.md](journal/SESSION_REPORT_5.md)).

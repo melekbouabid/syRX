@@ -1,6 +1,6 @@
 # Continuous delivery without publishing: after the `ci` workflow succeeds on a push to main,
 # build the backend and frontend Docker images of that exact commit and smoke-test them.
-# Nothing is pushed: the app runs only on the owner's PC (CLAUDE.md, D69, D70).
+# Nothing is pushed: the app runs only on the owner's PC (docs/project_rules.md, D69, D70).
 #
 # Publishing to GitHub Container Registry stays possible only by hand, as an explicit opt-in:
 #   gh workflow run cd -f push_images=true     (off by default; see docs/cd.md)

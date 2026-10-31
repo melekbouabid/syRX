@@ -1,7 +1,7 @@
 # Tujya
 
-[![CI](https://github.com/melekbouabid/tujia-/actions/workflows/ci.yml/badge.svg)](https://github.com/melekbouabid/tujia-/actions/workflows/ci.yml)
-[![CD](https://github.com/melekbouabid/tujia-/actions/workflows/cd.yml/badge.svg)](https://github.com/melekbouabid/tujia-/actions/workflows/cd.yml)
+[![CI](https://github.com/melekbouabid/syRX/actions/workflows/ci.yml/badge.svg)](https://github.com/melekbouabid/syRX/actions/workflows/ci.yml)
+[![CD](https://github.com/melekbouabid/syRX/actions/workflows/cd.yml/badge.svg)](https://github.com/melekbouabid/syRX/actions/workflows/cd.yml)
 
 **Tujya** est une application de sécurité du médicament. On photographie un ou plusieurs
 comprimés (upload ou webcam) : un modèle YOLO **détecte** chaque comprimé, un classifieur
@@ -119,7 +119,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | LangChain et/ou LangGraph | ✅ | [agent/graph.py](module2_ai_engineering/agent/graph.py) |
 | Benchmark de la récupération et de la génération | ✅ | [benchmark/](module2_ai_engineering/benchmark/) |
 | Interface web | ✅ | chat dans [app/frontend/](app/frontend/) |
-| Dépôt GitHub documenté avec commits réguliers | ✅ | [journal](docs/journal/JOURNAL.md), `git log` |
+| Dépôt GitHub documenté avec commits réguliers | ✅ | `git log`, tags git |
 | Rapport technique | ✅ | [rapport du module 2](module2_ai_engineering/docs/rapport_module2_ai_engineering.pdf) |
 | Démonstration | ⬜ | [docs/demo.md](docs/demo.md) |
 
@@ -154,7 +154,7 @@ app/                      application web commune : backend/ (FastAPI), frontend
 bonus/                    outil de toxicité (Tox21) et étude de synergie
 data_pipeline/            pipeline de collecte SynergyRx d'origine (connecteurs utilisés par le module 2)
 infra/                    MLflow, initialisation PostgreSQL, variante Ollama sans GPU
-docs/                     architecture, API, infra, CD, démo, décisions, captures, journal, archive
+docs/                     architecture, API, infra, CD, démo, décisions, règles, captures, archive
 config/                   listes tenues à la main : 150 classes, split, alias, galerie de démo
 data/  models/            données (DVC) et modèles servis : jamais dans git
 docker-compose.yml        toute l'application en une commande
@@ -212,9 +212,8 @@ et [data_pipeline/LICENSES.md](data_pipeline/LICENSES.md). Jeu C3PI en détail :
 - Projet : [architecture](docs/architecture.md), [API](docs/api.md), [infrastructure et DVC](docs/infra.md),
   [CD](docs/cd.md), [décisions](docs/decisions.md), [feuille de route](docs/roadmap.md).
 - Soutenance : [script de démonstration](docs/demo.md), [questions probables du jury](docs/questions_jury.md).
-- Historique : [journal de progression](docs/journal/JOURNAL.md) et rapports de session dans
-  [docs/journal/](docs/journal/) ; [archive SynergyRx](docs/archive/).
-- Règles de travail des sessions d'IA sur ce dépôt : [CLAUDE.md](CLAUDE.md).
+- Règles du projet (sécurité des réponses, usage local) : [docs/project_rules.md](docs/project_rules.md).
+- Historique : `git log` et tags git ; [archive SynergyRx](docs/archive/).
 
 ## Auteur
 

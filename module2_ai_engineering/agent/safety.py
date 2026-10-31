@@ -1,4 +1,4 @@
-"""Safety rules applied to every agent answer (CLAUDE.md), sentence by sentence.
+"""Safety rules applied to every agent answer (docs/project_rules.md), sentence by sentence.
 
 1. No dose: a sentence with a quantity of medicine ("50 mg", "2 comprimés", "deux fois
    par jour") is removed. A question asking for a dose is refused before any LLM call.

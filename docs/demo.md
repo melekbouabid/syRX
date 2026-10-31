@@ -5,7 +5,7 @@ Chaque étape : **ce qu'on fait** (clic ou commande), **ce que le jury doit voir
 **une phrase à dire**. Les durées sont indicatives (total ≈ 14 min).
 
 Le parcours a été répété en entier sur les conteneurs le 2026-10-28 (session 4) : résultats
-et temps mesurés dans [SESSION_REPORT_4.md](journal/SESSION_REPORT_4.md#tâche-4--script-de-démo-et-questions-du-jury-fait).
+et temps mesurés à cette occasion.
 
 > Règle de sécurité à garder en tête pendant toute la démo : Tujya ne donne jamais de dose,
 > ne dit jamais qu'une association est « sûre » (au mieux « aucune interaction connue dans

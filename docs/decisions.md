@@ -451,7 +451,7 @@ exact); BM25 is computed in the backend over the same chunks (Okapi, k1 1.2, b 0
 and English stop words) and both lists are fused by reciprocal rank fusion (k = 60).
 
 **D63. The agent's safety rules are code, not only prompt.** A 3B model does not follow
-every instruction, so the rules of CLAUDE.md are enforced after generation by a `safety`
+every instruction, so the rules of docs/project_rules.md are enforced after generation by a `safety`
 node (`app/rag/safety.py`), sentence by sentence: dose sentences removed (lab values such as
 "mL/min" or "mg/dL" excepted), "safe"/"sûr"/"sans danger" sentences removed and replaced by
 "aucune interaction connue dans cette base de données" when nothing was found, uncited timing
@@ -518,7 +518,7 @@ of uncited sentences (bge-m3 cosine at least 0.65 and 0.03 above the next source
 citation judge measures whether these citations hold).
 
 **D69. Strictly local: the app runs only on this PC (session 4, 2026-10-28).** The owner's
-rule (now in CLAUDE.md): no public deployment, no tunnel, no published image of the app, no
+rule (now in docs/project_rules.md): no public deployment, no tunnel, no published image of the app, no
 service bound to 0.0.0.0 on the host; the GitHub repository stays public for the code and
 the docs. Every compose port is published on 127.0.0.1, Vite listens on 127.0.0.1, and the
 MCP server's HTTP transport refuses any non-loopback `--host` (argparse choices, so a typo

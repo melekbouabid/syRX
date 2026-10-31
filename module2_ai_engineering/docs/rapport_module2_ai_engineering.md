@@ -24,7 +24,7 @@ sécurité médicales appliquées dans le code.
 | LangChain / LangGraph | graphe LangGraph à 5 nœuds, outils LangChain | 4 |
 | Benchmark de la récupération et de la génération | 88 questions, Recall@k / MRR, sécurité, citations, RAGAS | 7 |
 | Interface web | panneau de chat sur la page Scanner | 8 |
-| Dépôt documenté, commits réguliers | docs/, journal du README, historique git | — |
+| Dépôt documenté, commits réguliers | docs/, historique git et tags | — |
 
 ![Architecture : l'agent, Ollama et pgvector dans la même pile Docker Compose, sur ce PC.](../../docs/assets/architecture.png)
 
