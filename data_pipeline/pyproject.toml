@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "synergyrx-data"
 version = "0.1.0"
-description = "Polite, reproducible data collection pipeline for SynergyRx AI (drug-combination synergy and PubMed literature)."
+description = "Polite, reproducible data collection (DDInter, PubMed, openFDA labels) for the Tujya module 2 corpus; started as the SynergyRx pipeline."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -13,17 +13,14 @@ dependencies = [
     "tenacity>=8.2",
     "pydantic>=2.6",
     "typer>=0.12",
-    "pandas>=2.2,<3.1",  # pandas 3.1 breaks list columns in build (see docs/decisions.md D26)
+    "pandas>=2.2,<3.1",  # pandas 3.1 breaks list columns (see docs/decisions.md D26)
     "pyarrow>=15",
-    "rdkit>=2023.9",
     "pyyaml>=6.0",
     "rich>=13",
     "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]
-# PyTDC pins numpy<2 and pandas<3, so it only installs on Python 3.11 / 3.12.
-tdc = ["PyTDC>=1.0; python_version < '3.13'"]
 dev = [
     "pytest>=8",
     "pytest-asyncio>=0.23",
@@ -47,7 +44,6 @@ addopts = "-q -m 'not live'"
 markers = [
     "live: hits real public services with tiny samples; run with `pytest -m live`",
 ]
-filterwarnings = ["ignore::DeprecationWarning:rdkit.*"]
 
 # Lint rules shared with the rest of the repository: ../ruff.toml.
 [tool.ruff]
@@ -70,13 +66,6 @@ no_implicit_optional = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["pandas.*", "pyarrow.*", "tdc.*", "dotenv.*"]
+module = ["pandas.*", "pyarrow.*", "dotenv.*"]
 ignore_missing_imports = true
 follow_imports = "skip"
-
-# RDKit ships stub files that mypy cannot parse; treat the package as untyped.
-[[tool.mypy.overrides]]
-module = ["rdkit", "rdkit.*"]
-ignore_missing_imports = true
-follow_imports = "skip"
-follow_imports_for_stubs = true

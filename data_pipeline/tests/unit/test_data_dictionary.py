@@ -2,22 +2,28 @@
 
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 
+import httpx
 import pandas as pd
 import pytest
+import respx
 
-from synergyrx_data import build
-from synergyrx_data.cleaning.scores import SCORE_COLUMNS
-from synergyrx_data.config import Settings
+from synergyrx_data import pipeline
+from synergyrx_data.config import Settings, SourceConfig
 from synergyrx_data.manifest import ManifestEntry
 from synergyrx_data.provenance import PROVENANCE_COLUMNS
-from tests.unit.test_build_cli import seed_interim
+from tests.unit.test_connectors_lookup import PUBMED_XML
 
 DICTIONARY = Path(__file__).resolve().parents[2] / "docs" / "data_dictionary.md"
-GENE_COLUMN = re.compile(r"^.+ \(\d+\)$")
+EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+TABLES = [
+    "data/interim/ddinter/interactions.parquet",
+    "data/interim/pubmed/articles.parquet",
+    "data/interim/pubmed/query_hits.parquet",
+    "data/interim/openfda_label/label_sections.parquet",
+]
 
 
 def documented() -> dict[str, set[str]]:
@@ -33,65 +39,65 @@ def documented() -> dict[str, set[str]]:
     return sections
 
 
-@pytest.fixture(scope="module")
-def outputs(tmp_path_factory: pytest.TempPathFactory) -> Settings:
-    from synergyrx_data.config import Secrets, load_settings
+def openfda_label() -> dict[str, object]:
+    return {
+        "id": "f1",
+        "set_id": "set-f1",
+        "version": "3",
+        "effective_time": "20240101",
+        "openfda": {
+            "generic_name": ["FLUCONAZOLE"],
+            "substance_name": ["FLUCONAZOLE"],
+            "product_type": ["HUMAN PRESCRIPTION DRUG"],
+            "brand_name": ["Brand"],
+            "manufacturer_name": ["Maker"],
+        },
+        "drug_interactions": ["Interactions text."],
+        "warnings": ["Warnings text."],
+    }
 
-    settings = load_settings(None, project_root=tmp_path_factory.mktemp("project"), environ={})
-    settings.secrets = Secrets()
-    seed_interim(settings)
-    for step in (build.clean, build.literature, build.report, build.export):
-        step(settings)
+
+@pytest.fixture
+async def outputs(settings: Settings, mock_http: respx.MockRouter, allow_robots: None) -> Settings:
+    """Every table of the three connectors, written by real runs on mocked HTTP."""
+    classes = settings.resolve("config/pill_classes.csv")
+    classes.parent.mkdir(parents=True, exist_ok=True)
+    classes.write_text("class_id,class_key,active_ingredients\n0,x_0,fluconazole\n", "utf-8")
+    settings.sources["ddinter"] = SourceConfig(
+        enabled=True, options={"terms_acknowledged": True, "codes": ["A"]}
+    )
+    settings.sources["openfda_label"] = SourceConfig(enabled=True)
+    mock_http.get(url__startswith="https://ddinter2.scbdd.com/static/").respond(
+        200,
+        text="DDInterID_A,Drug_A,DDInterID_B,Drug_B,Level\n"
+        "DDInter1,Abacavir,DDInter424,Cobicistat,Moderate\n",
+        headers={"content-type": "application/octet-stream"},
+    )
+    mock_http.post(f"{EUTILS}/esearch.fcgi").respond(
+        json={"esearchresult": {"count": "2", "webenv": "W", "querykey": "1"}}
+    )
+    mock_http.get(f"{EUTILS}/efetch.fcgi").respond(
+        200, content=PUBMED_XML, headers={"content-type": "text/xml"}
+    )
+    mock_http.get("https://api.fda.gov/drug/label.json").mock(
+        return_value=httpx.Response(200, json={"meta": {}, "results": [openfda_label()]})
+    )
+    runs = await pipeline.fetch(settings, ["ddinter", "pubmed", "openfda_label"])
+    assert [run.outcome for run in runs] == ["ok", "ok", "ok"], [run.message for run in runs]
     return settings
 
 
-def columns_of(path: Path) -> set[str]:
-    if path.suffix == ".parquet":
-        return set(pd.read_parquet(path).columns)
-    if path.suffix == ".csv":
-        return set(pd.read_csv(path, nrows=0).columns)
-    payload = json.loads(path.read_text(encoding="utf-8"))
-    return set(payload[0] if isinstance(payload, list) else payload)
-
-
-@pytest.mark.parametrize(
-    "relative",
-    [
-        "data/parquet/synergy_pairs.parquet",
-        "data/parquet/drugs.parquet",
-        "data/parquet/cell_lines.parquet",
-        "data/parquet/expression.parquet",
-        "data/parquet/abstracts.parquet",
-        "data/parquet/candidate_sentences.parquet",
-        "data/json/drugs.json",
-        "data/json/cell_lines.json",
-        "data/json/mock_predictions_seed.json",
-        "data/json/citations.json",
-        "data/csv/coverage.csv",
-        "data/csv/conflicts.csv",
-        "data/csv/source_agreement.csv",
-        "data/csv/drug_review_queue.csv",
-        "data/csv/cell_line_review_queue.csv",
-        "data/csv/sample_sentences.csv",
-    ],
-)
-def test_every_output_column_is_documented(outputs: Settings, relative: str) -> None:
+async def test_every_output_column_is_documented(outputs: Settings) -> None:
     sections = documented()
-    assert relative in sections, f"no section for {relative} in data_dictionary.md"
-    described = set(sections[relative])
-    if relative.startswith("data/parquet/"):
-        described |= set(PROVENANCE_COLUMNS)  # explained once, at the top of the document
-    if "X_n" in described:  # conflicts.csv documents its per-score columns as a pattern
-        described |= {
-            f"{score}_{stat}" for score in SCORE_COLUMNS for stat in ("n", "min", "max", "range")
-        }
-    actual = {c for c in columns_of(outputs.resolve(relative)) if not GENE_COLUMN.match(c)}
-    assert not actual - described, (
-        f"undocumented columns in {relative}: {sorted(actual - described)}"
-    )
-    stale = described - actual - set(PROVENANCE_COLUMNS) - {"X_n", "X_min", "X_max", "X_range"}
-    stale -= {"<SYMBOL (EntrezID)>"}
-    assert not stale, f"documented but not produced in {relative}: {sorted(stale)}"
+    for relative in TABLES:
+        assert relative in sections, f"no section for {relative} in data_dictionary.md"
+        described = sections[relative] | set(PROVENANCE_COLUMNS)  # explained once, at the top
+        actual = set(pd.read_parquet(outputs.resolve(relative)).columns)
+        assert not actual - described, (
+            f"undocumented columns in {relative}: {sorted(actual - described)}"
+        )
+        stale = sections[relative] - actual
+        assert not stale, f"documented but not produced in {relative}: {sorted(stale)}"
 
 
 def test_provenance_and_manifest_fields_are_documented() -> None:

@@ -172,8 +172,8 @@ ruff.toml                 règles de lint communes à tout le code Python
 | MLOps | MLflow 3.17 (tracking, Model Registry), DVC 3.67 (remote local), Docker Compose, GitHub Actions |
 | LLM et RAG | LangGraph, LangChain, Ollama (qwen2.5:3b, bge-m3), PostgreSQL 16 + pgvector, BM25, MCP (SDK officiel), RAGAS |
 | Application | FastAPI, Pydantic, SQLAlchemy, React 19, Vite, TypeScript, nginx, Playwright (captures) |
-| Données | NLM C3PI, RxNav, DDInter 2, openFDA, PubMed, Tox21, DrugComb |
-| Qualité | pytest (plus de 400 tests), ruff, mypy, ESLint, pre-commit (hooks de secrets et de messages de commit) |
+| Données | NLM C3PI, RxNav, DDInter 2, openFDA, PubMed, Tox21 |
+| Qualité | pytest (plus de 300 tests), ruff, mypy, ESLint, pre-commit (hooks de secrets et de messages de commit) |
 
 ## Usage local et sécurité
 

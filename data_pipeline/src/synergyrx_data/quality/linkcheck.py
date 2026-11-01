@@ -19,67 +19,9 @@ from synergyrx_data.manifest import utc_now_iso
 # (source, label, url, kind): the endpoint each connector downloads from or calls.
 ENDPOINTS: list[tuple[str, str, str, Kind]] = [
     (
-        "drugcomb",
-        "Zenodo file (bulk)",
-        "https://zenodo.org/api/records/11102665/files/summary_table_v1.4.csv/content",
-        "bulk",
-    ),
-    (
-        "tdc",
-        "Harvard Dataverse file used by PyTDC",
-        "https://dataverse.harvard.edu/api/access/datafile/4215720",
-        "api",
-    ),
-    ("oneil", "labels.csv (bulk)", "https://bioinf.jku.at/software/DeepSynergy/labels.csv", "bulk"),
-    (
-        "nci_almanac",
-        "ComboDrugGrowth_Nov2017.zip (bulk)",
-        "https://wiki.nci.nih.gov/download/attachments/338237347/ComboDrugGrowth_Nov2017.zip",
-        "bulk",
-    ),
-    (
-        "depmap",
-        "Figshare API, DepMap 24Q4 article",
-        "https://api.figshare.com/v2/articles/27993248",
-        "api",
-    ),
-    (
-        "gdsc",
-        "Cell Model Passports model list (bulk)",
-        "https://cog.sanger.ac.uk/cmp/download/model_list_latest.csv.gz",
-        "bulk",
-    ),
-    (
         "pubmed",
         "E-utilities EInfo",
         "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/einfo.fcgi?retmode=json",
-        "api",
-    ),
-    (
-        "pubmed_baseline",
-        "Baseline README (bulk)",
-        "https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/README.txt",
-        "bulk",
-    ),
-    (
-        "pubchem",
-        "PUG-REST property call",
-        "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/2244/property/InChIKey/JSON",
-        "api",
-    ),
-    ("chembl", "ChEMBL API status", "https://www.ebi.ac.uk/chembl/api/data/status.json", "api"),
-    (
-        "europepmc",
-        "Europe PMC search API",
-        "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=EXT_ID:31600000&format=json"
-        "&pageSize=1",
-        "api",
-    ),
-    (
-        "pubtator",
-        "PubTator 3 export API",
-        "https://www.ncbi.nlm.nih.gov/research/pubtator3-api/publications/export/biocjson"
-        "?pmids=31600000",
         "api",
     ),
     (
@@ -101,48 +43,22 @@ RATE_LIMITS: list[tuple[str, str, str, str]] = [
         "pipeline: confirm in a browser.",
     ),
     (
-        "pubchem.ncbi.nlm.nih.gov",
-        "5 req/s",
-        "No more than 5 requests per second and 400 per minute; dynamic throttling headers",
-        "PubChem programmatic access documentation. The page needs JavaScript and could not be "
-        "re-read by the pipeline: confirm in a browser.",
-    ),
-    (
-        "www.ncbi.nlm.nih.gov (PubTator 3 API)",
+        "www.ncbi.nlm.nih.gov (NCBI documentation pages)",
         "2 req/s",
-        "No more than three requests per second",
-        "PubTator 3 API page. Needs JavaScript; could not be re-read by the pipeline.",
+        "-",
+        "Only the documentation links are probed there; kept conservative.",
     ),
     (
-        "zenodo.org",
-        "1 request per 10 s (robots.txt Crawl-delay)",
-        "Guests: 60 requests per minute, 2000 per hour. robots.txt: Crawl-delay 10; `/api` "
-        "disallowed except `/api/records/*/files`",
-        "Read from developers.zenodo.org and zenodo.org/robots.txt on 2026-10-13.",
+        "rxnav.nlm.nih.gov",
+        "10 req/s",
+        "No more than 20 requests per second per IP address",
+        "RxNav API terms of service; used by the Tujya ingredient step (module 2 corpus).",
     ),
     (
-        "api.figshare.com / ndownloader.figshare.com",
-        "1 req/s",
-        'No automatic rate limit; "do not make more than one request per second"',
-        "Read from docs.figshare.com on 2026-10-13.",
-    ),
-    (
-        "www.ebi.ac.uk (ChEMBL, Europe PMC)",
-        "2 req/s",
-        "No numeric limit found in the ChEMBL web-service documentation",
-        "ChEMBL documentation read on 2026-10-13 mentions no rate limit; kept conservative.",
-    ),
-    (
-        "dataverse.harvard.edu",
-        "1 req/s",
-        "No numeric limit found",
-        "Dataverse guide page for rate limits was not found (404); kept conservative.",
-    ),
-    (
-        "wiki.nci.nih.gov",
-        "1 request per 15 s (robots.txt Crawl-delay)",
-        "robots.txt: Crawl-delay 15, everything disallowed except wiki pages",
-        "Read from wiki.nci.nih.gov/robots.txt on 2026-10-13.",
+        "api.fda.gov",
+        "3 req/s",
+        "240 requests per minute per IP address without an API key",
+        "openFDA authentication documentation; used by the Tujya label step (module 2 corpus).",
     ),
     (
         "every other host",
@@ -154,41 +70,15 @@ RATE_LIMITS: list[tuple[str, str, str, str]] = [
 
 FINDINGS = """## What was found while building the connectors
 
-Measured on 2026-10-13 with the pipeline itself.
+Measured on 2026-10-13 with the pipeline itself. The SynergyRx synergy sources (DrugComb,
+TDC, O'Neil, NCI-ALMANAC, DepMap, GDSC, PubChem, ChEMBL, Europe PMC, PubTator, DrugBank,
+PubMed baseline) were removed later (decision D85); their findings are in the git history.
 
-- **DrugComb**: the Zenodo record holds one file, `summary_table_v1.4.csv` (193 MB, CC BY 4.0,
-  MD5 pinned in the connector). It has **no study and no tissue column**, so a row cannot be
-  traced back to the screen it came from. Of its 1,175,220 rows, 709,187 are single-drug
-  screens (second drug `NA`, synergy 0) and are skipped; 466,033 are combinations, covering
-  4,150 drug names and 112 cell lines. The portal `drugcomb.org` did not answer at all
-  (connection timeout); the data does not depend on it.
-- **TDC**: PyTDC 1.1.15 pins `numpy<2`, `pandas<3` and `rdkit<2024.3.1`, so it does not
-  install on Python 3.13+. The connector downloads the same Harvard Dataverse file PyTDC
-  uses and reads it with a restricted loader when PyTDC is absent. TDC's `drugcomb` set
-  (297,098 rows, 129 drug names, 59 cell lines) is a copy of the NCI-60 part of DrugComb:
-  on the 286,674 combinations they share, the scores are identical.
-- **O'Neil / DeepSynergy**: 23,052 rows, 38 drugs, 39 cell lines, Loewe only. The same
-  experiments are inside DrugComb with scores recomputed by a different pipeline: on the
-  22,737 shared combinations the two Loewe values correlate at only 0.42.
-- **NCI-ALMANAC**: `dtp.cancer.gov` serves `Disallow: /` to every automated client, and the
-  data files are attachments on `wiki.nci.nih.gov`, whose robots.txt disallows `/download/`.
-  The pipeline requests neither; a person downloads the zip in a browser and places it under
-  `data/manual/nci_almanac/`. The ALMANAC screen is also present inside DrugComb and TDC.
-- **DepMap**: the portal API answers automated requests with a "verifying you are a person"
-  page and asks not to be scraped. The connector uses the official Figshare+ release
-  instead (documented API, MD5 checksums, CC BY 4.0), pinned to 24Q4 (2,105 models).
-- **GDSC**: `cancerrxgene.org` answers **410 Gone**; GDSC moved into the Sanger DepMap. The
-  optional connector reads the Cell Model Passports model list.
-- **PubMed baseline**: `ftp.ncbi.nlm.nih.gov` serves `Disallow: /` in robots.txt, although
-  NLM documents the server as its bulk download site. The optional connector therefore does
-  not fetch from it and reads files placed under `data/manual/pubmed_baseline/`.
 - **DDInter**: licensed CC BY-NC-SA 4.0 (non-commercial, share-alike). Disabled, and it
-  refuses to download until `terms_acknowledged: true` is set.
-- **DrugBank**: never requested by a connector. The site answers the link check with a
-  Cloudflare challenge (403). The connector only reads a file a licensed user placed.
-- **Documentation pages** (NCBI Bookshelf, PubChem docs, Europe PMC `RestfulWebService`,
-  the Figshare+ record page) sit behind a browser check, a CAPTCHA or JavaScript. They are
-  reported as such. The APIs themselves answer normally.
+  refuses to download until `terms_acknowledged: true` is set; the Tujya corpus step sets
+  both for this academic project.
+- **Documentation pages** (NCBI Bookshelf) sit behind a browser check or a CAPTCHA. They
+  are reported as such. The APIs themselves answer normally.
 """
 
 

@@ -5,7 +5,7 @@
 modules » du [README](../README.md#exigences-des-modules).
 
 ## Déjà fait (hérité de SynergyRx)
-- [x] Pipeline de données `data_pipeline/src/synergyrx_data` (14 connecteurs dont DDInter et PubMed, 270 tests)
+- [x] Pipeline de données `data_pipeline/src/synergyrx_data` (14 connecteurs, 270 tests ; réduit à DDInter, PubMed et openFDA à l'étape 1.1, D85)
 - [x] Backend FastAPI : comptes, sessions, administration (le catalogue SynergyRx des médicaments et des lignées a été retiré à l'étape 1.1, D85)
 - [x] Ébauche de frontend React + Vite à l'image de Tujya (prédictions factices)
 - [x] Planification de la nouvelle orientation (deux modules, périmètre, choix techniques)

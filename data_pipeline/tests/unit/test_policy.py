@@ -17,26 +17,13 @@ CONNECTOR_FILES = sorted((SRC / "connectors").glob("*.py"))
 # The module 2 corpus steps run on this pipeline and follow the same network policy.
 CORPUS = Path(__file__).resolve().parents[3] / "module2_ai_engineering" / "corpus"
 NETWORK_CHECKED = sorted(SRC.rglob("*.py")) + sorted(CORPUS.rglob("*.py"))
+# The links of the original brief for the sources that remain (the SynergyRx synergy sources
+# were removed, decision D85).
 BRIEF_LINKS = [
-    "https://drugcomb.org/",
-    "https://zenodo.org/records/11102665",
-    "https://arxiv.org/pdf/2102.09548",
-    "https://bioinf.jku.at/software/DeepSynergy",
-    "https://dtp.cancer.gov/ncialmanac",
     "https://ddinter2.scbdd.com/",
-    "https://sites.broadinstitute.org/ccle/datasets",
-    "https://forum.depmap.org/t/depmap-portal-datasets/3695",
-    "https://depmap.org/portal/",
-    "https://www.cancerrxgene.org/",
     "https://www.ncbi.nlm.nih.gov/books/NBK25501/",
     "https://dataguide.nlm.nih.gov/eutilities/how_eutilities_works.html",
     "https://dtd.nlm.nih.gov/ncbi/pubmed/doc/out/190101/index.html",
-    "https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/",
-    "https://europepmc.org/RestfulWebService",
-    "https://www.ncbi.nlm.nih.gov/research/pubtator3/",
-    "https://pubchem.ncbi.nlm.nih.gov/docs/pug-rest",
-    "https://www.ebi.ac.uk/chembl/api/data/docs",
-    "https://go.drugbank.com/",
 ]
 
 
@@ -91,30 +78,25 @@ def test_every_source_declares_licence_terms_hosts_and_citation() -> None:
         info = connector.info
         assert info.license and info.terms_url and info.citation, name
         assert info.hosts, name
-        assert info.category in {"synergy", "cell_line", "chemistry", "literature", "interaction"}
+        assert info.category in {"literature", "interaction"}
         assert info.access in {"api", "bulk", "package", "manual"}
         for link in info.links:
             assert urlsplit(link.url).hostname in info.hosts, f"{name}: {link.url}"
 
 
 def test_licence_gated_and_optional_sources_are_off_by_default() -> None:
-    for name in ("drugbank", "ddinter", "gdsc", "pubmed_baseline", "pubtator"):
+    for name in ("ddinter", "openfda_label"):
         info = REGISTRY[name].info
         assert info.optional and not info.default_enabled, name
-    assert REGISTRY["drugbank"].info.access == "manual"
-
-
-def test_drugbank_connector_contains_no_network_code() -> None:
-    source = (SRC / "connectors" / "drugbank_manual.py").read_text(encoding="utf-8")
-    assert "self.client" not in source and "fetch_file" not in source
+    assert set(REGISTRY) == {"ddinter", "pubmed", "openfda_label"}
 
 
 def test_every_link_from_the_brief_is_registered_for_the_link_check() -> None:
     registered = {link.url for _, link in all_links()}
     assert not [url for url in BRIEF_LINKS if url not in registered]
     marks = {link.url: link.origin for _, link in all_links()}
-    assert marks["https://zenodo.org/records/11102665"] == "checked"
-    assert marks["https://go.drugbank.com/"] == "verify"
+    assert marks["https://ddinter2.scbdd.com/"] == "checked"
+    assert marks["https://open.fda.gov/apis/drug/label/"] == "verify"
 
 
 def test_every_data_endpoint_is_on_a_declared_host() -> None:

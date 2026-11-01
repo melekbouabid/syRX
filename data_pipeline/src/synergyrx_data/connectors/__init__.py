@@ -4,43 +4,18 @@ from __future__ import annotations
 
 from synergyrx_data.config import Settings
 from synergyrx_data.connectors.base import Connector, Context, Link, SourceInfo
-from synergyrx_data.connectors.chembl import ChemblConnector
 from synergyrx_data.connectors.ddinter import DDInterConnector
-from synergyrx_data.connectors.depmap import DepMapConnector
-from synergyrx_data.connectors.drugbank_manual import DrugBankManualConnector
-from synergyrx_data.connectors.drugcomb import DrugCombConnector
-from synergyrx_data.connectors.europepmc import EuropePmcConnector
-from synergyrx_data.connectors.gdsc import GdscConnector
-from synergyrx_data.connectors.nci_almanac import NciAlmanacConnector
-from synergyrx_data.connectors.oneil import ONeilConnector
 from synergyrx_data.connectors.openfda import OpenFdaLabelConnector
-from synergyrx_data.connectors.pubchem import PubChemConnector
 from synergyrx_data.connectors.pubmed import PubMedConnector
-from synergyrx_data.connectors.pubmed_baseline import PubMedBaselineConnector
-from synergyrx_data.connectors.pubtator import PubTatorConnector
-from synergyrx_data.connectors.tdc import TdcConnector
 
-# Adding a source = writing one Connector subclass and listing it here.
+# The sources the Tujya module 2 corpus uses (the SynergyRx synergy sources were removed,
+# decision D85). Adding a source = writing one Connector subclass and listing it here.
 _CONNECTORS: tuple[type[Connector], ...] = (
-    DrugCombConnector,
-    TdcConnector,
-    ONeilConnector,
-    NciAlmanacConnector,
-    DepMapConnector,
-    GdscConnector,
     DDInterConnector,
-    DrugBankManualConnector,
-    PubChemConnector,
-    ChemblConnector,
     PubMedConnector,
-    PubMedBaselineConnector,
-    EuropePmcConnector,
-    PubTatorConnector,
     OpenFdaLabelConnector,
 )
 REGISTRY: dict[str, type[Connector]] = {cls.info.name: cls for cls in _CONNECTORS}
-
-SYNERGY_SOURCES = tuple(n for n, c in REGISTRY.items() if c.info.category == "synergy")
 
 
 def source_names() -> list[str]:
@@ -78,7 +53,6 @@ def all_links() -> list[tuple[str, Link]]:
 
 __all__ = [
     "REGISTRY",
-    "SYNERGY_SOURCES",
     "Connector",
     "Context",
     "Link",

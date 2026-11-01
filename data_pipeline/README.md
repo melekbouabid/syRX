@@ -1,17 +1,17 @@
-# Pipeline de données SynergyRx
+# Pipeline de données (hérité de SynergyRx)
 
-Pipeline de collecte de données d'origine du dépôt, écrit pour **SynergyRx AI** (prédiction
-de la synergie de combinaisons de médicaments sur des lignées cellulaires cancéreuses,
-enrichie par la littérature PubMed). Tujya n'en est plus l'objectif principal, mais il le
-réutilise : ses briques HTTP « polies » (limites de débit, cache, robots.txt, manifeste,
-provenance) et ses connecteurs DDInter, PubMed et openFDA servent au corpus du module 2
-([../module2_ai_engineering/corpus/](../module2_ai_engineering/corpus/)), et ses tables
-DrugComb à l'étude de synergie du bonus ([../bonus/](../bonus/)).
+Pipeline de collecte d'origine du dépôt, écrit pour **SynergyRx AI** (synergie de
+combinaisons de médicaments anticancéreux). Tujya n'en garde que ce qui sert au corpus du
+module 2 ([../module2_ai_engineering/corpus/](../module2_ai_engineering/corpus/)) : ses
+briques HTTP « polies » (limites de débit, cache, robots.txt, manifeste, provenance) et trois
+connecteurs, **DDInter**, **PubMed** et **openFDA** (notices). Les sources et les étapes de
+synergie (DrugComb, TDC, O'Neil, NCI-ALMANAC, DepMap, GDSC, PubChem, ChEMBL, Europe PMC,
+PubTator, DrugBank, PubMed baseline ; `clean`, `literature`, `report`, `export`) ont été
+retirées (décision D85) ; elles restent dans l'historique git (tag `v1.0-avant-restructuration`).
 
-Il collecte des données scientifiques publiques depuis une liste fermée de sources, poliment
-et de façon reproductible : API officielles d'abord, fichiers officiels en bloc ensuite,
-jamais de scraping HTML. Ce n'est pas un robot d'exploration généraliste : il refuse de
-contacter tout hôte qui n'est pas l'une de ses sources.
+Il collecte des données publiques depuis une liste fermée de sources, poliment et de façon
+reproductible : API officielles d'abord, fichiers officiels en bloc ensuite, jamais de
+scraping HTML. Il refuse de contacter tout hôte qui n'est pas l'une de ses sources.
 
 ## Ce dossier
 
@@ -20,46 +20,32 @@ contacter tout hôte qui n'est pas l'une de ses sources.
 | `src/synergyrx_data/` | le paquet Python (`synergyrx`, commande en ligne) |
 | `tests/unit/`, `tests/live/` | tests unitaires (HTTP simulé, aucun réseau) et tests de fumée optionnels sur les vrais services |
 | `config.yaml` | réglages (aucun secret) ; fixe la racine du projet à la racine du dépôt (`project_root: ..`) |
-| `manifest.json`, `LICENSES.md` | SHA-256, taille, URL, version, date et licence de chaque fichier collecté ; registre des licences |
+| `manifest.json`, `LICENSES.md` | SHA-256, taille, URL, version, date et licence de chaque fichier collecté ; licences et citations des sources |
 | `docs/` | [dictionnaire des données](docs/data_dictionary.md), [sources et état des liens](docs/sources.md), [règles d'accès aux sources](docs/code_review.md) |
 
-Les données produites ne sont **pas** dans ce dossier : elles sont dans `data/` à la racine
-du dépôt (partagé avec l'application et les modules, versionné par DVC, jamais par git).
-`config/` (listes tenues à la main) est aussi à la racine.
+Les données ne sont **pas** dans ce dossier : elles sont dans `data/` à la racine du dépôt
+(partagé avec l'application et les modules, versionné par DVC, jamais par git). `config/`
+(listes tenues à la main, dont `pill_classes.csv`) est aussi à la racine.
 
 ## Ce que produit le pipeline
 
-Tout ce que le pipeline produit est rangé dans `data/`, un sous-dossier par format :
-
 ```
 data/
-  parquet/   les tables pour la modélisation
-  csv/       couverture, conflits, files de relecture, phrases à annoter
-  json/      fichiers pour le frontend
-  reports/   rapport de qualité des données (Markdown et HTML), guide d'annotation
-
-  raw/       fichiers tels que téléchargés, par source     interim/   une table validée par source
-  manual/    fichiers déposés à la main                    cache/ state/   tenue des comptes
+  raw/       fichiers tels que téléchargés, par source
+  interim/   une table validée par source (et ses lignes rejetées, *.rejects.parquet)
+  manual/    fichiers déposés à la main        cache/ state/   tenue des comptes
 ```
 
-| Fichier | Contenu |
+| Table | Contenu |
 |---|---|
-| `data/parquet/synergy_pairs.parquet` | une ligne par paire de médicaments, lignée, source et étude ; Bliss, Loewe, HSA et ZIP en colonnes séparées |
-| `data/parquet/drugs.parquet` | une ligne par médicament : SMILES standardisé, InChIKey, CID PubChem, ID ChEMBL, synonymes, validité |
-| `data/parquet/cell_lines.parquet` | noms, tissu, identifiant DepMap |
-| `data/parquet/expression.parquet` | matrice d'expression des lignées utilisées |
-| `data/parquet/abstracts.parquet`, `candidate_sentences.parquet` | résumés PubMed et phrases citant au moins deux médicaments |
-| `data/csv/coverage.csv`, `conflicts.csv`, `source_agreement.csv` | médicaments et lignées distincts par source ; enregistrements en désaccord ; accord entre sources |
-| `data/csv/drug_review_queue.csv`, `cell_line_review_queue.csv` | noms à vérifier par une personne |
-| `data/csv/sample_sentences.csv` | phrases stratifiées à annoter à la main (aussi `data/json/sample_sentences.jsonl`) |
-| `data/json/*.json` | `drugs.json`, `cell_lines.json`, `mock_predictions_seed.json`, `citations.json` pour le frontend |
-| `data/reports/data_quality.md` / `.html` | rapport de qualité ; `annotation_guide.md` explique les étiquettes |
-| `data_pipeline/manifest.json`, `data_pipeline/LICENSES.md` | SHA-256, taille, URL, version, date et licence de chaque fichier |
+| `data/interim/ddinter/interactions.parquet` | paires de médicaments en interaction et leur gravité (Major, Moderate, Minor) |
+| `data/interim/pubmed/articles.parquet`, `query_hits.parquet` | résumés PubMed (type d'article, langue, rétractation) et quelle requête a trouvé quel article |
+| `data/interim/openfda_label/label_sections.parquet` | sections d'une notice par principe actif, jamais la posologie |
 
 Chaque colonne est expliquée dans [docs/data_dictionary.md](docs/data_dictionary.md) (un test
-vérifie que toutes les colonnes écrites y figurent). `--data-dir` déplace tout le dossier ;
-`parquet_dir`, `csv_dir`, `json_dir` et `reports_dir` de `config.yaml` peuvent envoyer un
-format ailleurs.
+vérifie que toutes les colonnes écrites y figurent, et seulement elles). Les étapes du corpus
+lancent ces connecteurs avec leurs propres réglages : les notices et les résumés vont dans
+`data/rag/` avec leur propre manifeste ([rag.md](../module2_ai_engineering/docs/rag.md)).
 
 ## Installation
 
@@ -83,97 +69,58 @@ Puis vérifier la machine : `synergyrx preflight`.
 
 ## Utilisation
 
-Toujours **depuis ce dossier** (`data_pipeline/`), où `config.yaml` est trouvé :
+Pour Tujya, passer par les étapes du module 2, qui règlent les sources comme il faut
+(DDInter accepté sous ses conditions, PubMed sur les principes actifs, dossier `data/rag`) :
 
 ```bash
-synergyrx fetch --sample 100 --dry-run   # affiche le plan ; ne requête et n'écrit rien
-synergyrx fetch --sample 100             # petit échantillon de chaque source activée
-synergyrx fetch                          # exécution complète (environ 740 Mo pour l'étape 1)
-synergyrx clean                          # construit les tables (data/parquet)
-synergyrx fetch --source pubmed --source europepmc
-synergyrx literature                     # résumés, phrases candidates, échantillon d'annotation
-synergyrx report                         # rapport de qualité, couverture, conflits, LICENSES.md
-synergyrx export                         # JSON du frontend
-synergyrx summary                        # bilan de tout ce qui a été collecté
+python -m module2_ai_engineering.corpus ddinter      # depuis la racine du dépôt
+python -m module2_ai_engineering.corpus labels
+python -m module2_ai_engineering.corpus pubmed
 ```
 
-Ou tout d'un coup, de façon incrémentale : `synergyrx update`.
+La commande `synergyrx` reste utilisable directement, **depuis ce dossier**
+(`data_pipeline/`), où `config.yaml` est trouvé :
 
-`fetch` procède par étapes, car les sources suivantes ont besoin des résultats précédents :
-
-1. Combinaisons et lignées : DrugComb, TDC, O'Neil, NCI-ALMANAC, DepMap.
-2. PubChem résout les noms de médicaments trouvés à l'étape 1.
-3. ChEMBL recherche les InChIKey renvoyées par PubChem.
-4. PubMed, avec des requêtes construites depuis la table nettoyée (donc `clean` d'abord).
-5. Europe PMC (accès ouvert) et PubTator, pour les PMID renvoyés par PubMed.
+```bash
+synergyrx fetch --dry-run                # affiche le plan ; ne requête et n'écrit rien
+synergyrx fetch --source pubmed --sample 20
+synergyrx status                         # état de chaque connecteur
+synergyrx summary                        # bilan de tout ce qui a été collecté
+```
 
 | Commande | Rôle |
 |---|---|
 | `sources` | sources, licences et état ; `--check` teste chaque lien et réécrit [docs/sources.md](docs/sources.md) |
 | `fetch` | télécharge, analyse et valide dans `data/raw` et `data/interim` ; `--source`, `--sample N`, `--dry-run`, `--refresh` |
 | `validate` | revérifie les empreintes des fichiers bruts et les lignes intermédiaires |
-| `clean` | construit les tables de `data/parquet` |
-| `literature` | résumés, découpage en phrases, mentions de médicaments, échantillon d'annotation |
-| `report` | rapport de qualité, couverture, conflits, registre des licences |
-| `export` | JSON du frontend |
 | `status` | état de chaque connecteur et de ce qui est sur le disque |
 | `summary` | bilan final (`--json` pour les machines) |
 | `preflight` | espace disque, droits, identité, outils |
-| `update` | tout ce qui précède, de façon incrémentale (pour cron ou la CI) |
+| `update` | `fetch` de toutes les sources activées, de façon incrémentale (pour une tâche planifiée) |
 
 Les options globales se placent avant la commande : `--config`, `--set key=value`,
 `--data-dir`, `--log-level`, `--text-logs`. Toute valeur de `config.yaml` peut être
-surchargée, par exemple `synergyrx --set sources.tdc.enabled=false fetch`. Les journaux sont
-des lignes JSON sur stderr ; tableaux et rapports vont sur stdout.
+surchargée, par exemple `synergyrx --set sources.pubmed.enabled=false fetch`. Les journaux
+sont des lignes JSON sur stderr ; les tableaux vont sur stdout.
 
 **Les seconds passages ne coûtent presque rien** : un fichier brut dont l'empreinte
 correspond au manifeste n'est pas retéléchargé, les réponses d'API sont en cache et
-revalidées (ETag / Last-Modified), les recherches (même « introuvable ») sont mémorisées, un
-téléchargement interrompu reprend (requête HTTP Range), et PubMed n'est interrogé que sur les
-notices ajoutées depuis le passage précédent.
+revalidées (ETag / Last-Modified), un téléchargement interrompu reprend (requête HTTP
+Range), et PubMed n'est interrogé que sur les notices ajoutées depuis le passage précédent.
 
 ## Sources
 
 | Source | Accès | Activée par défaut | Licence |
 |---|---|---|---|
-| DrugComb v1.4 | fichier Zenodo, version figée | oui | CC BY 4.0 |
-| TDC DrugSyn | fichier Harvard Dataverse (via PyTDC s'il est installé) | oui | CC BY 4.0 |
-| O'Neil / DeepSynergy | CSV en bloc | oui | aucune indiquée : recherche, ne pas redistribuer |
-| NCI-ALMANAC | **téléchargement manuel** | oui | œuvre du gouvernement américain |
-| DepMap / CCLE 24Q4 | API et fichiers Figshare+ | oui | CC BY 4.0 |
-| PubChem | API PUG-REST | oui | domaine public |
-| ChEMBL | API web services | oui | CC BY-SA 3.0 |
-| PubMed | API E-utilities | oui | conditions NLM |
-| Europe PMC | API REST | oui | conditions Europe PMC |
-| GDSC (Cell Model Passports) | fichier en bloc | non | non vérifiée |
-| DDInter | CSV en bloc, soumis à conditions | non | CC BY-NC-SA 4.0 |
-| DrugBank | **fichier fourni par vous** | non | licence DrugBank |
-| PubMed baseline | XML en bloc, très volumineux, **téléchargement manuel** | non | conditions NLM |
-| PubTator 3 | API | non | domaine public |
-| openFDA (notices) | API | non (activée par les étapes Tujya) | CC0 / domaine public |
+| DDInter 2.0 | CSV en bloc, soumis à conditions | non (activée par l'étape `ddinter` du corpus) | CC BY-NC-SA 4.0 |
+| PubMed | API E-utilities, requêtes par principe actif de `config/pill_classes.csv` | oui | conditions NLM |
+| openFDA (notices) | API | non (activée par l'étape `labels` du corpus) | CC0 / domaine public |
 
-État des liens, points d'accès, limites de débit et ce qui a été trouvé pour chaque source :
-[docs/sources.md](docs/sources.md). Licences et citations : [LICENSES.md](LICENSES.md).
-
-### Étapes manuelles
-
-- **NCI-ALMANAC.** Le robots.txt de `wiki.nci.nih.gov` interdit les téléchargements
-  automatiques. Ouvrir la [page NCI-ALMANAC](https://wiki.nci.nih.gov/spaces/NCIDTPdata/pages/338237347/NCI-ALMANAC)
-  dans un navigateur, enregistrer `ComboDrugGrowth_Nov2017.zip` (et éventuellement
-  `ComboCompoundNames_small.txt`) dans `data/manual/nci_almanac/`, puis relancer `fetch`.
-- **PubMed baseline** (optionnel). `ftp.ncbi.nlm.nih.gov` interdit les clients automatiques :
-  télécharger soi-même les fichiers listés dans `sources.pubmed_baseline.options.files` vers
-  `data/manual/pubmed_baseline/`.
-- **DrugBank.** Jamais téléchargé. Avec une licence, enregistrer l'export du vocabulaire sous
-  `data/manual/drugbank/drugbank vocabulary.csv` et mettre `sources.drugbank.enabled: true`.
-- **DDInter.** Lire ses [conditions](https://ddinter2.scbdd.com/terms/) (non commercial,
-  partage à l'identique), puis `sources.ddinter.enabled: true` et `terms_acknowledged: true`.
-  Les étapes Tujya le font pour ce projet étudiant (module 2, D62).
-- **TDC via PyTDC.** PyTDC ne s'installe que sous Python 3.11 / 3.12 :
-  `pip install -e ".[tdc]"`. Sans lui, le même fichier est lu par un chargeur intégré.
-- **Médicaments et lignées non résolus.** Traiter `data/csv/drug_review_queue.csv` et
-  `data/csv/cell_line_review_queue.csv`, noter les décisions dans
-  `config/manual_drug_overrides.csv` et `config/cell_line_aliases.csv`, puis `clean`.
+État des liens, points d'accès, limites de débit : [docs/sources.md](docs/sources.md).
+Licences et citations : [LICENSES.md](LICENSES.md). **DDInter** : lire ses
+[conditions](https://ddinter2.scbdd.com/terms/) (non commercial, partage à l'identique) ;
+les étapes Tujya mettent `enabled` et `terms_acknowledged` à `true` pour ce projet étudiant
+(module 2, D62).
 
 ## Comportement sur le réseau
 
@@ -190,9 +137,7 @@ notices ajoutées depuis le passage précédent.
 
 Une source en échec n'arrête pas l'exécution : les autres continuent, `status` indique
 laquelle demande attention et pourquoi ; `fetch` et `update` sortent alors avec un code non
-nul.
-
-`synergyrx update` peut être relancé sans risque (par exemple depuis une tâche planifiée).
+nul. `synergyrx update` peut être relancé sans risque.
 
 ## Développement
 
@@ -207,12 +152,10 @@ d'abord [docs/code_review.md](docs/code_review.md).
 
 ```
 src/synergyrx_data/
-  cli.py  pipeline.py  build.py  config.py  manifest.py
+  cli.py  pipeline.py  config.py  manifest.py  provenance.py  state.py  preflight.py
   http/         client, ratelimit, retry, cache, robots, circuit, guardrails
-  connectors/   un module par source (dont ddinter, pubmed, openfda)
-  cleaning/     smiles, drugs, cell_lines, pairs, scores
-  literature/   queries, abstracts, sentences, mentions, annotation_export
-  quality/      reports, drift, licenses, linkcheck
-  export/       frontend
+  connectors/   base, schemas, ddinter, pubmed, openfda
+  literature/   queries (requêtes PubMed), abstracts (lecture du XML PubMed)
+  quality/      drift (dérive de schéma), linkcheck (docs/sources.md)
 tests/unit/     HTTP simulé        tests/live/   tests de fumée optionnels
 ```
