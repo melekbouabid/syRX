@@ -92,6 +92,6 @@ modules » du [README](../README.md#exigences-des-modules).
 
 ## Bonus (seulement s'il reste du temps)
 - [x] Outil `predict_toxicity` : tests in vitro Tox21, LightGBM sur empreintes de Morgan, split par scaffold, ROC-AUC test moyen 0,725 ([toxicity.md](../bonus/docs/toxicity.md))
-- [x] `predict_synergy` étudié (DrugComb, médicaments laissés de côté, [synergy.md](../bonus/docs/synergy.md)) : RMSE −7,3 % contre la moyenne, sous la règle des 10 % (D75), donc **aucun outil ajouté**
+- [x] `predict_synergy` étudié (DrugComb, médicaments laissés de côté) : RMSE −7,3 % contre la moyenne, sous la règle des 10 % (D75), donc **aucun outil ajouté** ; étude retirée du dépôt à l'étape 1.1 (D85)
 - [ ] OCR des empreintes des comprimés
-- [ ] Page des données de synergie anticancéreuse
+- ~~Page des données de synergie anticancéreuse~~ : abandonnée, données SynergyRx retirées (D85)

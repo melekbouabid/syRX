@@ -55,7 +55,7 @@ source [diagrams/architecture.mmd](diagrams/architecture.mmd).
 | [module2_ai_engineering/agent/](../module2_ai_engineering/agent/) | graphe LangGraph, outils, règles de sécurité | dans l'API |
 | [module2_ai_engineering/mcp_server/](../module2_ai_engineering/mcp_server/) | les mêmes outils par MCP | processus séparé (stdio ou HTTP local) |
 | [module2_ai_engineering/benchmark/](../module2_ai_engineering/benchmark/) | questions, scripts, résultats | sur le PC |
-| [bonus/](../bonus/) | toxicité Tox21 (outil de l'agent, route, page) et étude de synergie | dans l'API ; entraînement sur le PC |
+| [bonus/](../bonus/) | toxicité Tox21 (outil de l'agent, route, page) | dans l'API ; entraînement sur le PC |
 | [data_pipeline/](../data_pipeline/) | pipeline SynergyRx : client HTTP poli, connecteurs, manifeste | sur le PC (venv du pipeline) |
 | [infra/](../infra/) | images et réglages des services MLflow, PostgreSQL, Ollama | Docker Compose |
 

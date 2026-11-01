@@ -242,7 +242,8 @@ séparément, jamais rien sur leur association (bonus/docs/toxicity.md).
 une copie, O'Neil diverge ; cible ZIP ; 323 339 expériences, 287 médicaments), un LightGBM
 évalué en laissant 15 % des médicaments de côté fait mieux que la moyenne (RMSE 5,189 contre
 5,597, r 0,377) mais seulement de 7,3 %, sous la règle de 10 % fixée avant l'entraînement
-(D75) : aucun outil `predict_synergy` n'a été ajouté (bonus/docs/synergy.md).
+(D75) : aucun outil `predict_synergy` n'a été ajouté, et l'étude a ensuite été retirée du
+dépôt (D85).
 
 ## 10. Limites et suite
 

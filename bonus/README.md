@@ -22,17 +22,12 @@ leur association, et jamais « non toxique ».
 - Documentation : [docs/toxicity.md](docs/toxicity.md) ; décisions D73 et D74 dans
   [../docs/decisions.md](../docs/decisions.md).
 
-## Étude de synergie (DrugComb), sans outil
+## Étude de synergie (retirée)
 
-Peut-on prédire la synergie (score ZIP) d'une association pour des médicaments jamais vus ?
-Données DrugComb du pipeline ([../data_pipeline/](../data_pipeline/)), split en laissant des
-médicaments de côté, LightGBM contre la moyenne, règle de décision fixée **avant**
-l'entraînement (RMSE au moins 10 % sous la moyenne et r ≥ 0,3). Résultat : −7,3 % et
-r = 0,377, règle non atteinte, donc **pas d'outil `predict_synergy`** ; le résultat est
-documenté plutôt que forcé.
-
-- Code : [synergy/train_synergy.py](synergy/train_synergy.py) (MLflow `tujya-synergy`).
-- Documentation : [docs/synergy.md](docs/synergy.md) ; décision D75.
+Une étude de prédiction de la synergie (DrugComb, score ZIP) a été menée puis retirée du
+dépôt : elle n'a pas atteint la règle fixée d'avance (RMSE −7,3 % contre la moyenne, sous les
+10 % demandés), donc aucun outil `predict_synergy` n'existe. Décisions D75 (l'étude) et D85
+(le retrait) ; le code reste dans l'historique git.
 
 ## Commandes
 
@@ -42,7 +37,6 @@ documenté plutôt que forcé.
 python -m bonus.toxicity.train_tox21 download
 python -m bonus.toxicity.train_tox21 train        # serveur MLflow sur 127.0.0.1:5000
 python -m bonus.toxicity.train_tox21 publish      # -> models/tox21/, lu par l'API
-python -m bonus.synergy.train_synergy
 
 # Tests
 cd bonus && ../app/backend/.venv/Scripts/python -m pytest
