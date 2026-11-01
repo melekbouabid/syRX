@@ -10,13 +10,6 @@ const PATHS = {
       <path d="m8.5 8.5 7 7" />
     </>
   ),
-  cells: (
-    <>
-      <circle cx="8" cy="8" r="4.5" />
-      <circle cx="17.5" cy="10.5" r="3" />
-      <circle cx="11.5" cy="17.5" r="3.5" />
-    </>
-  ),
   user: (
     <>
       <circle cx="12" cy="8" r="4" />

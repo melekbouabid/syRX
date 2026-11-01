@@ -128,6 +128,6 @@ def test_change_own_password(user: TestClient, browser: Callable[[], TestClient]
 
 
 def test_anonymous_access_is_refused(anonymous: TestClient) -> None:
-    for path in ("/api/auth/me", "/api/admin/users", "/api/admin/stats", "/api/catalog/drugs"):
+    for path in ("/api/auth/me", "/api/admin/users", "/api/admin/stats", "/api/pills"):
         assert anonymous.get(path).status_code == 401, path
     assert anonymous.get("/api/health").json() == {"status": "ok"}

@@ -29,34 +29,6 @@ export interface AdminStats {
   active_sessions: number;
 }
 
-export interface CatalogSummary {
-  drugs: number | null;
-  cell_lines: number | null;
-  synergy_measurements: number | null;
-  abstracts: number | null;
-}
-
-export interface Drug {
-  drug_id: string;
-  name: string;
-  synonyms: string[];
-  pubchem_cid: number | null;
-  chembl_id: string | null;
-  smiles: string | null;
-  sources: string[];
-  n_measurements: number;
-}
-
-export interface CellLine {
-  cell_line_id: string;
-  name: string;
-  tissue: string | null;
-  disease: string | null;
-  depmap_id: string | null;
-  sources: string[];
-  n_measurements: number;
-}
-
 export interface UserFilters {
   q?: string;
   role?: Role | "";
@@ -407,14 +379,6 @@ export const api = {
     request<User>("PATCH", "/auth/me", { body: { full_name } }),
   changePassword: (current_password: string, new_password: string) =>
     request<void>("POST", "/auth/me/password", { body: { current_password, new_password } }),
-
-  // Public: the introduction page shows these counts before anyone has signed in.
-  catalogSummary: (signal?: AbortSignal) =>
-    request<CatalogSummary>("GET", "/public/summary", { signal, anonymous: true }),
-  drugs: (query: QueryParams, signal?: AbortSignal) =>
-    request<Page<Drug>>("GET", "/catalog/drugs", { query, signal }),
-  cellLines: (query: QueryParams, signal?: AbortSignal) =>
-    request<Page<CellLine>>("GET", "/catalog/cell-lines", { query, signal }),
 
   scan: (image: Blob, filename: string, signal?: AbortSignal) => {
     const form = new FormData();

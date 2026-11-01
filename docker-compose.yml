@@ -85,7 +85,6 @@ services:
       # The image keeps the repository layout under /tujya: these are the default paths.
       - ./config:/tujya/config:ro
       - ./data/tujya:/tujya/data/tujya:ro
-      - ./data/parquet:/tujya/data/parquet:ro
       - ./data/vision/c3pi/images:/tujya/data/vision/c3pi/images:ro
       - ./data/rag/corpus:/tujya/data/rag/corpus:ro
       - ./models:/tujya/models:ro

@@ -1,6 +1,6 @@
 """POST /api/scan: one photo in, every detected pill out with its top-5 identifications.
 
-Sign-in required, like the catalog: the demo uses the demo account (decision D46).
+Sign-in required, like the medicine routes: the demo uses the demo account (decision D46).
 """
 
 from __future__ import annotations

@@ -46,7 +46,7 @@ source [diagrams/architecture.mmd](diagrams/architecture.mmd).
 
 | Dossier | Rôle | Exécution |
 |---|---|---|
-| [app/backend/](../app/backend/) | API FastAPI : configuration, bases (comptes en SQLite ou PostgreSQL, médicaments et interactions dans PostgreSQL), comptes et sessions, administration, catalogue, routes ; importe le code des modules | conteneur `backend` (et `pharma-init`, `rag-init`) |
+| [app/backend/](../app/backend/) | API FastAPI : configuration, bases (comptes en SQLite ou PostgreSQL, médicaments et interactions dans PostgreSQL), comptes et sessions, administration, routes ; importe le code des modules | conteneur `backend` (et `pharma-init`, `rag-init`) |
 | [app/frontend/](../app/frontend/) | site React : Scanner (upload, webcam, boîtes, interactions), chat, Toxicity, admin | conteneur `frontend` (nginx) |
 | [module1_vision_mlops/training/](../module1_vision_mlops/training/) | sélection C3PI, étiquetage automatique, entraînement, évaluation, export ONNX, Model Registry, publication | sur le PC (venv avec PyTorch, GPU) |
 | [module1_vision_mlops/serving/](../module1_vision_mlops/serving/) | chaîne de scan ONNX Runtime (détecteur, recadrage, classifieur) | dans l'API |

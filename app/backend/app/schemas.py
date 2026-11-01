@@ -97,25 +97,6 @@ class AdminStats(BaseModel):
     active_sessions: int
 
 
-# --- catalog --------------------------------------------------------------------------------
-
-
-class CatalogSummary(BaseModel):
-    """Row counts of the processed tables; null when a table has not been built yet."""
-
-    drugs: int | None
-    cell_lines: int | None
-    synergy_measurements: int | None
-    abstracts: int | None
-
-
-class CatalogPage(BaseModel):
-    items: list[dict[str, Any]]
-    total: int
-    page: int
-    page_size: int
-
-
 # --- Tujya: pills, scan, interactions -------------------------------------------------------
 # Every answer about medicines carries its sources and the disclaimer (safety rules,
 # docs/project_rules.md).
