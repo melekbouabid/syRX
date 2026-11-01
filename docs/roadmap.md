@@ -15,6 +15,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] README avec les exigences des modules, les sources de données et le journal de progression
 - [x] Règles du projet (sécurité des réponses, usage local) dans [project_rules.md](project_rules.md)
 - [x] Conventions Git : branches, Conventional Commits, tags d'étape et de modèle, hooks pre-commit et commit-msg testés, ESLint, contrôle des messages en CI ([git_workflow.md](git_workflow.md), `v1.1.0-conventions`)
+- [x] Fichiers inutiles retirés (remarque du professeur) : catalogue, étude de synergie et partie synergie du pipeline SynergyRx, fichiers isolés ; tout reste dans l'historique git (D85)
 - [ ] Changer le mot de passe administrateur par défaut (admin@gmail.com / admin)
 
 ## 1. Données des comprimés (C3PI, aucune photo personnelle)

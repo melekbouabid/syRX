@@ -751,3 +751,42 @@ factices sont voulus (même exception que les règles S105/S106 de ruff), et une
 (`password: "Password"`) seraient pris pour des mots de passe. Le contrôle des messages de
 commit est refait par la CI sur les commits poussés, qu'un `git commit --no-verify` ne peut
 pas contourner.
+
+## Fichiers inutiles (2026-11-01)
+
+**D85. Retrait de la partie SynergyRx que Tujya n'utilise pas.** Le professeur a relevé
+« plusieurs fichiers et dossiers inutiles ». Un inventaire des 345 fichiers suivis (chaque
+dépendance vérifiée dans les imports, `dvc.yaml`, `docker-compose.yml` et les workflows) a
+séparé ce que l'application, l'entraînement, les tests, le RAG, la CI et la démonstration
+utilisent de ce qui ne servait plus que l'ancien objectif (synergie de médicaments
+anticancéreux). Ont été retirés, en quatre commits :
+- des fichiers isolés : `config/medicines.csv` (en-tête seul), le `Makefile` et le
+  `Dockerfile` du pipeline (ni `make` ni cette image ne servent : ni la CI, ni la CD, ni
+  docker compose), ses exemples de planification, `docs/archive/` et le modèle de pull
+  request SynergyRx ;
+- le catalogue des médicaments et des lignées cellulaires de l'application (routes
+  `/api/catalog/*` et `/api/public/summary`, pages Drugs et Cell lines) ; les pages
+  d'accueil, de connexion et d'introduction décrivent maintenant Tujya, avec ses règles de
+  sécurité et l'avertissement « information only » ;
+- l'étude de synergie du bonus (résultat négatif, D75 : aucun outil `predict_synergy`) et
+  le pointeur DVC `data/parquet.dvc` (le cache et le remote DVC n'ont pas été touchés) ;
+- dans le pipeline, douze connecteurs (DrugComb, TDC, O'Neil, NCI-ALMANAC, DepMap, GDSC,
+  PubChem, ChEMBL, Europe PMC, PubTator, DrugBank, PubMed baseline), le nettoyage, `build.py`
+  (commandes `clean`, `literature`, `report`, `export`), l'export frontend, l'extraction de
+  phrases et le rapport de qualité, avec leurs tests et deux fichiers de `config/`.
+
+Le pipeline garde ce que le corpus du module 2 utilise : le client HTTP poli, le manifeste,
+la provenance, la détection de dérive, la vérification des liens et trois connecteurs
+(DDInter, PubMed, openFDA). PubMed ne garde que le mode `ingredients` : les modes `pairs` et
+`drugs` lisaient les tables de synergie. `literature/abstracts.py` reste (le connecteur
+PubMed en lit le XML) ; la structure des requêtes (`kind`, `pair_key`) ne change pas, pour
+que les journaux de requêtes déjà versionnés gardent le même schéma. Les tests du code
+retiré sont partis avec lui ; ceux du code gardé qui passaient par les données de synergie
+(PubMed, CLI, mise à jour de bout en bout, dictionnaire des données) ont été réécrits sur
+DDInter et PubMed avec les mêmes vérifications. RDKit et PyTDC ne sont plus des dépendances
+du pipeline (RDKit reste dans le venv du backend, pour la toxicité). `LICENSES.md`, qui
+était généré par `report`, est tenu à la main ; `docs/sources.md` a été régénéré hors ligne
+depuis le dernier relevé des liens. Rien n'est perdu : tout reste dans l'historique git
+(tag `v1.0-avant-restructuration`). Le nom du paquet `synergyrx_data`, la commande
+`synergyrx` et le préfixe de configuration `SYNERGYRX_` ne changent pas ici (ce serait un
+renommage, pas une suppression).
