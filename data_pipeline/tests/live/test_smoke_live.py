@@ -1,8 +1,8 @@
 """Optional smoke tests against the real services.
 
-They are excluded from the default run. Start them with `pytest tests/live -m live` (or
-`make live`) after putting CONTACT_EMAIL in `.env`. Each test asks for a few kilobytes: one
-record, one name, the first rows of one file.
+They are excluded from the default run. Start them with `pytest tests/live -m live` after
+putting CONTACT_EMAIL in `.env`. Each test asks for a few kilobytes: one record, one name,
+the first rows of one file.
 """
 
 from __future__ import annotations

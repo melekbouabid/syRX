@@ -21,8 +21,7 @@ contacter tout hôte qui n'est pas l'une de ses sources.
 | `tests/unit/`, `tests/live/` | tests unitaires (HTTP simulé, aucun réseau) et tests de fumée optionnels sur les vrais services |
 | `config.yaml` | réglages (aucun secret) ; fixe la racine du projet à la racine du dépôt (`project_root: ..`) |
 | `manifest.json`, `LICENSES.md` | SHA-256, taille, URL, version, date et licence de chaque fichier collecté ; registre des licences |
-| `docs/` | [dictionnaire des données](docs/data_dictionary.md), [sources et état des liens](docs/sources.md), [règles d'accès aux sources](docs/code_review.md), [exemples de planification](docs/examples/) |
-| `Dockerfile`, `Makefile` | image du pipeline (contexte de build : la racine du dépôt) et raccourcis |
+| `docs/` | [dictionnaire des données](docs/data_dictionary.md), [sources et état des liens](docs/sources.md), [règles d'accès aux sources](docs/code_review.md) |
 
 Les données produites ne sont **pas** dans ce dossier : elles sont dans `data/` à la racine
 du dépôt (partagé avec l'application et les modules, versionné par DVC, jamais par git).
@@ -193,31 +192,14 @@ Une source en échec n'arrête pas l'exécution : les autres continuent, `status
 laquelle demande attention et pourquoi ; `fetch` et `update` sortent alors avec un code non
 nul.
 
-## Planification et Docker
-
-`synergyrx update` peut être relancé sans risque. Exemples :
-[docs/examples/crontab.txt](docs/examples/crontab.txt) et
-[docs/examples/github-actions-update.yml](docs/examples/github-actions-update.yml).
-
-```bash
-# depuis la racine du dépôt (le contexte de build est la racine : l'image lit config/)
-docker build -f data_pipeline/Dockerfile -t synergyrx-data .
-docker run --rm --env-file .env -v "$PWD/data:/app/data" synergyrx-data fetch --sample 100
-```
-
-`--build-arg INSTALL_TDC=1` ajoute PyTDC. Les secrets sont passés à l'exécution et ne font
-pas partie de l'image.
+`synergyrx update` peut être relancé sans risque (par exemple depuis une tâche planifiée).
 
 ## Développement
 
-```bash
-make check        # lint, typage, tests unitaires (HTTP simulé, pas de réseau)
-make live         # tests de fumée optionnels sur les vrais services, petits échantillons
-```
-
-Sans `make` (Windows) : `python -m ruff check src tests`, `python -m mypy`,
-`python -m pytest tests/unit`, `python -m pytest tests/live -m live`. Règles de lint
-communes : [../ruff.toml](../ruff.toml).
+Depuis `data_pipeline/` : `python -m ruff check src tests`, `python -m mypy`,
+`python -m pytest tests/unit` (HTTP simulé, pas de réseau) et
+`python -m pytest tests/live -m live` (tests de fumée optionnels sur les vrais services,
+petits échantillons). Règles de lint communes : [../ruff.toml](../ruff.toml).
 
 Ajouter une source, c'est écrire une sous-classe de `Connector` (`discover`, `fetch`,
 `parse`, `validate`) et l'enregistrer dans `src/synergyrx_data/connectors/__init__.py`. Lire

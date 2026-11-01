@@ -215,7 +215,7 @@ et [data_pipeline/LICENSES.md](data_pipeline/LICENSES.md). Jeu C3PI en détail :
   [CD](docs/cd.md), [décisions](docs/decisions.md), [feuille de route](docs/roadmap.md).
 - Soutenance : [script de démonstration](docs/demo.md), [questions probables du jury](docs/questions_jury.md).
 - Règles du projet (sécurité des réponses, usage local) : [docs/project_rules.md](docs/project_rules.md).
-- Historique : `git log` et tags git ; [archive SynergyRx](docs/archive/).
+- Historique : `git log` et tags git (`v1.0-avant-restructuration` : état SynergyRx avant la restructuration).
 
 ## Auteur
 
