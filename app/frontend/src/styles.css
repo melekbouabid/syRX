@@ -1131,46 +1131,6 @@ input::placeholder {
   margin-top: 20px;
 }
 
-.banner-search {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  max-width: 540px;
-  margin-top: 22px;
-  padding: 6px 6px 6px 16px;
-  border: 1px solid rgb(255 255 255 / 30%);
-  border-radius: 14px;
-  background: rgb(255 255 255 / 13%);
-  backdrop-filter: blur(6px);
-  transition:
-    background-color 0.2s,
-    border-color 0.2s,
-    box-shadow 0.2s;
-}
-
-.banner-search:focus-within {
-  border-color: #ffffff;
-  background: rgb(255 255 255 / 20%);
-  box-shadow: 0 0 0 4px rgb(255 255 255 / 16%);
-}
-
-.banner-search input,
-.banner-search input:hover,
-.banner-search input:focus-visible {
-  flex: 1;
-  height: 40px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  box-shadow: none;
-  color: #ffffff;
-}
-
-.banner-search input::placeholder {
-  color: rgb(255 255 255 / 78%);
-  opacity: 1;
-}
-
 /* ---------- cards, stats, links ---------- */
 
 .card {
@@ -1258,8 +1218,7 @@ input::placeholder {
   right: 20px;
 }
 
-.stat:nth-child(even) .stat-icon,
-.intro-stat:nth-child(even) .stat-icon {
+.stat:nth-child(even) .stat-icon {
   background: var(--accent-soft);
   color: var(--accent-strong);
 }
@@ -1693,28 +1652,6 @@ input::placeholder {
   font-size: 1.03rem;
 }
 
-.auth-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 30px;
-  margin: 26px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.auth-facts li {
-  display: flex;
-  flex-direction: column;
-  color: rgb(255 255 255 / 84%);
-  font-size: 0.85rem;
-}
-
-.auth-facts strong {
-  color: #ffffff;
-  font-size: 1.45rem;
-  line-height: 1.2;
-}
-
 .auth-aside .auth-footnote {
   margin: 0;
   color: rgb(255 255 255 / 82%);
@@ -1977,24 +1914,12 @@ input::placeholder {
   transition-delay: 0.8s;
 }
 
-.bar-row:nth-child(6) .bar-fill {
-  transition-delay: 0.95s;
-}
-
-.bar-single {
+.bar-other {
   background: var(--border-strong);
 }
 
-.bar-expected {
+.bar-top {
   background: var(--primary);
-}
-
-/* Sits on top of the measured bar from where the expectation ends, and arrives last. */
-.bar-row:nth-child(6) .bar-excess {
-  border-radius: 0 999px 999px 0;
-  background: var(--brand-green);
-  transition-delay: 1.9s;
-  transition-duration: 0.6s;
 }
 
 .figure-card figcaption {
@@ -2006,55 +1931,8 @@ input::placeholder {
   font-size: 0.85rem;
 }
 
-.bar-swatch {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: 6px;
-  border-radius: 3px;
-  background: var(--brand-green);
-}
-
 .figure-note {
   font-size: 0.78rem;
-}
-
-.intro-stats {
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
-
-.intro-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 22px;
-  padding-block: 30px;
-}
-
-.intro-stat {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  column-gap: 14px;
-}
-
-.intro-stat .stat-icon {
-  grid-row: span 2;
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-}
-
-.intro-stat-value {
-  color: var(--primary-text);
-  font-size: 2rem;
-  font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-}
-
-.intro-stat-label {
-  color: var(--muted);
 }
 
 .intro-section {
@@ -2107,15 +1985,15 @@ input::placeholder {
   gap: 32px;
 }
 
-.score-card {
+.step-card {
   border-top: 3px solid var(--primary);
 }
 
-.score-card:nth-child(even) {
+.step-card:nth-child(even) {
   border-top-color: var(--brand-green);
 }
 
-.score-card h3 {
+.step-card h3 {
   margin-bottom: 4px;
   color: var(--primary-text);
   font-size: 1.12rem;
@@ -2294,9 +2172,6 @@ input::placeholder {
     padding: 22px;
   }
 
-  .banner-search .btn {
-    padding: 0 12px;
-  }
 }
 
 /* ---------- scanner ---------- */

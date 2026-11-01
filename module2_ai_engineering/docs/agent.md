@@ -42,7 +42,7 @@ par règle s'exécutent quand même.
 `TOOL_SPECS` ; il est alors disponible pour l'agent (`CHAT_TOOLS`) et le serveur MCP. Deux
 outils bonus étaient prévus : `predict_toxicity` est implémenté (session 4) ;
 `predict_synergy(drug_a, drug_b)` ne l'est pas, l'étude n'ayant pas atteint la règle fixée
-d'avance ([bonus/docs/synergy.md](../../bonus/docs/synergy.md), D75).
+d'avance (D75 ; étude retirée du dépôt ensuite, D85).
 
 ## Règles de sécurité ([`agent/safety.py`](../agent/safety.py), D63)
 

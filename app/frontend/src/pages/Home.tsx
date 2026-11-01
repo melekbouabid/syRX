@@ -1,42 +1,21 @@
-import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { api, type CatalogSummary } from "../api";
+import { Link } from "react-router-dom";
 import { useAuth } from "../auth";
 import { APP_NAME } from "../brand";
-import { Alert, greeting, LogoMark, StatTile, staggerIndex } from "../components";
-import { useQuery } from "../hooks";
+import { greeting, LogoMark, staggerIndex } from "../components";
 import { Icon, type IconName } from "../icons";
-
-const TILES: { key: keyof CatalogSummary; label: string; note: string; icon: IconName }[] = [
-  { key: "drugs", label: "Drugs", note: "with identifiers and synonyms", icon: "pill" },
-  { key: "cell_lines", label: "Cell lines", note: "mapped to DepMap", icon: "cells" },
-  {
-    key: "synergy_measurements",
-    label: "Synergy measurements",
-    note: "Bliss, Loewe, HSA, ZIP",
-    icon: "flask",
-  },
-  { key: "abstracts", label: "PubMed abstracts", note: "on drug combinations", icon: "book" },
-];
 
 const SHORTCUTS: { to: string; title: string; text: string; icon: IconName }[] = [
   {
     to: "/scan",
     icon: "scan",
     title: "Scan pills",
-    text: "Identify pills from a photo or the webcam and check their interactions.",
+    text: "Identify pills from a photo or the webcam, check their interactions and ask a question.",
   },
   {
-    to: "/drugs",
-    icon: "pill",
-    title: "Browse drugs",
-    text: "Search by name, synonym or ChEMBL ID and open the PubChem record.",
-  },
-  {
-    to: "/cell-lines",
-    icon: "cells",
-    title: "Browse cell lines",
-    text: "See tissue, disease and how many measurements each line has.",
+    to: "/toxicity",
+    icon: "flask",
+    title: "Toxicity (bonus)",
+    text: "See what an in vitro model predicts for an active ingredient, with its limits.",
   },
   {
     to: "/profile",
@@ -48,16 +27,7 @@ const SHORTCUTS: { to: string; title: string; text: string; icon: IconName }[] =
 
 export default function Home() {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const summary = useQuery((signal) => api.catalogSummary(signal), []);
-  const [search, setSearch] = useState("");
   const firstName = user?.full_name.split(/\s+/)[0] ?? "";
-
-  const openDrugs = (event: FormEvent) => {
-    event.preventDefault();
-    const q = search.trim();
-    navigate(q ? `/drugs?q=${encodeURIComponent(q)}` : "/drugs");
-  };
 
   return (
     <>
@@ -72,39 +42,12 @@ export default function Home() {
             {greeting()}, {firstName}
           </h1>
           <p>
-            {APP_NAME} brings together published drug-combination screens on cancer cell lines,
-            so you can see which pairs were measured, where, and how strongly they interact.
+            {APP_NAME} identifies pills from a photo, checks whether their active ingredients
+            interact and answers your questions with cited sources. Information only: consult a
+            pharmacist or doctor.
           </p>
-          <form className="banner-search" role="search" onSubmit={openDrugs}>
-            <Icon name="search" size={20} />
-            <input
-              type="search"
-              aria-label="Search a drug"
-              placeholder="Search a drug, for example erlotinib"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-            <button type="submit" className="btn btn-light">
-              Search
-            </button>
-          </form>
         </div>
         <LogoMark size={170} className="banner-emblem emblem-float" />
-      </section>
-
-      {summary.error && <Alert>{summary.error}</Alert>}
-
-      <section aria-label="Dataset size" className="stat-grid">
-        {TILES.map((tile) => (
-          <StatTile
-            key={tile.key}
-            icon={tile.icon}
-            label={tile.label}
-            note={summary.data && summary.data[tile.key] == null ? "not built yet" : tile.note}
-            value={summary.data?.[tile.key]}
-            loading={summary.loading && !summary.data}
-          />
-        ))}
       </section>
 
       <h2 className="section-title">Where to go</h2>

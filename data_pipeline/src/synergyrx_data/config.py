@@ -78,31 +78,6 @@ class SourceConfig(_Model):
     options: dict[str, Any] = Field(default_factory=dict)
 
 
-class CleaningSettings(_Model):
-    manual_overrides: str = "config/manual_drug_overrides.csv"
-    cell_line_aliases: str = "config/cell_line_aliases.csv"
-    review_confidence_below: float = 0.7
-    max_synonyms: int = 50
-    score_outlier_abs: float = Field(200.0, description="Scores beyond this are flagged.")
-    conflict_abs_tolerance: float = Field(10.0, description="Range above this is a conflict.")
-    expression_top_variable_genes: int | None = None
-
-
-class LiteratureSettings(_Model):
-    min_synonym_length: int = 4
-    max_ngram: int = 6
-    min_drugs_per_sentence: int = 2
-    annotation_sample_size: int = Field(300, ge=200, le=500)
-    annotation_max_per_pmid: int = 3
-    annotation_seed: int = 20260101
-
-
-class ExportSettings(_Model):
-    mock_seed: int = 42
-    mock_examples: int = 200
-    max_synonyms: int = 10
-
-
 class LoggingSettings(_Model):
     level: str = "INFO"
     json_logs: bool = True
@@ -140,15 +115,7 @@ class Secrets(BaseModel):
 class Settings(_Model):
     project_root: Path = Field(default_factory=Path.cwd)
     data_dir: Path = Path("data")
-    # Generated files are grouped by format under `data_dir`: `data/parquet` (the processed
-    # tables), `data/csv`, `data/json` and `data/reports` (Markdown / HTML documents).
-    # Each can be pointed elsewhere; left unset it follows `data_dir`.
-    parquet_dir: Path | None = None
-    csv_dir: Path | None = None
-    json_dir: Path | None = None
-    reports_dir: Path | None = None
     manifest_path: Path = Path("manifest.json")
-    licenses_path: Path = Path("LICENSES.md")
     sources_doc_path: Path = Path("docs/sources.md")
 
     sample: int | None = Field(None, ge=1)
@@ -157,9 +124,6 @@ class Settings(_Model):
 
     http: HttpSettings = Field(default_factory=HttpSettings)
     sources: dict[str, SourceConfig] = Field(default_factory=dict)
-    cleaning: CleaningSettings = Field(default_factory=CleaningSettings)
-    literature: LiteratureSettings = Field(default_factory=LiteratureSettings)
-    export: ExportSettings = Field(default_factory=ExportSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     secrets: Secrets = Field(default_factory=Secrets, exclude=True, repr=False)
 
@@ -177,29 +141,6 @@ class Settings(_Model):
     @property
     def data_root(self) -> Path:
         return self.resolve(self.data_dir)
-
-    def _output(self, override: Path | None, default: str) -> Path:
-        return self.resolve(override) if override else self.data_root / default
-
-    @property
-    def parquet_root(self) -> Path:
-        """The processed tables: the final layer after `raw` and `interim`."""
-        return self._output(self.parquet_dir, "parquet")
-
-    @property
-    def csv_root(self) -> Path:
-        """Every CSV output: coverage, conflicts, review queues, the annotation sample."""
-        return self._output(self.csv_dir, "csv")
-
-    @property
-    def json_root(self) -> Path:
-        """JSON for the frontend and the JSON Lines copy of the annotation sample."""
-        return self._output(self.json_dir, "json")
-
-    @property
-    def reports_root(self) -> Path:
-        """Documents meant to be read: the quality report and the annotation guide."""
-        return self._output(self.reports_dir, "reports")
 
     @property
     def raw_dir(self) -> Path:

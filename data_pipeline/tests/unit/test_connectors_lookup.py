@@ -1,15 +1,12 @@
-"""Identifier, literature and licence-gated connectors with mocked HTTP."""
+"""PubMed and DDInter connectors with mocked HTTP (openFDA labels: module 2 corpus tests)."""
 
 from __future__ import annotations
 
-import gzip
-import hashlib
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.parse import parse_qs
 
-import httpx
 import pandas as pd
 import pytest
 import respx
@@ -17,184 +14,14 @@ from pydantic import SecretStr
 
 from synergyrx_data import pipeline
 from synergyrx_data.config import Settings, SourceConfig
-from synergyrx_data.connectors._synergy import synergy_frame
-from synergyrx_data.provenance import has_provenance, write_parquet
 from synergyrx_data.state import MANUAL_STEP, NEEDS_ATTENTION
 from synergyrx_data.testing import FAKE_API_KEY, TEST_EMAIL
 
-PUG = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound"
-CHEMBL = "https://www.ebi.ac.uk/chembl/api/data/molecule.json"
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
-EPMC = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
-ASPIRIN_KEY = "BSYNRYMUTXBXSQ-UHFFFAOYSA-N"
 
 
 async def run(settings: Settings, source: str) -> pipeline.SourceRun:
     return (await pipeline.fetch(settings, [source]))[0]
-
-
-def write_synergy(settings: Settings, names: list[tuple[str, str]]) -> None:
-    frame = synergy_frame(
-        pd.DataFrame(
-            [
-                {"drug_a_name": a, "drug_b_name": b, "cell_line_name": "A2058", "synergy_zip": 1.0}
-                for a, b in names
-            ]
-        )
-    ).assign(
-        source="screen",
-        source_url="u",
-        retrieved_at="2026-01-01T00:00:00Z",
-        source_version="1",
-        license="CC0",
-    )
-    write_parquet(frame, settings.interim_dir / "screen" / "synergy.parquet")
-
-
-# ----------------------------------------------------------------- PubChem
-
-
-@pytest.fixture
-def pubchem(settings: Settings, mock_http: respx.MockRouter) -> dict[str, respx.Route]:
-    write_synergy(settings, [("Aspirin", "Glucose"), ("Aspirin", "Nonexistium")])
-    cids = {"Aspirin": [2244], "Glucose": [5793, 107526, 64689]}
-
-    def name_lookup(request: httpx.Request) -> httpx.Response:
-        name = parse_qs(request.content.decode())["name"][0]
-        if name not in cids:
-            fault = {"Fault": {"Code": "PUGREST.NotFound", "Message": "No CID found"}}
-            return httpx.Response(404, json=fault)
-        return httpx.Response(200, json={"IdentifierList": {"CID": cids[name]}})
-
-    properties = {
-        "PropertyTable": {
-            "Properties": [
-                {
-                    "CID": 2244,
-                    "SMILES": "CC(=O)OC1=CC=CC=C1C(=O)O",
-                    "ConnectivitySMILES": "CC(=O)OC1=CC=CC=C1C(=O)O",
-                    "InChIKey": ASPIRIN_KEY,
-                    "Title": "Aspirin",
-                },
-                {
-                    "CID": 5793,
-                    "SMILES": "C([C@@H]1[C@H]([C@@H]([C@H](C(O1)O)O)O)O)O",
-                    "ConnectivitySMILES": "C(C1C(C(C(C(O1)O)O)O)O)O",
-                    "InChIKey": "WQZGKKKJIJFFOK-GASJEMHNSA-N",
-                    "Title": "D-Glucose",
-                },
-            ]
-        }
-    }
-    synonyms = {
-        "InformationList": {
-            "Information": [
-                {"CID": 2244, "Synonym": ["aspirin", "Acetylsalicylic acid", "50-78-2"]},
-                {"CID": 5793, "Synonym": ["D-Glucose", "dextrose"]},
-            ]
-        }
-    }
-    return {
-        "names": mock_http.post(f"{PUG}/name/cids/JSON").mock(side_effect=name_lookup),
-        "properties": mock_http.get(url__regex=rf"{PUG}/cid/[\d,]+/property/.+").respond(
-            json=properties
-        ),
-        "synonyms": mock_http.get(url__regex=rf"{PUG}/cid/[\d,]+/synonyms/JSON").respond(
-            json=synonyms
-        ),
-    }
-
-
-async def test_pubchem_resolves_names_and_flags_ambiguity(
-    settings: Settings, pubchem: dict[str, respx.Route]
-) -> None:
-    result = await run(settings, "pubchem")
-    assert result.outcome == "ok" and result.tables == {"compounds": 3}
-    table = pd.read_parquet(settings.interim_dir / "pubchem" / "compounds.parquet").set_index(
-        "query_name"
-    )
-    assert table.loc["Aspirin", "status"] == "found"
-    assert table.loc["Aspirin", "pubchem_cid"] == 2244
-    assert table.loc["Aspirin", "inchikey"] == ASPIRIN_KEY
-    assert "Acetylsalicylic acid" in list(table.loc["Aspirin", "synonyms"])
-    assert table.loc["Glucose", "status"] == "ambiguous" and table.loc["Glucose", "n_cids"] == 3
-    assert table.loc["Glucose", "pubchem_cid"] == 5793  # PubChem's first, best-ranked hit
-    assert table.loc["Nonexistium", "status"] == "not_found"
-    assert pd.isna(table.loc["Nonexistium", "pubchem_cid"])
-    assert has_provenance(table.reset_index())
-    assert table.loc["Aspirin", "source_url"] == "https://pubchem.ncbi.nlm.nih.gov/compound/2244"
-    # Properties and synonyms are requested in batches, not one call per compound.
-    assert pubchem["properties"].call_count == 1 and pubchem["synonyms"].call_count == 1
-    assert "2244,5793" in str(pubchem["properties"].calls.last.request.url)
-
-
-async def test_pubchem_second_run_asks_nothing_and_new_names_are_incremental(
-    settings: Settings, pubchem: dict[str, respx.Route], mock_http: respx.MockRouter
-) -> None:
-    await run(settings, "pubchem")
-    calls = len(mock_http.calls)
-    again = await run(settings, "pubchem")
-    assert len(mock_http.calls) == calls and again.tables == {"compounds": 3}
-    # A not-found name is remembered too: it is not asked again on every run.
-    write_synergy(
-        settings, [("Aspirin", "Glucose"), ("Aspirin", "Nonexistium"), ("Aspirin", "New")]
-    )
-    await run(settings, "pubchem")
-    assert pubchem["names"].call_count == 4  # only "New" was looked up
-
-
-async def test_pubchem_outage_keeps_progress_and_reports_needs_attention(
-    settings: Settings, mock_http: respx.MockRouter
-) -> None:
-    write_synergy(settings, [("Aspirin", "Glucose")])
-    mock_http.post(f"{PUG}/name/cids/JSON").respond(503, headers={"retry-after": "0"})
-    settings.http.retry.max_attempts = 2
-    settings.http.retry.backoff_base = 0.01
-    result = await run(settings, "pubchem")
-    assert result.outcome == NEEDS_ATTENTION and "lookups failed" in result.message
-
-
-# ------------------------------------------------------------------ ChEMBL
-
-
-async def test_chembl_by_inchikey_then_by_name(
-    settings: Settings, pubchem: dict[str, respx.Route], mock_http: respx.MockRouter
-) -> None:
-    await run(settings, "pubchem")
-
-    def molecules(request: httpx.Request) -> httpx.Response:
-        params = dict(request.url.params)
-        if "molecule_structures__standard_inchi_key__in" in params:
-            hit = {
-                "molecule_chembl_id": "CHEMBL25",
-                "pref_name": "ASPIRIN",
-                "max_phase": "4.0",
-                "molecule_structures": {"standard_inchi_key": ASPIRIN_KEY},
-            }
-            return httpx.Response(200, json={"molecules": [hit]})
-        if params.get("pref_name__iexact") == "Nonexistium":
-            return httpx.Response(200, json={"molecules": []})
-        hit = {
-            "molecule_chembl_id": "CHEMBL999",
-            "pref_name": "NONEXISTIUM",
-            "max_phase": None,
-            "molecule_structures": None,
-        }
-        return httpx.Response(200, json={"molecules": [hit]})
-
-    route = mock_http.get(CHEMBL).mock(side_effect=molecules)
-    result = await run(settings, "chembl")
-    assert result.outcome == "ok" and result.tables == {"molecules": 2}
-    table = pd.read_parquet(settings.interim_dir / "chembl" / "molecules.parquet").set_index(
-        "query"
-    )
-    assert table.loc[ASPIRIN_KEY, "chembl_id"] == "CHEMBL25"
-    assert table.loc[ASPIRIN_KEY, "max_phase"] == 4.0
-    assert table.loc["Nonexistium", "query_type"] == "name"  # found through the synonym search
-    assert set(table["license"]) == {"CC-BY-SA-3.0"}
-    assert route.call_count == 3  # one batch of keys, then name and synonym for the miss
-    await run(settings, "chembl")
-    assert route.call_count == 3  # misses are remembered as well
 
 
 # ------------------------------------------------------------------ PubMed
@@ -244,32 +71,21 @@ PUBMED_XML = b"""<?xml version="1.0" ?>
 </PubmedArticleSet>
 """
 
-FU_ID, VELI_ID = "GHASVSINZRGABV-UHFFFAOYSA-N", "JNAHVYVRKWKWKQ-UHFFFAOYSA-N"
 
-
-def write_processed(settings: Settings) -> None:
-    drugs = pd.DataFrame(
-        {
-            "drug_id": [FU_ID, VELI_ID, "name:dasatinib"],
-            "name": ["Fluorouracil", "Veliparib", "Dasatinib"],
-            "synonyms": [["5-FU", "5-fluorouracil", "51-21-8"], ["ABT-888"], []],
-        }
+def write_classes(settings: Settings) -> None:
+    """One pill class with one active ingredient, so one PubMed query, plus its synonyms."""
+    path = settings.project_root / "config" / "pill_classes.csv"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("class_id,class_key,active_ingredients\n0,x_0,Fluorouracil\n", "utf-8")
+    settings.sources["pubmed"] = SourceConfig(
+        enabled=True,
+        options={"ingredient_aliases": {"fluorouracil": ["5-FU", "5-fluorouracil", "51-21-8"]}},
     )
-    pairs = pd.DataFrame(
-        {
-            "pair_key": [f"{FU_ID}|{VELI_ID}"] * 2,
-            "drug_a_id": [FU_ID] * 2,
-            "drug_b_id": [VELI_ID] * 2,
-            "cell_line_id": ["ACH-1", "ACH-2"],
-        }
-    )
-    write_parquet(drugs, settings.parquet_root / "drugs.parquet")
-    write_parquet(pairs, settings.parquet_root / "synergy_pairs.parquet")
 
 
 @pytest.fixture
 def pubmed(settings: Settings, mock_http: respx.MockRouter) -> dict[str, respx.Route]:
-    write_processed(settings)
+    write_classes(settings)
     search = {
         "esearchresult": {
             "count": "2",
@@ -298,8 +114,10 @@ async def test_pubmed_history_search_fetch_and_flags(
     assert search["tool"] == ["synergyrx-data"] and search["email"] == [TEST_EMAIL]
     assert (search["mindate"], search["datetype"]) == (["2000/01/01"], ["edat"])
     term = search["term"][0]
-    assert '"Fluorouracil"[tiab]' in term and '"5-FU"[tiab]' in term and '"ABT-888"[tiab]' in term
-    assert '"Drug Synergism"[mh]' in term and "51-21-8" not in term  # CAS numbers are not searched
+    assert '"fluorouracil"[tiab]' in term and '"5-FU"[tiab]' in term
+    assert '"5-fluorouracil"[tiab]' in term
+    assert '"Drug Interactions"[mh]' in term
+    assert "51-21-8" not in term  # CAS numbers are not searched
     fetch = dict(pubmed["efetch"].calls.last.request.url.params)
     assert (fetch["WebEnv"], fetch["query_key"], fetch["retmode"]) == ("MCID_abc", "1", "xml")
 
@@ -329,7 +147,7 @@ async def test_pubmed_history_search_fetch_and_flags(
         for line in (settings.interim_dir / "pubmed" / "query_log.jsonl").read_text().splitlines()
     ]
     assert len(log) == 1 and log[0]["count"] == 2 and log[0]["query"] == term
-    assert log[0]["pair_key"] == f"{FU_ID}|{VELI_ID}"
+    assert log[0]["kind"] == "ingredient" and log[0]["pair_key"] is None
 
 
 async def test_pubmed_is_incremental_and_deduplicates_by_pmid(
@@ -380,142 +198,24 @@ async def test_pubmed_api_key_is_sent_but_never_stored(
             assert FAKE_API_KEY.encode() not in path.read_bytes(), f"API key leaked into {path}"
 
 
-async def test_pubmed_without_processed_tables_explains_what_to_do(
+async def test_pubmed_without_ingredients_explains_what_to_do(
     settings: Settings, mock_http: respx.MockRouter
 ) -> None:
     result = await run(settings, "pubmed")
     assert result.outcome == NEEDS_ATTENTION and "no queries" in result.message
     assert len(mock_http.calls) == 0
     plan = await pipeline.plan(settings, ["pubmed"])
-    assert plan[0].action == "skip" and "clean" in plan[0].note
+    assert plan[0].action == "skip" and "pill_classes.csv" in plan[0].note
 
 
-# ---------------------------------------------------- Europe PMC / PubTator
-
-
-async def test_europepmc_adds_open_access_status(
-    settings: Settings, pubmed: dict[str, respx.Route], mock_http: respx.MockRouter
-) -> None:
-    await run(settings, "pubmed")
-    hits = {
-        "resultList": {
-            "result": [
-                {
-                    "pmid": "111",
-                    "pmcid": "PMC111",
-                    "doi": "10.1000/TEST.111",
-                    "isOpenAccess": "Y",
-                    "inEPMC": "Y",
-                    "hasPDF": "Y",
-                    "license": "cc by",
-                    "title": "T",
-                    "abstractText": "Abstract from Europe PMC.",
-                    "pubYear": "2019",
-                },
-            ]
-        }
-    }
-    route = mock_http.get(EPMC).respond(json=hits)
-    result = await run(settings, "europepmc")
-    assert result.outcome == "ok" and result.stats["mode"] == "enrich"
-    query = route.calls.last.request.url.params["query"]
-    assert query == "(EXT_ID:111 OR EXT_ID:222) AND SRC:MED"
-    table = pd.read_parquet(settings.interim_dir / "europepmc" / "articles.parquet")
-    assert list(table["pmid"]) == ["111"]  # 222 is unknown to Europe PMC: remembered, not listed
-    assert bool(table["is_open_access"].iloc[0]) and table["article_license"].iloc[0] == "cc by"
-    await run(settings, "europepmc")
-    assert route.call_count == 1
-
-
-async def test_europepmc_takes_over_when_pubmed_is_down(
+async def test_pubmed_rejects_the_removed_synergyrx_query_modes(
     settings: Settings, mock_http: respx.MockRouter
 ) -> None:
-    write_processed(settings)
-    mock_http.post(f"{EUTILS}/esearch.fcgi").respond(403)
-    assert (await run(settings, "pubmed")).outcome == NEEDS_ATTENTION
-    hits = {
-        "resultList": {
-            "result": [
-                {
-                    "pmid": "555",
-                    "title": "Found by fallback",
-                    "abstractText": "Veliparib plus 5-FU.",
-                    "pubYear": "2020",
-                }
-            ]
-        }
-    }
-    route = mock_http.get(EPMC).respond(json=hits)
-    result = await run(settings, "europepmc")
-    assert result.stats["mode"] == "search"
-    query = route.calls.last.request.url.params["query"]
-    assert 'TITLE_ABS:"Fluorouracil"' in query and "SRC:MED" in query
-    table = pd.read_parquet(settings.interim_dir / "europepmc" / "articles.parquet")
-    assert list(table["pmid"]) == ["555"] and table["found_by_query"].notna().all()
-
-
-async def test_pubtator_annotations(
-    settings: Settings, pubmed: dict[str, respx.Route], mock_http: respx.MockRouter
-) -> None:
-    await run(settings, "pubmed")
-    payload = {
-        "PubTator3": [
-            {
-                "id": "111",
-                "passages": [
-                    {
-                        "infons": {"type": "abstract"},
-                        "annotations": [
-                            {
-                                "text": "veliparib",
-                                "infons": {"type": "Chemical", "identifier": "MESH:C521013"},
-                                "locations": [{"offset": 40, "length": 9}],
-                            },
-                            {"text": "", "infons": {"type": "Chemical"}, "locations": []},
-                        ],
-                    }
-                ],
-            }
-        ]
-    }
-    route = mock_http.get(url__startswith="https://www.ncbi.nlm.nih.gov/research/pubtator3-api/")
-    route.respond(json=payload)
-    result = await run(settings, "pubtator")
-    assert result.tables == {"annotations": 1}
-    row = pd.read_parquet(settings.interim_dir / "pubtator" / "annotations.parquet").iloc[0]
-    assert (row.pmid, row.entity_type, row.text, row.identifier, row.start, row.length) == (
-        "111",
-        "Chemical",
-        "veliparib",
-        "MESH:C521013",
-        40,
-        9,
-    )
-    assert route.calls.last.request.url.params["pmids"] == "111,222"
-
-
-# ----------------------------------------------------- baseline (optional)
-
-
-async def test_pubmed_baseline_downloads_only_listed_files_and_checks_md5(
-    settings: Settings, mock_http: respx.MockRouter, allow_robots: None
-) -> None:
-    assert (await pipeline.plan(settings, ["pubmed_baseline"]))[0].action == "skip"
-    archive = gzip.compress(PUBMED_XML)
-    base = "https://ftp.ncbi.nlm.nih.gov/pubmed/baseline/pubmed26n0007.xml.gz"
-    mock_http.get(base + ".md5").respond(
-        200,
-        text=f"MD5(pubmed26n0007.xml.gz)= {hashlib.md5(archive).hexdigest()}\n",
-        headers={"content-type": "text/plain"},
-    )
-    data = mock_http.get(base).respond(
-        200, content=archive, headers={"content-type": "application/x-gzip"}
-    )
-    settings.sources["pubmed_baseline"] = SourceConfig(enabled=True, options={"files": [7]})
-    result = await run(settings, "pubmed_baseline")
-    assert result.outcome == "ok" and result.tables == {"articles": 1}  # only 111 has an abstract
-    assert (await run(settings, "pubmed_baseline")).outcome == "unchanged"
-    assert data.call_count == 1
+    """`pairs` and `drugs` read the SynergyRx synergy tables, which no longer exist (D85)."""
+    settings.sources["pubmed"] = SourceConfig(enabled=True, options={"mode": "pairs"})
+    result = await run(settings, "pubmed")
+    assert result.outcome == NEEDS_ATTENTION and "unknown PubMed query mode" in result.message
+    assert len(mock_http.calls) == 0
 
 
 # --------------------------------------------------------- licence-gated
@@ -542,49 +242,6 @@ async def test_ddinter_refuses_until_terms_are_acknowledged(
     table = pd.read_parquet(settings.interim_dir / "ddinter" / "interactions.parquet")
     assert len(table) == 1  # the same pair is listed in both category files
     assert set(table["license"]) == {"CC-BY-NC-SA-4.0"}
-
-
-async def test_drugbank_never_touches_the_network(
-    settings: Settings, mock_http: respx.MockRouter
-) -> None:
-    result = await run(settings, "drugbank")
-    assert result.outcome == MANUAL_STEP
-    assert "never downloaded automatically" in result.message
-    assert "data/manual/drugbank/drugbank vocabulary.csv" in result.message
-
-    manual = settings.manual_dir / "drugbank"
-    manual.mkdir(parents=True)
-    (manual / "drugbank vocabulary.csv").write_text(
-        "DrugBank ID,Accession Numbers,Common name,CAS,UNII,Synonyms,Standard InChI Key\n"
-        f"DB00945,APRD00264,Acetylsalicylic acid,50-78-2,R16CO5Y76E,Aspirin | ASA,{ASPIRIN_KEY}\n",
-        encoding="utf-8",
-    )
-    result = await run(settings, "drugbank")
-    assert result.outcome == "ok" and result.tables == {"vocabulary": 1}
-    row = pd.read_parquet(settings.interim_dir / "drugbank" / "vocabulary.parquet").iloc[0]
-    assert row.drugbank_id == "DB00945" and list(row.synonyms) == ["Aspirin", "ASA"]
-    assert len(mock_http.calls) == 0  # not a single request, in either case
-
-
-async def test_pubmed_baseline_respects_the_real_robots_rule_and_reads_manual_files(
-    settings: Settings, mock_http: respx.MockRouter
-) -> None:
-    """ftp.ncbi.nlm.nih.gov really serves `Disallow: /`: nothing is fetched from it."""
-    mock_http.get("https://ftp.ncbi.nlm.nih.gov/robots.txt").respond(
-        200, text="User-agent: *\nDisallow: /\n"
-    )
-    files = mock_http.get(url__startswith="https://ftp.ncbi.nlm.nih.gov/pubmed/").respond(200)
-    settings.sources["pubmed_baseline"] = SourceConfig(enabled=True, options={"files": [7]})
-    result = await run(settings, "pubmed_baseline")
-    assert result.outcome == MANUAL_STEP and not files.called
-    assert "data/manual/pubmed_baseline/pubmed26n0007.xml.gz" in result.message
-
-    manual = settings.manual_dir / "pubmed_baseline"
-    manual.mkdir(parents=True)
-    (manual / "pubmed26n0007.xml.gz").write_bytes(gzip.compress(PUBMED_XML))
-    result = await run(settings, "pubmed_baseline")
-    assert result.outcome == "ok" and result.tables == {"articles": 1}
-    assert not files.called
 
 
 async def test_a_sample_run_does_not_advance_the_real_pubmed_state(

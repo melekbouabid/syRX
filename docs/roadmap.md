@@ -5,8 +5,8 @@
 modules » du [README](../README.md#exigences-des-modules).
 
 ## Déjà fait (hérité de SynergyRx)
-- [x] Pipeline de données `data_pipeline/src/synergyrx_data` (14 connecteurs dont DDInter et PubMed, 270 tests)
-- [x] Backend FastAPI : comptes, sessions, administration, catalogue des médicaments et des lignées
+- [x] Pipeline de données `data_pipeline/src/synergyrx_data` (14 connecteurs, 270 tests ; réduit à DDInter, PubMed et openFDA à l'étape 1.1, D85)
+- [x] Backend FastAPI : comptes, sessions, administration (le catalogue SynergyRx des médicaments et des lignées a été retiré à l'étape 1.1, D85)
 - [x] Ébauche de frontend React + Vite à l'image de Tujya (prédictions factices)
 - [x] Planification de la nouvelle orientation (deux modules, périmètre, choix techniques)
 
@@ -15,6 +15,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] README avec les exigences des modules, les sources de données et le journal de progression
 - [x] Règles du projet (sécurité des réponses, usage local) dans [project_rules.md](project_rules.md)
 - [x] Conventions Git : branches, Conventional Commits, tags d'étape et de modèle, hooks pre-commit et commit-msg testés, ESLint, contrôle des messages en CI ([git_workflow.md](git_workflow.md), `v1.1.0-conventions`)
+- [x] Fichiers inutiles retirés (remarque du professeur) : catalogue, étude de synergie et partie synergie du pipeline SynergyRx, fichiers isolés ; tout reste dans l'historique git (D85)
 - [ ] Changer le mot de passe administrateur par défaut (admin@gmail.com / admin)
 
 ## 1. Données des comprimés (C3PI, aucune photo personnelle)
@@ -92,6 +93,6 @@ modules » du [README](../README.md#exigences-des-modules).
 
 ## Bonus (seulement s'il reste du temps)
 - [x] Outil `predict_toxicity` : tests in vitro Tox21, LightGBM sur empreintes de Morgan, split par scaffold, ROC-AUC test moyen 0,725 ([toxicity.md](../bonus/docs/toxicity.md))
-- [x] `predict_synergy` étudié (DrugComb, médicaments laissés de côté, [synergy.md](../bonus/docs/synergy.md)) : RMSE −7,3 % contre la moyenne, sous la règle des 10 % (D75), donc **aucun outil ajouté**
+- [x] `predict_synergy` étudié (DrugComb, médicaments laissés de côté) : RMSE −7,3 % contre la moyenne, sous la règle des 10 % (D75), donc **aucun outil ajouté** ; étude retirée du dépôt à l'étape 1.1 (D85)
 - [ ] OCR des empreintes des comprimés
-- [ ] Page des données de synergie anticancéreuse
+- ~~Page des données de synergie anticancéreuse~~ : abandonnée, données SynergyRx retirées (D85)

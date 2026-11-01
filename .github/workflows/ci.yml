@@ -119,7 +119,7 @@ jobs:
       - run: python -m pytest
 
   bonus:
-    name: bonus (toxicity tool, synergy study)
+    name: bonus (toxicity tool)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:

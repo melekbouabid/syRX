@@ -37,5 +37,4 @@ No connector parses HTML today. `tests/unit/test_policy.py` fails if one starts 
 - Add proxies, IP rotation or any other way to look like several clients.
 - Call an undocumented or authenticated endpoint.
 - Put a secret in YAML, a fixture, a log line or a stored URL.
-- Merge or convert synergy scores of different types.
 - Commit anything under `data/`.

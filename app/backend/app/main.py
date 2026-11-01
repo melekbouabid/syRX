@@ -10,11 +10,10 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import sessionmaker
 
 from app.accounts import seed_accounts, warn_about_default_password
-from app.catalog import Catalog
 from app.config import Settings
 from app.db import Base, make_engine
 from app.limits import BodySizeLimit
-from app.routers import admin, auth, catalog, chat, demo, medicines, scan, toxicity
+from app.routers import admin, auth, chat, demo, medicines, scan, toxicity
 from bonus.toxicity.model import ToxHolder
 from module1_vision_mlops.serving.scanner import ScannerHolder
 from module2_ai_engineering.agent.runtime import AgentHolder
@@ -66,7 +65,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.state.settings = settings
     app.state.session_factory = session_factory
-    app.state.catalog = Catalog(settings.processed_dir)
     app.state.pharma_engine = pharma_engine
     app.state.scanner = ScannerHolder(
         settings.models_dir,
@@ -85,8 +83,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(auth.router)
     app.include_router(admin.router)
-    app.include_router(catalog.router)
-    app.include_router(catalog.public_router)
     app.include_router(scan.router)
     app.include_router(medicines.router)
     app.include_router(demo.router)

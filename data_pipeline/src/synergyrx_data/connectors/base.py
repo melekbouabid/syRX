@@ -46,7 +46,7 @@ class Link:
 class SourceInfo:
     name: str
     title: str
-    category: str  # synergy | cell_line | chemistry | literature | interaction
+    category: str  # literature | interaction
     access: str  # api | bulk | package | manual
     homepage: str
     license: str

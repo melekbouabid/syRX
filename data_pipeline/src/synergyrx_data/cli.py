@@ -12,18 +12,18 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from synergyrx_data import __version__, build, pipeline
+from synergyrx_data import __version__, pipeline
 from synergyrx_data.config import ConfigError, Settings, load_settings
 from synergyrx_data.connectors import REGISTRY, is_enabled, source_names
 from synergyrx_data.logging_utils import setup_logging
 from synergyrx_data.manifest import Manifest
 from synergyrx_data.preflight import run_preflight
-from synergyrx_data.state import MANUAL_STEP, NEEDS_ATTENTION, StateStore
+from synergyrx_data.state import MANUAL_STEP, NEEDS_ATTENTION
 
 app = typer.Typer(
     add_completion=False,
     no_args_is_help=True,
-    help="Polite, reproducible data collection for SynergyRx AI.",
+    help="Polite, reproducible collection of the Tujya corpus sources (DDInter, PubMed, openFDA).",
 )
 # Piped or redirected output is not wrapped at 80 columns: tables stay one row per line.
 console = Console(width=None if sys.stdout.isatty() else 200)
@@ -79,37 +79,6 @@ def _size(n: int | None) -> str:
     return ""
 
 
-def _print_build(title: str, result: build.BuildResult) -> None:
-    _table(
-        title,
-        ["output", "rows"],
-        [[path, f"{rows:,}" if rows >= 0 else ""] for path, rows in result.outputs.items()],
-    )
-    for key, value in result.stats.items():
-        console.print(
-            f"  {key.replace('_', ' ')}: {value:,}"
-            if isinstance(value, int)
-            else f"  {key.replace('_', ' ')}: {value}"
-        )
-    for finding in result.drift:
-        if finding.severity == "warning":
-            console.print(
-                f"[yellow]schema drift[/yellow] {finding.table}: {finding.kind} {finding.detail}"
-            )
-    for warning in result.warnings:
-        console.print(f"[yellow]warning[/yellow] {warning}")
-
-
-def _run_build(title: str, step: Any, settings: Settings) -> build.BuildResult:
-    try:
-        result: build.BuildResult = step(settings)
-    except build.BuildError as exc:
-        console.print(f"[red]{title} cannot run:[/red] {exc}")
-        raise typer.Exit(1) from exc
-    _print_build(title, result)
-    return result
-
-
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
@@ -150,7 +119,7 @@ def sources(
 ) -> None:
     """List the sources, their licence and state. With --check, test every link."""
     settings = _settings(ctx)
-    states = build.source_states(settings)
+    states = pipeline.source_states(settings)
     _table(
         "Sources",
         ["source", "category", "access", "enabled", "state", "licence"],
@@ -257,30 +226,6 @@ def validate(ctx: typer.Context, source: SourceOption = None) -> None:
 
 
 @app.command()
-def clean(ctx: typer.Context) -> None:
-    """Build the processed tables (data/parquet): drugs, cell lines, pairs, expression."""
-    _run_build("Clean", build.clean, _settings(ctx))
-
-
-@app.command()
-def literature(ctx: typer.Context) -> None:
-    """Build the abstract store, candidate sentences and the annotation sample."""
-    _run_build("Literature", build.literature, _settings(ctx))
-
-
-@app.command()
-def report(ctx: typer.Context) -> None:
-    """Write the quality report, coverage and conflict tables and LICENSES.md."""
-    _run_build("Report", build.report, _settings(ctx))
-
-
-@app.command()
-def export(ctx: typer.Context) -> None:
-    """Write the frontend JSON files into data/json/."""
-    _run_build("Export", build.export, _settings(ctx))
-
-
-@app.command()
 def preflight(ctx: typer.Context, source: SourceOption = None) -> None:
     """Check disk space, permissions, identity and tooling before a run."""
     settings = _settings(ctx, dry_run=True)
@@ -303,7 +248,7 @@ def preflight(ctx: typer.Context, source: SourceOption = None) -> None:
 def status(ctx: typer.Context) -> None:
     """Show the state of every connector and what is on disk."""
     settings = _settings(ctx)
-    states = build.source_states(settings)
+    states = pipeline.source_states(settings)
     _table(
         "Connector state",
         [str(c) for c in states.columns],
@@ -320,7 +265,7 @@ def status(ctx: typer.Context) -> None:
         ["layer", "files", "size"],
         [[layer, n, _size(size)] for layer, (n, size) in sorted(layers.items())],
     )
-    if samples := build.sample_sources(settings, manifest):
+    if samples := pipeline.sample_sources(settings, manifest):
         console.print(f"[yellow]Sample data present for:[/yellow] {', '.join(samples)}")
 
 
@@ -331,31 +276,18 @@ def summary(
 ) -> None:
     """Print a final report of everything collected."""
     settings = _settings(ctx)
-    from synergyrx_data.provenance import read_parquet
-    from synergyrx_data.quality.reports import coverage_table
-
-    state = StateStore(settings.state_dir / "connectors.json", read_only=True)
     manifest = Manifest(settings)
-    states = build.source_states(settings)
+    states = pipeline.source_states(settings)
     payload: dict[str, Any] = {
         "version": __version__,
-        "sample_sources": build.sample_sources(settings, manifest),
+        "sample_sources": pipeline.sample_sources(settings, manifest),
         "sources": states.to_dict("records"),
-        "clean": state.get("_clean").get("stats"),
-        "literature": state.get("_literature").get("stats"),
         "outputs": {
             path: entry.rows
             for path, entry in sorted(manifest.entries.items())
-            if entry.layer in ("processed", "export", "report")
+            if entry.layer == "interim"
         },
     }
-    drugs = read_parquet(settings.parquet_root / "drugs.parquet")
-    cells = read_parquet(settings.parquet_root / "cell_lines.parquet")
-    pairs = read_parquet(settings.parquet_root / "synergy_pairs.parquet")
-    coverage = None
-    if drugs is not None and cells is not None and pairs is not None:
-        coverage = coverage_table(pairs, drugs, cells)
-        payload["coverage"] = coverage.to_dict("records")
     if as_json:
         console.print_json(json.dumps(payload, default=str))
         return
@@ -379,41 +311,11 @@ def summary(
             for r in payload["sources"]
         ],
     )
-    if coverage is not None and len(coverage):
-        shown = [
-            "source",
-            "records",
-            "distinct_drugs",
-            "distinct_cell_lines",
-            "distinct_pairs",
-            "distinct_triplets",
-            "drugs_with_valid_smiles",
-            "cell_lines_mapped_to_depmap",
-        ]
-        _table(
-            "Coverage",
-            [c.replace("_", " ") for c in shown],
-            [
-                [f"{v:,}" if isinstance(v, int) else v for v in row]
-                for row in coverage[shown].itertuples(index=False)
-            ],
-        )
-        total = coverage[coverage["source"] == "ALL SOURCES"].iloc[0]
-        console.print(f"Distinct drugs across all sources: {int(total['distinct_drugs']):,}")
-    else:
-        console.print("No processed tables yet: run `synergyrx fetch` then `synergyrx clean`.")
-    for title, key in (("Cleaning", "clean"), ("Literature", "literature")):
-        if payload[key]:
-            _table(
-                title,
-                ["measure", "value"],
-                [
-                    [k.replace("_", " "), f"{v:,}" if isinstance(v, int) else v]
-                    for k, v in payload[key].items()
-                ],
-            )
+    if not payload["outputs"]:
+        console.print("Nothing collected yet: run `synergyrx fetch` first.")
+        return
     _table(
-        "Outputs",
+        "Interim tables",
         ["file", "rows"],
         [
             [path, f"{rows:,}" if rows is not None else ""]
@@ -426,29 +328,15 @@ def summary(
 def update(
     ctx: typer.Context,
     sample: Annotated[int | None, typer.Option(min=1)] = None,
-    skip_literature: Annotated[bool, typer.Option(help="Stop after the synergy tables.")] = False,
 ) -> None:
-    """Incremental end-to-end run for a scheduler: fetch, clean, literature, report, export.
+    """Incremental run for a scheduler: fetch every enabled source.
 
     Safe to run repeatedly: unchanged files are skipped and PubMed is only asked for records
     entered since the previous run.
     """
     settings = _settings(ctx, sample=sample)
     pipeline.mark_disabled(settings)
-    literature_sources = {"pubmed", "pubmed_baseline", "europepmc", "pubtator"}
-    enabled = pipeline.select_sources(settings, None)
-    first = [name for name in enabled if name not in literature_sources]
-    second = [name for name in enabled if name in literature_sources]
-    runs = asyncio.run(pipeline.fetch(settings, first)) if first else []
-    _run_build("Clean", build.clean, settings)
-    if second and not skip_literature:
-        runs += asyncio.run(pipeline.fetch(settings, second))
-        try:
-            _print_build("Literature", build.literature(settings))
-        except build.BuildError as exc:
-            console.print(f"[yellow]literature skipped:[/yellow] {exc}")
-    _run_build("Report", build.report, settings)
-    _run_build("Export", build.export, settings)
+    runs = asyncio.run(pipeline.fetch(settings, None))
     attention = [run.source for run in runs if run.outcome == NEEDS_ATTENTION]
     manual = [run.source for run in runs if run.outcome == MANUAL_STEP]
     if manual:

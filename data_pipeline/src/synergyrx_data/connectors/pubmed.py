@@ -23,8 +23,6 @@ from synergyrx_data.literature.queries import (
     Query,
     append_query_log,
     build_ingredient_queries,
-    build_queries,
-    load_query_inputs,
     read_ingredients,
 )
 from synergyrx_data.manifest import utc_now_iso
@@ -79,12 +77,12 @@ class PubMedConnector(Connector):
             ),
         ),
         stage=4,
-        notes="Queries are built from the processed drug table, so run `clean` first.",
+        notes="Queries are built from the active ingredients of config/pill_classes.csv.",
     )
     default_options: ClassVar[dict[str, Any]] = {
-        "mode": "pairs",  # pairs | drugs | ingredients (Tujya: interactions, adverse effects)
-        "ingredients_file": "config/pill_classes.csv",  # mode `ingredients` only
-        "ingredient_aliases": {},  # extra search terms per ingredient, mode `ingredients`
+        "mode": "ingredients",  # interactions and adverse effects of each ingredient
+        "ingredients_file": "config/pill_classes.csv",
+        "ingredient_aliases": {},  # extra search terms per ingredient
         "sort": None,  # ESearch sort order, e.g. "relevance"; None keeps PubMed's default
         "max_queries": 25,
         "max_records_per_query": 200,
@@ -115,19 +113,13 @@ class PubMedConnector(Connector):
 
     def queries(self) -> list[Query]:
         limit = min(self.options["max_queries"], 3) if self.sample else self.options["max_queries"]
-        if self.options["mode"] == "ingredients":
-            names = read_ingredients(self.settings.resolve(Path(self.options["ingredients_file"])))
-            return build_ingredient_queries(
-                names,
-                self.options["ingredient_aliases"],
-                max_queries=limit,
-                max_terms=self.options["max_terms_per_drug"],
-            )
-        drugs, pairs = load_query_inputs(self.settings)
-        return build_queries(
-            drugs,
-            pairs,
-            mode=self.options["mode"],
+        if self.options["mode"] != "ingredients":
+            # SynergyRx's `pairs` and `drugs` modes read the synergy tables, removed (D85).
+            raise ValueError(f"unknown PubMed query mode {self.options['mode']!r}")
+        names = read_ingredients(self.settings.resolve(Path(self.options["ingredients_file"])))
+        return build_ingredient_queries(
+            names,
+            self.options["ingredient_aliases"],
             max_queries=limit,
             max_terms=self.options["max_terms_per_drug"],
         )
@@ -165,7 +157,7 @@ class PubMedConnector(Connector):
                     f"{EUTILS}/esearch.fcgi",
                     None,
                     None,
-                    "no queries yet: run `fetch` for the synergy sources and `clean` first",
+                    "no queries yet: config/pill_classes.csv lists no active ingredient",
                 )
             ]
         state = self._load_state()
@@ -285,7 +277,7 @@ class PubMedConnector(Connector):
         queries = self.queries()
         self._fetched_now: set[Path] = set()
         if not queries:
-            self.problems.append("no queries: the processed drug and pair tables are empty")
+            self.problems.append("no queries: config/pill_classes.csv lists no active ingredient")
         state = self._load_state()
         today = datetime.now(UTC).date()
         advance = self.ctx.progress.counter("pubmed: queries", len(queries))

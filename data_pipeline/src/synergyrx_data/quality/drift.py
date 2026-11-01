@@ -1,8 +1,9 @@
 """Schema drift detection between data versions.
 
 Every time a table is written, its column names, types and row count are compared with the
-previous snapshot of the same table. A renamed column in a new DrugComb release then shows
-up in the quality report instead of silently producing an all-null column downstream.
+previous snapshot of the same table. A renamed column in a new DDInter release is then
+recorded with the source state (`data/state/connectors.json`) instead of silently producing an
+all-null column downstream.
 """
 
 from __future__ import annotations

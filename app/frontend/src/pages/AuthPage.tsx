@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
-import { api, errorMessage, type CatalogSummary, type User } from "../api";
+import { errorMessage, type User } from "../api";
 import { homePath, useAuth } from "../auth";
 import { APP_NAME } from "../brand";
 import {
@@ -12,16 +12,8 @@ import {
   SubmitButton,
   TextField,
 } from "../components";
-import { useQuery } from "../hooks";
-import { CountUp } from "../motion";
 
 const MIN_PASSWORD_LENGTH = 8;
-
-const FACTS: { key: keyof CatalogSummary; label: string }[] = [
-  { key: "synergy_measurements", label: "measurements" },
-  { key: "drugs", label: "drugs" },
-  { key: "cell_lines", label: "cell lines" },
-];
 
 /** Go back to the page that asked for a sign-in, but only inside the user's own area. */
 function destination(user: User, from: unknown): string {
@@ -35,7 +27,6 @@ export default function AuthPage({ mode }: { mode: "signin" | "signup" }) {
   const { user, ready, signIn, signUp } = useAuth();
   const location = useLocation();
   const from = (location.state as { from?: unknown } | null)?.from;
-  const summary = useQuery((signal) => api.catalogSummary(signal), []);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -77,11 +68,6 @@ export default function AuthPage({ mode }: { mode: "signin" | "signup" }) {
     }
   };
 
-  const facts = FACTS.flatMap((fact) => {
-    const value = summary.data?.[fact.key];
-    return value == null ? [] : [{ ...fact, value }];
-  });
-
   return (
     <div className="auth">
       <aside className="auth-aside">
@@ -90,32 +76,20 @@ export default function AuthPage({ mode }: { mode: "signin" | "signup" }) {
           <span />
           <span />
         </div>
-        <p className="eyebrow">Drug-combination synergy in cancer cell lines</p>
+        <p className="eyebrow">Pill identification and interaction checks</p>
         <div className="auth-aside-body">
           <div className="emblem-stage" aria-hidden="true">
             <span className="emblem-ring" />
             <span className="emblem-ring" />
             <LogoMark size={150} className="emblem-float" />
           </div>
-          <h1>Find drug combinations that work better together.</h1>
+          <h1>Know which pills you have and whether they interact.</h1>
           <p>
-            Explore measured synergy between drug pairs across cancer cell lines, built from
-            DrugComb, TDC, O'Neil and DepMap.
+            Identify pills from a photo, check their active ingredients against DDInter and ask
+            follow-up questions answered from openFDA labels and PubMed, with the sources cited.
           </p>
-          {facts.length > 0 && (
-            <ul className="auth-facts">
-              {facts.map((fact) => (
-                <li key={fact.key}>
-                  <strong>
-                    <CountUp value={fact.value} duration={1400} />
-                  </strong>
-                  {fact.label}
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
-        <p className="auth-footnote">Research use only. Not medical advice.</p>
+        <p className="auth-footnote">Information only: consult a pharmacist or doctor.</p>
       </aside>
 
       <main className="auth-main">

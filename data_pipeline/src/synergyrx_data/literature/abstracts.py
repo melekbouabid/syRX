@@ -1,4 +1,4 @@
-"""PubMed XML parsing and the abstract store.
+"""PubMed XML parsing into the `articles` table of the PubMed connector.
 
 Flags article type, language and retraction status so downstream text mining can exclude
 reviews, non-English text or retracted work on purpose rather than by accident.
@@ -14,7 +14,6 @@ from typing import Any, Protocol
 
 import pandas as pd
 
-from synergyrx_data.literature.sentences import split_sentences
 from synergyrx_data.provenance import PROVENANCE_COLUMNS
 
 _YEAR = re.compile(r"(1[89]|20)\d{2}")
@@ -184,36 +183,3 @@ def deduplicate(frame: pd.DataFrame) -> pd.DataFrame:
         .drop_duplicates("pmid", keep="last")
         .reset_index(drop=True)
     )
-
-
-def build_abstract_store(
-    articles: pd.DataFrame, open_access: pd.DataFrame | None = None
-) -> pd.DataFrame:
-    """Final `abstracts.parquet`: deduplicated articles, segmented, with a PubMed URL.
-
-    `open_access` is the Europe PMC table; it fills abstracts PubMed lacks and adds the
-    open-access flags.
-    """
-    store = deduplicate(articles).copy()
-    store["abstract_source"] = store["abstract"].notna().map({True: "pubmed", False: None})
-    store["is_open_access"] = pd.Series(pd.NA, index=store.index, dtype="boolean")
-    store["in_europepmc"] = pd.Series(pd.NA, index=store.index, dtype="boolean")
-    if open_access is not None and not open_access.empty:
-        extra = open_access.drop_duplicates("pmid").set_index("pmid")
-        pmids = store["pmid"]
-        store["is_open_access"] = pmids.map(extra["is_open_access"]).astype("boolean")
-        store["in_europepmc"] = pmids.map(extra["in_epmc"]).astype("boolean")
-        store["pmcid"] = store["pmcid"].fillna(pmids.map(extra["pmcid"]))
-        fallback = pmids.map(extra["abstract"])
-        fill = store["abstract"].isna() & fallback.notna()
-        store.loc[fill, "abstract"] = fallback[fill]
-        store.loc[fill, "abstract_source"] = "europepmc"
-        store["has_abstract"] = store["abstract"].notna()
-    sentences = store["abstract"].map(
-        lambda text: [s.text for s in split_sentences(text)] if isinstance(text, str) else []
-    )
-    store["sentences"] = sentences
-    store["n_sentences"] = sentences.map(len).astype("int64")
-    store["pubmed_url"] = "https://pubmed.ncbi.nlm.nih.gov/" + store["pmid"].astype(str) + "/"
-    ordered = [c for c in store.columns if c not in PROVENANCE_COLUMNS] + PROVENANCE_COLUMNS
-    return store[ordered]

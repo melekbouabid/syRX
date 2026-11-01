@@ -44,9 +44,6 @@ class Settings(BaseSettings):
     demo_images_dir: Path = PROJECT_DIR / "data" / "vision" / "c3pi" / "images"
     demo_split_file: Path = PROJECT_DIR / "config" / "splits" / "selected_images.csv"
     demo_gallery_file: Path = PROJECT_DIR / "config" / "demo_gallery.csv"
-    # Tables written by `synergyrx clean` (the pipeline keeps its Parquet tables in
-    # data/parquet); the API only ever reads them.
-    processed_dir: Path = PROJECT_DIR / "data" / "parquet"
 
     # Module 2: RAG and agent (module2_ai_engineering/docs/rag.md, agent.md). The chunk index
     # lives in the pharma database (table rag_chunks, pgvector);

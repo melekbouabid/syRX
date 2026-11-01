@@ -46,7 +46,7 @@ source [diagrams/architecture.mmd](diagrams/architecture.mmd).
 
 | Dossier | Rôle | Exécution |
 |---|---|---|
-| [app/backend/](../app/backend/) | API FastAPI : configuration, bases (comptes en SQLite ou PostgreSQL, médicaments et interactions dans PostgreSQL), comptes et sessions, administration, catalogue, routes ; importe le code des modules | conteneur `backend` (et `pharma-init`, `rag-init`) |
+| [app/backend/](../app/backend/) | API FastAPI : configuration, bases (comptes en SQLite ou PostgreSQL, médicaments et interactions dans PostgreSQL), comptes et sessions, administration, routes ; importe le code des modules | conteneur `backend` (et `pharma-init`, `rag-init`) |
 | [app/frontend/](../app/frontend/) | site React : Scanner (upload, webcam, boîtes, interactions), chat, Toxicity, admin | conteneur `frontend` (nginx) |
 | [module1_vision_mlops/training/](../module1_vision_mlops/training/) | sélection C3PI, étiquetage automatique, entraînement, évaluation, export ONNX, Model Registry, publication | sur le PC (venv avec PyTorch, GPU) |
 | [module1_vision_mlops/serving/](../module1_vision_mlops/serving/) | chaîne de scan ONNX Runtime (détecteur, recadrage, classifieur) | dans l'API |
@@ -55,7 +55,7 @@ source [diagrams/architecture.mmd](diagrams/architecture.mmd).
 | [module2_ai_engineering/agent/](../module2_ai_engineering/agent/) | graphe LangGraph, outils, règles de sécurité | dans l'API |
 | [module2_ai_engineering/mcp_server/](../module2_ai_engineering/mcp_server/) | les mêmes outils par MCP | processus séparé (stdio ou HTTP local) |
 | [module2_ai_engineering/benchmark/](../module2_ai_engineering/benchmark/) | questions, scripts, résultats | sur le PC |
-| [bonus/](../bonus/) | toxicité Tox21 (outil de l'agent, route, page) et étude de synergie | dans l'API ; entraînement sur le PC |
+| [bonus/](../bonus/) | toxicité Tox21 (outil de l'agent, route, page) | dans l'API ; entraînement sur le PC |
 | [data_pipeline/](../data_pipeline/) | pipeline SynergyRx : client HTTP poli, connecteurs, manifeste | sur le PC (venv du pipeline) |
 | [infra/](../infra/) | images et réglages des services MLflow, PostgreSQL, Ollama | Docker Compose |
 

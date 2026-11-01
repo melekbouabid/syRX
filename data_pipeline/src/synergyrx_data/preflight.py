@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib.util
 import shutil
 import sys
 from dataclasses import dataclass
@@ -55,17 +54,6 @@ def run_preflight(settings: Settings, planned_bytes: int = 0) -> list[Check]:
     version = sys.version_info
     checks.append(
         Check("python", version >= (3, 11), f"{version.major}.{version.minor}.{version.micro}")
-    )
-    checks.append(
-        Check("rdkit", importlib.util.find_spec("rdkit") is not None, "needed for SMILES cleaning")
-    )
-    checks.append(
-        Check(
-            "pytdc",
-            importlib.util.find_spec("tdc") is not None,
-            "optional: the TDC connector falls back to the same Harvard Dataverse file",
-            required=False,
-        )
     )
     env_file = settings.project_root / ".env"
     checks.append(Check(".env", env_file.is_file(), str(env_file), required=False))

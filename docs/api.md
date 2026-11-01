@@ -2,8 +2,8 @@
 
 Application FastAPI dans [`app/backend/`](../app/backend/). Swagger UI : `/docs`, schéma :
 `/openapi.json` (D44). Toutes les routes ci-dessous demandent un compte connecté (cookie de
-session obtenu par `POST /api/auth/login`), comme le catalogue ; la démonstration se connecte
-avec le compte de démonstration (D46).
+session obtenu par `POST /api/auth/login`) ; la démonstration se connecte avec le compte de
+démonstration (D46).
 
 | Route | Rôle | Documentation |
 |---|---|---|
@@ -13,7 +13,7 @@ avec le compte de démonstration (D46).
 | `POST /api/chat` | question à l'agent, réponse citée (module 2) | [module2_ai_engineering/docs/agent.md](../module2_ai_engineering/docs/agent.md#post-apichat) |
 | `POST /api/toxicity` | probabilités Tox21 d'une ou deux molécules (bonus) | [bonus/docs/toxicity.md](../bonus/docs/toxicity.md#où-il-est-utilisé) |
 | `GET /api/demo/images` | galerie de photos du split de test (lecture seule) | [demo.md](demo.md) |
-| `/api/auth/*`, `/api/admin/*`, `/api/catalog/*` | comptes, sessions, administration, catalogue SynergyRx | [app/README.md](../app/README.md#comptes) |
+| `/api/auth/*`, `/api/admin/*` | comptes, sessions, administration | [app/README.md](../app/README.md#comptes) |
 
 Chaque réponse sur des médicaments porte `sources` (nom, titre, URL, licence, citation) et
 `disclaimer` = « Information uniquement, consultez un pharmacien ou un médecin. ». Aucune

@@ -1,8 +1,7 @@
 """Optional smoke tests against the real services.
 
-They are excluded from the default run. Start them with `pytest tests/live -m live` (or
-`make live`) after putting CONTACT_EMAIL in `.env`. Each test asks for a few kilobytes: one
-record, one name, the first rows of one file.
+They are excluded from the default run. Start them with `pytest tests/live -m live` after
+putting CONTACT_EMAIL in `.env`. Each test asks for a few kilobytes.
 """
 
 from __future__ import annotations
@@ -49,47 +48,6 @@ def identity(settings: Settings) -> dict[str, str]:
     return params
 
 
-async def test_drugcomb_first_rows(client: PoliteClient) -> None:
-    url = "https://zenodo.org/api/records/11102665/files/summary_table_v1.4.csv/content"
-    head = await client.head_lines(url, 4, source="drugcomb")
-    lines = head.decode("utf-8").splitlines()
-    assert len(lines) == 4
-    assert lines[0].startswith('"block_id","drug_row","drug_col","cell_line_name"')
-    assert "synergy_loewe" in lines[0]
-
-
-async def test_oneil_first_rows(client: PoliteClient) -> None:
-    head = await client.head_lines(
-        "https://bioinf.jku.at/software/DeepSynergy/labels.csv", 3, source="oneil"
-    )
-    assert head.decode().splitlines()[0] == ",drug_a_name,drug_b_name,cell_line,synergy,fold"
-
-
-async def test_pubchem_name_to_structure(client: PoliteClient) -> None:
-    base = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound"
-    cids = await client.fetch(
-        f"{base}/name/cids/JSON", source="pubchem", method="POST", data={"name": "aspirin"}
-    )
-    assert cids.json()["IdentifierList"]["CID"] == [2244]
-    props = await client.fetch(
-        f"{base}/cid/2244/property/SMILES,ConnectivitySMILES,InChIKey,Title/JSON", source="pubchem"
-    )
-    record = props.json()["PropertyTable"]["Properties"][0]
-    assert record["InChIKey"] == "BSYNRYMUTXBXSQ-UHFFFAOYSA-N" and record["SMILES"]
-
-
-async def test_chembl_by_inchikey(client: PoliteClient) -> None:
-    result = await client.fetch(
-        "https://www.ebi.ac.uk/chembl/api/data/molecule.json",
-        source="chembl",
-        params={
-            "molecule_structures__standard_inchi_key__in": "BSYNRYMUTXBXSQ-UHFFFAOYSA-N",
-            "only": "molecule_chembl_id,pref_name",
-        },
-    )
-    assert result.json()["molecules"][0]["molecule_chembl_id"] == "CHEMBL25"
-
-
 async def test_pubmed_history_search_and_fetch(client: PoliteClient, settings: Settings) -> None:
     search = await client.fetch(
         f"{EUTILS}/esearch.fcgi",
@@ -97,7 +55,7 @@ async def test_pubmed_history_search_and_fetch(client: PoliteClient, settings: S
         method="POST",
         data={
             "db": "pubmed",
-            "term": '"Drug Synergism"[mh] AND fluorouracil[tiab] AND veliparib[tiab]',
+            "term": '"Drug Interactions"[mh] AND fluconazole[tiab] AND warfarin[tiab]',
             "usehistory": "y",
             "retmax": "0",
             "retmode": "json",
@@ -125,20 +83,3 @@ async def test_pubmed_history_search_and_fetch(client: PoliteClient, settings: S
     articles = parse_pubmed_xml(fetched.content)
     assert 1 <= len(articles) <= 2 and articles[0]["pmid"].isdigit()
     assert "api_key" not in fetched.url and "email" not in fetched.url
-
-
-async def test_europepmc_open_access_flag(client: PoliteClient) -> None:
-    result = await client.fetch(
-        "https://www.ebi.ac.uk/europepmc/webservices/rest/search",
-        source="europepmc",
-        params={"query": "EXT_ID:31600000 AND SRC:MED", "format": "json", "resultType": "core"},
-    )
-    hit = result.json()["resultList"]["result"][0]
-    assert hit["pmid"] == "31600000" and hit["isOpenAccess"] in ("Y", "N")
-
-
-async def test_depmap_release_listing(client: PoliteClient) -> None:
-    result = await client.fetch("https://api.figshare.com/v2/articles/27993248", source="depmap")
-    files = {entry["name"]: entry for entry in result.json()["files"]}
-    assert "Model.csv" in files and files["Model.csv"]["computed_md5"]
-    assert "OmicsExpressionProteinCodingGenesTPMLogp1.csv" in files

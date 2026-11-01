@@ -143,8 +143,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 
 Détails : [module 1](module1_vision_mlops/README.md#résultats),
 [module 2](module2_ai_engineering/README.md#résultats-du-benchmark). Bonus : toxicité Tox21,
-ROC-AUC moyen 0,725 en test (split par scaffold) ; la synergie DrugComb n'a pas atteint la
-règle fixée d'avance et n'est donc pas devenue un outil ([bonus/](bonus/)).
+ROC-AUC moyen 0,725 en test (split par scaffold) ([bonus/](bonus/)).
 
 ## Organisation du dépôt
 
@@ -152,7 +151,7 @@ règle fixée d'avance et n'est donc pas devenue un outil ([bonus/](bonus/)).
 module1_vision_mlops/     Module 1 : training/ (YOLO, MLflow, ONNX), serving/ (scan ONNX Runtime), tests/, docs/
 module2_ai_engineering/   Module 2 : corpus/, rag/, agent/, mcp_server/, benchmark/, tests/, docs/
 app/                      application web commune : backend/ (FastAPI), frontend/ (React)
-bonus/                    outil de toxicité (Tox21) et étude de synergie
+bonus/                    outil de toxicité (Tox21)
 data_pipeline/            pipeline de collecte SynergyRx d'origine (connecteurs utilisés par le module 2)
 infra/                    MLflow, initialisation PostgreSQL, variante Ollama sans GPU
 docs/                     architecture, API, infra, CD, démo, décisions, règles, captures, archive
@@ -173,8 +172,8 @@ ruff.toml                 règles de lint communes à tout le code Python
 | MLOps | MLflow 3.17 (tracking, Model Registry), DVC 3.67 (remote local), Docker Compose, GitHub Actions |
 | LLM et RAG | LangGraph, LangChain, Ollama (qwen2.5:3b, bge-m3), PostgreSQL 16 + pgvector, BM25, MCP (SDK officiel), RAGAS |
 | Application | FastAPI, Pydantic, SQLAlchemy, React 19, Vite, TypeScript, nginx, Playwright (captures) |
-| Données | NLM C3PI, RxNav, DDInter 2, openFDA, PubMed, Tox21, DrugComb |
-| Qualité | pytest (plus de 400 tests), ruff, mypy, ESLint, pre-commit (hooks de secrets et de messages de commit) |
+| Données | NLM C3PI, RxNav, DDInter 2, openFDA, PubMed, Tox21 |
+| Qualité | pytest (plus de 300 tests), ruff, mypy, ESLint, pre-commit (hooks de secrets et de messages de commit) |
 
 ## Usage local et sécurité
 
@@ -203,7 +202,6 @@ elles sont sous `data/`, versionnées par DVC avec un remote local hors du dép�
 | [openFDA drug labels](https://open.fda.gov/apis/drug/label/) | CC0 / domaine public | corpus RAG : notices officielles |
 | [PubMed (E-utilities)](https://www.ncbi.nlm.nih.gov/books/NBK25501/) | conditions NLM | corpus RAG : résumés d'articles |
 | Tox21 (copie MoleculeNet / DeepChem) | aucune licence explicite trouvée (données publiques, citées) | bonus toxicité |
-| DrugComb v1.4 | CC BY 4.0 | bonus synergie (pipeline SynergyRx) |
 
 Sources du pipeline SynergyRx et registre complet : [data_pipeline/README.md](data_pipeline/README.md)
 et [data_pipeline/LICENSES.md](data_pipeline/LICENSES.md). Jeu C3PI en détail :
@@ -215,7 +213,7 @@ et [data_pipeline/LICENSES.md](data_pipeline/LICENSES.md). Jeu C3PI en détail :
   [CD](docs/cd.md), [décisions](docs/decisions.md), [feuille de route](docs/roadmap.md).
 - Soutenance : [script de démonstration](docs/demo.md), [questions probables du jury](docs/questions_jury.md).
 - Règles du projet (sécurité des réponses, usage local) : [docs/project_rules.md](docs/project_rules.md).
-- Historique : `git log` et tags git ; [archive SynergyRx](docs/archive/).
+- Historique : `git log` et tags git (`v1.0-avant-restructuration` : état SynergyRx avant la restructuration).
 
 ## Auteur
 

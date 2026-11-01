@@ -33,8 +33,7 @@ que le dépôt sous `/tujya` (D79).
    [interactions.md](../module2_ai_engineering/docs/interactions.md)) : `dvc pull` depuis le
    remote par défaut (section « Remote DVC » plus bas) donne `data/tujya/*.csv` (tables des
    médicaments), `data/vision/c3pi/images/` (galerie de démonstration) et `data/rag/corpus`
-   (index RAG) ; `data/parquet/` (tables SynergyRx, utilisées par le bonus synergie) est
-   aussi suivi par DVC.
+   (index RAG).
 2. Les modèles : `cd module1_vision_mlops/training && python -m tujya_vision.publish` remplit
    `models/` depuis le Model Registry de MLflow (MLflow doit tourner :
    `docker compose up -d mlflow` d'abord).
@@ -126,7 +125,7 @@ dvc remote list     # localstore  C:\Users\msi\dvc-storage\tujya  (default)
 DVC est installé dans le venv d'entraînement
 (`module1_vision_mlops/training/.venv/Scripts/dvc.exe`, DVC 3.67.1). Ce qui est suivi :
 `data/vision/c3pi/images` et `metadata` (`dvc add`), `data/tujya`, `data/rag/raw`,
-`data/rag/interim`, `data/rag/manifest.json`, `data/tox21`, `data/parquet` (`dvc add`), et les
+`data/rag/interim`, `data/rag/manifest.json`, `data/tox21` (`dvc add`), et les
 sorties des étapes `prepare` (étiquettes, jeux YOLO) et `rag_corpus` (chunks) de
 [`dvc.yaml`](../dvc.yaml).
 
@@ -197,7 +196,7 @@ comprimé-principe actif, 40 508 interactions. Tests :
 
 Les scripts d'entraînement lisent `MLFLOW_TRACKING_URI` (par défaut
 `http://127.0.0.1:5000`). L'interface sur http://localhost:5000 montre les expériences
-(`tujya-vision`, `tujya-rag`, `tujya-tox`, `tujya-synergy`) et les modèles enregistrés
+(`tujya-vision`, `tujya-rag`, `tujya-tox`, et `tujya-synergy` de l'étude retirée, D85) et les modèles enregistrés
 `tujya-pill-classifier`, `tujya-pill-detector` et `tujya-tox21`. Le tracking et les artefacts
 vivent dans les volumes `pgdata` et `mlartifacts` du projet compose.
 

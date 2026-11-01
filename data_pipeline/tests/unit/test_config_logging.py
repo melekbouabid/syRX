@@ -34,10 +34,11 @@ def test_shipped_config_is_valid_and_matches_documented_limits() -> None:
     )
     assert settings.http.ncbi.rate_without_key == 3.0
     assert settings.http.ncbi.rate_with_key == 10.0
-    assert settings.http.hosts["pubchem.ncbi.nlm.nih.gov"].rate == 5.0
+    assert settings.http.hosts["rxnav.nlm.nih.gov"].rate == 10.0
+    assert settings.http.hosts["api.fda.gov"].rate == 3.0
     assert settings.http.require_contact_email is True
     # Licence-gated and optional sources ship disabled.
-    for name in ("drugbank", "ddinter", "gdsc", "pubmed_baseline", "pubtator"):
+    for name in ("ddinter", "openfda_label"):
         assert settings.sources[name].enabled is False
     assert settings.sources["ddinter"].options["terms_acknowledged"] is False
 
@@ -60,9 +61,9 @@ def test_relative_project_root_is_relative_to_the_config_file(
 
 def test_overrides_including_dotted_host_names(tmp_path: Path) -> None:
     raw = apply_overrides(
-        {}, ["http.hosts[zenodo.org].rate=0.05", "sample=25", "sources.tdc.enabled=false"]
+        {}, ["http.hosts[api.fda.gov].rate=0.05", "sample=25", "sources.pubmed.enabled=false"]
     )
-    assert raw["http"]["hosts"]["zenodo.org"]["rate"] == 0.05
+    assert raw["http"]["hosts"]["api.fda.gov"]["rate"] == 0.05
     settings = load_settings(None, ["sample=25", "logging.level=DEBUG"], project_root=tmp_path)
     assert settings.sample == 25 and settings.logging.level == "DEBUG"
     with pytest.raises(ConfigError, match="key=value"):

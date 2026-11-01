@@ -5,7 +5,6 @@ import { AdminLayout, RequireAuth, UserLayout } from "./layouts";
 import Dashboard from "./pages/admin/Dashboard";
 import Users from "./pages/admin/Users";
 import AuthPage from "./pages/AuthPage";
-import { CellLinesPage, DrugsPage } from "./pages/CatalogPage";
 import Home from "./pages/Home";
 import Intro from "./pages/Intro";
 import Profile from "./pages/Profile";
@@ -45,8 +44,6 @@ export default function App() {
           <Route path="/home" element={<Home />} />
           <Route path="/scan" element={<ScanPage />} />
           <Route path="/toxicity" element={<ToxicityPage />} />
-          <Route path="/drugs" element={<DrugsPage />} />
-          <Route path="/cell-lines" element={<CellLinesPage />} />
           <Route path="/profile" element={<Profile />} />
         </Route>
       </Route>

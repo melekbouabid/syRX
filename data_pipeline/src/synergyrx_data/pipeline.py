@@ -1,8 +1,8 @@
 """Orchestration: what the CLI commands actually do.
 
-`fetch` runs the connectors stage by stage (synergy and cell lines, then identifiers, then
-literature). A failing source never stops the others: its state becomes "needs attention"
-and the run carries on.
+`fetch` runs the connectors stage by stage (DDInter, then the literature sources: PubMed and
+openFDA labels). A failing source never stops the others: its state becomes "needs
+attention" and the run carries on.
 """
 
 from __future__ import annotations
@@ -238,6 +238,38 @@ def mark_disabled(settings: Settings) -> None:
             "never_run",
         ):
             ctx.state.update(name, state=DISABLED, message="disabled in configuration")
+
+
+def sample_sources(settings: Settings, manifest: Manifest | None = None) -> list[str]:
+    """Sources whose interim tables come from a `--sample` run."""
+    manifest = manifest or Manifest(settings)
+    return sorted(
+        {e.source for e in manifest.entries.values() if e.layer == "interim" and e.is_sample}
+    )
+
+
+def source_states(settings: Settings) -> pd.DataFrame:
+    """One row per source: enabled, state, last run, rows kept and rejected, message."""
+    state = StateStore(settings.state_dir / "connectors.json", read_only=True)
+    rows = []
+    for name in source_names():
+        entry = state.get(name)
+        current = entry.get("state", "never_run")
+        if current == "never_run" and not is_enabled(name, settings):
+            current = "disabled"
+        rows.append(
+            {
+                "source": name,
+                "enabled": is_enabled(name, settings),
+                "state": current + (" (sample)" if entry.get("is_sample") else ""),
+                "last_run": (entry.get("last_run_at") or "-")[:16],
+                "rows": sum((entry.get("tables") or {}).values()) or None,
+                "rejected_rows": sum((entry.get("rejects") or {}).values()) or None,
+                "access": REGISTRY[name].info.access,
+                "message": (entry.get("message") or "")[:400],
+            }
+        )
+    return pd.DataFrame(rows)
 
 
 def validate(settings: Settings, requested: list[str] | None) -> list[dict[str, Any]]:

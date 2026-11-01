@@ -2,7 +2,7 @@
 
 L'application que l'on démontre : une API **FastAPI** et un site **React + Vite +
 TypeScript**, branding Tujya. Le cœur de l'API (configuration, bases de données, comptes,
-sessions, administration, catalogue, tables des médicaments et des interactions) est ici ;
+sessions, administration, tables des médicaments et des interactions) est ici ;
 les routes de scan, de chat et de toxicité importent le code des modules :
 
 | Route | Code du module importé |
@@ -21,8 +21,8 @@ Référence de l'API : [../docs/api.md](../docs/api.md) ; Swagger sur
 app/
   backend/
     app/              paquet FastAPI : main, config, db, models, accounts, security, deps,
-                      limits, catalog, schemas, medicines, pharma, pharma_loader, routers/
-    tests/            tests du cœur de l'API (comptes, admin, catalogue, démo, docs, médicaments)
+                      limits, schemas, medicines, pharma, pharma_loader, routers/
+    tests/            tests du cœur de l'API (comptes, admin, démo, docs, médicaments)
     tujya_testing/    fixtures partagées avec les tests des modules (plugin pytest)
     pyproject.toml    installation éditable : met ce dossier et la racine du dépôt sur le chemin
     requirements*.txt dépendances (requirements.txt est aussi celui de l'image Docker)

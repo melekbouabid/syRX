@@ -1,81 +1,85 @@
 import { useRef, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
-import { api, type CatalogSummary } from "../api";
 import { APP_NAME } from "../brand";
 import { Logo, LogoMark } from "../components";
-import { useQuery } from "../hooks";
 import { Icon, type IconName } from "../icons";
-import { CountUp, Reveal, useInView } from "../motion";
+import { Reveal, useInView } from "../motion";
 
-const STATS: { key: keyof CatalogSummary; label: string; icon: IconName }[] = [
-  { key: "synergy_measurements", label: "synergy measurements", icon: "flask" },
-  { key: "drugs", label: "drugs", icon: "pill" },
-  { key: "cell_lines", label: "cancer cell lines", icon: "cells" },
-  { key: "abstracts", label: "PubMed abstracts", icon: "book" },
-];
-
-// Each score compares the measured effect of a pair with a different idea of "no interaction".
-const SCORES = [
-  { name: "Bliss", expects: "the two drugs acting independently of each other." },
-  { name: "Loewe", expects: "simply giving more of a single drug (dose additivity)." },
-  { name: "HSA", expects: "the better of the two drugs on its own (highest single agent)." },
-  { name: "ZIP", expects: "neither drug changing how potent the other one is." },
-];
-
-const FEATURES: { title: string; text: string; icon: IconName }[] = [
+// The three things the app does, in the order a visit goes through them.
+const STEPS = [
   {
-    icon: "search",
-    title: "Search every drug",
-    text: "Find a compound by name, synonym or ChEMBL ID, then jump to its PubChem and ChEMBL records.",
+    name: "Scan",
+    text: "A photo or the webcam: each pill is detected, then identified among the known pills, with a confidence score.",
   },
   {
-    icon: "cells",
-    title: "Browse cell lines",
-    text: "See the tissue and disease of each cancer cell line, with its DepMap identifier.",
+    name: "Check",
+    text: "The active ingredients of every pair are looked up in DDInter: severity and explanation, as the source gives them.",
   },
   {
-    icon: "check",
-    title: "Know where it came from",
-    text: "Every drug and cell line shows which screens it was measured in, and how many times.",
+    name: "Ask",
+    text: "An assistant answers follow-up questions from official drug labels, PubMed and DDInter, and cites each source.",
+  },
+];
+
+// The safety rules of the project (docs/project_rules.md), as a visitor sees them.
+const RULES: { title: string; text: string; icon: IconName }[] = [
+  {
+    icon: "ban",
+    title: "Never a dose",
+    text: "Questions about how much to take are refused: that is for a pharmacist or doctor.",
+  },
+  {
+    icon: "alert",
+    title: "Never called safe",
+    text: "A pair missing from DDInter is reported as “no known interaction in this database”.",
+  },
+  {
+    icon: "book",
+    title: "Always a source",
+    text: "Every answer cites the label, article or database entry it comes from.",
+  },
+  {
+    icon: "eye",
+    title: "A suggestion, not a certainty",
+    text: "Each identified pill shows its confidence; when it is low, you confirm or pick from the top 5.",
   },
 ];
 
 const SOURCES = [
-  { name: "DrugComb", gives: "Combination screens with Bliss, Loewe, HSA and ZIP scores" },
-  { name: "Therapeutics Data Commons", gives: "A curated drug-synergy benchmark" },
-  { name: "O'Neil et al.", gives: "The combination screen used to train DeepSynergy" },
-  { name: "DepMap", gives: "Cell line names, tissues and diseases" },
-  { name: "PubChem and ChEMBL", gives: "Compound identifiers, structures and synonyms" },
-  { name: "PubMed", gives: "Abstracts about drug combinations" },
+  { name: "NLM C3PI", gives: "Pill photographs used to train and test the vision models" },
+  { name: "RxNorm (RxNav)", gives: "From a pill to its active ingredients" },
+  { name: "DDInter 2", gives: "Interactions between active ingredients, with their severity" },
+  { name: "openFDA drug labels", gives: "Official labels the assistant answers from" },
+  { name: "PubMed", gives: "Abstracts of articles on drug interactions" },
+  { name: "Tox21", gives: "In vitro toxicity data for the bonus model" },
 ];
 
-// Growth inhibition in percent. "Expected" follows Bliss independence:
-// 35 + 45 - (35 x 45) / 100 = 64. An illustration of the idea, not measured data.
-const FIGURE = { a: 35, b: 45, expected: 64, measured: 85 };
+// Confidence of the three best suggestions for one detected pill, in percent.
+// An illustration of the idea, not a real prediction.
+const FIGURE = [
+  { label: "Top 1 · 81%", width: 81, kind: "top" },
+  { label: "Top 2 · 12%", width: 12, kind: "other" },
+  { label: "Top 3 · 4%", width: 4, kind: "other" },
+];
 
 /** A bar that grows to `--w` once its card is on screen (see .figure-card in the CSS). */
-function barWidth(percent: number, left = 0): CSSProperties {
-  return { "--w": `${percent}%`, left: `${left}%` } as CSSProperties;
+function barWidth(percent: number): CSSProperties {
+  return { "--w": `${percent}%` } as CSSProperties;
 }
 
-function SynergyFigure() {
+function ScanFigure() {
   const ref = useRef<HTMLElement>(null);
   const inView = useInView(ref);
-  const rows = [
-    { label: "Drug A alone", width: FIGURE.a, kind: "single" },
-    { label: "Drug B alone", width: FIGURE.b, kind: "single" },
-    { label: "Expected together", width: FIGURE.expected, kind: "expected" },
-  ];
   return (
     <figure
       ref={ref}
       className={inView ? "figure-card is-visible" : "figure-card"}
       role="img"
-      aria-label="Illustration: each drug alone slows the cancer cells a little. Together they are expected to do more, but the measured effect is higher still. The extra part is the synergy."
+      aria-label="Illustration: for one detected pill, the best suggestion has a confidence of 81 percent, the next two 12 and 4 percent."
     >
-      <p className="figure-title">How synergy is read</p>
-      <p className="figure-sub">Growth inhibition of one cancer cell line</p>
-      {rows.map((row) => (
+      <p className="figure-title">How a scan reads</p>
+      <p className="figure-sub">The three best suggestions for one detected pill</p>
+      {FIGURE.map((row) => (
         <div className="bar-row" key={row.label}>
           <span>{row.label}</span>
           <div className="bar-track">
@@ -83,21 +87,9 @@ function SynergyFigure() {
           </div>
         </div>
       ))}
-      <div className="bar-row">
-        <span>Measured together</span>
-        <div className="bar-track">
-          <span className="bar-fill bar-expected" style={barWidth(FIGURE.measured)} />
-          <span
-            className="bar-fill bar-excess"
-            style={barWidth(FIGURE.measured - FIGURE.expected, FIGURE.expected)}
-          />
-        </div>
-      </div>
       <figcaption>
-        <span>
-          <span className="bar-swatch" /> Synergy: the effect beyond what was expected.
-        </span>
-        <span className="figure-note">An illustration of the idea, not measured data.</span>
+        <span>A suggestion, never a certainty: when the confidence is low, you confirm it.</span>
+        <span className="figure-note">An illustration of the idea, not a real prediction.</span>
       </figcaption>
     </figure>
   );
@@ -105,13 +97,6 @@ function SynergyFigure() {
 
 /** The public start page: what the site is, shown before anyone signs in. */
 export default function Intro() {
-  const summary = useQuery((signal) => api.catalogSummary(signal), []);
-  // Only tables that exist are shown; if the API is down the band is simply left out.
-  const stats = STATS.flatMap((stat) => {
-    const value = summary.data?.[stat.key];
-    return value == null ? [] : [{ ...stat, value }];
-  });
-
   return (
     <div className="intro">
       <header className="intro-bar">
@@ -137,12 +122,12 @@ export default function Intro() {
           </div>
           <div className="intro-inner intro-hero-grid">
             <div className="hero-copy">
-              <p className="eyebrow">Drug-combination synergy in cancer cell lines</p>
-              <h1>Find drug combinations that work better together.</h1>
+              <p className="eyebrow">Pill identification and interaction checks</p>
+              <h1>Know which pills you have and whether they interact.</h1>
               <p className="intro-lead">
-                Two drugs can do more together than either does alone. {APP_NAME} gathers the
-                published experiments that measured this into one place, so you can see which
-                pairs were tested, on which cancer cells, and how strongly they interact.
+                Take a photo of one or more pills. {APP_NAME} detects each one, suggests what it
+                is with a confidence score, checks its active ingredients for known interactions
+                and answers your questions, citing every source.
               </p>
               <div className="intro-cta">
                 <Link className="btn btn-light btn-lg" to="/signup">
@@ -155,45 +140,25 @@ export default function Intro() {
               </div>
             </div>
             <div className="hero-figure">
-              <SynergyFigure />
+              <ScanFigure />
             </div>
           </div>
         </section>
 
-        {stats.length > 0 && (
-          <section className="intro-stats" aria-label="What the collection contains">
-            <Reveal stagger className="intro-inner intro-stats-grid">
-              {stats.map((stat) => (
-                <div className="intro-stat" key={stat.key}>
-                  <span className="stat-icon">
-                    <Icon name={stat.icon} size={20} />
-                  </span>
-                  <span className="intro-stat-value">
-                    <CountUp value={stat.value} duration={1400} />
-                  </span>
-                  <span className="intro-stat-label">{stat.label}</span>
-                </div>
-              ))}
-            </Reveal>
-          </section>
-        )}
-
         <section className="intro-section">
           <div className="intro-inner">
             <Reveal>
-              <h2>What is synergy?</h2>
+              <h2>How it works</h2>
               <p className="intro-text">
-                A combination is <strong>synergistic</strong> when it stops more cancer cells
-                than expected from each drug alone, and <strong>antagonistic</strong> when it
-                stops fewer. "Expected" can be defined in several ways, so every experiment
-                here keeps four scores. Above zero means synergy; below zero, antagonism.
+                Three steps, each built on public data, each answer traced back to where it
+                comes from.
               </p>
             </Reveal>
-            <Reveal stagger className="intro-grid intro-grid-4">
-              {SCORES.map((score) => (
-                <div className="card score-card lift" key={score.name}>
-                  <h3>{score.name}</h3>
-                  <p className="muted">Compares the pair with {score.expects}</p>
+            <Reveal stagger className="intro-grid intro-grid-3">
+              {STEPS.map((step) => (
+                <div className="card step-card lift" key={step.name}>
+                  <h3>{step.name}</h3>
+                  <p className="muted">{step.text}</p>
                 </div>
               ))}
             </Reveal>
@@ -203,24 +168,24 @@ export default function Intro() {
         <section className="intro-section intro-section-alt">
           <div className="intro-inner">
             <Reveal>
-              <h2>What you can do here</h2>
+              <h2>Rules it always follows</h2>
             </Reveal>
-            <Reveal stagger className="intro-grid intro-grid-3">
-              {FEATURES.map((feature) => (
-                <div className="feature" key={feature.title}>
+            <Reveal stagger className="intro-grid intro-grid-4">
+              {RULES.map((rule) => (
+                <div className="feature" key={rule.title}>
                   <span className="feature-icon" aria-hidden="true">
-                    <Icon name={feature.icon} size={22} />
+                    <Icon name={rule.icon} size={22} />
                   </span>
-                  <h3>{feature.title}</h3>
-                  <p className="muted">{feature.text}</p>
+                  <h3>{rule.title}</h3>
+                  <p className="muted">{rule.text}</p>
                 </div>
               ))}
             </Reveal>
             <Reveal>
               <p className="intro-next">
-                <span className="badge badge-admin badge-neutral">In development</span>{" "}
-                Predicted synergy for pairs nobody has tested yet, with supporting evidence
-                from PubMed.
+                <span className="badge badge-admin badge-neutral">Information only</span>{" "}
+                {APP_NAME} does not replace a pharmacist or doctor: consult one before changing
+                any treatment.
               </p>
             </Reveal>
           </div>
@@ -231,9 +196,8 @@ export default function Intro() {
             <Reveal>
               <h2>Where the data comes from</h2>
               <p className="intro-text">
-                Only public scientific sources, collected through their official APIs and
-                files. Nothing is invented or estimated: every number is a published
-                measurement.
+                Only public sources, collected through their official APIs and files, each with
+                its licence. Nothing is invented: what the sources do not say is not said.
               </p>
             </Reveal>
             <Reveal stagger className="source-list">
@@ -255,7 +219,7 @@ export default function Intro() {
                 <span />
               </div>
               <LogoMark size={96} className="emblem-float" />
-              <h2>Ready to explore?</h2>
+              <h2>Ready to scan?</h2>
               <p>An account takes less than a minute to create.</p>
               <div className="intro-cta">
                 <Link className="btn btn-light btn-lg" to="/signup">
@@ -274,7 +238,7 @@ export default function Intro() {
       <footer className="intro-footer">
         <div className="intro-inner intro-footer-inner">
           <LogoMark size={28} />
-          <span>{APP_NAME}. Research use only. Not medical advice.</span>
+          <span>{APP_NAME}. Information only: consult a pharmacist or doctor.</span>
         </div>
       </footer>
     </div>
