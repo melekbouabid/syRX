@@ -1,7 +1,7 @@
 """Train, evaluate, export and register the two Tujya vision models.
 
-    python -m tujya_vision.train classify --epochs 10            # pill identification
-    python -m tujya_vision.train detect --epochs 5 --imgsz 416   # pill detection
+    python -m src.models.train classify --epochs 10            # pill identification
+    python -m src.models.train detect --epochs 5 --imgsz 416   # pill detection
 
 Each run:
 1. trains an Ultralytics YOLO model from pretrained weights (transfer learning);
@@ -32,11 +32,12 @@ import onnxruntime as ort
 import torch
 from ultralytics import YOLO, settings
 
-from tujya_vision.autolabel import read_image
-from tujya_vision.prepare import CLASSIFY, DETECT
+from src.data.autolabel import read_image
+from src.data.prepare import CLASSIFY, DETECT
 
-ROOT = Path(__file__).resolve().parents[3]  # repository root
-RUNS = ROOT / "module1_vision_mlops" / "training" / "runs"
+ROOT = Path(__file__).resolve().parents[2]  # repository root
+# Ultralytics training runs (git-ignored; the results that matter are in MLflow).
+RUNS = ROOT / "runs"
 CLASSES = ROOT / "config" / "pill_classes.csv"
 REGISTERED = {"classify": "tujya-pill-classifier", "detect": "tujya-pill-detector"}
 EXPERIMENT = "tujya-vision"
@@ -270,7 +271,7 @@ def run(args: argparse.Namespace) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m tujya_vision.train")
+    parser = argparse.ArgumentParser(prog="python -m src.models.train")
     parser.add_argument("task", choices=["classify", "detect"])
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--imgsz", type=int, default=0, help="default 224 (classify), 640 (detect)")

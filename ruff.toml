@@ -1,13 +1,12 @@
-# Lint and format rules shared by every Python package of the repository (data pipeline,
-# web app backend, module 1, module 2, bonus). Ruff uses the closest configuration file:
+# Lint and format rules shared by every Python package of the repository (src/, backend/,
+# tests/, tools/ and the data pipeline). Ruff uses the closest configuration file:
 # a package with its own file extends this one and only changes its import roots (`src`)
 # and its test exceptions.
 line-length = 100
 target-version = "py311"
-# Import roots of the code that has no configuration file of its own (modules and bonus):
-# the repository root (packages module1_vision_mlops, module2_ai_engineering, bonus), the
-# web app (package `app`) and the training code (package `tujya_vision`).
-src = [".", "backend", "module1_vision_mlops/training"]
+# Import roots: the repository root (package `src`, the root test suite `tests`) and
+# backend/ (package `app`, the shared test fixtures `tujya_testing`).
+src = [".", "backend"]
 
 [lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "S", "ASYNC", "PTH", "C4"]

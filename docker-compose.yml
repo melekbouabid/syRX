@@ -15,7 +15,7 @@
 #
 # Before the first start, on the host (docs/infra.md):
 #   - `dvc pull` or the data steps, so data/tujya/*.csv and data/vision/c3pi/images exist;
-#   - `python -m tujya_vision.publish` (vision venv) to fill models/ from the Model Registry.
+#   - `python -m src.models.publish` (training venv, .venv-train) to fill models/ from the Model Registry.
 # `pharma-init` reloads the medicine tables from data/tujya on every start, then exits;
 # `rag-init` pulls the Ollama models (first start only) and indexes data/rag/corpus.
 #

@@ -4,10 +4,10 @@ Module 1 serving code, imported by the web API (backend) and by the agent tools.
 
 Same two stages and the same pre- and post-processing as the training code in `../training/`
 (Ultralytics YOLO11 letterbox and NMS for the detector, the 20 %-margin square crop of
-`tujya_vision.autolabel.square_crop` for the classifier), re-implemented with numpy and
+`src.data.autolabel.square_crop` for the classifier), re-implemented with numpy and
 OpenCV so the API needs neither PyTorch nor Ultralytics.
 
-The model directory (`Settings.models_dir`) holds what `python -m tujya_vision.publish`
+The model directory (`Settings.models_dir`) holds what `python -m src.models.publish`
 writes:
 
     detector.onnx     YOLO11 detection, one class "pill", input 1x3xSxS
@@ -197,7 +197,7 @@ class PillScanner:
         if missing:
             raise ModelsMissing(
                 f"Model files missing in {directory}: {', '.join(missing)}. "
-                "Export them with `python -m tujya_vision.publish` "
+                "Export them with `python -m src.models.publish` "
                 "(see module1_vision_mlops/docs/vision.md)."
             )
         manifest_path = directory / MANIFEST_FILE

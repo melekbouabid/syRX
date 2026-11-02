@@ -1,13 +1,13 @@
 """Copy the deployment models into the directory the API loads them from.
 
-    python -m tujya_vision.publish                          # latest registered versions (MLflow)
-    python -m tujya_vision.publish --classifier-version 2 --detector-version 1
-    python -m tujya_vision.publish --from-runs              # newest training/runs/*/best.onnx
+    python -m src.models.publish                          # latest registered versions (MLflow)
+    python -m src.models.publish --classifier-version 2 --detector-version 1
+    python -m src.models.publish --from-runs              # newest runs/*/weights/best.onnx
 
 Writes `detector.onnx`, `classifier.onnx` and `models.json` (origin and SHA-256 of each file)
 into `--out` (default `models/` at the repository root, git-ignored; the API reads it from
 SYNERGYRX_MODELS_DIR, same default). The files are the ONNX exports registered by
-`tujya_vision.train`, so the API serves exactly the versions shown in the Model Registry.
+`src.models.train`, so the API serves exactly the versions shown in the Model Registry.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from typing import Any
 
 import onnx
 
-from tujya_vision.train import REGISTERED, ROOT, RUNS
+from src.models.train import REGISTERED, ROOT, RUNS
 
 FILES = {"detect": "detector.onnx", "classify": "classifier.onnx"}
 
@@ -77,7 +77,7 @@ def from_runs(task: str) -> tuple[Path, dict[str, Any]]:
     if not runs:
         raise SystemExit(f"no {task} run with weights/best.onnx under {RUNS}")
     path = runs[-1]
-    return path, {"source": "module1_vision_mlops/training/runs", "run": path.parents[1].name}
+    return path, {"source": "runs", "run": path.parents[1].name}
 
 
 def publish(out: Path, *, use_runs: bool, versions: dict[str, int | None]) -> dict[str, Any]:
@@ -98,9 +98,9 @@ def publish(out: Path, *, use_runs: bool, versions: dict[str, int | None]) -> di
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m tujya_vision.publish")
+    parser = argparse.ArgumentParser(prog="python -m src.models.publish")
     parser.add_argument("--out", type=Path, default=ROOT / "models")
-    parser.add_argument("--from-runs", action="store_true", help="skip MLflow, use training/runs")
+    parser.add_argument("--from-runs", action="store_true", help="skip MLflow, use runs/")
     parser.add_argument("--classifier-version", type=int, default=None)
     parser.add_argument("--detector-version", type=int, default=None)
     args = parser.parse_args(argv)

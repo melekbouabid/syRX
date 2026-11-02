@@ -17,3 +17,9 @@ requires-python = ">=3.11"
 [tool.hatch.build.targets.wheel]
 packages = ["backend/app"]
 dev-mode-dirs = [".", "backend"]
+
+# Tests of src/ (tests/), from the repository root: `python -m pytest`. The API has its own
+# suite in backend/tests (backend/pytest.ini): `cd backend && python -m pytest`.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

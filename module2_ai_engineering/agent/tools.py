@@ -22,10 +22,10 @@ from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
 from app.config import Settings
+from app.inference import ScannerHolder
 from app.medicines import DISCLAIMER, PharmaUnavailable, search_pills
 from app.pharma import Ingredient
 from bonus.toxicity.model import ToxHolder, ToxicityUnavailable, predict_molecules
-from module1_vision_mlops.serving.scanner import ScannerHolder
 from module2_ai_engineering.rag.names import NameIndex
 from module2_ai_engineering.rag.retrieval import Hit, RetrieverHolder
 from module2_ai_engineering.rag.store import Filters

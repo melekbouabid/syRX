@@ -20,9 +20,9 @@ from mcp.server.mcpserver import MCPServer
 
 from app.config import Settings
 from app.db import make_engine
+from app.inference import ScannerHolder
 from app.medicines import DISCLAIMER
 from bonus.toxicity.model import ToxHolder
-from module1_vision_mlops.serving.scanner import ScannerHolder
 from module2_ai_engineering.agent.tools import TOOL_SPECS, Toolbox
 from module2_ai_engineering.rag.embeddings import Embedder, OllamaEmbedder
 from module2_ai_engineering.rag.retrieval import RetrieverHolder

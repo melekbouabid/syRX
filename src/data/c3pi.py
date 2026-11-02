@@ -4,7 +4,7 @@ C3PI publishes one XML file per image folder (`ALLXML/PillProjectDiscN.xml`) des
 every image: NDC, part, generic and proprietary names, file name, size, SHA-1, image type
 and, for consumer photos, camera, lighting and background. This module turns those files
 into one flat table and builds the training subset from it. It only uses the standard
-library so that it runs (and is tested) without the vision venv.
+library so that it runs (and is tested) without the training venv.
 
 Docs: module1_vision_mlops/docs/dataset_c3pi.md. Licence: ODbL, research and development use only.
 """

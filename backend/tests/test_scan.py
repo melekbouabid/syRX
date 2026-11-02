@@ -13,9 +13,9 @@ from starlette.applications import Starlette
 from starlette.responses import PlainTextResponse
 from starlette.routing import Route
 
+from app.inference import letterbox, nms, square_crop
 from app.limits import BodySizeLimit
-from module1_vision_mlops.serving.scanner import letterbox, nms, square_crop
-from module1_vision_mlops.tests.fake_models import write_models
+from tests.fake_models import write_models
 
 NAMES = ["005", "007", "009", "011", "013", "015"]
 # A 200 x 100 photo letterboxed to 64 x 64: scale 0.32, 16 px of padding above.
@@ -111,7 +111,7 @@ def test_photo_without_pills(app: FastAPI, user: TestClient, pharma: str) -> Non
 def test_missing_models_answer_503(user: TestClient, pharma: str) -> None:
     response = upload(user, photo())
     assert response.status_code == 503
-    assert "tujya_vision.publish" in response.json()["detail"]
+    assert "src.models.publish" in response.json()["detail"]
 
 
 def test_missing_medicine_tables_answer_503(user: TestClient, models: Path) -> None:

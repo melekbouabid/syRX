@@ -1,7 +1,7 @@
 # Tujya API: FastAPI + ONNX Runtime (CPU). No model, data or secret is baked in: the
 # models, config and data are mounted by docker-compose.yml.
 # The build context is the repository root, because the API imports the module packages
-# (module1_vision_mlops, ...); Dockerfile.dockerignore next to this file is the allow-list.
+# (src/rag, src/agent, ...); Dockerfile.dockerignore next to this file is the allow-list.
 #   docker build -f backend/Dockerfile -t tujya-backend .      # from the repository root
 FROM python:3.12-slim
 
@@ -22,7 +22,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
 COPY backend/requirements.txt ./
 RUN pip install -r requirements.txt
 
-COPY module1_vision_mlops /tujya/module1_vision_mlops
 COPY module2_ai_engineering /tujya/module2_ai_engineering
 COPY bonus /tujya/bonus
 COPY backend/app ./app

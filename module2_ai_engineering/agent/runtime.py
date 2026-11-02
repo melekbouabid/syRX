@@ -12,8 +12,8 @@ from langchain_core.language_models import BaseChatModel
 from sqlalchemy import Engine
 
 from app.config import Settings
+from app.inference import ScannerHolder
 from bonus.toxicity.model import ToxHolder
-from module1_vision_mlops.serving.scanner import ScannerHolder
 from module2_ai_engineering.agent.graph import TujyaAgent
 from module2_ai_engineering.agent.tools import Toolbox
 from module2_ai_engineering.rag.embeddings import Embedder, OllamaEmbedder

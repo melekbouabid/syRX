@@ -1,4 +1,4 @@
-"""Tujya vision: C3PI subset, automatic pill boxes, training, evaluation, ONNX export."""
+"""Models: training, evaluation, ONNX export and publication of the vision models."""
 
 import os
 

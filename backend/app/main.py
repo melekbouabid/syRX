@@ -12,10 +12,10 @@ from sqlalchemy.orm import sessionmaker
 from app.accounts import seed_accounts, warn_about_default_password
 from app.config import Settings
 from app.db import Base, make_engine
+from app.inference import ScannerHolder
 from app.limits import BodySizeLimit
 from app.routers import admin, auth, chat, demo, medicines, scan, toxicity
 from bonus.toxicity.model import ToxHolder
-from module1_vision_mlops.serving.scanner import ScannerHolder
 from module2_ai_engineering.agent.runtime import AgentHolder
 
 DESCRIPTION = (

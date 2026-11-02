@@ -17,7 +17,7 @@ pills are found as the regions whose colour differs from the background:
 6. each kept region becomes a box, mapped back to full resolution.
 
 Each result carries flags so doubtful images can be left out of detection training and
-checked by eye (`python -m tujya_vision.prepare --sheet`).
+checked by eye (`python -m src.data.prepare --sheet`).
 """
 
 from __future__ import annotations

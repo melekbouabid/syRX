@@ -13,6 +13,13 @@ from starlette.concurrency import run_in_threadpool
 
 from app.config import Settings
 from app.deps import PharmaSession, SettingsDep, get_current_user
+from app.inference import (
+    InvalidImage,
+    ModelsMissing,
+    PillScanner,
+    ScannerHolder,
+    decode_image,
+)
 from app.medicines import DISCLAIMER, PharmaUnavailable, pill_infos, sources
 from app.schemas import (
     NormalizedBox,
@@ -22,13 +29,6 @@ from app.schemas import (
     ScanResult,
     ScanTimings,
     SourceOut,
-)
-from module1_vision_mlops.serving.scanner import (
-    InvalidImage,
-    ModelsMissing,
-    PillScanner,
-    ScannerHolder,
-    decode_image,
 )
 
 router = APIRouter(prefix="/api", tags=["scan"], dependencies=[Depends(get_current_user)])

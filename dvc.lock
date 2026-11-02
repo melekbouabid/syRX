@@ -1,32 +1,32 @@
 schema: '2.0'
 stages:
   prepare:
-    cmd: python -m tujya_vision.prepare
+    cmd: python -m src.data.prepare
     deps:
-    - path: ../../config/splits/selected_images.csv
+    - path: config/splits/selected_images.csv
       hash: md5
       md5: de21c22fc4a8b12ef6e410cea10f1f8b
       size: 543427
-    - path: ../../data/vision/c3pi/images
+    - path: data/vision/c3pi/images
       hash: md5
       md5: d578e15638468a663cfe3c2b418a75df.dir
       size: 4770826176
       nfiles: 4206
-    - path: tujya_vision/autolabel.py
+    - path: src/data/autolabel.py
       hash: md5
-      md5: 26b310958e91f768acfd060deb459df1
-      size: 11308
-    - path: tujya_vision/prepare.py
+      md5: 42302ec12c5b8b3baa7c491bf09149a4
+      size: 11304
+    - path: src/data/prepare.py
       hash: md5
-      md5: 7c9a7747d41ca89b63ea86eb7cae5aa4
-      size: 7903
+      md5: 92b1ea913988540ec16a4b5c9fa3b90e
+      size: 7887
     outs:
-    - path: ../../data/vision/c3pi/labels
+    - path: data/vision/c3pi/labels
       hash: md5
       md5: e1f992c2edc160b47053b0e938f9ebfd.dir
       size: 499067
       nfiles: 1
-    - path: ../../data/vision/datasets
+    - path: data/vision/datasets
       hash: md5
       md5: 955353297ec68253f1e925a7304ec275.dir
       size: 304693171

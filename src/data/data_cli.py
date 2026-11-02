@@ -1,7 +1,7 @@
-"""Command line for the C3PI subset: `python -m tujya_vision.data_cli <command>`.
+"""Command line for the C3PI subset: `python -m src.data.data_cli <command>`.
 
-Run from the `module1_vision_mlops/training/` folder. Paths default to the repository layout:
-metadata in data/vision/c3pi/metadata, images in data/vision/c3pi/images,
+Run from the repository root with the training venv (.venv-train). Paths default to the
+repository layout: metadata in data/vision/c3pi/metadata, images in data/vision/c3pi/images,
 class list in config/pill_classes.csv, split lists in config/splits/.
 """
 
@@ -12,9 +12,9 @@ import csv
 from collections import Counter
 from pathlib import Path
 
-from tujya_vision import c3pi
+from src.data import c3pi
 
-ROOT = Path(__file__).resolve().parents[3]  # repository root
+ROOT = Path(__file__).resolve().parents[2]  # repository root
 META = ROOT / "data" / "vision" / "c3pi" / "metadata"
 IMAGES = ROOT / "data" / "vision" / "c3pi" / "images"
 CLASSES = ROOT / "config" / "pill_classes.csv"
@@ -84,7 +84,7 @@ def cmd_download(args: argparse.Namespace) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="tujya_vision.data_cli")
+    parser = argparse.ArgumentParser(prog="src.data.data_cli")
     parser.add_argument("--index", type=Path, default=META / "images.csv")
     parser.add_argument("--classes", type=Path, default=CLASSES)
     parser.add_argument("--images", type=Path, default=IMAGES)

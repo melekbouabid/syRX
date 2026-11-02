@@ -1,6 +1,6 @@
 """End-to-end evaluation: detector boxes -> crops -> classifier, on every test photo.
 
-    python -m tujya_vision.evaluate --detector runs/<detect-run>/weights/best.onnx \
+    python -m src.models.evaluate --detector runs/<detect-run>/weights/best.onnx \
         --classifier runs/<classify-run>/weights/best.onnx
 
 Unlike the per-model test scores, this uses all consumer photos of the test split (also the
@@ -20,9 +20,9 @@ from pathlib import Path
 import mlflow
 from ultralytics import YOLO
 
-from tujya_vision.autolabel import read_image, square_crop
-from tujya_vision.prepare import CROP_SIZE, SELECTED, Item
-from tujya_vision.train import EXPERIMENT, ROOT
+from src.data.autolabel import read_image, square_crop
+from src.data.prepare import CROP_SIZE, SELECTED, Item
+from src.models.train import EXPERIMENT, ROOT
 
 
 def evaluate(detector: Path, classifier: Path, *, conf: float = 0.25) -> dict[str, float]:
@@ -59,7 +59,7 @@ def evaluate(detector: Path, classifier: Path, *, conf: float = 0.25) -> dict[st
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m tujya_vision.evaluate")
+    parser = argparse.ArgumentParser(prog="python -m src.models.evaluate")
     parser.add_argument("--detector", type=Path, required=True)
     parser.add_argument("--classifier", type=Path, required=True)
     parser.add_argument("--conf", type=float, default=0.25)

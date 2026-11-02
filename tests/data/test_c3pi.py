@@ -1,4 +1,4 @@
-"""Tests for tujya_vision.c3pi on a tiny hand-written ALLXML file (no network)."""
+"""Tests for src.data.c3pi on a tiny hand-written ALLXML file (no network)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from tujya_vision import c3pi
+from src.data import c3pi
 
 
 def _image(

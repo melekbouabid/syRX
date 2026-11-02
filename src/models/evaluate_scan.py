@@ -2,10 +2,10 @@
 
 From the repository root, with the project venv (.venv) active:
 
-    python -m module1_vision_mlops.serving.evaluate_scan --split val    # choose the threshold
-    python -m module1_vision_mlops.serving.evaluate_scan --split test   # final numbers
+    python -m src.models.evaluate_scan --split val    # choose the threshold
+    python -m src.models.evaluate_scan --split test   # final numbers
 
-Same protocol as `training/tujya_vision/evaluate.py` (all consumer photos of the split, the
+Same protocol as `src/models/evaluate.py` (all consumer photos of the split, the
 most confident box is identified, no box counts as wrong), but with the code the API runs.
 Prints top-1 / top-5 and, for candidate thresholds, the share of photos accepted without
 confirmation and the top-1 accuracy among them. The models are read from SYNERGYRX_MODELS_DIR
@@ -21,7 +21,7 @@ import time
 from pathlib import Path
 
 from app.config import PROJECT_DIR, Settings
-from module1_vision_mlops.serving.scanner import PillScanner, decode_image
+from app.inference import PillScanner, decode_image
 
 THRESHOLDS = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95]
 

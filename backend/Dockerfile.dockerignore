@@ -3,9 +3,6 @@
 *
 !backend/requirements.txt
 !backend/app/
-!module1_vision_mlops/__init__.py
-!module1_vision_mlops/serving/__init__.py
-!module1_vision_mlops/serving/scanner.py
 !module2_ai_engineering/__init__.py
 !module2_ai_engineering/rag/
 !module2_ai_engineering/agent/

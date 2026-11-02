@@ -1,7 +1,7 @@
 """Build the training datasets from the downloaded C3PI subset.
 
-    python -m tujya_vision.prepare            # labels + both datasets
-    python -m tujya_vision.prepare --sheet    # also a contact sheet of boxes to check by eye
+    python -m src.data.prepare            # labels + both datasets
+    python -m src.data.prepare --sheet    # also a contact sheet of boxes to check by eye
 
 Outputs (all under data/vision/, tracked by DVC, never by git):
 - c3pi/labels/autolabel.csv     one row per image: boxes, flags, split, class
@@ -26,9 +26,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from tujya_vision.autolabel import Box, detect_pills, detect_reference, read_image, square_crop
+from src.data.autolabel import Box, detect_pills, detect_reference, read_image, square_crop
 
-ROOT = Path(__file__).resolve().parents[3]  # repository root
+ROOT = Path(__file__).resolve().parents[2]  # repository root
 VISION = ROOT / "data" / "vision"
 IMAGES = VISION / "c3pi" / "images"
 SELECTED = ROOT / "config" / "splits" / "selected_images.csv"
@@ -170,7 +170,7 @@ def contact_sheet(rows: list[dict[str, str]], out: Path, n: int = 48, seed: int 
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m tujya_vision.prepare")
+    parser = argparse.ArgumentParser(prog="python -m src.data.prepare")
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--limit", type=int, default=0, help="only the first N images (tests)")
     parser.add_argument("--sheet", type=Path, default=None, help="write a QA contact sheet")

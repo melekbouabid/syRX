@@ -42,10 +42,10 @@ Thumbs.db
 
 # Tujya: extra virtual environments and ML outputs (training runs of module 1)
 .venv-*/
-module1_vision_mlops/training/runs/
+/runs/
 mlruns/
 mlartifacts/
 *.onnx
 *.pt
-# Models served by the API (python -m tujya_vision.publish), never committed
+# Models served by the API (python -m src.models.publish), never committed
 /models/

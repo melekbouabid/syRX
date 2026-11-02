@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 import pytest
 
-from tujya_vision.autolabel import detect_pills, read_image, square_crop
+from src.data.autolabel import detect_pills, read_image, square_crop
 
 
 def _photo(pills: list[tuple[int, int, int, int, tuple[int, int, int]]]) -> np.ndarray:
