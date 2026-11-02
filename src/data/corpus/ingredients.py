@@ -20,7 +20,7 @@ from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Any
 
-from synergyrx_data.http.client import PoliteClient
+from src.data.synergyrx_data.http.client import PoliteClient
 
 RXNAV = "https://rxnav.nlm.nih.gov/REST"
 HOST = "rxnav.nlm.nih.gov"

@@ -10,12 +10,12 @@ import httpx
 import pandas as pd
 import pytest
 import respx
-from synergyrx_data import pipeline
-from synergyrx_data.config import Settings, SourceConfig
-from synergyrx_data.connectors.openfda import API, choose_label, label_sections
-from synergyrx_data.literature.queries import build_topic_query, read_ingredients
 
 from src.data.corpus import corpus
+from src.data.synergyrx_data import pipeline
+from src.data.synergyrx_data.config import Settings, SourceConfig
+from src.data.synergyrx_data.connectors.openfda import API, choose_label, label_sections
+from src.data.synergyrx_data.literature.queries import build_topic_query, read_ingredients
 
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 

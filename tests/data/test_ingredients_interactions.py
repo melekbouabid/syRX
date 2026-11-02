@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pandas as pd
 import respx
-from synergyrx_data.testing import ClientFactory
 
 from src.data.corpus import ingredients as ing
 from src.data.corpus.__main__ import update_class_file
@@ -15,6 +14,7 @@ from src.data.corpus.interactions import (
     filter_interactions,
     read_aliases,
 )
+from src.data.synergyrx_data.testing import ClientFactory
 
 R = ing.RXNAV
 

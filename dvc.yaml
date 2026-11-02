@@ -2,7 +2,7 @@
 # (data/vision/c3pi/*.dvc); the datasets built from them are a pipeline stage, so
 # `dvc repro` rebuilds them when the images, the split list or the labelling code change.
 # `prepare`: run from the repository root with the training venv active (.venv-train).
-# `rag_corpus`: from the repository root with the pipeline venv active (data_pipeline/.venv);
+# `rag_corpus`: from the repository root with the project venv active (.venv);
 # its inputs, the openFDA labels and PubMed abstracts under data/rag/raw and data/rag/interim,
 # are fetched by `python -m src.data.corpus labels` / `pubmed` and tracked with
 # `dvc add` (module2_ai_engineering/docs/rag.md).

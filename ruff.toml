@@ -18,6 +18,8 @@ ignore = [
 
 [lint.per-file-ignores]
 "**/tests/**" = ["S105", "S106", "S108"]
+# The data pipeline tests read small files synchronously inside async tests.
+"tests/data/pipeline/**" = ["S105", "S106", "S108", "ASYNC240"]
 # Test fixtures shared by the test suites (fake accounts and passwords).
 "backend/tujya_testing/**" = ["S105", "S106"]
 # One-off generator of the benchmark spec: its long lines are question and reference texts.

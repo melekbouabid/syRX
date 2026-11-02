@@ -25,7 +25,7 @@ flowchart LR
   DATA["data/ (DVC)<br/>C3PI, DDInter, corpus"] --> TR
   CORP --> DATA
   DATA --> RAG
-  PIPE["data_pipeline<br/>connecteurs"] --> CORP
+  PIPE["src/data/synergyrx_data<br/>connecteurs"] --> CORP
   classDef ops fill:#eef6ee,stroke:#5a8f5a
   classDef app fill:#eef3f8,stroke:#4a6f8f
   class DATA,TR,MLF,PIPE,CORP ops

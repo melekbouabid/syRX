@@ -24,10 +24,6 @@ import json
 from pathlib import Path
 
 import pandas as pd
-from synergyrx_data import pipeline
-from synergyrx_data.config import Settings, find_config, load_settings
-from synergyrx_data.http.client import PoliteClient
-from synergyrx_data.provenance import read_parquet, write_parquet
 
 from src.data.corpus import corpus
 from src.data.corpus import ingredients as ing
@@ -36,6 +32,10 @@ from src.data.corpus.interactions import (
     filter_interactions,
     read_aliases,
 )
+from src.data.synergyrx_data import pipeline
+from src.data.synergyrx_data.config import Settings, find_config, load_settings
+from src.data.synergyrx_data.http.client import PoliteClient
+from src.data.synergyrx_data.provenance import read_parquet, write_parquet
 
 # Tujya uses DDInter under its CC BY-NC-SA 4.0 terms (non-commercial student project, owner's
 # decision of 2026-10-27). The shared config.yaml keeps the connector opt-in.
@@ -57,11 +57,11 @@ PUBMED_OVERRIDES = [
     "sources.pubmed.options.start_date=2000/01/01",
 ]
 CLASS_COLUMNS = ["rxcui", "active_ingredients", "ingredient_rxcuis", "ingredient_method"]
-# Module 2 corpus steps run through the SynergyRx pipeline connectors (data_pipeline/): its
+# Module 2 corpus steps run through the SynergyRx pipeline connectors (src/data/synergyrx_data): its
 # configuration (rate limits, sources) is used when the steps run from the repository root,
 # as the DVC stage does; SYNERGYRX_CONFIG or a config.yaml in the working
 # directory still wins.
-PIPELINE_CONFIG = Path(__file__).resolve().parents[3] / "data_pipeline" / "config.yaml"
+PIPELINE_CONFIG = Path(__file__).resolve().parents[3] / "config" / "data_pipeline" / "config.yaml"
 
 
 def _paths(settings: Settings) -> dict[str, Path]:
