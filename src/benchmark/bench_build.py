@@ -1,7 +1,7 @@
 """Build the RAG benchmark set from the corpus: benchmark/rag_questions.jsonl.
 
 Each item comes from a hand-written spec (`benchmark/spec.json`: question type, ingredients,
-language, question text) and gets, from data/rag/corpus/chunks.parquet:
+language, question text) and gets, from data/processed/rag/corpus/chunks.parquet:
 - `expected_chunks`: every chunk that answers it (rules per type below);
 - `reference`: an extractive reference answer (sentences of the expected label chunks).
 The candidates were then read one by one and corrected or dropped
@@ -31,7 +31,7 @@ import pyarrow.parquet as pq
 from src.agent.safety import CROSS_REFERENCE, sentence_problems
 
 ROOT = Path(__file__).resolve().parents[2]
-CHUNKS = ROOT / "data" / "rag" / "corpus" / "chunks.parquet"
+CHUNKS = ROOT / "data" / "processed" / "rag" / "corpus" / "chunks.parquet"
 SPEC = ROOT / "src" / "benchmark" / "spec.json"
 OUT = ROOT / "src" / "benchmark" / "rag_questions.jsonl"
 

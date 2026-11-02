@@ -1,7 +1,7 @@
 """Train, log and publish the Tox21 toxicity model (bonus tool, bonus/docs/toxicity.md).
 
 # from the repository root, project venv (rdkit, lightgbm, mlflow)
-python -m src.models.toxicity.train_tox21 download   # MoleculeNet tox21.csv.gz -> data/tox21/
+python -m src.models.toxicity.train_tox21 download   # MoleculeNet tox21.csv.gz -> data/raw/tox21/
 python -m src.models.toxicity.train_tox21 train      # scaffold split, 12 LightGBM, MLflow tujya-tox
 python -m src.models.toxicity.train_tox21 publish    # registered version -> models/tox21/ (API)
 
@@ -32,7 +32,7 @@ import pandas as pd
 from src.models.toxicity.model import FP_BITS, FP_RADIUS, TASKS, fingerprint, scaffold, standardise
 
 ROOT = Path(__file__).resolve().parents[3]
-DATA = ROOT / "data" / "tox21"
+DATA = ROOT / "data" / "raw" / "tox21"
 RAW = DATA / "tox21.csv.gz"
 URL = "https://deepchemdata.s3-us-west-1.amazonaws.com/datasets/tox21.csv.gz"
 MODELS = ROOT / "models" / "tox21"

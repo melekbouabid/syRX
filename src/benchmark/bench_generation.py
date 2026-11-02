@@ -38,7 +38,7 @@ from src.agent.safety import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-ANSWERS = ROOT / "data" / "rag" / "bench" / "answers.jsonl"
+ANSWERS = ROOT / "data" / "processed" / "rag" / "bench" / "answers.jsonl"
 OUT = ROOT / "src" / "benchmark" / "results_generation.json"
 PER_QUESTION = ROOT / "src" / "benchmark" / "generation_per_question.jsonl"
 JUDGE_PROMPT = """You check citations. Answer with one word: yes or no.

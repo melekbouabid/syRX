@@ -2,15 +2,16 @@
 
     ddinter        DDInter 2.0, all 14 ATC files, terms acknowledged for this academic
                    project (CC BY-NC-SA 4.0); SynergyRx's own config keeps it opt-in
-    ingredients    config/pill_classes.csv -> RxNav -> data/tujya/pill_ingredients.csv,
+    ingredients    config/pill_classes.csv -> RxNav -> data/processed/pharma/pill_ingredients.csv,
                    and the ingredient columns of config/pill_classes.csv
     interactions   DDInter (run `synergyrx fetch --source ddinter` first) ->
-                   data/tujya/interactions_between_classes.csv (both drugs are class ingredients)
-                   data/tujya/interactions_with_any_drug.csv (at least one is)
+                   data/processed/pharma/interactions_between_classes.csv (both drugs are
+                   class ingredients), data/processed/pharma/interactions_with_any_drug.csv
+                   (at least one is)
     labels         openFDA drug labels, one per class ingredient -> data/rag (raw, interim)
     pubmed         PubMed abstracts on interactions and adverse effects, up to 20 per
                    ingredient -> data/rag (raw, interim)
-    corpus         labels + abstracts + DDInter pairs -> data/rag/corpus/chunks.parquet
+    corpus         labels + abstracts + DDInter pairs -> data/processed/rag/corpus/chunks.parquet
 
 Docs: module2_ai_engineering/docs/interactions.md, module2_ai_engineering/docs/rag.md.
 """
@@ -66,7 +67,7 @@ PIPELINE_CONFIG = Path(__file__).resolve().parents[3] / "config" / "data_pipelin
 
 def _paths(settings: Settings) -> dict[str, Path]:
     root = settings.project_root
-    out = root / "data" / "tujya"
+    out = root / "data" / "processed" / "pharma"
     return {
         "classes": root / "config" / "pill_classes.csv",
         "aliases": root / "config" / "ingredient_aliases.csv",
@@ -74,7 +75,9 @@ def _paths(settings: Settings) -> dict[str, Path]:
         "ddinter": root / "data" / "interim" / "ddinter" / "interactions.parquet",
         "between": out / "interactions_between_classes.csv",
         "any": out / "interactions_with_any_drug.csv",
+        # Collection workspace of the RAG sources (raw downloads, interim tables, manifest).
         "rag": root / "data" / "rag",
+        "corpus": root / "data" / "processed" / "rag" / "corpus",
     }
 
 
@@ -155,7 +158,7 @@ def run_corpus(settings: Settings) -> None:
     if ddinter.is_file():
         ddinter_date = str(pd.read_parquet(ddinter, columns=["retrieved_at"])["retrieved_at"].max())
     chunks = corpus.build_chunks(labels, articles, by_pmid, pairs, names, ddinter_date)
-    out = rag / "corpus"
+    out = paths["corpus"]
     write_parquet(chunks, out / "chunks.parquet")
     stats = corpus.summary(chunks)
     (out / "summary.json").write_text(json.dumps(stats, indent=2) + "\n", encoding="utf-8")

@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     scan_max_bytes: int = 10 * 1024 * 1024
     scan_max_pixels: int = 50_000_000
     # C3PI test-split photos shown in the demo gallery (read-only); see app/routers/demo.py.
-    demo_images_dir: Path = PROJECT_DIR / "data" / "vision" / "c3pi" / "images"
+    demo_images_dir: Path = PROJECT_DIR / "data" / "raw" / "c3pi" / "images"
     demo_split_file: Path = PROJECT_DIR / "config" / "splits" / "selected_images.csv"
     demo_gallery_file: Path = PROJECT_DIR / "config" / "demo_gallery.csv"
 
@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     # lives in the pharma database (table rag_chunks, pgvector);
     # `python -m src.rag.index` fills it from this file. Ollama serves both
     # the LLM and the embeddings (docker compose `ollama`).
-    rag_chunks_file: Path = PROJECT_DIR / "data" / "rag" / "corpus" / "chunks.parquet"
+    rag_chunks_file: Path = PROJECT_DIR / "data" / "processed" / "rag" / "corpus" / "chunks.parquet"
     ollama_url: str = "http://127.0.0.1:11434"
     llm_model: str = "qwen2.5:3b"
     llm_temperature: float = 0.1

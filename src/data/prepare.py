@@ -3,8 +3,9 @@
     python -m src.data.prepare            # labels + both datasets
     python -m src.data.prepare --sheet    # also a contact sheet of boxes to check by eye
 
-Outputs (all under data/vision/, tracked by DVC, never by git):
-- c3pi/labels/autolabel.csv     one row per image: boxes, flags, split, class
+Input: the C3PI photos in data/raw/c3pi/images. Outputs (all under data/processed/c3pi/,
+tracked by DVC, never by git):
+- labels/autolabel.csv          one row per image: boxes, flags, split, class
 - datasets/detect/              YOLO detection dataset, one class "pill"; consumer photos
                                 without flags only; long side resized to 640 px
 - datasets/classify/            YOLO classification dataset: square crops around each box,
@@ -29,12 +30,12 @@ import numpy as np
 from src.data.autolabel import Box, detect_pills, detect_reference, read_image, square_crop
 
 ROOT = Path(__file__).resolve().parents[2]  # repository root
-VISION = ROOT / "data" / "vision"
-IMAGES = VISION / "c3pi" / "images"
+IMAGES = ROOT / "data" / "raw" / "c3pi" / "images"
+PROCESSED = ROOT / "data" / "processed" / "c3pi"
 SELECTED = ROOT / "config" / "splits" / "selected_images.csv"
-LABELS = VISION / "c3pi" / "labels" / "autolabel.csv"
-DETECT = VISION / "datasets" / "detect"
-CLASSIFY = VISION / "datasets" / "classify"
+LABELS = PROCESSED / "labels" / "autolabel.csv"
+DETECT = PROCESSED / "datasets" / "detect"
+CLASSIFY = PROCESSED / "datasets" / "classify"
 DETECT_SIZE = 640
 CROP_SIZE = 224
 MAX_CROPS = 2  # front and back of the same pill at most

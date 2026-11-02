@@ -4,9 +4,10 @@
     python -m app.pharma_loader --database-url postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
 
 Inputs (built by the data steps, see module2_ai_engineering/docs/interactions.md):
-- config/pill_classes.csv                        one row per identification class
-- data/tujya/pill_ingredients.csv                class -> ingredient (RxNav)
-- data/tujya/interactions_with_any_drug.csv      DDInter pairs involving a class ingredient
+- config/pill_classes.csv                                 one row per identification class
+- data/processed/pharma/pill_ingredients.csv             class -> ingredient (RxNav)
+- data/processed/pharma/interactions_with_any_drug.csv   DDInter pairs involving a class
+                                                         ingredient
 
 The load is a full refresh: the five tables are dropped and created again from the models
 in app/pharma.py (so a new column reaches an existing database), then filled in one
@@ -65,8 +66,8 @@ class Inputs:
     def default(cls, root: Path = PROJECT_DIR) -> Inputs:
         return cls(
             classes=root / "config" / "pill_classes.csv",
-            ingredients=root / "data" / "tujya" / "pill_ingredients.csv",
-            interactions=root / "data" / "tujya" / "interactions_with_any_drug.csv",
+            ingredients=root / "data" / "processed" / "pharma" / "pill_ingredients.csv",
+            interactions=root / "data" / "processed" / "pharma" / "interactions_with_any_drug.csv",
         )
 
 

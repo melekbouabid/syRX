@@ -1,7 +1,7 @@
 """Command line for the C3PI subset: `python -m src.data.data_cli <command>`.
 
 Run from the repository root with the training venv (.venv-train). Paths default to the
-repository layout: metadata in data/vision/c3pi/metadata, images in data/vision/c3pi/images,
+repository layout: metadata in data/raw/c3pi/metadata, images in data/raw/c3pi/images,
 class list in config/pill_classes.csv, split lists in config/splits/.
 """
 
@@ -15,8 +15,8 @@ from pathlib import Path
 from src.data import c3pi
 
 ROOT = Path(__file__).resolve().parents[2]  # repository root
-META = ROOT / "data" / "vision" / "c3pi" / "metadata"
-IMAGES = ROOT / "data" / "vision" / "c3pi" / "images"
+META = ROOT / "data" / "raw" / "c3pi" / "metadata"
+IMAGES = ROOT / "data" / "raw" / "c3pi" / "images"
 CLASSES = ROOT / "config" / "pill_classes.csv"
 SPLITS = ROOT / "config" / "splits"
 

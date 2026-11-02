@@ -1,6 +1,6 @@
 """Generation benchmark, step 1: run the real agent on every benchmark question.
 
-Writes data/rag/bench/answers.jsonl (git-ignored: it holds the source texts, some from
+Writes data/processed/rag/bench/answers.jsonl (git-ignored: it holds the source texts, some from
 PubMed abstracts): question, draft (before the safety node), answer, sources with their
 text, tool calls, safety report, timings. Step 2 is bench_generation.py.
 
@@ -23,7 +23,7 @@ from src.agent.runtime import AgentHolder
 
 ROOT = Path(__file__).resolve().parents[2]
 QUESTIONS = ROOT / "src" / "benchmark" / "rag_questions.jsonl"
-OUT = ROOT / "data" / "rag" / "bench" / "answers.jsonl"
+OUT = ROOT / "data" / "processed" / "rag" / "bench" / "answers.jsonl"
 
 
 async def main() -> None:

@@ -27,7 +27,7 @@ THRESHOLDS = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95]
 
 
 def photos(split: str) -> list[tuple[Path, int]]:
-    images = PROJECT_DIR / "data" / "vision" / "c3pi" / "images"
+    images = PROJECT_DIR / "data" / "raw" / "c3pi" / "images"
     with (PROJECT_DIR / "config" / "splits" / "selected_images.csv").open(encoding="utf-8") as f:
         rows = [r for r in csv.DictReader(f) if r["split"] == split]
     out = []

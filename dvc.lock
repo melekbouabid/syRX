@@ -7,7 +7,7 @@ stages:
       hash: md5
       md5: de21c22fc4a8b12ef6e410cea10f1f8b
       size: 543427
-    - path: data/vision/c3pi/images
+    - path: data/raw/c3pi/images
       hash: md5
       md5: d578e15638468a663cfe3c2b418a75df.dir
       size: 4770826176
@@ -18,22 +18,30 @@ stages:
       size: 11304
     - path: src/data/prepare.py
       hash: md5
-      md5: 92b1ea913988540ec16a4b5c9fa3b90e
-      size: 7887
+      md5: 73dba297e27dd32bd9ee600d7c8cef2b
+      size: 7973
     outs:
-    - path: data/vision/c3pi/labels
-      hash: md5
-      md5: e1f992c2edc160b47053b0e938f9ebfd.dir
-      size: 499067
-      nfiles: 1
-    - path: data/vision/datasets
+    - path: data/processed/c3pi/datasets
       hash: md5
       md5: 955353297ec68253f1e925a7304ec275.dir
       size: 304693171
       nfiles: 10726
+    - path: data/processed/c3pi/labels
+      hash: md5
+      md5: e1f992c2edc160b47053b0e938f9ebfd.dir
+      size: 499067
+      nfiles: 1
   rag_corpus:
-    cmd: python -m module2_ai_engineering.corpus corpus
+    cmd: python -m src.data.corpus corpus
     deps:
+    - path: data/processed/pharma/interactions_between_classes.csv
+      hash: md5
+      md5: 91982324eb744e1ce2a132dcf2cb88ba
+      size: 552534
+    - path: data/processed/pharma/pill_ingredients.csv
+      hash: md5
+      md5: 6051d52004ad0d914547068491a20339
+      size: 19017
     - path: data/rag/interim
       hash: md5
       md5: 0419ea6313c8ca6eba822de3bd8c76be.dir
@@ -44,20 +52,12 @@ stages:
       md5: c95d50e0b58af134900dc7d81420654a.dir
       size: 22134557
       nfiles: 164
-    - path: data/tujya/interactions_between_classes.csv
-      hash: md5
-      md5: 91982324eb744e1ce2a132dcf2cb88ba
-      size: 552534
-    - path: data/tujya/pill_ingredients.csv
-      hash: md5
-      md5: 6051d52004ad0d914547068491a20339
-      size: 19017
-    - path: module2_ai_engineering/corpus/corpus.py
+    - path: src/data/corpus/corpus.py
       hash: md5
       md5: 5e12e51330514dd2f0589242b9be8ae8
       size: 11687
     outs:
-    - path: data/rag/corpus
+    - path: data/processed/rag/corpus
       hash: md5
       md5: 67ab752e53fb16523e9e01787320cf55.dir
       size: 1832839

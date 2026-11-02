@@ -1,4 +1,4 @@
-"""Index the RAG corpus: data/rag/corpus/chunks.parquet -> table rag_chunks (pgvector).
+"""Index the RAG corpus: data/processed/rag/corpus/chunks.parquet -> table rag_chunks (pgvector).
 
 Idempotent: each row keeps a hash of its text, metadata and embedding model, so a second
 run embeds nothing, a changed chunk is re-embedded, and a chunk gone from the corpus is
