@@ -15,8 +15,8 @@ from app.db import Base, make_engine
 from app.inference import ScannerHolder
 from app.limits import BodySizeLimit
 from app.routers import admin, auth, chat, demo, medicines, scan, toxicity
-from bonus.toxicity.model import ToxHolder
 from src.agent.runtime import AgentHolder
+from src.models.toxicity.model import ToxHolder
 
 DESCRIPTION = (
     "Pill identification and interaction checks for the Tujya project. "

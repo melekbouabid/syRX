@@ -13,9 +13,9 @@ from sqlalchemy import Engine
 
 from app.config import Settings
 from app.inference import ScannerHolder
-from bonus.toxicity.model import ToxHolder
 from src.agent.graph import TujyaAgent
 from src.agent.tools import Toolbox
+from src.models.toxicity.model import ToxHolder
 from src.rag.embeddings import Embedder, OllamaEmbedder
 from src.rag.retrieval import RetrieverHolder
 from src.rag.store import ChunkStore

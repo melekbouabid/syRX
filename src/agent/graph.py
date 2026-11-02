@@ -30,7 +30,6 @@ from langgraph.graph import END, START, StateGraph
 from sqlalchemy.orm import Session
 
 from app.medicines import DISCLAIMER, pill_infos
-from bonus.toxicity.model import LOW_NOTE, MIXTURE_NOTE, WORDING
 from src.agent.safety import (
     CROSS_REFERENCE,
     REFUSAL_DOSE,
@@ -41,6 +40,7 @@ from src.agent.safety import (
     split_sentences,
 )
 from src.agent.tools import CHAT_TOOLS, Toolbox, ToolError, langchain_tools
+from src.models.toxicity.model import LOW_NOTE, MIXTURE_NOTE, WORDING
 from src.rag.embeddings import EmbeddingError, fold
 
 MAX_SOURCES = 8

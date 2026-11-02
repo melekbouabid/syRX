@@ -16,7 +16,9 @@ from mcp import Client
 
 from app.config import Settings
 from app.medicines import DISCLAIMER
-from bonus.toxicity.model import (
+from src.agent.runtime import AgentHolder
+from src.mcp_server.server import build_server, default_toolbox
+from src.models.toxicity.model import (
     FP_BITS,
     MIXTURE_NOTE,
     TASKS,
@@ -30,8 +32,6 @@ from bonus.toxicity.model import (
     standardise,
     tanimoto_max,
 )
-from src.agent.runtime import AgentHolder
-from src.mcp_server.server import build_server, default_toolbox
 from src.rag.embeddings import FakeEmbedder
 from tujya_testing.fixtures import USER, sign_in
 from tujya_testing.rag_fakes import DIM, FakeChatModel, build_index
@@ -112,7 +112,7 @@ def test_names_resolver_invalid_input_and_at_most_two() -> None:
 
 def test_missing_model_says_how_to_publish(tmp_path: Path) -> None:
     holder = ToxHolder(tmp_path / "none", tmp_path / "none.csv")
-    with pytest.raises(ToxicityUnavailable, match=r"bonus\.toxicity\.train_tox21 publish"):
+    with pytest.raises(ToxicityUnavailable, match=r"src\.models\.toxicity\.train_tox21 publish"):
         predict_molecules(holder, ["CCO"])
 
 

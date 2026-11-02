@@ -25,7 +25,7 @@ from app.config import Settings
 from app.inference import ScannerHolder
 from app.medicines import DISCLAIMER, PharmaUnavailable, search_pills
 from app.pharma import Ingredient
-from bonus.toxicity.model import ToxHolder, ToxicityUnavailable, predict_molecules
+from src.models.toxicity.model import ToxHolder, ToxicityUnavailable, predict_molecules
 from src.rag.names import NameIndex
 from src.rag.retrieval import Hit, RetrieverHolder
 from src.rag.store import Filters

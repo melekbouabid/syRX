@@ -1,7 +1,7 @@
 """Write config/ingredient_smiles.csv: a structure (SMILES) for each active ingredient.
 
 # from the repository root, project venv (.venv) active
-python -m bonus.toxicity.fetch_ingredient_smiles      # PubChem PUG-REST, 4 requests/s at most
+python -m src.models.toxicity.fetch_ingredient_smiles      # PubChem PUG-REST, 4 requests/s at most
 
 Used by the toxicity tool to accept ingredient names (bonus/docs/toxicity.md). One PubChem lookup
 by name per ingredient of data/tujya/pill_ingredients.csv; PubChem data is public domain.
@@ -19,7 +19,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 INGREDIENTS = ROOT / "data" / "tujya" / "pill_ingredients.csv"
 OUT = ROOT / "config" / "ingredient_smiles.csv"
 API = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{}/property/SMILES/JSON"

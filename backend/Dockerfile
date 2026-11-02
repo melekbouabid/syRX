@@ -23,7 +23,6 @@ COPY backend/requirements.txt ./
 RUN pip install -r requirements.txt
 
 COPY src /tujya/src
-COPY bonus /tujya/bonus
 COPY backend/app ./app
 
 RUN useradd --create-home --uid 1000 tujya

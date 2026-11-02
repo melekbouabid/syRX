@@ -22,8 +22,8 @@ from app.config import Settings
 from app.db import make_engine
 from app.inference import ScannerHolder
 from app.medicines import DISCLAIMER
-from bonus.toxicity.model import ToxHolder
 from src.agent.tools import TOOL_SPECS, Toolbox
+from src.models.toxicity.model import ToxHolder
 from src.rag.embeddings import Embedder, OllamaEmbedder
 from src.rag.retrieval import RetrieverHolder
 from src.rag.store import ChunkStore
