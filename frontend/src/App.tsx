@@ -1,7 +1,7 @@
 import { Link, Navigate, Route, Routes } from "react-router-dom";
-import { homePath, useAuth } from "./auth";
+import { homePath, useAuth } from "./services/auth";
 import { Logo, Spinner } from "./components";
-import { AdminLayout, RequireAuth, UserLayout } from "./layouts";
+import { AdminLayout, RequireAuth, UserLayout } from "./components/layouts";
 import Dashboard from "./pages/admin/Dashboard";
 import Users from "./pages/admin/Users";
 import AuthPage from "./pages/AuthPage";

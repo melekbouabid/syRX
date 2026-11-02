@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import { useAuth } from "../auth";
+import { useAuth } from "../services/auth";
 import { APP_NAME } from "../brand";
 import { greeting, LogoMark, staggerIndex } from "../components";
-import { Icon, type IconName } from "../icons";
+import { Icon, type IconName } from "../components/icons";
 
 const SHORTCUTS: { to: string; title: string; text: string; icon: IconName }[] = [
   {

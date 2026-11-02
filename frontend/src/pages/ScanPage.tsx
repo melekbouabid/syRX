@@ -10,10 +10,10 @@ import {
   type ScanResult,
   type Severity,
   type Source,
-} from "../api";
+} from "../services/api";
 import { Alert, Badge, Spinner, staggerIndex } from "../components";
 import { useDebounced, useQuery } from "../hooks";
-import { Icon, type IconName } from "../icons";
+import { Icon, type IconName } from "../components/icons";
 import ChatPanel from "./ChatPanel";
 
 // Safety texts are shown exactly as the project rules write them (docs/project_rules.md, D53).

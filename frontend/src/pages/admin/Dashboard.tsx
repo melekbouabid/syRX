@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
-import { api, type AdminStats } from "../../api";
-import { useAuth } from "../../auth";
+import { api, type AdminStats } from "../../services/api";
+import { useAuth } from "../../services/auth";
 import { APP_NAME } from "../../brand";
 import {
   Alert,
@@ -14,7 +14,7 @@ import {
   TableSkeleton,
 } from "../../components";
 import { useQuery } from "../../hooks";
-import { Icon, type IconName } from "../../icons";
+import { Icon, type IconName } from "../../components/icons";
 
 const TILES: { key: keyof AdminStats; label: string; note: string; icon: IconName }[] = [
   { key: "users_total", label: "Accounts", note: "users and administrators", icon: "users" },

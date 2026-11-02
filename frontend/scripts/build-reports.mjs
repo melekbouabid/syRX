@@ -1,6 +1,6 @@
 // Build the diagrams and the technical reports: Mermaid -> PNG, Markdown -> PDF.
 //
-//   cd app/frontend
+//   cd frontend
 //   node scripts/build-reports.mjs            # all diagrams and reports
 //
 // No pandoc or LaTeX on this machine: Chromium (Playwright) renders everything. Mermaid and
@@ -15,7 +15,7 @@ import { chromium } from "playwright";
 
 // REPORTS: one folder, or several separated by ";" (default: the three documentation folders).
 const FOLDERS = (
-  process.env.REPORTS ?? "../../docs;../../module1_vision_mlops/docs;../../module2_ai_engineering/docs"
+  process.env.REPORTS ?? "../docs;../module1_vision_mlops/docs;../module2_ai_engineering/docs"
 )
   .split(";")
   .map((folder) => resolve(folder));

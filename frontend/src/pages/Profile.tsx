@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { api, errorMessage } from "../api";
-import { useAuth } from "../auth";
+import { api, errorMessage } from "../services/api";
+import { useAuth } from "../services/auth";
 import {
   Alert,
   Avatar,

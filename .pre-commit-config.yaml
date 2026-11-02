@@ -42,10 +42,10 @@ repos:
         stages: [commit-msg]
 
       - id: eslint
-        name: eslint (app/frontend)
-        entry: npm --prefix app/frontend run lint --silent
+        name: eslint (frontend/)
+        entry: npm --prefix frontend run lint --silent
         language: system
-        files: ^app/frontend/(src/.*\.tsx?|scripts/.*\.mjs|vite\.config\.ts|eslint/eslint\.config\.js)$
+        files: ^frontend/(src/.*\.tsx?|scripts/.*\.mjs|vite\.config\.ts|eslint/eslint\.config\.js)$
         pass_filenames: false
 
   - repo: local

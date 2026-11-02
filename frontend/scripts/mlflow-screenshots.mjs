@@ -10,7 +10,7 @@ import { join, resolve } from "node:path";
 import { chromium } from "playwright";
 
 const MLFLOW = process.env.MLFLOW ?? "http://127.0.0.1:5000";
-const OUT = resolve(process.env.OUT ?? "../../docs/screenshots");
+const OUT = resolve(process.env.OUT ?? "../docs/screenshots");
 
 async function experimentId(name) {
   const response = await fetch(

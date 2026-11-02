@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { api, errorMessage, type Role, type User } from "../../api";
-import { useAuth } from "../../auth";
+import { api, errorMessage, type Role, type User } from "../../services/api";
+import { useAuth } from "../../services/auth";
 import {
   Alert,
   Avatar,
@@ -15,7 +15,7 @@ import {
   TextField,
 } from "../../components";
 import { useDebounced, useQuery } from "../../hooks";
-import { Icon } from "../../icons";
+import { Icon } from "../../components/icons";
 
 const PAGE_SIZE = 10;
 const MIN_PASSWORD_LENGTH = 8;

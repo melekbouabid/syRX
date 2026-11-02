@@ -1,7 +1,7 @@
 {
   "name": "tujya-web-eslint",
   "private": true,
-  "description": "ESLint for app/frontend, kept apart: typescript-eslint parses with TypeScript 6.0, while the app builds with TypeScript 7 (no JavaScript API yet).",
+  "description": "ESLint for frontend/, kept apart: typescript-eslint parses with TypeScript 6.0, while the app builds with TypeScript 7 (no JavaScript API yet).",
   "type": "module",
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -7,10 +7,10 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import logoDarkUrl from "./assets/logo-dark.png";
-import logoMarkUrl from "./assets/logo-mark.png";
-import logoUrl from "./assets/logo.png";
-import { APP_NAME } from "./brand";
+import logoDarkUrl from "../assets/logo-dark.png";
+import logoMarkUrl from "../assets/logo-mark.png";
+import logoUrl from "../assets/logo.png";
+import { APP_NAME } from "../brand";
 import { Icon, type IconName } from "./icons";
 import { CountUp } from "./motion";
 

@@ -182,12 +182,12 @@ jobs:
           exit $status
 
   frontend:
-    name: frontend (app/frontend, lint, type check and build)
+    name: frontend (frontend/, lint, type check and build)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: app/frontend
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -195,8 +195,8 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: |
-            app/frontend/package-lock.json
-            app/frontend/eslint/package-lock.json
+            frontend/package-lock.json
+            frontend/eslint/package-lock.json
       - run: npm ci
       - run: npm ci --prefix eslint
       - run: npm run lint

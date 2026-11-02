@@ -1,7 +1,7 @@
 import { Fragment, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { api, errorMessage, type ChatCitation, type ChatResult, type ChatToolCall } from "../api";
+import { api, errorMessage, type ChatCitation, type ChatResult, type ChatToolCall } from "../services/api";
 import { Alert, Badge } from "../components";
-import { Icon } from "../icons";
+import { Icon } from "../components/icons";
 
 // Shown exactly as the project rules write it (docs/project_rules.md, D53); always visible.
 const DISCLAIMER = "Information uniquement, consultez un pharmacien ou un médecin.";

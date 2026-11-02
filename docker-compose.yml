@@ -151,7 +151,7 @@ services:
 
   frontend:
     image: ${FRONTEND_IMAGE:-tujia2-frontend:local}
-    build: ./app/frontend
+    build: ./frontend
     ports:
       - "127.0.0.1:${WEB_PORT:-8080}:80"
     depends_on:

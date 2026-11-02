@@ -1,14 +1,14 @@
-// ESLint for the React app (app/frontend). This folder is its own npm package because
+// ESLint for the React app (frontend/). This folder is its own npm package because
 // typescript-eslint needs the TypeScript JavaScript API, which TypeScript 7 (used by the app's
 // build) no longer ships: the parser runs on TypeScript 6.0 here, type checking stays `tsc`.
-// Run from app/frontend: `npm --prefix eslint ci` once, then `npm run lint`.
+// Run from frontend/: `npm --prefix eslint ci` once, then `npm run lint`.
 import js from "@eslint/js";
 import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  // Paths are relative to app/frontend, where `npm run lint` runs ESLint with this config.
+  // Paths are relative to frontend/, where `npm run lint` runs ESLint with this config.
   { ignores: ["dist/", "node_modules/", "eslint/", "public/"] },
   {
     files: ["src/**/*.{ts,tsx}", "vite.config.ts"],

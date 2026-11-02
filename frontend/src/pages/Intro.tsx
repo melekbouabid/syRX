@@ -2,8 +2,8 @@ import { useRef, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { APP_NAME } from "../brand";
 import { Logo, LogoMark } from "../components";
-import { Icon, type IconName } from "../icons";
-import { Reveal, useInView } from "../motion";
+import { Icon, type IconName } from "../components/icons";
+import { Reveal, useInView } from "../components/motion";
 
 // The three things the app does, in the order a visit goes through them.
 const STEPS = [

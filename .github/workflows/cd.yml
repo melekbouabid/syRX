@@ -49,8 +49,8 @@ jobs:
             context: .
             file: backend/Dockerfile
           - image: frontend
-            context: app/frontend
-            file: app/frontend/Dockerfile
+            context: frontend
+            file: frontend/Dockerfile
     steps:
       - uses: actions/checkout@v4
         with:
@@ -119,8 +119,8 @@ jobs:
             context: .
             file: backend/Dockerfile
           - image: frontend
-            context: app/frontend
-            file: app/frontend/Dockerfile
+            context: frontend
+            file: frontend/Dockerfile
     steps:
       - uses: actions/checkout@v4
 

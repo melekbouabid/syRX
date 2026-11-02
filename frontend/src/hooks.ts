@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type DependencyList } from "react";
-import { errorMessage } from "./api";
+import { errorMessage } from "./services/api";
 
 interface QueryState<T> {
   data: T | null;

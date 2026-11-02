@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
-import { errorMessage, type User } from "../api";
-import { homePath, useAuth } from "../auth";
+import { errorMessage, type User } from "../services/api";
+import { homePath, useAuth } from "../services/auth";
 import { APP_NAME } from "../brand";
 import {
   Alert,

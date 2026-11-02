@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link, Navigate, NavLink, Outlet, useLocation } from "react-router-dom";
-import { errorMessage, type Role } from "./api";
-import { homePath, useAuth } from "./auth";
-import { Alert, Avatar, Logo, Spinner } from "./components";
+import { errorMessage, type Role } from "../services/api";
+import { homePath, useAuth } from "../services/auth";
+import { Alert, Avatar, Logo, Spinner } from "./index";
 import { Icon, type IconName } from "./icons";
 
 /** Gate for a group of routes: signed in, and (when `role` is given) with that role. */
