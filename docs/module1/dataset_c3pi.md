@@ -3,8 +3,8 @@
 Ce que contient l'archive du Computational Photography Project for Pill Identification
 (C3PI), et comment Tujya l'utilise. Exploré le 2026-10-28 à partir des fichiers listés
 ci-dessous ; chaque chiffre de cette page a été calculé à partir des métadonnées téléchargées
-(`data/vision/c3pi/metadata/images.csv`, construit par
-`python -m tujya_vision.data_cli index`).
+(`data/raw/c3pi/metadata/images.csv`, construit par
+`python -m src.data.data_cli index`).
 
 - Catalogue : https://catalog.data.gov/dataset/computational-photography-project-for-pill-identification-c3pi
 - Fichiers : https://data.lhncbc.nlm.nih.gov/public/Pills/ (bucket S3 public, simple index
@@ -52,7 +52,7 @@ Chaque fichier XML liste, pour chaque image de son dossier :
 laboratoire. **Non disponibles :** RxCUI ou tout code RxNorm, liste normalisée des principes
 actifs, dosages sous forme de nombres. Les principes actifs viennent donc de RxNav (NDC ->
 RxCUI -> principes actifs), voir
-[interactions.md](../../module2_ai_engineering/docs/interactions.md).
+[interactions.md](../module2/interactions.md).
 
 ## Types d'images
 
@@ -108,7 +108,7 @@ les deux images de l'API RxImage en six résolutions (de 120 px à l'original).
 - Les photos « consumer » montrent **un comprimé**, à peu près centré, sur un fond assez
   uniforme (voir l'exemple de `RxImageImageLayouts.docx` et le sous-ensemble téléchargé). Une
   boîte peut donc être calculée automatiquement (soustraction du fond / seuillage) : c'est
-  la méthode retenue pour l'étape de détection ([vision.md](vision.md), D38).
+  la méthode retenue pour l'étape de détection ([docs/module1/vision.md](vision.md), D38).
 - Les PNG de référence segmentés portent un vrai masque du comprimé dans leur canal alpha ;
   ils pourraient être collés sur des fonds pour synthétiser des images d'entraînement à
   plusieurs comprimés.
@@ -118,7 +118,7 @@ les deux images de l'API RxImage en six résolutions (de 120 px à l'original).
 - Classes d'identification : les 150 produits ayant le plus de photos « consumer », après
   avoir écarté les deux appareils haute résolution (Canon G10 et Nikon S3000 : 28 % des photos
   mais 60 % des octets). Voir `config/pill_classes.csv` et
-  [docs/decisions.md](../../docs/decisions.md) (D32).
+  [docs/decisions.md](../decisions.md) (D32).
 - Par classe : jusqu'à 30 photos « consumer » (échantillon aléatoire à graine fixe) + une
   image de référence RxNav par NDC de conditionnement quand elle existe. 4 206 fichiers,
   4,8 Go.
@@ -126,18 +126,18 @@ les deux images de l'API RxImage en six résolutions (de 120 px à l'original).
   entraînement ; les photos de même SHA-1 sont toujours dans le même split ; les images de
   référence sont en entraînement seulement. Liste : `config/splits/selected_images.csv`
   (chemin, class_id, type, taille, sha1, split).
-- Stockage : `data/vision/c3pi/images/<disque>/<fichier>`, suivi par DVC, jamais par git.
+- Stockage : `data/raw/c3pi/images/<disque>/<fichier>`, suivi par DVC, jamais par git.
 
 ## Reconstruire
 
 ```bash
-cd module1_vision_mlops/training
-python -m tujya_vision.data_cli metadata         # READMEs, index, ALLXML/*.xml (~130 Mo)
-python -m tujya_vision.data_cli index            # ALLXML -> data/vision/c3pi/metadata/images.csv
-python -m tujya_vision.data_cli select --max-classes 150 --min-images 20 --max-per-class 30 \
+# depuis la racine du dépôt, venv d'entraînement (.venv-train) actif
+python -m src.data.data_cli metadata         # READMEs, index, ALLXML/*.xml (~130 Mo)
+python -m src.data.data_cli index            # ALLXML -> data/raw/c3pi/metadata/images.csv
+python -m src.data.data_cli select --max-classes 150 --min-images 20 --max-per-class 30 \
     --exclude-camera "Canon PowerShot G10 [14.7 megapixel CCD]" \
     --exclude-camera "Nikon S3000 Coolpix (12.0 megapixel)"
-python -m tujya_vision.data_cli download --workers 6   # reprise possible, SHA-1 vérifié
+python -m src.data.data_cli download --workers 6   # reprise possible, SHA-1 vérifié
 ```
 
 La première exploration avait récupéré les mêmes fichiers avec curl.

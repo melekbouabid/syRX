@@ -7,7 +7,7 @@
 # the openFDA labels and PubMed abstracts under data/rag/raw and data/rag/interim (the
 # collection workspace of the RAG sources, whose manifest records these paths: D86), are
 # fetched by `python -m src.data.corpus labels` / `pubmed` and tracked with `dvc add`
-# (module2_ai_engineering/docs/rag.md).
+# (docs/module2/rag.md).
 stages:
   prepare:
     cmd: python -m src.data.prepare

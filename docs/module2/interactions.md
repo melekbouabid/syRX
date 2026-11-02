@@ -2,26 +2,26 @@
 
 Comment chaque classe d'identification reçoit son ou ses principes actifs, et comment sont
 construites les interactions entre ces principes actifs. Exécuté le 2026-10-28. Code :
-[`corpus/ingredients.py`](../corpus/ingredients.py),
-[`corpus/interactions.py`](../corpus/interactions.py),
-[`corpus/__main__.py`](../corpus/__main__.py).
+[`src/data/corpus/ingredients.py`](../../src/data/corpus/ingredients.py),
+[`src/data/corpus/interactions.py`](../../src/data/corpus/interactions.py),
+[`src/data/corpus/__main__.py`](../../src/data/corpus/__main__.py).
 
 ```
 config/pill_classes.csv (liste des NDC11 par classe)
   -> RxNav ndcstatus      NDC11 -> RxCUI du produit (NDC obsolètes compris, par leur historique)
   -> RxNav historystatus  RxCUI -> principes actifs de base (RxNorm IN), dosages retirés
-  -> data/tujya/pill_ingredients.csv  + colonnes de principes actifs dans config/pill_classes.csv
-  -> DDInter 2.0 (14 fichiers ATC, `python -m module2_ai_engineering.corpus ddinter`)
+  -> data/processed/pharma/pill_ingredients.csv  + colonnes de principes actifs dans config/pill_classes.csv
+  -> DDInter 2.0 (14 fichiers ATC, `python -m src.data.corpus ddinter`)
   -> config/ingredient_aliases.csv (3 noms DDInter différents de RxNorm)
-  -> data/tujya/interactions_between_classes.csv, data/tujya/interactions_with_any_drug.csv
+  -> data/processed/pharma/interactions_between_classes.csv, data/processed/pharma/interactions_with_any_drug.csv
 ```
 
-Commandes (venv du pipeline `data_pipeline/.venv`, depuis la racine du dépôt) :
+Commandes (venv du projet `.venv`, depuis la racine du dépôt) :
 
 ```bash
-python -m module2_ai_engineering.corpus --set http.require_contact_email=false ddinter
-python -m module2_ai_engineering.corpus --set http.require_contact_email=false ingredients
-python -m module2_ai_engineering.corpus interactions
+python -m src.data.corpus --set http.require_contact_email=false ddinter
+python -m src.data.corpus --set http.require_contact_email=false ingredients
+python -m src.data.corpus interactions
 ```
 
 `http.require_contact_email=false` a servi parce qu'aucun `.env` n'existait sur cette machine
@@ -46,7 +46,7 @@ Non associée : la classe 104, « FORMULA B PLUS TAB » (vitamines et minéraux,
 de principes actifs. La classe reste dans le modèle de vision ; l'application doit dire
 qu'aucune information sur les principes actifs n'est disponible.
 
-Colonnes de `data/tujya/pill_ingredients.csv` : class_id, class_key, ndc11, ndc_status
+Colonnes de `data/processed/pharma/pill_ingredients.csv` : class_id, class_key, ndc11, ndc_status
 (ACTIVE / OBSOLETE / ALIEN / UNKNOWN), product_rxcui, product_name (nom RxNorm),
 ingredient_rxcui, ingredient (RxNorm IN en minuscules), method (`ndc` ou `name`).
 
@@ -55,7 +55,7 @@ ingredient_rxcui, ingredient (RxNorm IN en minuscules), method (`ndc` ou `name`)
 - Licence CC BY-NC-SA 4.0 (non commerciale, partage à l'identique). Activée pour ce projet
   académique par l'étape `ddinter`, qui lance le connecteur existant du pipeline avec
   `enabled=true`, `terms_acknowledged=true` et les 14 fichiers. Le
-  [`data_pipeline/config.yaml`](../../data_pipeline/config.yaml) partagé garde DDInter
+  [`config/data_pipeline/config.yaml`](../../config/data_pipeline/config.yaml) partagé garde DDInter
   désactivé par défaut pour l'exécution `update` de SynergyRx (deux tests existants fixent
   ce défaut). Pas de redistribution : les tables restent sous `data/`, ignoré par git.
 - Citation : Tian Y, et al. DDInter 2.0: an enhanced drug interaction resource with expanded

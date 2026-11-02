@@ -5,7 +5,7 @@ probabilité que chaque molécule soit **active** dans les 12 tests in vitro de 
 sortie dit qu'il s'agit d'une **« prédiction d'un modèle sur des tests in vitro, pas une
 évaluation clinique »**. Chaque molécule est prédite séparément : l'outil ne dit jamais rien
 d'un mélange. Décisions : D73 (données et licence) et D74 (conception et sécurité) dans
-[docs/decisions.md](../../docs/decisions.md).
+[docs/decisions.md](../decisions.md).
 
 > Information uniquement, consultez un pharmacien ou un médecin.
 
@@ -17,8 +17,8 @@ d'un mélange. Décisions : D73 (données et licence) et D74 (conception et séc
 | Origine | Tox21 Data Challenge 2014 (NIH NCATS, avec NIEHS/NTP, EPA et FDA), <https://tripod.nih.gov/tox21/challenge/> |
 | Licence | **Aucun fichier de licence explicite trouvé** pour la copie MoleculeNet ni sur la page du challenge (vérifié le 2026-10-28). Les données ont été produites par des agences fédérales américaines et publiées gratuitement ; le code de DeepChem est sous licence MIT, qui ne couvre pas les données. Traitées comme des données publiques de recherche : citées, utilisées pour ce projet étudiant non commercial, **non redistribuées** (DVC seulement, jamais dans git) (D73) |
 | Citation | Huang R. et al., « Tox21 Challenge to Build Predictive Models of Nuclear Receptor and Stress Response Pathways as Mediated by Exposure to Environmental Chemicals and Drugs », Front. Environ. Sci. 2016 ; Wu Z. et al., « MoleculeNet: a benchmark for molecular machine learning », Chem. Sci. 2018 |
-| Versionnement | `data/tox21/` (le fichier + `SOURCE.json` : URL, SHA-256 `45d09792…`, taille, date) par `dvc add`, envoyé sur le remote DVC |
-| Structures des principes actifs | `config/ingredient_smiles.csv` : un SMILES PubChem par principe actif (82/82), par [`fetch_ingredient_smiles.py`](../toxicity/fetch_ingredient_smiles.py) ; PubChem est du domaine public. Alias : valproate -> valproic acid, vitamin B12 -> cyanocobalamin, vitamin B6 -> pyridoxine |
+| Versionnement | `data/raw/tox21/` (le fichier + `SOURCE.json` : URL, SHA-256 `45d09792…`, taille, date) par `dvc add`, envoyé sur le remote DVC |
+| Structures des principes actifs | `config/ingredient_smiles.csv` : un SMILES PubChem par principe actif (82/82), par [`fetch_ingredient_smiles.py`](../../src/models/toxicity/fetch_ingredient_smiles.py) ; PubChem est du domaine public. Alias : valproate -> valproic acid, vitamin B12 -> cyanocobalamin, vitamin B6 -> pyridoxine |
 
 Les 12 tests : NR-AR, NR-AR-LBD (récepteur des androgènes), NR-AhR (récepteur des
 hydrocarbures aryliques), NR-Aromatase, NR-ER, NR-ER-LBD (récepteur alpha des œstrogènes),
@@ -27,10 +27,10 @@ thermique), SR-MMP (potentiel de membrane mitochondriale), SR-p53 (dommages de l
 
 ## Modèle
 
-[`train_tox21.py`](../toxicity/train_tox21.py) (venv du backend : RDKit 2026.09,
+[`train_tox21.py`](../../src/models/toxicity/train_tox21.py) (venv du projet `.venv` : RDKit 2026.09,
 LightGBM 4.7, MLflow) :
 
-- **Variables** ([`model.py`](../toxicity/model.py), partagé avec l'API) : plus grand
+- **Variables** ([`model.py`](../../src/models/toxicity/model.py), partagé avec l'API) : plus grand
   fragment (sels retirés), empreinte de Morgan de rayon 2, 2 048 bits. 7 823 molécules sur
   7 831 sont lisibles.
 - **Split par scaffold** (Bemis-Murcko, les plus grands groupes de scaffolds d'abord en
@@ -70,10 +70,10 @@ splits, ROC-AUC de validation et de test par tâche, le paquet du modèle ; mod�
 **`tujya-tox21`** version **2** (pyfunc : colonne SMILES -> une probabilité par tâche). La
 version 1 est une première exécution identique dont le script a planté après
 l'enregistrement (erreur d'encodage de la console Windows dans une ligne de journal MLflow) ;
-son run est marqué FAILED avec une note. `python -m bonus.toxicity.train_tox21 publish` copie
+son run est marqué FAILED avec une note. `python -m src.models.toxicity.train_tox21 publish` copie
 le paquet enregistré dans `models/tox21/` (ignoré par git), que l'API charge.
 
-![Expérience MLflow tujya-tox](../../docs/screenshots/17-mlflow-tox.jpg)
+![Expérience MLflow tujya-tox](../screenshots/17-mlflow-tox.jpg)
 
 **Domaine d'applicabilité** (heuristique) : la plus grande similarité de Tanimoto entre la
 molécule demandée et les 6 258 empreintes d'entraînement ; sous 0,3, le résultat dit que la
@@ -86,12 +86,12 @@ vitamine B12).
 
 | Endroit | Quoi |
 |---|---|
-| Outil de l'agent ([`agent/tools.py`](../../module2_ai_engineering/agent/tools.py)) | `predict_toxicity(molecules)`, dans `CHAT_TOOLS` ; le planificateur peut l'appeler ; le graphe l'ajoute par règle quand la question parle de toxicité / Tox21 / in vitro |
+| Outil de l'agent ([`src/agent/tools.py`](../../src/agent/tools.py)) | `predict_toxicity(molecules)`, dans `CHAT_TOOLS` ; le planificateur peut l'appeler ; le graphe l'ajoute par règle quand la question parle de toxicité / Tox21 / in vitro |
 | Serveur MCP | cinquième outil `predict_toxicity` ; les instructions du serveur répètent la formulation et « ne jamais conclure sur un mélange » |
 | API | `POST /api/toxicity` `{"molecules": ["warfarin", "fluconazole"]}` (1 ou 2, connexion requise) : par molécule, les 12 probabilités, le ROC-AUC de test de chaque tâche, la similarité avec le jeu d'entraînement, plus `wording`, `mixture_note`, `low_probability_note`, version du modèle, source, avertissement ; 503 sans modèle publié |
 | Site | page **Toxicity** (menu) : une ou deux molécules, une carte par molécule, formulation et avertissement toujours visibles |
 
-![Page Toxicity](../../docs/screenshots/16-toxicity.jpg)
+![Page Toxicity](../screenshots/16-toxicity.jpg)
 
 ## Sécurité (D74)
 
@@ -121,23 +121,23 @@ montre pas une absence de toxicité » ; « Le fluconazole et la warfarine inter
 
 ## Tests
 
-[`tests/test_toxicity.py`](../tests/test_toxicity.py) (prédicteurs factices, LightGBM
+[`tests/models/test_toxicity.py`](../../tests/models/test_toxicity.py) (prédicteurs factices, LightGBM
 inutile sauf pour un test qui construit un tout petit vrai paquet LightGBM) : calcul des
 variables et retrait des sels, chaque molécule séparée avec la formulation exacte et aucun mot
 interdit, noms et entrées invalides, deux molécules au plus, message en l'absence de modèle,
 chargement d'un vrai paquet, la route (connexion, 422, 503), l'agent (outil ajouté par règle,
 source de la prédiction citée, phrases du LLM remplacées par le résumé, résumé seul quand il
 ne reste rien d'autre), l'outil MCP avec un nom français.
-[`module2_ai_engineering/tests/test_safety.py`](../../module2_ai_engineering/tests/test_safety.py) :
+[`tests/agent/test_safety.py`](../../tests/agent/test_safety.py) :
 la règle de non-toxicité et la retenue pendant la diffusion.
 
 ## Reproduire
 
 ```bash
-# venv du backend (rdkit, lightgbm ; plus mlflow pour l'entraînement), depuis la racine
-python -m bonus.toxicity.train_tox21 download          # ou : dvc pull data/tox21.dvc
-python -m bonus.toxicity.train_tox21 train             # MLflow sur 127.0.0.1:5000
-python -m bonus.toxicity.train_tox21 publish           # -> models/tox21/
-python -m bonus.toxicity.fetch_ingredient_smiles       # seulement pour rafraîchir config/ingredient_smiles.csv
-cd app/frontend && BASE=http://localhost:8080 node scripts/toxicity-screenshots.mjs
+# venv du projet `.venv` (rdkit, lightgbm ; plus mlflow pour l'entraînement), depuis la racine
+python -m src.models.toxicity.train_tox21 download          # ou : dvc pull data/raw/tox21.dvc
+python -m src.models.toxicity.train_tox21 train             # MLflow sur 127.0.0.1:5000
+python -m src.models.toxicity.train_tox21 publish           # -> models/tox21/
+python -m src.models.toxicity.fetch_ingredient_smiles       # seulement pour rafraîchir config/ingredient_smiles.csv
+cd frontend && BASE=http://localhost:8080 node scripts/toxicity-screenshots.mjs
 ```

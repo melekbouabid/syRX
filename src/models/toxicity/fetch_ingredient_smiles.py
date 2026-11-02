@@ -3,7 +3,7 @@
 # from the repository root, project venv (.venv) active
 python -m src.models.toxicity.fetch_ingredient_smiles      # PubChem PUG-REST, 4 requests/s at most
 
-Used by the toxicity tool to accept ingredient names (bonus/docs/toxicity.md). One PubChem lookup
+Used by the toxicity tool to accept ingredient names (docs/bonus/toxicity.md). One PubChem lookup
 by name per ingredient of data/processed/pharma/pill_ingredients.csv; PubChem data is public domain.
 An ingredient PubChem does not find (or a mixture such as a multivitamin) gets an empty
 SMILES: the tool then says it cannot predict it.
@@ -25,7 +25,7 @@ OUT = ROOT / "config" / "ingredient_smiles.csv"
 API = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{}/property/SMILES/JSON"
 PAGE = "https://pubchem.ncbi.nlm.nih.gov/compound/{}"
 # PubChem's best match for these names is an ion or a coenzyme; look up the form in the
-# pills instead (the same aliases as the openFDA label search, module2_ai_engineering/docs/rag.md).
+# pills instead (the same aliases as the openFDA label search, docs/module2/rag.md).
 LOOKUP_ALIASES = {
     "valproate": "valproic acid",
     "vitamin b12": "cyanocobalamin",

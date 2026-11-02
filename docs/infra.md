@@ -15,26 +15,25 @@ docker compose down                 # arrête ; les volumes sont gardés (down -
 |---|---|---|---|
 | `postgres` | `pgvector/pgvector:pg16` | 5432 | volume `pgdata` ; base `tujya` (comptes, tables des médicaments, pgvector) et base `mlflow` |
 | `mlflow` | construite depuis [`infra/docker/mlflow/Dockerfile`](../infra/docker/mlflow/Dockerfile) (MLflow 3.17.2 + psycopg2) | 5000 | stockage du tracking dans PostgreSQL, artefacts dans le volume `mlartifacts`, Model Registry |
-| `pharma-init` | image du backend | aucun | ponctuel : `python -m app.pharma_loader` reconstruit les tables des médicaments depuis `config/` et `data/tujya/`, puis s'arrête ; le backend l'attend |
-| `rag-init` | image du backend | aucun | ponctuel : `python -m module2_ai_engineering.rag.index --pull` télécharge les modèles Ollama s'ils manquent, puis indexe `data/rag/corpus` dans la table `rag_chunks` (idempotent ; [rag.md](../module2_ai_engineering/docs/rag.md)) ; le backend ne l'attend pas |
-| `backend` | construite depuis [`app/backend/Dockerfile`](../app/backend/Dockerfile) (Python 3.12, FastAPI, ONNX Runtime CPU, LangGraph) | 8000 | l'API et l'agent (`/api/chat`, parle à `ollama`) ; Swagger sur `/docs` |
-| `frontend` | construite depuis [`app/frontend/Dockerfile`](../app/frontend/Dockerfile) (build Node 22, nginx 1.27) | 8080 | le site React ; nginx transmet `/api`, `/docs`, `/openapi.json` à `backend` ([`nginx.conf`](../app/frontend/nginx.conf)) |
+| `pharma-init` | image du backend | aucun | ponctuel : `python -m app.pharma_loader` reconstruit les tables des médicaments depuis `config/` et `data/processed/pharma/`, puis s'arrête ; le backend l'attend |
+| `rag-init` | image du backend | aucun | ponctuel : `python -m src.rag.index --pull` télécharge les modèles Ollama s'ils manquent, puis indexe `data/processed/rag/corpus` dans la table `rag_chunks` (idempotent ; [rag.md](module2/rag.md)) ; le backend ne l'attend pas |
+| `backend` | construite depuis [`backend/Dockerfile`](../backend/Dockerfile) (Python 3.12, FastAPI, ONNX Runtime CPU, LangGraph) | 8000 | l'API et l'agent (`/api/chat`, parle à `ollama`) ; Swagger sur `/docs` |
+| `frontend` | construite depuis [`frontend/Dockerfile`](../frontend/Dockerfile) (build Node 22, nginx 1.27) | 8080 | le site React ; nginx transmet `/api`, `/docs`, `/openapi.json` à `backend` ([`nginx.conf`](../frontend/nginx.conf)) |
 | `ollama` | `ollama/ollama:0.40.12` | 11434 | LLM local (`qwen2.5:3b`) et embeddings (`bge-m3`) ; modèles dans le volume `ollama` ; GPU NVIDIA réservé (D57) |
 
-L'image de l'API se construit depuis la racine du dépôt (elle importe les paquets des
-modules) avec une liste blanche, [`app/backend/Dockerfile.dockerignore`](../app/backend/Dockerfile.dockerignore) :
-seuls le code de l'API, `module1_vision_mlops/serving`, `module2_ai_engineering/{rag,agent,mcp_server}`
-et `bonus/toxicity/model.py` y entrent (contexte d'environ 200 Ko), dans la même disposition
+L'image de l'API se construit depuis la racine du dépôt (elle importe le paquet `src`) avec une liste blanche, [`backend/Dockerfile.dockerignore`](../backend/Dockerfile.dockerignore) :
+seuls le code de l'API (dont la chaîne de scan `backend/app/inference.py`), `src/{rag,agent,mcp_server}`
+et `src/models/toxicity/model.py` y entrent (contexte d'environ 200 Ko), dans la même disposition
 que le dépôt sous `/tujya` (D79).
 
 **Avant le premier démarrage** (les images ne contiennent ni données ni modèles, D55) :
 
-1. Les données sous `data/` (DVC, [dataset_c3pi.md](../module1_vision_mlops/docs/dataset_c3pi.md),
-   [interactions.md](../module2_ai_engineering/docs/interactions.md)) : `dvc pull` depuis le
-   remote par défaut (section « Remote DVC » plus bas) donne `data/tujya/*.csv` (tables des
-   médicaments), `data/vision/c3pi/images/` (galerie de démonstration) et `data/rag/corpus`
+1. Les données sous `data/` (DVC, [dataset_c3pi.md](module1/dataset_c3pi.md),
+   [interactions.md](module2/interactions.md)) : `dvc pull` depuis le
+   remote par défaut (section « Remote DVC » plus bas) donne `data/processed/pharma/*.csv` (tables des
+   médicaments), `data/raw/c3pi/images/` (galerie de démonstration) et `data/processed/rag/corpus`
    (index RAG).
-2. Les modèles : `cd module1_vision_mlops/training && python -m tujya_vision.publish` remplit
+2. Les modèles : `python -m src.models.publish` remplit
    `models/` depuis le Model Registry de MLflow (MLflow doit tourner :
    `docker compose up -d mlflow` d'abord).
 
@@ -45,14 +44,14 @@ les chemins par défaut de `app/config.py` n'ont besoin d'aucun réglage). Sans 
 échoue et le backend ne démarre pas.
 
 Comptes : dans Docker, les tables des comptes sont dans la même base PostgreSQL `tujya` (pas
-dans `app/backend/app.db`, qui ne sert qu'au serveur de développement local). Le premier
+dans `backend/app.db`, qui ne sert qu'au serveur de développement local). Le premier
 démarrage crée l'administrateur par défaut et le compte de démonstration (`user@gmail.com` /
 `user`) ; changer le mot de passe administrateur avant que quiconque d'autre puisse joindre
 le serveur.
 
 Les images sont toujours construites en local par `docker compose up -d --build`. Le workflow
 de CD construit et teste les mêmes images sur GitHub mais ne les publie plus (D70,
-[cd.md](cd.md)).
+[docs/cd.md](cd.md)).
 
 [`infra/docker/postgres/init/01-init.sql`](../infra/docker/postgres/init/01-init.sql) s'exécute
 une fois, sur un volume vide : il active `vector` dans la base `tujya` et crée la base
@@ -62,17 +61,17 @@ surcharger `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`,
 
 ## Usage strictement local (depuis le 2026-10-28)
 
-Le projet tourne **uniquement sur ce PC** (règle de [project_rules.md](project_rules.md)) : pas de déploiement public,
+Le projet tourne **uniquement sur ce PC** (règle de [docs/project_rules.md](project_rules.md)) : pas de déploiement public,
 pas de tunnel (ngrok, Cloudflare Tunnel...), pas d'image Docker de l'application publiée
-([cd.md](cd.md)), et aucun service lié à `0.0.0.0` sur la machine. Le dépôt GitHub reste
+([docs/cd.md](cd.md)), et aucun service lié à `0.0.0.0` sur la machine. Le dépôt GitHub reste
 public (code et documentation seulement).
 
 | Quoi | Écoute sur | Comment |
 |---|---|---|
 | postgres, mlflow, backend, ollama, frontend (Docker) | `127.0.0.1:<port>` | `ports: ["127.0.0.1:${WEB_PORT:-8080}:80"]` etc. dans `docker-compose.yml` |
-| serveur Vite / `vite preview` | `127.0.0.1:5173` / `127.0.0.1:4173` | `server.host` et `preview.host` dans [`app/frontend/vite.config.ts`](../app/frontend/vite.config.ts) |
+| serveur Vite / `vite preview` | `127.0.0.1:5173` / `127.0.0.1:4173` | `server.host` et `preview.host` dans [`frontend/vite.config.ts`](../frontend/vite.config.ts) |
 | uvicorn (développement local) | `127.0.0.1:8000` | `uvicorn app.main:app --host 127.0.0.1 --reload` (aussi le défaut d'uvicorn) |
-| serveur MCP, transport HTTP | `127.0.0.1:8765` | `--host` n'accepte que `127.0.0.1`, `localhost` ou `::1` ([`mcp_server/server.py`](../module2_ai_engineering/mcp_server/server.py), testé) |
+| serveur MCP, transport HTTP | `127.0.0.1:8765` | `--host` n'accepte que `127.0.0.1`, `localhost` ou `::1` ([`src/mcp_server/server.py`](../src/mcp_server/server.py), testé) |
 | interface MLflow | `127.0.0.1:5000` | le port de compose ; ne jamais lancer `mlflow ui --host 0.0.0.0` sur la machine |
 
 Dans les conteneurs, uvicorn, MLflow et nginx écoutent toujours sur `0.0.0.0` : c'est
@@ -123,9 +122,9 @@ dvc remote list     # localstore  C:\Users\msi\dvc-storage\tujya  (default)
 ```
 
 DVC est installé dans le venv d'entraînement
-(`module1_vision_mlops/training/.venv/Scripts/dvc.exe`, DVC 3.67.1). Ce qui est suivi :
-`data/vision/c3pi/images` et `metadata` (`dvc add`), `data/tujya`, `data/rag/raw`,
-`data/rag/interim`, `data/rag/manifest.json`, `data/tox21` (`dvc add`), et les
+(`.venv-train/Scripts/dvc.exe`, DVC 3.67.1). Ce qui est suivi :
+`data/raw/c3pi/images` et `metadata` (`dvc add`), `data/processed/pharma`, `data/rag/raw`,
+`data/rag/interim`, `data/rag/manifest.json`, `data/raw/tox21` (`dvc add`), et les
 sorties des étapes `prepare` (étiquettes, jeux YOLO) et `rag_corpus` (chunks) de
 [`dvc.yaml`](../dvc.yaml).
 
@@ -162,13 +161,13 @@ démonstration, `/api/scan` sur une photo de test C3PI de 2560 x 1920 de flucona
 comprimé, classe top-1 9 FLUCONAZOLE 100MG TABLETS, probabilité 0,996, 59 ms, modèles
 détecteur v1 / classifieur v2 ; `/api/interactions` fluconazole + citalopram : Major
 (DDInter) ; galerie de démonstration de 8 photos. Le script Playwright
-(`BASE=http://localhost:8080 node scripts/screenshots.mjs`, depuis `app/frontend`) rejoue tout
+(`BASE=http://localhost:8080 node scripts/screenshots.mjs`, depuis `frontend`) rejoue tout
 le parcours du navigateur sur les conteneurs.
 
 ## Tables des médicaments
 
-Définies dans [`app/backend/app/pharma.py`](../app/backend/app/pharma.py) avec leur propre
-base SQLAlchemy, pour ne jamais toucher la base des comptes `app/backend/app.db` :
+Définies dans [`backend/app/pharma.py`](../backend/app/pharma.py) avec leur propre
+base SQLAlchemy, pour ne jamais toucher la base des comptes `backend/app.db` :
 
 ```
 sources (name, title, url, license, citation)          une ligne par source, sert de citation
@@ -182,7 +181,7 @@ Dans Docker, `pharma-init` les charge à chaque démarrage. À la main (recharge
 relançable sans risque) :
 
 ```bash
-cd app/backend
+cd backend
 python -m app.pharma_loader --database-url postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
 ```
 
@@ -190,7 +189,7 @@ Sans `--database-url`, le chargeur utilise `SYNERGYRX_PHARMA_DATABASE_URL`, par 
 `sqlite:///data/tujya.db`. Résultat du 2026-10-28 : 150 comprimés, 1 716 principes actifs
 (82 venant des comprimés, les autres sont des partenaires DDInter), 161 liens
 comprimé-principe actif, 40 508 interactions. Tests :
-[`app/backend/tests/test_pharma.py`](../app/backend/tests/test_pharma.py) (SQLite).
+[`backend/tests/test_pharma.py`](../backend/tests/test_pharma.py) (SQLite).
 
 ## MLflow
 

@@ -14,13 +14,13 @@ leur association, et jamais « non toxique ».
   selon le test), 0,766 en validation ; MLflow `tujya-tox`, modèle enregistré `tujya-tox21`.
 - Utilisé par l'outil `predict_toxicity` de l'agent et du serveur MCP (module 2), la route
   `POST /api/toxicity` et la page « Toxicity » du site
-  ([capture](../docs/screenshots/16-toxicity.jpg)).
-- Code : [toxicity/model.py](toxicity/model.py) (prédiction, domaine d'applicabilité,
-  formulations), [toxicity/train_tox21.py](toxicity/train_tox21.py) (téléchargement,
-  entraînement, publication), [toxicity/fetch_ingredient_smiles.py](toxicity/fetch_ingredient_smiles.py)
-  (structures des 82 principes actifs depuis PubChem). Tests : [tests/test_toxicity.py](tests/test_toxicity.py).
-- Documentation : [docs/toxicity.md](docs/toxicity.md) ; décisions D73 et D74 dans
-  [../docs/decisions.md](../docs/decisions.md).
+  ([capture](../screenshots/16-toxicity.jpg)).
+- Code : [src/models/toxicity/model.py](../../src/models/toxicity/model.py) (prédiction, domaine d'applicabilité,
+  formulations), [src/models/toxicity/train_tox21.py](../../src/models/toxicity/train_tox21.py) (téléchargement,
+  entraînement, publication), [src/models/toxicity/fetch_ingredient_smiles.py](../../src/models/toxicity/fetch_ingredient_smiles.py)
+  (structures des 82 principes actifs depuis PubChem). Tests : [tests/models/test_toxicity.py](../../tests/models/test_toxicity.py).
+- Documentation : [docs/bonus/toxicity.md](toxicity.md) ; décisions D73 et D74 dans
+  [docs/decisions.md](../decisions.md).
 
 ## Étude de synergie (retirée)
 
@@ -32,12 +32,12 @@ dépôt : elle n'a pas atteint la règle fixée d'avance (RMSE −7,3 % contre l
 ## Commandes
 
 ```bash
-# Depuis la racine du dépôt, venv du backend (app/backend/.venv) ; l'entraînement a aussi
-# besoin de MLflow : uv pip install -p app/backend/.venv mlflow==3.17.2
-python -m bonus.toxicity.train_tox21 download
-python -m bonus.toxicity.train_tox21 train        # serveur MLflow sur 127.0.0.1:5000
-python -m bonus.toxicity.train_tox21 publish      # -> models/tox21/, lu par l'API
+# Depuis la racine du dépôt, venv du projet (`.venv`) ; l'entraînement a aussi
+# besoin de MLflow : uv pip install -p .venv mlflow==3.17.2
+python -m src.models.toxicity.train_tox21 download
+python -m src.models.toxicity.train_tox21 train        # serveur MLflow sur 127.0.0.1:5000
+python -m src.models.toxicity.train_tox21 publish      # -> models/tox21/, lu par l'API
 
 # Tests
-cd bonus && ../app/backend/.venv/Scripts/python -m pytest
+.venv/Scripts/python -m pytest tests/models
 ```

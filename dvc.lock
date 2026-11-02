@@ -54,8 +54,8 @@ stages:
       nfiles: 164
     - path: src/data/corpus/corpus.py
       hash: md5
-      md5: 5e12e51330514dd2f0589242b9be8ae8
-      size: 11687
+      md5: 9d85a1cdf051850c775a51e602037eb3
+      size: 11672
     outs:
     - path: data/processed/rag/corpus
       hash: md5

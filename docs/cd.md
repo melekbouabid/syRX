@@ -10,7 +10,7 @@ Deux workflows dans [`.github/workflows/`](../.github/workflows/) :
 
 | Workflow | Quand | Quoi |
 |---|---|---|
-| [`ci.yml`](../.github/workflows/ci.yml) | chaque push et pull request | lint et tests unitaires de chaque paquet Python, un job par dossier : `pipeline` (data_pipeline, avec mypy), `backend` (app/backend), `module1`, `module2` (avec un service PostgreSQL + pgvector), `bonus` ; typage et build du site (`frontend`) |
+| [`ci.yml`](../.github/workflows/ci.yml) | chaque push et pull request | lint (ruff, mypy) et tests unitaires : `src` (tout le code de `src/`, tests dans `tests/`, avec un service PostgreSQL + pgvector), `backend` (l'API, dont la chaîne de scan), `hooks` (hooks Git et messages de commit) ; lint, typage et build du site (`frontend`) |
 | [`cd.yml`](../.github/workflows/cd.yml) | quand `ci` **réussit sur un push vers `main`** (`workflow_run`), ou lancé à la main | construit les images du backend et du frontend du commit testé par la CI et les teste ; **aucun envoi** |
 
 Fonctionnement de `cd.yml`, par image (job `images`, une matrice de deux jobs) :
@@ -18,9 +18,8 @@ Fonctionnement de `cd.yml`, par image (job `images`, une matrice de deux jobs) :
 1. récupère `workflow_run.head_sha`, le commit exact qui a passé la CI ;
 2. construit l'image avec Buildx dans le Docker local du runner (`load: true`,
    `push: false` ; cache des couches dans le cache de GitHub Actions). Le backend se construit
-   depuis la racine du dépôt avec `app/backend/Dockerfile` (il importe les paquets des
-   modules ; liste blanche `app/backend/Dockerfile.dockerignore`), le frontend depuis
-   `app/frontend` ;
+   depuis la racine du dépôt avec `backend/Dockerfile` (il importe le paquet `src` ; liste
+   blanche `backend/Dockerfile.dockerignore`), le frontend depuis `frontend/` ;
 3. test de fumée, avec le port du conteneur publié seulement sur le `127.0.0.1` du runner :
    le backend doit répondre à `/api/health`, servir `/docs` et lister `/api/scan` et
    `/api/chat` dans `/openapi.json` (comptes dans un fichier SQLite jetable, aucune donnée
@@ -35,7 +34,7 @@ paquets du tout. Un échec de la CI signifie aucun job de CD.
 L'ancien comportement (envoi sur GitHub Container Registry) est gardé comme second job,
 `publish`, qui ne s'exécute que si le workflow est **lancé à la main avec `push_images`
 coché**. C'est le seul job avec `packages: write`. Ne pas l'utiliser tant que l'application
-doit rester locale ([project_rules.md](project_rules.md)).
+doit rester locale ([docs/project_rules.md](project_rules.md)).
 
 ```bash
 gh workflow run cd                         # construction + test seulement (push_images=false)

@@ -4,5 +4,5 @@ openFDA labels and PubMed abstracts turned into chunks with metadata for the RAG
 Runs on the SynergyRx pipeline (src/data/synergyrx_data: polite HTTP client, connectors,
 manifest);
 commands: `python -m src.data.corpus --help`. Docs:
-module2_ai_engineering/docs/rag.md, module2_ai_engineering/docs/interactions.md.
+docs/module2/rag.md, docs/module2/interactions.md.
 """

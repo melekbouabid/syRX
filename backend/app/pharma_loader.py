@@ -3,7 +3,7 @@
     python -m app.pharma_loader                       # database from SYNERGYRX_PHARMA_DATABASE_URL
     python -m app.pharma_loader --database-url postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
 
-Inputs (built by the data steps, see module2_ai_engineering/docs/interactions.md):
+Inputs (built by the data steps, see docs/module2/interactions.md):
 - config/pill_classes.csv                                 one row per identification class
 - data/processed/pharma/pill_ingredients.csv             class -> ingredient (RxNav)
 - data/processed/pharma/interactions_with_any_drug.csv   DDInter pairs involving a class

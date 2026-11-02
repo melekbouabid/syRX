@@ -72,7 +72,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         threads=settings.onnx_threads,
         conf=settings.scan_detection_confidence,
     )
-    # Bonus: Tox21 toxicity model, loaded on first use (models/tox21, bonus/docs/toxicity.md).
+    # Bonus: Tox21 toxicity model, loaded on first use (models/tox21, docs/bonus/toxicity.md).
     app.state.toxicity = ToxHolder(settings.tox_model_dir, settings.ingredient_smiles_file)
     # Module 2 agent: built on the first /api/chat call (Ollama, chunk index in pgvector).
     app.state.agents = AgentHolder(

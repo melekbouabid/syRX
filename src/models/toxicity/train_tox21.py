@@ -1,4 +1,4 @@
-"""Train, log and publish the Tox21 toxicity model (bonus tool, bonus/docs/toxicity.md).
+"""Train, log and publish the Tox21 toxicity model (bonus tool, docs/bonus/toxicity.md).
 
 # from the repository root, project venv (rdkit, lightgbm, mlflow)
 python -m src.models.toxicity.train_tox21 download   # MoleculeNet tox21.csv.gz -> data/raw/tox21/
@@ -79,7 +79,7 @@ def download() -> None:
                 "sha256": digest,
                 "bytes": RAW.stat().st_size,
                 "retrieved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                "licence": "see bonus/docs/toxicity.md (Tox21: US federal data; MoleculeNet copy)",
+                "licence": "see docs/bonus/toxicity.md (Tox21: US federal data; MoleculeNet copy)",
             },
             indent=2,
         ),

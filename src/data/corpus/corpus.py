@@ -6,7 +6,7 @@
 - DDInter: one chunk per interacting pair between the class ingredients.
 
 Every chunk carries its metadata (`CHUNK_COLUMNS`, documented in
-module2_ai_engineering/docs/rag.md). Dosage sections are refused here a second time, whatever
+docs/module2/rag.md). Dosage sections are refused here a second time, whatever
 the connector stored.
 """
 

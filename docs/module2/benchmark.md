@@ -1,12 +1,12 @@
 # Benchmark du RAG : récupération et génération
 
 Mesuré le 2026-10-28 sur le portable (RTX 2050 4 Go, Docker Desktop), avec le vrai corpus
-(8 661 chunks, [rag.md](rag.md)), les embeddings bge-m3 et qwen2.5:3b ([agent.md](agent.md)).
+(8 661 chunks, [docs/module2/rag.md](rag.md)), les embeddings bge-m3 et qwen2.5:3b ([docs/module2/agent.md](agent.md)).
 Chaque exécution est journalisée dans MLflow, expérience **`tujya-rag`**
 (http://localhost:5000) : paramètres, métriques, résultats par question en artefacts.
 Décisions : D65 à D68.
 
-## Le jeu de questions ([`benchmark/`](../benchmark/))
+## Le jeu de questions ([`src/benchmark/`](../../src/benchmark/))
 
 **88 questions, 44 en français et 44 en anglais**, sur les 82 principes actifs des classes :
 
@@ -21,8 +21,8 @@ Décisions : D65 à D68.
 | `abstract` | 9 | les chunks d'un article PubMed (cas cliniques, une revue systématique, une méta-analyse) |
 | `safety` | 5 | aucun : deux demandes de dose, deux questions « est-ce sûr », une question d'horaire ; notées sur la réponse seulement |
 
-Construction ([`bench_build.py`](../benchmark/bench_build.py), spécification
-[`spec.json`](../benchmark/spec.json) écrite par [`make_spec.py`](../benchmark/make_spec.py)) :
+Construction ([`bench_build.py`](../../src/benchmark/bench_build.py), spécification
+[`spec.json`](../../src/benchmark/spec.json) écrite par [`make_spec.py`](../../src/benchmark/make_spec.py)) :
 
 1. Candidats tirés du corpus : paires dont la notice de l'un cite l'autre principe actif dans
    une section interactions ou mises en garde et que DDInter note (178 paires ; 24 choisies
@@ -54,7 +54,7 @@ questions ; 23 ont été écrites à la main.
 
 ## Récupération
 
-[`bench_retrieval.py`](../benchmark/bench_retrieval.py) : les 83 questions qui ont des chunks
+[`bench_retrieval.py`](../../src/benchmark/bench_retrieval.py) : les 83 questions qui ont des chunks
 attendus, top 10, six configurations (trois modes x deux réglages du filtre). **Recall@k** =
 part des questions avec au moins un chunk attendu dans le top k (taux de succès) ;
 **Coverage@10** = part moyenne des chunks attendus d'une question dans le top 10 ; **MRR** =
@@ -96,9 +96,9 @@ peu chaque mode (+0,01 à +0,05 de Recall@5).
 
 ## Génération
 
-[`bench_answers.py`](../benchmark/bench_answers.py) fait tourner le vrai agent (qwen2.5:3b,
+[`bench_answers.py`](../../src/benchmark/bench_answers.py) fait tourner le vrai agent (qwen2.5:3b,
 recherche dense, nœud de sécurité) sur les 88 questions ;
-[`bench_generation.py`](../benchmark/bench_generation.py) note les réponses. Juge :
+[`bench_generation.py`](../../src/benchmark/bench_generation.py) note les réponses. Juge :
 **gemma3:4b**, un modèle différent du générateur (D67).
 
 **Temps de réponse** (modèles chargés, RTX 2050) : moyenne **4,7 s**, médiane 4,5 s,
@@ -180,18 +180,18 @@ n'étaient pas lisibles par RAGAS.
   mémoire vidéo.
 
 Tout ceci est dans MLflow (`generation-qwen2.5:3b-dense`, `citation-judge-control`) avec les
-notes par question ([`generation_per_question.jsonl`](../benchmark/generation_per_question.jsonl),
+notes par question ([`generation_per_question.jsonl`](../../src/benchmark/generation_per_question.jsonl),
 sans texte des sources).
 
 ## Reproduire
 
 ```bash
-# venv du backend, depuis n'importe quel dossier ; pile lancée (postgres, ollama, mlflow)
+# venv du projet `.venv`, depuis n'importe quel dossier ; pile lancée (postgres, ollama, mlflow)
 export SYNERGYRX_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
-python -m module2_ai_engineering.benchmark.bench_build        # rag_questions.jsonl depuis le corpus
-python -m module2_ai_engineering.benchmark.bench_retrieval    # six exécutions -> MLflow, results_retrieval.json
-python -m module2_ai_engineering.benchmark.bench_answers      # l'agent sur les 88 questions -> data/rag/bench/
-python -m module2_ai_engineering.benchmark.bench_generation   # sécurité, citations, RAGAS -> MLflow, results_generation.json
+python -m src.benchmark.bench_build        # rag_questions.jsonl depuis le corpus
+python -m src.benchmark.bench_retrieval    # six exécutions -> MLflow, results_retrieval.json
+python -m src.benchmark.bench_answers      # l'agent sur les 88 questions -> data/processed/rag/bench/
+python -m src.benchmark.bench_generation   # sécurité, citations, RAGAS -> MLflow, results_generation.json
 ```
 
 RAGAS et le client MLflow ne sont pas dans `requirements.txt` (benchmark seulement) :

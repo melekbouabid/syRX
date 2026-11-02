@@ -5,7 +5,7 @@
 //
 // No pandoc or LaTeX on this machine: Chromium (Playwright) renders everything. Mermaid and
 // marked are loaded from jsDelivr at pinned versions, so the build needs Internet access.
-// In each documentation folder (docs/, module1_vision_mlops/docs/, module2_ai_engineering/docs/):
+// In each documentation folder (docs/, docs/module1/, docs/module2/):
 // diagrams/*.mmd -> assets/*.png, and rapport_*.md -> rapport_*.pdf (A4, page numbers).
 // Fails if a diagram does not render or an image of a report does not load.
 import { readdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -15,7 +15,7 @@ import { chromium } from "playwright";
 
 // REPORTS: one folder, or several separated by ";" (default: the three documentation folders).
 const FOLDERS = (
-  process.env.REPORTS ?? "../docs;../module1_vision_mlops/docs;../module2_ai_engineering/docs"
+  process.env.REPORTS ?? "../docs;../docs/module1;../docs/module2"
 )
   .split(";")
   .map((folder) => resolve(folder));

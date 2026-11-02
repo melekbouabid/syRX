@@ -1,17 +1,17 @@
 flowchart LR
   NAV["Navigateur<br/>localhost:8080<br/>(127.0.0.1)"] --> FE
-  subgraph APP["Application web : app/"]
+  subgraph APP["Application web : backend/, frontend/"]
     FE["frontend<br/>nginx + React"] -- "/api, /docs" --> BE["backend<br/>FastAPI, Pydantic"]
   end
   subgraph M1["Module 1 : Vision et MLOps"]
-    SCAN["serving<br/>ONNX Runtime"]
-    TR["training<br/>YOLO11 (Ultralytics)"]
+    SCAN["backend/app/inference.py<br/>ONNX Runtime"]
+    TR["src/data, src/models<br/>YOLO11 (Ultralytics)"]
   end
   subgraph M2["Module 2 : AI Engineering"]
-    AG["agent<br/>LangGraph, outils,<br/>sécurité"]
-    MCP["mcp_server"]
-    RAG["rag<br/>dense + BM25"]
-    CORP["corpus<br/>openFDA, PubMed,<br/>DDInter"]
+    AG["src/agent<br/>LangGraph, outils,<br/>sécurité"]
+    MCP["src/mcp_server"]
+    RAG["src/rag<br/>dense + BM25"]
+    CORP["src/data/corpus<br/>openFDA, PubMed,<br/>DDInter"]
   end
   BE --> SCAN
   BE --> AG
@@ -22,7 +22,7 @@ flowchart LR
   BE --> PG
   TR --> MLF["MLflow<br/>tracking + registre"]
   MLF -- "ONNX publié" --> SCAN
-  DATA["data/ (DVC)<br/>C3PI, DDInter, corpus"] --> TR
+  DATA["data/raw, data/processed (DVC)<br/>C3PI, DDInter, corpus"] --> TR
   CORP --> DATA
   DATA --> RAG
   PIPE["src/data/synergyrx_data<br/>connecteurs"] --> CORP

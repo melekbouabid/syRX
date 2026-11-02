@@ -31,10 +31,9 @@ et temps mesurés à cette occasion.
    GPU), les suivantes **5 à 7 s**. Poser une question une fois avant l'arrivée du jury :
 
    ```bash
-   cd app/backend
    export SYNERGYRX_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
    export SYNERGYRX_DATABASE_URL=$SYNERGYRX_PHARMA_DATABASE_URL PYTHONIOENCODING=utf-8
-   .venv/Scripts/python -m module2_ai_engineering.agent.ask "What are the contraindications of metformin?"
+   .venv/Scripts/python -m src.agent.ask "What are the contraindications of metformin?"
    docker compose exec ollama ollama ps     # qwen2.5:3b et bge-m3 : "100% GPU"
    ```
 
@@ -48,8 +47,8 @@ et temps mesurés à cette occasion.
      fenêtres d'aide « Got it ») ;
    - <https://github.com/melekbouabid/tujia-/actions> (onglet Actions) ;
    - [docs/assets/architecture.png](assets/architecture.png) (schéma) ;
-   - [module2_ai_engineering/docs/benchmark.md](../module2_ai_engineering/docs/benchmark.md) ou le tableau des résultats du README.
-5. Garder un terminal ouvert dans `app/backend/` avec les variables ci-dessus, et un autre à la
+   - [docs/module2/benchmark.md](module2/benchmark.md) ou le tableau des résultats du README.
+5. Garder un terminal ouvert dans `backend/` avec les variables ci-dessus, et un autre à la
    racine pour DVC et `gh`.
 6. Préparer 1 ou 2 vraies boîtes de comprimés **parmi les 150 classes** si vous voulez
    montrer la webcam (fond uni, bonne lumière) ; sinon montrer la webcam sans conclure.
@@ -68,7 +67,7 @@ et temps mesurés à cette occasion.
 
 ## 2. Architecture (1 min 30)
 
-- **Faire** : ouvrir [rapports/img/architecture.png](assets/architecture.png).
+- **Faire** : ouvrir [docs/assets/architecture.png](assets/architecture.png).
 - **Le jury voit** : le site React (nginx), l'API FastAPI, les deux modèles ONNX, PostgreSQL
   + pgvector, Ollama sur le GPU, MLflow, DVC, GitHub Actions ; tout sur `127.0.0.1`.
 - **Dire** : « Deux modules : vision et MLOps d'un côté (YOLO détecte, un classifieur
@@ -171,10 +170,10 @@ et temps mesurés à cette occasion.
 - **Faire** (terminal à la racine) :
 
   ```bash
-  module1_vision_mlops/training/.venv/Scripts/dvc.exe status        # Data and pipelines are up to date.
-  module1_vision_mlops/training/.venv/Scripts/dvc.exe status -c     # Cache and remote 'localstore' are in sync.
-  module1_vision_mlops/training/.venv/Scripts/dvc.exe remote list   # localstore  C:\Users\msi\dvc-storage\tujya  (default)
-  module1_vision_mlops/training/.venv/Scripts/dvc.exe dag           # étapes prepare et rag_corpus
+  .venv-train/Scripts/dvc.exe status        # Data and pipelines are up to date.
+  .venv-train/Scripts/dvc.exe status -c     # Cache and remote 'localstore' are in sync.
+  .venv-train/Scripts/dvc.exe remote list   # localstore  C:\Users\msi\dvc-storage\tujya  (default)
+  .venv-train/Scripts/dvc.exe dag           # étapes prepare et rag_corpus
   ```
 
 - **Le jury voit** : données et pipelines à jour, remote synchronisé, le graphe des étapes.
@@ -193,8 +192,8 @@ et temps mesurés à cette occasion.
 
 ## 13. Serveur MCP (45 s)
 
-- **Faire** (terminal `app/backend/`, variables de la préparation) :
-  `.venv/Scripts/python -m module2_ai_engineering.mcp_server.smoke`
+- **Faire** (terminal `backend/`, variables de la préparation) :
+  `.venv/Scripts/python -m src.mcp_server.smoke`
 - **Le jury voit** (≈ 11 s) : `tools: ['identify_pills', 'check_interaction',
   'get_drug_info', 'search_documents']`, `check_interaction -> … Major`,
   `search_documents -> ['Metformin label …']`.
@@ -203,7 +202,7 @@ et temps mesurés à cette occasion.
 
 ## 14. Résultats du benchmark (1 min)
 
-- **Faire** : tableau « Résultats du benchmark RAG » du README ou module2_ai_engineering/docs/benchmark.md.
+- **Faire** : tableau « Résultats du benchmark RAG » du README ou docs/module2/benchmark.md.
 - **Le jury voit** : récupération sur 83 questions : dense + filtre Recall@5 **0,928**, MRR
   **0,852** (hybride 0,904 / 0,796 ; BM25 0,783 / 0,660) ; génération : 94,0 % des phrases
   citées soutenues par leur source, 0 dose chiffrée, 0 « sûr », 2/2 questions de dose
@@ -248,14 +247,14 @@ et temps mesurés à cette occasion.
 | La webcam ne reconnaît rien | Le dire (modèle entraîné sur C3PI uniquement) et revenir aux photos de démo |
 | `/docs` reste blanc | Pas d'Internet (Swagger UI vient d'un CDN) : montrer <http://localhost:8080/openapi.json> et la capture [07](screenshots/07-swagger.jpg) |
 | Un conteneur n'est pas « healthy » | `docker compose logs <service> --tail 30`, puis `docker compose up -d` |
-| Scan en 503 | `models/` vide : `cd module1_vision_mlops/training && .venv/Scripts/python -m tujya_vision.publish` (MLflow démarré) |
+| Scan en 503 | `models/` vide : `.venv-train/Scripts/python -m src.models.publish` (MLflow démarré) |
 | Pas d'Internet pour GitHub | `gh run list` ne marchera pas : montrer `.github/workflows/` et le rapport de session 4 |
 | Le script MCP met plus d'une minute | une adresse contient `localhost` : la remplacer par `127.0.0.1` |
 
 ## Rejouer la démo automatiquement
 
 ```bash
-cd app/frontend
+cd frontend
 BASE=http://localhost:8080 node scripts/screenshots.mjs        # scan, interactions, webcam, Swagger
 BASE=http://localhost:8080 node scripts/chat-screenshots.mjs   # chat, citation, dose refusée
 node scripts/mlflow-screenshots.mjs                            # MLflow (expériences, registre)

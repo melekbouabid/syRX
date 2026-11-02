@@ -1,6 +1,6 @@
 """Single-molecule toxicity: one LightGBM model per Tox21 assay on RDKit Morgan fingerprints.
 
-Bonus tool of the agent and the MCP server (bonus/docs/toxicity.md). The model predicts the
+Bonus tool of the agent and the MCP server (docs/bonus/toxicity.md). The model predicts the
 probability that a molecule is *active* in each of the 12 Tox21 in vitro assays; it is
 "prédiction d'un modèle sur des tests in vitro, pas une évaluation clinique". Each molecule
 is predicted on its own: nothing is ever said about a mixture.

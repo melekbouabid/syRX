@@ -12,14 +12,14 @@ photo ──> détecteur (YOLO11n, 1 classe « pill ») ──> une boîte par c
 
 ![Chaîne de vision](assets/vision_pipeline.png)
 
-Code : [`training/tujya_vision/`](../training/tujya_vision/) (`autolabel.py`, `prepare.py`,
-`train.py`), avec son propre venv `module1_vision_mlops/training/.venv`
-([`training/requirements.txt`](../training/requirements.txt)). Données :
-[dataset_c3pi.md](dataset_c3pi.md).
+Code : [`src/data/`](../../src/data/) (`autolabel.py`, `prepare.py`) et
+[`src/models/`](../../src/models/) (`train.py`), avec son propre venv `.venv-train`
+([`src/models/requirements-train.txt`](../../src/models/requirements-train.txt)). Données :
+[docs/module1/dataset_c3pi.md](dataset_c3pi.md).
 
 ## D'où viennent les boîtes (décision D38)
 
-C3PI ne fournit aucune boîte ([dataset_c3pi.md](dataset_c3pi.md)). Trois options ont été
+C3PI ne fournit aucune boîte ([docs/module1/dataset_c3pi.md](dataset_c3pi.md)). Trois options ont été
 étudiées :
 
 1. Des annotations existantes : aucune dans C3PI ; ePillID fournit des recadrages, pas des
@@ -31,7 +31,7 @@ C3PI ne fournit aucune boîte ([dataset_c3pi.md](dataset_c3pi.md)). Trois option
    deux comprimés sur un fond assez uni, la vision classique les trouve donc de façon assez
    fiable, et les photos douteuses peuvent être repérées et écartées.
 
-[`autolabel.py`](../training/tujya_vision/autolabel.py) : surface de fond quadratique
+[`autolabel.py`](../../src/data/autolabel.py) : surface de fond quadratique
 robuste en Lab (absorbe le vignettage), distance de couleur avec les ombres atténuées, seuil
 borné, régions connexes ne touchant pas le bord, pièces de monnaie (référence de taille de
 C3PI) rejetées par leur texture, régions en croissant (une ombre à côté d'un comprimé clair)
@@ -45,12 +45,12 @@ apprises sur les photos à deux comprimés (recto et verso) et grâce à l'augme
 
 ## Jeux de données (étape DVC `prepare`)
 
-`python -m tujya_vision.prepare` (ou `dvc repro prepare`) écrit, à partir de
+`python -m src.data.prepare` (ou `dvc repro prepare`) écrit, à partir de
 `config/splits/selected_images.csv` :
 
-- `data/vision/c3pi/labels/autolabel.csv` : par image, boîtes, drapeaux, ok
-- `data/vision/datasets/detect/` : format YOLO, grand côté 640 px, photos propres seulement
-- `data/vision/datasets/classify/<split>/<class_id:03d>/` : recadrages carrés de 224 px, deux
+- `data/processed/c3pi/labels/autolabel.csv` : par image, boîtes, drapeaux, ok
+- `data/processed/c3pi/datasets/detect/` : format YOLO, grand côté 640 px, photos propres seulement
+- `data/processed/c3pi/datasets/classify/<split>/<class_id:03d>/` : recadrages carrés de 224 px, deux
   au plus par photo (recto et verso), plus des recadrages des images de référence RxNav
   (entraînement seulement)
 
@@ -60,9 +60,9 @@ Une photo et tous ses recadrages restent dans le split de `selected_images.csv`.
 
 ```bash
 docker compose up -d                                   # MLflow sur http://localhost:5000
-cd module1_vision_mlops/training
-python -m tujya_vision.train classify --epochs 20
-python -m tujya_vision.train detect --epochs 10 --imgsz 640
+# depuis la racine du dépôt, venv d'entraînement (.venv-train) actif
+python -m src.models.train classify --epochs 20
+python -m src.models.train detect --epochs 10 --imgsz 640
 ```
 
 Chaque exécution est journalisée dans l'expérience MLflow `tujya-vision` : paramètres,
@@ -86,7 +86,7 @@ nouvelle version de `tujya-pill-classifier` ou de `tujya-pill-detector`.
 Boîtes par photo propre : 1 (2 862), 2 (775), 3 (43), 4 (30).
 
 **Contrôle à l'œil** d'une planche aléatoire de 48 photos
-(`python -m tujya_vision.prepare --sheet`) : 40 ont passé les filtres, dont 36 avec toutes
+(`python -m src.data.prepare --sheet`) : 40 ont passé les filtres, dont 36 avec toutes
 leurs boîtes justes (environ 90 %). Les erreurs sont surtout un rectangle pâle de lumière
 inégale près du bord inférieur d'un papier beige, et une fois un second comprimé manqué. Les
 photos douteuses étaient bien signalées. Améliorer les étiquettes (vérification à la main du
@@ -124,7 +124,7 @@ avec l'étiqueteur automatique.
 
 ### De bout en bout (ce que ferait l'application)
 
-`python -m tujya_vision.evaluate` sur **les 600 photos « consumer » du split de test**
+`python -m src.models.evaluate` sur **les 600 photos « consumer » du split de test**
 (y compris les 117 que l'étiqueteur a rejetées), avec les deux exports **ONNX** : le
 détecteur tourne sur la photo entière, la boîte la plus sûre est recadrée et classée.
 
@@ -135,7 +135,7 @@ détecteur tourne sur la photo entière, la boîte la plus sûre est recadrée e
 Run MLflow `9bfa9d81a606472892fbf67efe7036e1` (`evaluate-end-to-end`). Plus lent que
 nécessaire (25 min sur CPU) parce qu'Ultralytics a installé `onnxruntime-gpu` à la volée
 pendant cette exécution ; l'installation automatique est désactivée depuis dans
-`tujya_vision/__init__.py` (D42).
+`src/models/__init__.py` (D42).
 
 ### À propos de ces scores
 
@@ -159,8 +159,8 @@ réentraîner sur le split et les métriques d'ePillID (MAP, GAP, top-k sur le j
 
 ## Service : la chaîne propre à l'API et le seuil de confirmation
 
-`POST /api/scan` ([docs/api.md](../../docs/api.md)) n'utilise pas Ultralytics :
-[`serving/scanner.py`](../serving/scanner.py) réimplémente le letterbox, la NMS et le
+`POST /api/scan` ([docs/api.md](../api.md)) n'utilise pas Ultralytics :
+[`backend/app/inference.py`](../../backend/app/inference.py) réimplémente le letterbox, la NMS et le
 recadrage à 20 % de marge avec numpy et OpenCV, et fait tourner les deux fichiers ONNX avec
 ONNX Runtime (D45). Vérifications :
 
@@ -168,7 +168,7 @@ ONNX Runtime (D45). Vérifications :
   40/40, IoU moyen de la boîte principale 0,9999, même classe top-1 sur 39/39 (une photo sans
   boîte) ;
 - sur les 600 photos de test
-  (`python -m module1_vision_mlops.serving.evaluate_scan --split test`) : comprimé trouvé
+  (`python -m src.models.evaluate_scan --split test`) : comprimé trouvé
   98,5 %, top-1 **89,3 %**, top-5 **95,8 %**, comme l'évaluation de bout en bout ci-dessus.
 
 ### Seuil de confirmation
@@ -176,7 +176,7 @@ ONNX Runtime (D45). Vérifications :
 L'application demande à l'utilisateur de confirmer un comprimé quand sa probabilité top-1 est
 sous un seuil (`needs_confirmation`). Choisi sur les photos de **validation** (600, jamais
 utilisées pour l'entraînement), avec
-`python -m module1_vision_mlops.serving.evaluate_scan --split val` : règle = le plus petit
+`python -m src.models.evaluate_scan --split val` : règle = le plus petit
 seuil pour lequel au plus 1 % de toutes les photos serait accepté avec un mauvais comprimé.
 
 | Seuil | Acceptées sans confirmation | Top-1 parmi les acceptées | Fausses et acceptées (part de toutes les photos) |

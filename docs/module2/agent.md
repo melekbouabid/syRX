@@ -2,11 +2,11 @@
 
 L'agent répond aux questions sur les comprimés confirmés et leurs principes actifs, à partir
 des seuls documents retrouvés et résultats d'outils, avec des citations numérotées. Code :
-[`agent/`](../agent/) ([graph.py](../agent/graph.py), [tools.py](../agent/tools.py),
-[safety.py](../agent/safety.py), [runtime.py](../agent/runtime.py)) et
-[`rag/names.py`](../rag/names.py) ; route
-[`app/backend/app/routers/chat.py`](../../app/backend/app/routers/chat.py). Corpus et
-recherche : [rag.md](rag.md). Décisions D57 à D59 et D63 ([docs/decisions.md](../../docs/decisions.md)).
+[`src/agent/`](../../src/agent/) ([graph.py](../../src/agent/graph.py), [tools.py](../../src/agent/tools.py),
+[safety.py](../../src/agent/safety.py), [runtime.py](../../src/agent/runtime.py)) et
+[`src/rag/names.py`](../../src/rag/names.py) ; route
+[`backend/app/routers/chat.py`](../../backend/app/routers/chat.py). Corpus et
+recherche : [docs/module2/rag.md](rag.md). Décisions D57 à D59 et D63 ([docs/decisions.md](../decisions.md)).
 
 ## Graphe
 
@@ -28,7 +28,7 @@ START -> understand --(question de dose)-----------------------> safety -> END
 Si l'appel au planificateur échoue (modèle indisponible, JSON invalide), les appels ajoutés
 par règle s'exécutent quand même.
 
-## Outils ([`agent/tools.py`](../agent/tools.py), partagés avec le serveur MCP)
+## Outils ([`src/agent/tools.py`](../../src/agent/tools.py), partagés avec le serveur MCP)
 
 | Outil | Arguments | Renvoie |
 |---|---|---|
@@ -36,7 +36,7 @@ par règle s'exécutent quand même.
 | `check_interaction` | `drugs` (noms, français ou anglais), `pills` (class_id) | le résultat de `/api/interactions` : chaque paire, sévérité DDInter, description, source ; « aucune interaction connue dans cette base de données » quand rien n'est listé |
 | `get_drug_info` | `drug`, `sections` en option | classes de comprimés contenant le principe actif et le premier chunk de chaque section de la notice (encadré, indications, contre-indications, mises en garde, interactions, mécanisme) |
 | `search_documents` | `query`, `ingredients`, `doc_types`, `sections`, `k`, `exclude_retracted` | résultats de recherche avec titre, section, URL, source, date, licence, texte |
-| `predict_toxicity` (bonus) | `molecules` (1 ou 2 noms ou SMILES) | probabilités des tests in vitro de Tox21 par molécule, jamais sur un mélange ([bonus/docs/toxicity.md](../../bonus/docs/toxicity.md)) ; ajouté par règle à une question de toxicité ; ses phrases dans la réponse sont écrites par le code, pas par le LLM (D74) |
+| `predict_toxicity` (bonus) | `molecules` (1 ou 2 noms ou SMILES) | probabilités des tests in vitro de Tox21 par molécule, jamais sur un mélange ([docs/bonus/toxicity.md](../bonus/toxicity.md)) ; ajouté par règle à une question de toxicité ; ses phrases dans la réponse sont écrites par le code, pas par le LLM (D74) |
 
 **Point d'extension.** Un outil est une méthode asynchrone de `Toolbox` et une entrée de
 `TOOL_SPECS` ; il est alors disponible pour l'agent (`CHAT_TOOLS`) et le serveur MCP. Deux
@@ -44,7 +44,7 @@ outils bonus étaient prévus : `predict_toxicity` est implémenté (session 4) 
 `predict_synergy(drug_a, drug_b)` ne l'est pas, l'étude n'ayant pas atteint la règle fixée
 d'avance (D75 ; étude retirée du dépôt ensuite, D85).
 
-## Règles de sécurité ([`agent/safety.py`](../agent/safety.py), D63)
+## Règles de sécurité ([`src/agent/safety.py`](../../src/agent/safety.py), D63)
 
 Appliquées à chaque réponse, phrase par phrase :
 
@@ -90,14 +90,14 @@ moment où il a lieu), `token` (texte de la réponse, une phrase vérifiée à l
 (`X-Accel-Buffering: no`).
 
 Erreurs : 401 si non connecté ; 503 si l'index est vide (« run
-`python -m module2_ai_engineering.rag.index` ») ou si Ollama est injoignable.
+`python -m src.rag.index` ») ou si Ollama est injoignable.
 
 Configuration (`SYNERGYRX_*`) : `OLLAMA_URL` (compose : `http://ollama:11434`), `LLM_MODEL`
 (`qwen2.5:3b`), `LLM_TEMPERATURE` (0.1), `LLM_NUM_CTX` (4096, D68), `LLM_MAX_TOKENS` (450),
 `EMBEDDING_MODEL` (`bge-m3`), `RAG_TOP_K` (6).
 
-En ligne de commande (venv du backend) :
-`python -m module2_ai_engineering.agent.ask "question" [--pills 9 120]`.
+En ligne de commande (venv du projet `.venv`) :
+`python -m src.agent.ask "question" [--pills 9 120]`.
 
 ## Exemple (vrais modèles, 2026-10-28)
 
@@ -110,12 +110,12 @@ without coma [1]. » + avertissement ; environ 15 s au total sur la RTX 2050 (pl
 
 ## Tests (sans Ollama ni vrais embeddings)
 
-[`tests/test_chat.py`](../tests/test_chat.py) : un modèle de chat scénarisé
-([`tests/rag_fakes.py`](../tests/rag_fakes.py), appels d'outils et réponses diffusées) et
+[`tests/agent/test_chat.py`](../../tests/agent/test_chat.py) : un modèle de chat scénarisé
+([`backend/tujya_testing/rag_fakes.py`](../../backend/tujya_testing/rag_fakes.py), appels d'outils et réponses diffusées) et
 des embeddings factices par hachage sur un corpus de six chunks. Couvre : connexion
 obligatoire, choix des outils et appels ajoutés par règle, outils inconnus ignorés,
 correspondance des citations, articles rétractés exclus, réponses dangereuses réécrites
 (dose, « sans danger », mauvaise citation), question de dose refusée sans appel au LLM,
 repli si le planificateur échoue, comprimés -> principes actifs, ordre du flux SSE (tool,
 token, final) avec les phrases dangereuses retenues, 503 sans index.
-[`tests/test_safety.py`](../tests/test_safety.py) : les règles et le rapprochement des noms.
+[`tests/agent/test_safety.py`](../../tests/agent/test_safety.py) : les règles et le rapprochement des noms.

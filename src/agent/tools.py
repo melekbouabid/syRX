@@ -5,7 +5,7 @@ Every tool returns plain JSON-serialisable data with the sources it used, never 
 (the corpus has no dosage section) and never the word "safe".
 
 Extension point: a new tool is one async method on `Toolbox` plus one entry in
-`TOOL_SPECS`. Bonus tool: `predict_toxicity` (Tox21 in vitro assays, bonus/docs/toxicity.md).
+`TOOL_SPECS`. Bonus tool: `predict_toxicity` (Tox21 in vitro assays, docs/bonus/toxicity.md).
 """
 
 from __future__ import annotations

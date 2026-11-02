@@ -125,7 +125,7 @@ par clone :
 ```bash
 pip install pre-commit
 pre-commit install --hook-type pre-commit --hook-type commit-msg
-npm --prefix app/frontend/eslint ci     # pour le hook eslint
+npm --prefix frontend/eslint ci     # pour le hook eslint
 pre-commit run --all-files              # vérifier tout le dépôt
 ```
 
@@ -133,7 +133,7 @@ pre-commit run --all-files              # vérifier tout le dépôt
 |---|---|
 | `ruff`, `ruff-format` | Lint et formatage Python (équivalents de flake8 et black). |
 | `mypy` | Types du pipeline de données et du corpus du Module 2. |
-| `eslint` | Lint du frontend React ([app/frontend/eslint/](../app/frontend/eslint/eslint.config.js)). |
+| `eslint` | Lint du frontend React ([frontend/eslint/](../frontend/eslint/eslint.config.js)). |
 | `check-added-large-files` | Refuse un fichier de plus de 500 Ko : les données vont dans DVC. |
 | `nbstripout` | Enlève les sorties des notebooks avant le commit. |
 | `detect-private-key` | Refuse une clé privée. |

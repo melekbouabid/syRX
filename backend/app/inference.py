@@ -40,7 +40,7 @@ DETECTOR_FILE = "detector.onnx"
 CLASSIFIER_FILE = "classifier.onnx"
 MANIFEST_FILE = "models.json"
 LETTERBOX_FILL = 114  # Ultralytics' padding grey
-CROP_MARGIN = 0.2  # same as the training crops (module1_vision_mlops/docs/vision.md)
+CROP_MARGIN = 0.2  # same as the training crops (docs/module1/vision.md)
 
 
 class ModelsMissing(RuntimeError):
@@ -198,7 +198,7 @@ class PillScanner:
             raise ModelsMissing(
                 f"Model files missing in {directory}: {', '.join(missing)}. "
                 "Export them with `python -m src.models.publish` "
-                "(see module1_vision_mlops/docs/vision.md)."
+                "(see docs/module1/vision.md)."
             )
         manifest_path = directory / MANIFEST_FILE
         manifest = json.loads(manifest_path.read_text("utf-8")) if manifest_path.is_file() else {}

@@ -78,7 +78,7 @@ services:
     environment: &backend-env
       SYNERGYRX_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tujya}:${POSTGRES_PASSWORD:-tujya}@postgres:5432/${POSTGRES_DB:-tujya}
       SYNERGYRX_PHARMA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tujya}:${POSTGRES_PASSWORD:-tujya}@postgres:5432/${POSTGRES_DB:-tujya}
-      # Module 2: the agent's LLM and embeddings (module2_ai_engineering/docs/agent.md, module2_ai_engineering/docs/rag.md)
+      # Module 2: the agent's LLM and embeddings (docs/module2/agent.md, docs/module2/rag.md)
       SYNERGYRX_OLLAMA_URL: http://ollama:11434
       SYNERGYRX_LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
     volumes: &backend-mounts

@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     onnx_providers: str = "cpu"
     onnx_threads: int = 0  # 0 = ONNX Runtime default (one per core)
     # Below this top-1 probability the app asks the user to confirm the pill. Chosen on the
-    # validation photos: module1_vision_mlops/docs/vision.md, "Confirmation threshold" (D47).
+    # validation photos: docs/module1/vision.md, "Confirmation threshold" (D47).
     scan_confirm_threshold: float = 0.85
     scan_detection_confidence: float = 0.25
     scan_max_bytes: int = 10 * 1024 * 1024
@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     demo_split_file: Path = PROJECT_DIR / "config" / "splits" / "selected_images.csv"
     demo_gallery_file: Path = PROJECT_DIR / "config" / "demo_gallery.csv"
 
-    # Module 2: RAG and agent (module2_ai_engineering/docs/rag.md, agent.md). The chunk index
+    # Module 2: RAG and agent (docs/module2/rag.md, agent.md). The chunk index
     # lives in the pharma database (table rag_chunks, pgvector);
     # `python -m src.rag.index` fills it from this file. Ollama serves both
     # the LLM and the embeddings (docker compose `ollama`).
@@ -63,15 +63,15 @@ class Settings(BaseSettings):
     embedding_dim: int = 1024
     embedding_num_ctx: int = 2048  # chunks are at most ~400 tokens
     rag_top_k: int = 6
-    # Chosen on the benchmark (module2_ai_engineering/docs/benchmark.md, D65): dense +
+    # Chosen on the benchmark (docs/module2/benchmark.md, D65): dense +
     # ingredient filter is best; hybrid loses on French questions (BM25 only matches English).
     rag_search_mode: str = "dense"
     # An uncited answer sentence gets the source closest in meaning (bge-m3 cosine) above
-    # this; calibrated on the first benchmark run (module2_ai_engineering/docs/benchmark.md).
+    # this; calibrated on the first benchmark run (docs/module2/benchmark.md).
     # 0 disables it.
     rag_attribution_threshold: float = 0.65
 
-    # Bonus: single-molecule toxicity (bonus/docs/toxicity.md). The model bundle is published by
+    # Bonus: single-molecule toxicity (docs/bonus/toxicity.md). The model bundle is published by
     # `python -m src.models.toxicity.train_tox21 publish`; ingredient names -> SMILES from PubChem.
     tox_model_dir: Path = PROJECT_DIR / "models" / "tox21"
     ingredient_smiles_file: Path = PROJECT_DIR / "config" / "ingredient_smiles.csv"

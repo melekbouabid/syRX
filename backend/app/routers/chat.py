@@ -33,8 +33,7 @@ def get_agent(request: Request) -> tuple[AgentHolder, TujyaAgent]:
     if holder.toolbox().retrievers.get() is None:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
-            "The document index is empty. Run `python -m src.rag.index`"
-            " (module2_ai_engineering/docs/rag.md).",
+            "The document index is empty. Run `python -m src.rag.index` (docs/module2/rag.md).",
         )
     return holder, agent
 

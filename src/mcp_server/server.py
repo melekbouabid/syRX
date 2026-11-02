@@ -8,7 +8,7 @@
 Same tools, same code as the LangGraph agent (agent/tools.py): identify_pills,
 check_interaction, get_drug_info, search_documents, predict_toxicity (bonus). Settings come
 from the SYNERGYRX_* environment (database, Ollama URL for the query embeddings, models
-directory); see module2_ai_engineering/docs/mcp.md for client configuration.
+directory); see docs/module2/mcp.md for client configuration.
 """
 
 from __future__ import annotations
