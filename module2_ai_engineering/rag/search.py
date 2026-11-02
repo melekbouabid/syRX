@@ -1,6 +1,6 @@
 """Search the RAG index from the command line and time each mode (real bge-m3 embeddings).
 
-# from the repository root, backend venv (app/backend/.venv) active
+# from the repository root, project venv (.venv) active
 python -m module2_ai_engineering.rag.search "fluconazole warfarin" --ingredient warfarin --k 5
 """
 

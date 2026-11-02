@@ -9,7 +9,7 @@
 Logged to MLflow (experiment `tujya-rag`); aggregates in benchmark/results_generation.json,
 per-question scores (no source text) in benchmark/generation_per_question.jsonl.
 
-    # from the repository root, backend venv (app/backend/.venv) active
+    # from the repository root, project venv (.venv) active
     python -m module2_ai_engineering.benchmark.bench_generation [--judge gemma3:4b] [--ragas 30]
 """
 

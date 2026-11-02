@@ -1,6 +1,6 @@
 """Train, log and publish the Tox21 toxicity model (bonus tool, bonus/docs/toxicity.md).
 
-# from the repository root, backend venv (rdkit, lightgbm, mlflow)
+# from the repository root, project venv (rdkit, lightgbm, mlflow)
 python -m bonus.toxicity.train_tox21 download   # MoleculeNet tox21.csv.gz -> data/tox21/
 python -m bonus.toxicity.train_tox21 train      # scaffold split, 12 LightGBM, MLflow tujya-tox
 python -m bonus.toxicity.train_tox21 publish    # registered version -> models/tox21/ (API)

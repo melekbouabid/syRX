@@ -3,7 +3,7 @@
 Each configuration is one MLflow run in the experiment `tujya-rag` (params, metrics, the
 per-question results as an artifact). Results: module2_ai_engineering/docs/benchmark.md.
 
-    # from the repository root, backend venv (app/backend/.venv) active
+    # from the repository root, project venv (.venv) active
     python -m module2_ai_engineering.benchmark.bench_retrieval
     # needs SYNERGYRX_PHARMA_DATABASE_URL and MLFLOW_TRACKING_URI
 

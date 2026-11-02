@@ -132,7 +132,7 @@ class ToxModel:
         if not meta_file.is_file():
             raise ToxicityUnavailable(
                 f"no toxicity model in {directory}: run "
-                "`python -m bonus.toxicity.train_tox21 publish` (backend venv, MLflow running)"
+                "`python -m bonus.toxicity.train_tox21 publish` (project venv, MLflow running)"
             )
         import lightgbm as lgb
 

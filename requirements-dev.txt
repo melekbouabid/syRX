@@ -1,0 +1,12 @@
+# Development environment of the whole project (API, src/, tests), from the repository root:
+#   uv venv .venv -p 3.12 && uv pip install -p .venv -r requirements-dev.txt
+-r backend/requirements.txt
+# The repository root and backend/ on sys.path (pyproject.toml).
+-e .
+# Module 2 corpus tests: the SynergyRx pipeline they run on, and its test tools.
+-e data_pipeline
+pytest-asyncio>=0.23
+respx>=0.21
+pytest>=8
+httpx2>=2.0
+onnx>=1.17

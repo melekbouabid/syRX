@@ -1,6 +1,6 @@
 """Ask the Tujya agent one question from the command line (real index and Ollama).
 
-# from the repository root, backend venv (app/backend/.venv) active
+# from the repository root, project venv (.venv) active
 python -m module2_ai_engineering.agent.ask "La warfarine interagit-elle avec le fluconazole ?"
 python -m module2_ai_engineering.agent.ask "Effets indésirables ?" --pills 9 120 --database-url postgresql+psycopg://...
 """

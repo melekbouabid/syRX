@@ -7,7 +7,7 @@ target-version = "py311"
 # Import roots of the code that has no configuration file of its own (modules and bonus):
 # the repository root (packages module1_vision_mlops, module2_ai_engineering, bonus), the
 # web app (package `app`) and the training code (package `tujya_vision`).
-src = [".", "app/backend", "module1_vision_mlops/training"]
+src = [".", "backend", "module1_vision_mlops/training"]
 
 [lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "S", "ASYNC", "PTH", "C4"]
@@ -19,5 +19,7 @@ ignore = [
 
 [lint.per-file-ignores]
 "**/tests/**" = ["S105", "S106", "S108"]
+# Test fixtures shared by the test suites (fake accounts and passwords).
+"backend/tujya_testing/**" = ["S105", "S106"]
 # One-off generator of the benchmark spec: its long lines are question and reference texts.
 "module2_ai_engineering/benchmark/make_spec.py" = ["E501"]

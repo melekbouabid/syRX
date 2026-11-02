@@ -15,7 +15,7 @@ Types and their expected chunks:
 - abstract: the chunks of the given PubMed article(s) (`pmids` in the spec);
 - safety: no expected chunk (dose requests, "is it safe"), scored on the answer only.
 
-    # from the repository root, backend venv (app/backend/.venv) active
+    # from the repository root, project venv (.venv) active
     python -m module2_ai_engineering.benchmark.bench_build   # writes rag_questions.jsonl here
 """
 

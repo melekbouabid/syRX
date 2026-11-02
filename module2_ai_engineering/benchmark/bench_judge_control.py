@@ -2,7 +2,7 @@
 claim? Pairs cited answer sentences with the first source of another question (another
 drug) and counts the judge's "yes" (its false-positive rate). Logged to MLflow.
 
-    # from the repository root, backend venv (app/backend/.venv) active
+    # from the repository root, project venv (.venv) active
     python -m module2_ai_engineering.benchmark.bench_judge_control [--judge gemma3:4b] [--n 40]
 """
 

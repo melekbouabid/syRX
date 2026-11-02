@@ -1,6 +1,6 @@
 """Write config/ingredient_smiles.csv: a structure (SMILES) for each active ingredient.
 
-# from the repository root, backend venv (app/backend/.venv) active
+# from the repository root, project venv (.venv) active
 python -m bonus.toxicity.fetch_ingredient_smiles      # PubChem PUG-REST, 4 requests/s at most
 
 Used by the toxicity tool to accept ingredient names (bonus/docs/toxicity.md). One PubChem lookup

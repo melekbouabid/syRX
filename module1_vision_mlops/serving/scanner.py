@@ -1,6 +1,6 @@
 """Pill scan with ONNX Runtime: detect every pill, crop it, identify it.
 
-Module 1 serving code, imported by the web API (app/backend) and by the agent tools.
+Module 1 serving code, imported by the web API (backend) and by the agent tools.
 
 Same two stages and the same pre- and post-processing as the training code in `../training/`
 (Ultralytics YOLO11 letterbox and NMS for the detector, the 20 %-margin square crop of

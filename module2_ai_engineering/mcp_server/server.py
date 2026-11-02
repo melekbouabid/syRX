@@ -1,6 +1,6 @@
 """Tujya MCP server: the agent's five tools for any MCP client (official Python MCP SDK).
 
-    # backend venv (app/backend/.venv) active, from any folder
+    # project venv (.venv) active, from any folder
     python -m module2_ai_engineering.mcp_server            # stdio (Claude Desktop, IDEs)
     python -m module2_ai_engineering.mcp_server --transport streamable-http --port 8765
                                                            # http://127.0.0.1:8765/mcp

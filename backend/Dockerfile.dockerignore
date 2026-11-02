@@ -1,8 +1,8 @@
-# Build context of app/backend/Dockerfile: the repository root. Allow-list: only the API
+# Build context of backend/Dockerfile: the repository root. Allow-list: only the API
 # code and the module code it imports go into the image; no data, model, secret, test or venv.
 *
-!app/backend/requirements.txt
-!app/backend/app/
+!backend/requirements.txt
+!backend/app/
 !module1_vision_mlops/__init__.py
 !module1_vision_mlops/serving/__init__.py
 !module1_vision_mlops/serving/scanner.py

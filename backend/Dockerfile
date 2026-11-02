@@ -2,7 +2,7 @@
 # models, config and data are mounted by docker-compose.yml.
 # The build context is the repository root, because the API imports the module packages
 # (module1_vision_mlops, ...); Dockerfile.dockerignore next to this file is the allow-list.
-#   docker build -f app/backend/Dockerfile -t tujya-backend .      # from the repository root
+#   docker build -f backend/Dockerfile -t tujya-backend .      # from the repository root
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -10,22 +10,22 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Same layout as the repository under /tujya: the backend folder is /tujya/app/backend, so
+# Same layout as the repository under /tujya: the backend folder is /tujya/backend, so
 # the default paths of app/config.py are /tujya/models, /tujya/config/..., /tujya/data/...,
 # which are the compose mounts. PYTHONPATH plays the role of the editable install
-# (app/backend/pyproject.toml): package `app` and the repository root.
-WORKDIR /tujya/app/backend
-ENV PYTHONPATH=/tujya:/tujya/app/backend
+# (pyproject.toml): package `app` and the repository root.
+WORKDIR /tujya/backend
+ENV PYTHONPATH=/tujya:/tujya/backend
 # LightGBM (bonus toxicity tool) needs the OpenMP runtime, absent from the slim image.
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
     && rm -rf /var/lib/apt/lists/*
-COPY app/backend/requirements.txt ./
+COPY backend/requirements.txt ./
 RUN pip install -r requirements.txt
 
 COPY module1_vision_mlops /tujya/module1_vision_mlops
 COPY module2_ai_engineering /tujya/module2_ai_engineering
 COPY bonus /tujya/bonus
-COPY app/backend/app ./app
+COPY backend/app ./app
 
 RUN useradd --create-home --uid 1000 tujya
 USER tujya

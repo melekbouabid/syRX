@@ -1,6 +1,6 @@
 """End-to-end check of the API's own scan pipeline (scanner.py) on C3PI photos.
 
-From the repository root, with the backend venv (app/backend/.venv) active:
+From the repository root, with the project venv (.venv) active:
 
     python -m module1_vision_mlops.serving.evaluate_scan --split val    # choose the threshold
     python -m module1_vision_mlops.serving.evaluate_scan --split test   # final numbers

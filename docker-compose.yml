@@ -70,10 +70,10 @@ services:
   pharma-init:
     image: ${BACKEND_IMAGE:-tujia2-backend:local}
     # The API imports the module packages, so its build context is the repository root
-    # (allow-list: app/backend/Dockerfile.dockerignore).
+    # (allow-list: backend/Dockerfile.dockerignore).
     build: &backend-build
       context: .
-      dockerfile: app/backend/Dockerfile
+      dockerfile: backend/Dockerfile
     command: ["python", "-m", "app.pharma_loader"]
     environment: &backend-env
       SYNERGYRX_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tujya}:${POSTGRES_PASSWORD:-tujya}@postgres:5432/${POSTGRES_DB:-tujya}

@@ -42,12 +42,12 @@ jobs:
     strategy:
       fail-fast: false
       # The backend imports the module packages: its build context is the repository root
-      # (allow-list app/backend/Dockerfile.dockerignore); the frontend builds from its folder.
+      # (allow-list backend/Dockerfile.dockerignore); the frontend builds from its folder.
       matrix:
         include:
           - image: backend
             context: .
-            file: app/backend/Dockerfile
+            file: backend/Dockerfile
           - image: frontend
             context: app/frontend
             file: app/frontend/Dockerfile
@@ -117,7 +117,7 @@ jobs:
         include:
           - image: backend
             context: .
-            file: app/backend/Dockerfile
+            file: backend/Dockerfile
           - image: frontend
             context: app/frontend
             file: app/frontend/Dockerfile

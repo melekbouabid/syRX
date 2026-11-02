@@ -40,20 +40,23 @@ jobs:
       - run: python -m pytest tests/unit
 
   backend:
-    name: backend (app/backend, FastAPI)
+    name: backend (backend/, FastAPI)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: app/backend
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: app/backend/requirements*.txt
+          cache-dependency-path: |
+            requirements-dev.txt
+            backend/requirements.txt
       - run: pip install -r requirements-dev.txt ruff
+        working-directory: .
       - run: python -m ruff check .
       - run: python -m ruff format --check .
       - run: python -m pytest
@@ -71,11 +74,13 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: app/backend/requirements*.txt
-      # The backend venv: the scan API tests call the web app; the training tests only need
+          cache-dependency-path: |
+            requirements-dev.txt
+            backend/requirements.txt
+      # The project venv (.venv): the scan API tests call the web app; the training tests only need
       # numpy and OpenCV (training itself, with ultralytics and mlflow, is not run in CI).
       - run: pip install -r requirements-dev.txt ruff
-        working-directory: app/backend
+        working-directory: .
       - run: python -m ruff check .
       - run: python -m ruff format --check .
       - run: python -m pytest
@@ -109,11 +114,13 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: app/backend/requirements*.txt
-      # The backend venv: the web app, the module packages and the SynergyRx pipeline the
+          cache-dependency-path: |
+            requirements-dev.txt
+            backend/requirements.txt
+      # The project venv (.venv): the web app, the module packages and the SynergyRx pipeline the
       # corpus steps run on (requirements-dev.txt).
       - run: pip install -r requirements-dev.txt ruff
-        working-directory: app/backend
+        working-directory: .
       - run: python -m ruff check .
       - run: python -m ruff format --check .
       - run: python -m pytest
@@ -131,9 +138,11 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: app/backend/requirements*.txt
+          cache-dependency-path: |
+            requirements-dev.txt
+            backend/requirements.txt
       - run: pip install -r requirements-dev.txt ruff
-        working-directory: app/backend
+        working-directory: .
       - run: python -m ruff check .
       - run: python -m ruff format --check .
       - run: python -m pytest

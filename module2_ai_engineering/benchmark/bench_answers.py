@@ -4,7 +4,7 @@ Writes data/rag/bench/answers.jsonl (git-ignored: it holds the source texts, som
 PubMed abstracts): question, draft (before the safety node), answer, sources with their
 text, tool calls, safety report, timings. Step 2 is bench_generation.py.
 
-    # from the repository root, backend venv (app/backend/.venv) active
+    # from the repository root, project venv (.venv) active
     python -m module2_ai_engineering.benchmark.bench_answers
     # needs SYNERGYRX_PHARMA_DATABASE_URL and Ollama running
 """
