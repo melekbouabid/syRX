@@ -6,7 +6,7 @@
 
 Writes `detector.onnx`, `classifier.onnx` and `models.json` (origin and SHA-256 of each file)
 into `--out` (default `models/` at the repository root, git-ignored; the API reads it from
-SYNERGYRX_MODELS_DIR, same default). The files are the ONNX exports registered by
+TUJYA_MODELS_DIR, same default). The files are the ONNX exports registered by
 `src.models.train`, so the API serves exactly the versions shown in the Model Registry.
 """
 

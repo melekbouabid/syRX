@@ -12,10 +12,10 @@ import pytest
 import respx
 
 from src.data.corpus import corpus
-from src.data.synergyrx_data import pipeline
-from src.data.synergyrx_data.config import Settings, SourceConfig
-from src.data.synergyrx_data.connectors.openfda import API, choose_label, label_sections
-from src.data.synergyrx_data.literature.queries import build_topic_query, read_ingredients
+from src.data.tujya_data import pipeline
+from src.data.tujya_data.config import Settings, SourceConfig
+from src.data.tujya_data.connectors.openfda import API, choose_label, label_sections
+from src.data.tujya_data.literature.queries import build_topic_query, read_ingredients
 
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 

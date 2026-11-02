@@ -67,10 +67,10 @@ repos:
 
       - id: mypy
         name: mypy (data pipeline and the module 2 corpus that runs on it)
-        entry: python -m mypy --config-file pyproject.toml src/data/synergyrx_data src/data/corpus
+        entry: python -m mypy --config-file pyproject.toml src/data/tujya_data src/data/corpus
         language: system
         types: [python]
-        files: ^(src/data/synergyrx_data|src/data/corpus)/
+        files: ^(src/data/tujya_data|src/data/corpus)/
         pass_filenames: false
 
       - id: no-secrets-or-data

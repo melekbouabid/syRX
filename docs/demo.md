@@ -31,13 +31,13 @@ et temps mesurés à cette occasion.
    GPU), les suivantes **5 à 7 s**. Poser une question une fois avant l'arrivée du jury :
 
    ```bash
-   export SYNERGYRX_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
-   export SYNERGYRX_DATABASE_URL=$SYNERGYRX_PHARMA_DATABASE_URL PYTHONIOENCODING=utf-8
+   export TUJYA_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
+   export TUJYA_DATABASE_URL=$TUJYA_PHARMA_DATABASE_URL PYTHONIOENCODING=utf-8
    .venv/Scripts/python -m src.agent.ask "What are the contraindications of metformin?"
    docker compose exec ollama ollama ps     # qwen2.5:3b et bge-m3 : "100% GPU"
    ```
 
-   (PowerShell : `$env:SYNERGYRX_PHARMA_DATABASE_URL = "postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya"`.)
+   (PowerShell : `$env:TUJYA_PHARMA_DATABASE_URL = "postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya"`.)
    Toujours `127.0.0.1` dans ces adresses, jamais `localhost` (sinon 1 à 2 minutes
    d'attente par connexion, D72).
 4. Ouvrir à l'avance, dans le navigateur, ces onglets :

@@ -106,7 +106,7 @@ sur la machine** (D72). Sur ce PC, `localhost` se résout d'abord en `::1`, et D
 plus qu'en IPv4 : navigateurs et curl repassent aussitôt en `127.0.0.1`, mais libpq (psycopg)
 attendait **65 à 100 s** par connexion (`mcp_server/smoke.py` prenait 2 min 34 s au lieu de
 5 s). Les valeurs par défaut et la documentation utilisent donc `127.0.0.1`
-(`SYNERGYRX_OLLAMA_URL`, `MLFLOW_TRACKING_URI`, les URL PostgreSQL) ;
+(`TUJYA_OLLAMA_URL`, `MLFLOW_TRACKING_URI`, les URL PostgreSQL) ;
 `http://localhost:8080` dans un navigateur ne pose aucun problème.
 
 ## Remote DVC (depuis le 2026-10-28)
@@ -185,7 +185,7 @@ cd backend
 python -m app.pharma_loader --database-url postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
 ```
 
-Sans `--database-url`, le chargeur utilise `SYNERGYRX_PHARMA_DATABASE_URL`, par défaut
+Sans `--database-url`, le chargeur utilise `TUJYA_PHARMA_DATABASE_URL`, par défaut
 `sqlite:///data/tujya.db`. Résultat du 2026-10-28 : 150 comprimés, 1 716 principes actifs
 (82 venant des comprimés, les autres sont des partenaires DDInter), 161 liens
 comprimé-principe actif, 40 508 interactions. Tests :

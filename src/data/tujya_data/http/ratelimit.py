@@ -6,7 +6,7 @@ import asyncio
 import time
 from collections.abc import Awaitable, Callable
 
-from src.data.synergyrx_data.config import HostLimit
+from src.data.tujya_data.config import HostLimit
 
 Clock = Callable[[], float]
 Sleep = Callable[[float], Awaitable[None]]

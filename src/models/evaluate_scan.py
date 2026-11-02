@@ -8,7 +8,7 @@ From the repository root, with the project venv (.venv) active:
 Same protocol as `src/models/evaluate.py` (all consumer photos of the split, the
 most confident box is identified, no box counts as wrong), but with the code the API runs.
 Prints top-1 / top-5 and, for candidate thresholds, the share of photos accepted without
-confirmation and the top-1 accuracy among them. The models are read from SYNERGYRX_MODELS_DIR
+confirmation and the top-1 accuracy among them. The models are read from TUJYA_MODELS_DIR
 (default: models/ at the repository root).
 """
 

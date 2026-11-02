@@ -24,11 +24,11 @@ from urllib.parse import urlencode, urlsplit
 import httpx
 from tenacity import RetryCallState
 
-from src.data.synergyrx_data import __version__
-from src.data.synergyrx_data.config import HostLimit, Settings
-from src.data.synergyrx_data.http.cache import HttpCache
-from src.data.synergyrx_data.http.circuit import CircuitBreaker
-from src.data.synergyrx_data.http.errors import (
+from src.data.tujya_data import __version__
+from src.data.tujya_data.config import HostLimit, Settings
+from src.data.tujya_data.http.cache import HttpCache
+from src.data.tujya_data.http.circuit import CircuitBreaker
+from src.data.tujya_data.http.errors import (
     AccessControlError,
     ContentTypeError,
     GuardrailViolation,
@@ -39,17 +39,17 @@ from src.data.synergyrx_data.http.errors import (
     RetryableHttpError,
     RobotsDisallowedError,
 )
-from src.data.synergyrx_data.http.guardrails import (
+from src.data.tujya_data.http.guardrails import (
     Guardrails,
     build_user_agent,
     detect_wall,
     strip_secret_params,
 )
-from src.data.synergyrx_data.http.ratelimit import HostRateLimiter
-from src.data.synergyrx_data.http.retry import RETRYABLE_STATUS, build_retrying, parse_retry_after
-from src.data.synergyrx_data.http.robots import RobotsChecker
-from src.data.synergyrx_data.logging_utils import SECRET_PARAMS, get_logger, log_event
-from src.data.synergyrx_data.manifest import hash_file
+from src.data.tujya_data.http.ratelimit import HostRateLimiter
+from src.data.tujya_data.http.retry import RETRYABLE_STATUS, build_retrying, parse_retry_after
+from src.data.tujya_data.http.robots import RobotsChecker
+from src.data.tujya_data.logging_utils import SECRET_PARAMS, get_logger, log_event
+from src.data.tujya_data.manifest import hash_file
 
 Kind = Literal["api", "bulk", "html"]
 T = TypeVar("T")

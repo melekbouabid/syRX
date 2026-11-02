@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-ROOT_LOGGER = "synergyrx"
+ROOT_LOGGER = "tujya_data"
 REDACTED = "[REDACTED]"
 
 # Query-string parameters whose values must never reach a log line or a file on disk.

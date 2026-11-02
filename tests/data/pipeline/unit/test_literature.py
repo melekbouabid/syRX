@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from src.data.synergyrx_data.literature.abstracts import classify_article_type
-from src.data.synergyrx_data.literature.queries import (
+from src.data.tujya_data.literature.abstracts import classify_article_type
+from src.data.tujya_data.literature.queries import (
     append_query_log,
     build_ingredient_queries,
     build_topic_query,

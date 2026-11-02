@@ -14,15 +14,15 @@ from typing import Any
 import httpx
 import pandas as pd
 
-from src.data.synergyrx_data.config import Settings
-from src.data.synergyrx_data.connectors import (
+from src.data.tujya_data.config import Settings
+from src.data.tujya_data.connectors import (
     REGISTRY,
     allowed_hosts,
     get_connector,
     is_enabled,
     source_names,
 )
-from src.data.synergyrx_data.connectors.base import (
+from src.data.tujya_data.connectors.base import (
     Artifact,
     Connector,
     Context,
@@ -31,15 +31,15 @@ from src.data.synergyrx_data.connectors.base import (
     ValidationResult,
     validate_frame,
 )
-from src.data.synergyrx_data.http.client import PoliteClient
-from src.data.synergyrx_data.http.errors import HttpError
-from src.data.synergyrx_data.logging_utils import get_logger, log_event
-from src.data.synergyrx_data.manifest import Manifest, hash_file, utc_now_iso
-from src.data.synergyrx_data.preflight import PreflightError
-from src.data.synergyrx_data.progress import ProgressReporter
-from src.data.synergyrx_data.provenance import read_parquet, write_parquet
-from src.data.synergyrx_data.quality.drift import DriftTracker
-from src.data.synergyrx_data.state import DISABLED, MANUAL_STEP, NEEDS_ATTENTION, OK, StateStore
+from src.data.tujya_data.http.client import PoliteClient
+from src.data.tujya_data.http.errors import HttpError
+from src.data.tujya_data.logging_utils import get_logger, log_event
+from src.data.tujya_data.manifest import Manifest, hash_file, utc_now_iso
+from src.data.tujya_data.preflight import PreflightError
+from src.data.tujya_data.progress import ProgressReporter
+from src.data.tujya_data.provenance import read_parquet, write_parquet
+from src.data.tujya_data.quality.drift import DriftTracker
+from src.data.tujya_data.state import DISABLED, MANUAL_STEP, NEEDS_ATTENTION, OK, StateStore
 
 log = get_logger("pipeline")
 

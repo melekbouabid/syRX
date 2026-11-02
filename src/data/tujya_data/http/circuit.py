@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 
-from src.data.synergyrx_data.http.errors import CircuitOpenError
+from src.data.tujya_data.http.errors import CircuitOpenError
 
 
 class CircuitBreaker:

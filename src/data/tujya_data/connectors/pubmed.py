@@ -14,28 +14,28 @@ from typing import Any, ClassVar
 
 import pandas as pd
 
-from src.data.synergyrx_data.connectors.base import (
+from src.data.tujya_data.connectors.base import (
     Artifact,
     Connector,
     Link,
     PlannedAction,
     SourceInfo,
 )
-from src.data.synergyrx_data.connectors.schemas import ArticleRecord, Record
-from src.data.synergyrx_data.http.cache import atomic_write_bytes
-from src.data.synergyrx_data.http.errors import HttpError
-from src.data.synergyrx_data.literature.abstracts import (
+from src.data.tujya_data.connectors.schemas import ArticleRecord, Record
+from src.data.tujya_data.http.cache import atomic_write_bytes
+from src.data.tujya_data.http.errors import HttpError
+from src.data.tujya_data.literature.abstracts import (
     articles_frame,
     deduplicate,
     parse_pubmed_xml,
 )
-from src.data.synergyrx_data.literature.queries import (
+from src.data.tujya_data.literature.queries import (
     Query,
     append_query_log,
     build_ingredient_queries,
     read_ingredients,
 )
-from src.data.synergyrx_data.manifest import utc_now_iso
+from src.data.tujya_data.manifest import utc_now_iso
 
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 DATE_FORMAT = "%Y/%m/%d"
@@ -124,7 +124,7 @@ class PubMedConnector(Connector):
     def queries(self) -> list[Query]:
         limit = min(self.options["max_queries"], 3) if self.sample else self.options["max_queries"]
         if self.options["mode"] != "ingredients":
-            # SynergyRx's `pairs` and `drugs` modes read the synergy tables, removed (D85).
+            # The original `pairs` and `drugs` modes read the synergy tables, removed (D85).
             raise ValueError(f"unknown PubMed query mode {self.options['mode']!r}")
         names = read_ingredients(self.settings.resolve(Path(self.options["ingredients_file"])))
         return build_ingredient_queries(

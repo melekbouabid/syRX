@@ -22,12 +22,12 @@ route ne renvoie jamais de dose, et aucune ne dit jamais qu'une association est 
 ## POST /api/scan
 
 Formulaire multipart, un champ `image` : JPEG, PNG ou WebP, 10 Mo et 50 mégapixels au plus
-(`SYNERGYRX_SCAN_MAX_BYTES`, `SYNERGYRX_SCAN_MAX_PIXELS`). Erreurs : 401 non connecté, 413
+(`TUJYA_SCAN_MAX_BYTES`, `TUJYA_SCAN_MAX_PIXELS`). Erreurs : 401 non connecté, 413
 trop grand, 415 pas une image, 503 modèles ou tables de médicaments absents (le message dit
 quelle commande corrige le problème).
 
 Chaîne ([`backend/app/inference.py`](../backend/app/inference.py),
-ONNX Runtime, CPU par défaut, CUDA avec `SYNERGYRX_ONNX_PROVIDERS=auto`) :
+ONNX Runtime, CPU par défaut, CUDA avec `TUJYA_ONNX_PROVIDERS=auto`) :
 
 1. décodage (OpenCV, orientation EXIF appliquée), letterbox à 640 px, détecteur
    (`tujya-pill-detector`, YOLO11n), confiance >= 0,25, NMS à IoU 0,7, 20 comprimés au plus ;
@@ -62,7 +62,7 @@ Réponse (`ScanResult`), ici sur une photo du split de test :
 ```
 
 `needs_confirmation` est vrai quand la probabilité top-1 est sous `confirm_threshold` (0,85,
-`SYNERGYRX_SCAN_CONFIRM_THRESHOLD`) ; le site demande alors de choisir dans le top-5 ou de
+`TUJYA_SCAN_CONFIRM_THRESHOLD`) ; le site demande alors de choisir dans le top-5 ou de
 chercher avec `GET /api/pills`. Choix de 0,85 :
 [docs/module1/vision.md](module1/vision.md#seuil-de-confirmation)
 (D47). Sans comprimé trouvé, `pills` est vide et `message` le dit.
@@ -70,7 +70,7 @@ chercher avec `GET /api/pills`. Choix de 0,85 :
 ### Modèles
 
 L'API charge `detector.onnx`, `classifier.onnx` et `models.json` depuis
-`SYNERGYRX_MODELS_DIR` (par défaut `models/` à la racine du dépôt, ignoré par git), au premier
+`TUJYA_MODELS_DIR` (par défaut `models/` à la racine du dépôt, ignoré par git), au premier
 scan. On le remplit depuis le Model Registry de MLflow (venv d'entraînement, serveur MLflow
 lancé) :
 

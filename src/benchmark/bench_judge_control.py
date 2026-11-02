@@ -40,7 +40,7 @@ async def main() -> None:
     rng.shuffle(pairs)
     judge = ChatOllama(
         model=args.judge,
-        base_url=os.environ.get("SYNERGYRX_OLLAMA_URL", "http://127.0.0.1:11434"),
+        base_url=os.environ.get("TUJYA_OLLAMA_URL", "http://127.0.0.1:11434"),
         temperature=0,
         num_ctx=2048,
         num_predict=3,

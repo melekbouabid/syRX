@@ -12,10 +12,10 @@ from pathlib import Path
 
 import pytest
 
-from src.data.synergyrx_data.config import Settings, load_settings
-from src.data.synergyrx_data.connectors import allowed_hosts
-from src.data.synergyrx_data.http.client import PoliteClient
-from src.data.synergyrx_data.literature.abstracts import parse_pubmed_xml
+from src.data.tujya_data.config import Settings, load_settings
+from src.data.tujya_data.connectors import allowed_hosts
+from src.data.tujya_data.http.client import PoliteClient
+from src.data.tujya_data.literature.abstracts import parse_pubmed_xml
 
 pytestmark = pytest.mark.live
 PIPELINE = Path(__file__).resolve().parents[4] / "config" / "data_pipeline"
@@ -26,7 +26,7 @@ EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 def settings(tmp_path: Path) -> Settings:
     """Real rate limits and the real identity from `.env`, but a throwaway data directory."""
     built = load_settings(PIPELINE / "config.yaml", [f"data_dir={(tmp_path / 'data').as_posix()}"])
-    if not built.secrets.contact_email and os.environ.get("SYNERGYRX_ALLOW_ANONYMOUS") != "1":
+    if not built.secrets.contact_email and os.environ.get("TUJYA_ALLOW_ANONYMOUS") != "1":
         pytest.skip("CONTACT_EMAIL is not set in .env: live requests are refused without it")
     if not built.secrets.contact_email:
         built.http.require_contact_email = False

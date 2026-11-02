@@ -1,14 +1,21 @@
 """Settings of the web API.
 
-Every value can be overridden in `backend/.env` or the environment with the `SYNERGYRX_`
-prefix, for example `SYNERGYRX_ADMIN_PASSWORD=...`.
+Every value can be overridden in `backend/.env` or the environment with the `TUJYA_`
+prefix, for example `TUJYA_ADMIN_PASSWORD=...`. The project's first prefix, `SYNERGYRX_`, is
+still read after it, so that existing `.env` files and shells keep working (decision D86).
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    DotEnvSettingsSource,
+    EnvSettingsSource,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent  # backend/
 # The repository root (data/, config/, models/). The Docker image keeps the same layout under
@@ -16,12 +23,39 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent  # backend/
 PROJECT_DIR = BACKEND_DIR.parent
 
 DEFAULT_ADMIN_PASSWORD = "admin"  # noqa: S105  first-run default, meant to be changed
+ENV_PREFIX = "TUJYA_"
+# Fallback for the settings written before the rename (D86); TUJYA_ always wins.
+LEGACY_ENV_PREFIX = "SYNERGYRX_"
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=BACKEND_DIR / ".env", env_prefix="SYNERGYRX_", extra="ignore"
+        env_file=BACKEND_DIR / ".env", env_prefix=ENV_PREFIX, extra="ignore"
     )
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Arguments, then TUJYA_* (environment, .env), then the legacy SYNERGYRX_* names."""
+        env_file = getattr(dotenv_settings, "env_file", cls.model_config.get("env_file"))
+        legacy_env = EnvSettingsSource(settings_cls, env_prefix=LEGACY_ENV_PREFIX)
+        legacy_dotenv = DotEnvSettingsSource(
+            settings_cls, env_file=env_file, env_prefix=LEGACY_ENV_PREFIX
+        )
+        return (
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            legacy_env,
+            legacy_dotenv,
+            file_secret_settings,
+        )
 
     database_url: str = f"sqlite:///{(BACKEND_DIR / 'app.db').as_posix()}"
     # Tujya medicine tables (pills, ingredients, interactions): PostgreSQL from
@@ -29,7 +63,7 @@ class Settings(BaseSettings):
     # The default is a SQLite file under data/ so nothing else is needed for development.
     pharma_database_url: str = f"sqlite:///{(PROJECT_DIR / 'data' / 'tujya.db').as_posix()}"
     # ONNX models for /api/scan: detector.onnx, classifier.onnx and models.json, written by
-    # `python -m src.models.publish` (SYNERGYRX_MODELS_DIR). Loaded on the first scan.
+    # `python -m src.models.publish` (TUJYA_MODELS_DIR). Loaded on the first scan.
     models_dir: Path = PROJECT_DIR / "models"
     # "cpu" always works; "auto" uses CUDA first when the installed onnxruntime has it.
     onnx_providers: str = "cpu"
@@ -76,7 +110,7 @@ class Settings(BaseSettings):
     tox_model_dir: Path = PROJECT_DIR / "models" / "tox21"
     ingredient_smiles_file: Path = PROJECT_DIR / "config" / "ingredient_smiles.csv"
 
-    session_cookie: str = "synergyrx_session"
+    session_cookie: str = "tujya_session"
     session_hours: int = 12
     cookie_secure: bool = False  # set to true as soon as the site is served over HTTPS
 

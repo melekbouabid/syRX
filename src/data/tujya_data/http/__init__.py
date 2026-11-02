@@ -1,12 +1,12 @@
 """Polite HTTP stack: client, rate limiting, retries, cache, robots.txt, guardrails."""
 
-from src.data.synergyrx_data.http.client import (
+from src.data.tujya_data.http.client import (
     DownloadResult,
     FetchResult,
     PoliteClient,
     ProbeResult,
 )
-from src.data.synergyrx_data.http.errors import (
+from src.data.tujya_data.http.errors import (
     AccessControlError,
     CircuitOpenError,
     ContentTypeError,

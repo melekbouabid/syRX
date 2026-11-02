@@ -13,16 +13,16 @@ import numpy as np
 import pandas as pd
 from pydantic import TypeAdapter, ValidationError
 
-from src.data.synergyrx_data.config import Settings
-from src.data.synergyrx_data.connectors.schemas import Record
-from src.data.synergyrx_data.http.cache import atomic_write_bytes
-from src.data.synergyrx_data.http.client import Kind, PoliteClient
-from src.data.synergyrx_data.logging_utils import get_logger
-from src.data.synergyrx_data.manifest import Manifest, utc_now_iso
-from src.data.synergyrx_data.preflight import ensure_disk_space
-from src.data.synergyrx_data.progress import ProgressReporter
-from src.data.synergyrx_data.provenance import PROVENANCE_COLUMNS, Provenance
-from src.data.synergyrx_data.state import StateStore
+from src.data.tujya_data.config import Settings
+from src.data.tujya_data.connectors.schemas import Record
+from src.data.tujya_data.http.cache import atomic_write_bytes
+from src.data.tujya_data.http.client import Kind, PoliteClient
+from src.data.tujya_data.logging_utils import get_logger
+from src.data.tujya_data.manifest import Manifest, utc_now_iso
+from src.data.tujya_data.preflight import ensure_disk_space
+from src.data.tujya_data.progress import ProgressReporter
+from src.data.tujya_data.provenance import PROVENANCE_COLUMNS, Provenance
+from src.data.tujya_data.state import StateStore
 
 # Bump when a parser changes shape, so cached interim tables are rebuilt.
 PARSER_VERSION = "1"
@@ -34,7 +34,7 @@ class ManualStepRequired(Exception):
 
 @dataclass(frozen=True)
 class Link:
-    """A URL listed in the project brief, probed by `synergyrx sources --check`."""
+    """A URL listed in the project brief, probed by `tujya-data sources --check`."""
 
     url: str
     label: str

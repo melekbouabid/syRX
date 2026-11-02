@@ -5,7 +5,7 @@ per-question results as an artifact). Results: docs/module2/benchmark.md.
 
     # from the repository root, project venv (.venv) active
     python -m src.benchmark.bench_retrieval
-    # needs SYNERGYRX_PHARMA_DATABASE_URL and MLFLOW_TRACKING_URI
+    # needs TUJYA_PHARMA_DATABASE_URL and MLFLOW_TRACKING_URI
 
 Metrics, over the questions that have expected chunks (benchmark/rag_questions.jsonl):
 - Recall@k: share of questions with at least one expected chunk in the top k (hit rate);

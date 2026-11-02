@@ -74,7 +74,7 @@ jobs:
         if: matrix.image == 'backend'
         run: |
           docker run -d --name api -p 127.0.0.1:8000:8000 \
-            -e SYNERGYRX_DATABASE_URL=sqlite:////tmp/accounts.db tujya-backend:ci
+            -e TUJYA_DATABASE_URL=sqlite:////tmp/accounts.db tujya-backend:ci
           for i in $(seq 1 30); do
             curl -fsS http://127.0.0.1:8000/api/health && break
             sleep 2

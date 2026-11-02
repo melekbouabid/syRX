@@ -8,9 +8,15 @@ from pathlib import Path
 import pytest
 import yaml
 
-from src.data.synergyrx_data.config import ConfigError, apply_overrides, load_secrets, load_settings
-from src.data.synergyrx_data.http.client import PoliteClient
-from src.data.synergyrx_data.logging_utils import (
+from src.data.tujya_data.config import (
+    ConfigError,
+    apply_overrides,
+    find_config,
+    load_secrets,
+    load_settings,
+)
+from src.data.tujya_data.http.client import PoliteClient
+from src.data.tujya_data.logging_utils import (
     JsonFormatter,
     get_logger,
     log_event,
@@ -18,7 +24,7 @@ from src.data.synergyrx_data.logging_utils import (
     register_secrets,
     setup_logging,
 )
-from src.data.synergyrx_data.testing import FAKE_API_KEY, TEST_EMAIL
+from src.data.tujya_data.testing import FAKE_API_KEY, TEST_EMAIL
 
 REPO = Path(__file__).resolve().parents[4]  # the repository
 SHIPPED = REPO / "config" / "data_pipeline" / "config.yaml"
@@ -57,6 +63,20 @@ def test_relative_project_root_is_relative_to_the_config_file(
     assert load_settings(config, environ={}).project_root == tmp_path.resolve()
     # An explicit root wins over the file (the test fixtures depend on it).
     assert load_settings(config, project_root=elsewhere, environ={}).project_root == elsewhere
+
+
+def test_config_path_from_the_environment_with_the_legacy_name_as_fallback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    new, old = tmp_path / "new.yaml", tmp_path / "old.yaml"
+    for path in (new, old):
+        path.write_text("data_dir: data\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("TUJYA_CONFIG", raising=False)
+    monkeypatch.setenv("SYNERGYRX_CONFIG", str(old))  # name before the rename (D86)
+    assert find_config() == old
+    monkeypatch.setenv("TUJYA_CONFIG", str(new))  # the current name wins
+    assert find_config() == new
 
 
 def test_overrides_including_dotted_host_names(tmp_path: Path) -> None:

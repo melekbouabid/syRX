@@ -202,7 +202,7 @@ async def main() -> None:
     parser.add_argument("--ragas", type=int, default=8, help="subset size (0 = skip RAGAS)")
     parser.add_argument("--reuse", action="store_true", help="reuse the saved citation scores")
     args = parser.parse_args()
-    base_url = os.environ.get("SYNERGYRX_OLLAMA_URL", "http://127.0.0.1:11434")
+    base_url = os.environ.get("TUJYA_OLLAMA_URL", "http://127.0.0.1:11434")
     rows = [json.loads(line) for line in ANSWERS.read_text(encoding="utf-8").splitlines()]
 
     from langchain_ollama import ChatOllama

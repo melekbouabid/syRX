@@ -10,8 +10,8 @@ import httpx
 import pytest
 import respx
 
-from src.data.synergyrx_data.config import Secrets, Settings
-from src.data.synergyrx_data.http.errors import (
+from src.data.tujya_data.config import Secrets, Settings
+from src.data.tujya_data.http.errors import (
     AccessControlError,
     CircuitOpenError,
     ContentTypeError,
@@ -22,8 +22,8 @@ from src.data.synergyrx_data.http.errors import (
     ResponseTooLargeError,
     RobotsDisallowedError,
 )
-from src.data.synergyrx_data.http.guardrails import build_user_agent, strip_secret_params
-from src.data.synergyrx_data.testing import TEST_EMAIL, ClientFactory, FakeClock
+from src.data.tujya_data.http.guardrails import build_user_agent, strip_secret_params
+from src.data.tujya_data.testing import TEST_EMAIL, ClientFactory, FakeClock
 
 API = "https://example.org/api/item"
 JSON = {"content-type": "application/json"}
@@ -38,7 +38,7 @@ async def test_user_agent_names_the_tool_and_the_contact(
     route = mock_http.get(API).respond(json={"ok": True})
     await make_client().fetch(API, source="t")
     agent = route.calls.last.request.headers["user-agent"]
-    assert agent.startswith("synergyrx-data/")
+    assert agent.startswith("tujya-data/")
     assert f"mailto:{TEST_EMAIL}" in agent
     assert "mozilla" not in agent.lower()
 

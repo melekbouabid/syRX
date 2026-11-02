@@ -11,12 +11,12 @@ import respx
 from rich.console import Console
 from typer.testing import CliRunner
 
-from src.data.synergyrx_data import cli
-from src.data.synergyrx_data.cli import app
-from src.data.synergyrx_data.config import ConfigError, load_settings
-from src.data.synergyrx_data.manifest import Manifest
-from src.data.synergyrx_data.quality.drift import DriftTracker, compare, snapshot
-from src.data.synergyrx_data.testing import TEST_EMAIL
+from src.data.tujya_data import cli
+from src.data.tujya_data.cli import app
+from src.data.tujya_data.config import ConfigError, load_settings
+from src.data.tujya_data.manifest import Manifest
+from src.data.tujya_data.quality.drift import DriftTracker, compare, snapshot
+from src.data.tujya_data.testing import TEST_EMAIL
 
 runner = CliRunner()
 DDINTER = "https://ddinter2.scbdd.com/static/media/download/ddinter_downloads_code_A.csv"
@@ -48,7 +48,8 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(cli, "console", Console(width=250))  # no line wrapping in assertions
     monkeypatch.setenv("CONTACT_EMAIL", TEST_EMAIL)
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
-    monkeypatch.delenv("SYNERGYRX_CONFIG", raising=False)
+    monkeypatch.delenv("TUJYA_CONFIG", raising=False)
+    monkeypatch.delenv("SYNERGYRX_CONFIG", raising=False)  # legacy name (D86)
     return tmp_path
 
 
@@ -118,7 +119,7 @@ def test_cli_overrides_and_bad_config(project: Path) -> None:
     assert result.exit_code == 0 and "eutils" not in result.output
     bad = runner.invoke(app, ["--set", "http.nonsense=1", "fetch", "--dry-run"])
     assert bad.exit_code == 2 and "Configuration error" in bad.output
-    assert "synergyrx-data" in runner.invoke(app, ["--version"]).output
+    assert "tujya-data" in runner.invoke(app, ["--version"]).output
 
 
 def test_cli_offline_commands_on_collected_data(project: Path) -> None:

@@ -6,7 +6,7 @@ text, tool calls, safety report, timings. Step 2 is bench_generation.py.
 
     # from the repository root, project venv (.venv) active
     python -m src.benchmark.bench_answers
-    # needs SYNERGYRX_PHARMA_DATABASE_URL and Ollama running
+    # needs TUJYA_PHARMA_DATABASE_URL and Ollama running
 """
 
 from __future__ import annotations

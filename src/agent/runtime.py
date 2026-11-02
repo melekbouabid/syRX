@@ -1,7 +1,7 @@
 """Builds the agent's pieces once per app: chunk store, retriever, LLM, toolbox, agent.
 
-Production: Ollama (`SYNERGYRX_OLLAMA_URL`) serves the LLM (`SYNERGYRX_LLM_MODEL`) and the
-embeddings (`SYNERGYRX_EMBEDDING_MODEL`). Tests replace `llm` and `embedder` with fakes.
+Production: Ollama (`TUJYA_OLLAMA_URL`) serves the LLM (`TUJYA_LLM_MODEL`) and the
+embeddings (`TUJYA_EMBEDDING_MODEL`). Tests replace `llm` and `embedder` with fakes.
 """
 
 from __future__ import annotations

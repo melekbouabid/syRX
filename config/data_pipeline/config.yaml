@@ -1,5 +1,5 @@
-# Data pipeline configuration (inherited from SynergyRx; used by the Tujya module 2 corpus).
-# Any value can be overridden on the command line:  synergyrx --set http.cache_ttl_seconds=0 fetch
+# Tujya data pipeline configuration (tujya-data; used by the module 2 corpus).
+# Any value can be overridden on the command line:  tujya-data --set http.cache_ttl_seconds=0 fetch
 # Keys that contain dots go in brackets:            --set "http.hosts[api.fda.gov].rate=1"
 # Secrets (CONTACT_EMAIL, NCBI_API_KEY) live in .env at the repository root, never in this file.
 # Run the pipeline from the repository root with `--config config/data_pipeline/config.yaml`
@@ -18,7 +18,7 @@ sources_doc_path: docs/data_pipeline/sources.md
 data_dir: data
 
 http:
-  product: synergyrx-data
+  product: tujya-data
   project_url: null              # public page describing the project, added to the User-Agent
   require_contact_email: true    # refuse live requests until CONTACT_EMAIL is set in .env
   connect_timeout: 10
@@ -66,5 +66,5 @@ sources:
 logging:
   level: INFO
   json_logs: true
-  file: null                     # e.g. logs/synergyrx.jsonl
+  file: null                     # e.g. logs/tujya-data.jsonl
   progress: true

@@ -4,9 +4,9 @@
 [docs/project_rules.md](project_rules.md). Les exigences du professeur sont les tableaux « Exigences des
 modules » du [README](../README.md#exigences-des-modules).
 
-## Déjà fait (hérité de SynergyRx)
-- [x] Pipeline de données `src/data/synergyrx_data` (14 connecteurs, 270 tests ; réduit à DDInter, PubMed et openFDA à l'étape 1.1, D85)
-- [x] Backend FastAPI : comptes, sessions, administration (le catalogue SynergyRx des médicaments et des lignées a été retiré à l'étape 1.1, D85)
+## Déjà fait (hérité du projet d'origine, synergie de médicaments)
+- [x] Pipeline de données `src/data/tujya_data` (14 connecteurs, 270 tests ; réduit à DDInter, PubMed et openFDA à l'étape 1.1, D85)
+- [x] Backend FastAPI : comptes, sessions, administration (le catalogue des médicaments et des lignées du projet d'origine a été retiré à l'étape 1.1, D85)
 - [x] Ébauche de frontend React + Vite à l'image de Tujya (prédictions factices)
 - [x] Planification de la nouvelle orientation (deux modules, périmètre, choix techniques)
 
@@ -15,7 +15,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] README avec les exigences des modules, les sources de données et le journal de progression
 - [x] Règles du projet (sécurité des réponses, usage local) dans [docs/project_rules.md](project_rules.md)
 - [x] Conventions Git : branches, Conventional Commits, tags d'étape et de modèle, hooks pre-commit et commit-msg testés, ESLint, contrôle des messages en CI ([docs/git_workflow.md](git_workflow.md), `v1.1.0-conventions`)
-- [x] Fichiers inutiles retirés (remarque du professeur) : catalogue, étude de synergie et partie synergie du pipeline SynergyRx, fichiers isolés ; tout reste dans l'historique git (D85)
+- [x] Fichiers inutiles retirés (remarque du professeur) : catalogue, étude de synergie et partie synergie du pipeline d'origine, fichiers isolés ; tout reste dans l'historique git (D85)
 - [ ] Changer le mot de passe administrateur par défaut (admin@gmail.com / admin)
 
 ## 1. Données des comprimés (C3PI, aucune photo personnelle)
@@ -88,17 +88,17 @@ modules » du [README](../README.md#exigences-des-modules).
 
 ## 8. Structure du dépôt (2026-10-29)
 - [x] Deux dossiers de premier niveau pour les modules notés, chacun avec un README qui relie chaque exigence à ses fichiers (D79 à D82)
-- [x] Application web commune dans `app/`, bonus dans `bonus/`, pipeline SynergyRx dans `data_pipeline/`, infrastructure dans `infra/`
+- [x] Application web commune dans `app/`, bonus dans `bonus/`, pipeline de collecte dans `data_pipeline/`, infrastructure dans `infra/`
 - [x] Documentation rangée par module, noms en minuscules, archive
 
 ## 9. Arborescence du guide des modules (étape 1.2, 2026-11-02)
 - [x] Code des deux modules dans `src/` (`data`, `models`, `rag`, `agent`, `mcp_server`, `benchmark`, `utils`), API dans `backend/` (`app/inference.py` = chaîne de scan), site dans `frontend/` (`src/components`, `src/services`), tests dans `tests/` et `backend/tests/`, `notebooks/` (D86)
 - [x] Données DVC rangées en `data/raw` et `data/processed` (`dvc move`, mêmes empreintes, rien à envoyer au remote)
 - [x] Un seul venv Python pour l'API, `src/` et les tests (`.venv`, `requirements-dev.txt`) ; venv d'entraînement séparé (`.venv-train`)
-- [x] Noms hérités de SynergyRx renommés (paquet `tujya_data`, commande `tujya-data`, préfixe `TUJYA_*` avec repli sur `SYNERGYRX_*`)
+- [x] Noms hérités du projet d'origine renommés : paquet `tujya_data`, commande `tujya-data`, préfixe de configuration `TUJYA_*` (l'ancien préfixe reste lu en repli pour les `.env` existants)
 
 ## Bonus (seulement s'il reste du temps)
 - [x] Outil `predict_toxicity` : tests in vitro Tox21, LightGBM sur empreintes de Morgan, split par scaffold, ROC-AUC test moyen 0,725 ([toxicity.md](bonus/toxicity.md))
 - [x] `predict_synergy` étudié (DrugComb, médicaments laissés de côté) : RMSE −7,3 % contre la moyenne, sous la règle des 10 % (D75), donc **aucun outil ajouté** ; étude retirée du dépôt à l'étape 1.1 (D85)
 - [ ] OCR des empreintes des comprimés
-- ~~Page des données de synergie anticancéreuse~~ : abandonnée, données SynergyRx retirées (D85)
+- ~~Page des données de synergie anticancéreuse~~ : abandonnée, données de synergie retirées (D85)

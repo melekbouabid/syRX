@@ -38,7 +38,7 @@ _UNSAFE = re.compile(r'["\[\]{}\\]')
 @dataclass(frozen=True)
 class Query:
     query_id: str
-    kind: str  # "ingredient" (SynergyRx also wrote "drug" and "pair")
+    kind: str  # "ingredient" (the original project also wrote "drug" and "pair")
     drug_ids: tuple[str, ...]
     drug_names: tuple[str, ...]
     pair_key: str | None  # always None for ingredients; kept so query logs keep one schema

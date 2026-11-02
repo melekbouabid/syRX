@@ -70,7 +70,7 @@ tests/            tests (data, rag, agent, mcp_server), venv du projet
 docs/module2/     rag, agent, mcp, benchmark, interactions, rapport (md + pdf), diagrams/, assets/
 ```
 
-Le corpus s'appuie sur le pipeline SynergyRx ([docs/data_pipeline/](../data_pipeline/README.md)) :
+Le corpus s'appuie sur le pipeline de collecte `tujya-data` ([docs/data_pipeline/](../data_pipeline/README.md)) :
 client HTTP poli, connecteurs DDInter, PubMed et openFDA, manifeste et provenance. Le corpus
 dépend du pipeline, jamais l'inverse.
 

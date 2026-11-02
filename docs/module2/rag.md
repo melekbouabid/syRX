@@ -22,7 +22,7 @@ sans `.env`, ajouter `--set http.require_contact_email=false` (comme dans
 du pipeline ([docs/data_pipeline/](../data_pipeline/README.md) : PoliteClient avec limites de débit,
 reprises, cache HTTP, manifeste avec SHA-256 et provenance), dans leur propre dossier
 `data/rag/` avec leur propre manifeste `data/rag/manifest.json`, pour ne jamais se mêler aux
-fichiers SynergyRx de `data/raw`.
+fichiers du projet d'origine sous `data/raw`.
 
 ## Sources et volumes
 
@@ -38,9 +38,9 @@ Longueur moyenne d'un chunk : 687 caractères (notices 1 164, résumés 627).
 
 ### Notices openFDA (connecteur `openfda_label`)
 
-[`src/data/synergyrx_data/connectors/openfda.py`](../../src/data/synergyrx_data/connectors/openfda.py),
-enregistré avec les autres connecteurs (désactivé par défaut, pour que l'exécution `update`
-de SynergyRx ne le lance pas). Pour chaque principe actif, il demande à
+[`src/data/tujya_data/connectors/openfda.py`](../../src/data/tujya_data/connectors/openfda.py),
+enregistré avec les autres connecteurs (désactivé par défaut, pour que l'exécution
+`tujya-data update` ne le lance pas). Pour chaque principe actif, il demande à
 `api.fda.gov/drug/label.json` les 25 notices les plus récentes (`sort=effective_time:desc`)
 dont `openfda.generic_name` ou `openfda.substance_name` contient le principe actif (ou un
 alias de recherche : valproate -> valproic acid / divalproex, vitamin B12 -> cyanocobalamin,
@@ -198,7 +198,7 @@ Pour essayer : `python -m src.rag.search "warfarin bleeding" --ingredient
 fluconazole --doc-type label` (affiche les trois modes avec leurs rangs et leurs temps).
 
 Le meilleur mode est mesuré dans [docs/module2/benchmark.md](benchmark.md) : dense avec le filtre par
-principe actif est le réglage par défaut de l'agent depuis D65 (`SYNERGYRX_RAG_SEARCH_MODE`).
+principe actif est le réglage par défaut de l'agent depuis D65 (`TUJYA_RAG_SEARCH_MODE`).
 
 ## Tests
 

@@ -9,15 +9,15 @@ from urllib.parse import urlsplit
 
 import pytest
 
-from src.data.synergyrx_data.connectors import REGISTRY, all_links, allowed_hosts
-from src.data.synergyrx_data.quality.linkcheck import ENDPOINTS
+from src.data.tujya_data.connectors import REGISTRY, all_links, allowed_hosts
+from src.data.tujya_data.quality.linkcheck import ENDPOINTS
 
-SRC = Path(__file__).resolve().parents[4] / "src" / "data" / "synergyrx_data"
+SRC = Path(__file__).resolve().parents[4] / "src" / "data" / "tujya_data"
 CONNECTOR_FILES = sorted((SRC / "connectors").glob("*.py"))
 # The module 2 corpus steps run on this pipeline and follow the same network policy.
 CORPUS = Path(__file__).resolve().parents[4] / "src" / "data" / "corpus"
 NETWORK_CHECKED = sorted(SRC.rglob("*.py")) + sorted(CORPUS.rglob("*.py"))
-# The links of the original brief for the sources that remain (the SynergyRx synergy sources
+# The links of the original brief for the sources that remain (the original synergy sources
 # were removed, decision D85).
 BRIEF_LINKS = [
     "https://ddinter2.scbdd.com/",

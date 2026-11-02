@@ -12,10 +12,10 @@ import pytest
 import respx
 from pydantic import SecretStr
 
-from src.data.synergyrx_data import pipeline
-from src.data.synergyrx_data.config import Settings, SourceConfig
-from src.data.synergyrx_data.state import MANUAL_STEP, NEEDS_ATTENTION
-from src.data.synergyrx_data.testing import FAKE_API_KEY, TEST_EMAIL
+from src.data.tujya_data import pipeline
+from src.data.tujya_data.config import Settings, SourceConfig
+from src.data.tujya_data.state import MANUAL_STEP, NEEDS_ATTENTION
+from src.data.tujya_data.testing import FAKE_API_KEY, TEST_EMAIL
 
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
@@ -111,7 +111,7 @@ async def test_pubmed_history_search_fetch_and_flags(
 
     search = parse_qs(pubmed["esearch"].calls.last.request.content.decode())
     assert search["usehistory"] == ["y"] and search["db"] == ["pubmed"]
-    assert search["tool"] == ["synergyrx-data"] and search["email"] == [TEST_EMAIL]
+    assert search["tool"] == ["tujya-data"] and search["email"] == [TEST_EMAIL]
     assert (search["mindate"], search["datetype"]) == (["2000/01/01"], ["edat"])
     term = search["term"][0]
     assert '"fluorouracil"[tiab]' in term and '"5-FU"[tiab]' in term
@@ -181,7 +181,7 @@ async def test_pubmed_api_key_is_sent_but_never_stored(
     tmp_path: Path,
     capfd: pytest.CaptureFixture[str],
 ) -> None:
-    from src.data.synergyrx_data.logging_utils import setup_logging
+    from src.data.tujya_data.logging_utils import setup_logging
 
     settings.secrets.ncbi_api_key = SecretStr(FAKE_API_KEY)
     setup_logging("DEBUG", json_logs=True, secrets=settings.secrets.values_to_redact())
@@ -208,10 +208,10 @@ async def test_pubmed_without_ingredients_explains_what_to_do(
     assert plan[0].action == "skip" and "pill_classes.csv" in plan[0].note
 
 
-async def test_pubmed_rejects_the_removed_synergyrx_query_modes(
+async def test_pubmed_rejects_the_removed_synergy_query_modes(
     settings: Settings, mock_http: respx.MockRouter
 ) -> None:
-    """`pairs` and `drugs` read the SynergyRx synergy tables, which no longer exist (D85)."""
+    """`pairs` and `drugs` read the original synergy tables, which no longer exist (D85)."""
     settings.sources["pubmed"] = SourceConfig(enabled=True, options={"mode": "pairs"})
     result = await run(settings, "pubmed")
     assert result.outcome == NEEDS_ATTENTION and "unknown PubMed query mode" in result.message

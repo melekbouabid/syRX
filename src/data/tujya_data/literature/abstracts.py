@@ -14,7 +14,7 @@ from typing import Any, Protocol
 
 import pandas as pd
 
-from src.data.synergyrx_data.provenance import PROVENANCE_COLUMNS
+from src.data.tujya_data.provenance import PROVENANCE_COLUMNS
 
 _YEAR = re.compile(r"(1[89]|20)\d{2}")
 

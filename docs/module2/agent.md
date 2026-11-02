@@ -92,7 +92,7 @@ moment où il a lieu), `token` (texte de la réponse, une phrase vérifiée à l
 Erreurs : 401 si non connecté ; 503 si l'index est vide (« run
 `python -m src.rag.index` ») ou si Ollama est injoignable.
 
-Configuration (`SYNERGYRX_*`) : `OLLAMA_URL` (compose : `http://ollama:11434`), `LLM_MODEL`
+Configuration (`TUJYA_*`) : `OLLAMA_URL` (compose : `http://ollama:11434`), `LLM_MODEL`
 (`qwen2.5:3b`), `LLM_TEMPERATURE` (0.1), `LLM_NUM_CTX` (4096, D68), `LLM_MAX_TOKENS` (450),
 `EMBEDDING_MODEL` (`bge-m3`), `RAG_TOP_K` (6).
 

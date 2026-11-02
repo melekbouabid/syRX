@@ -14,8 +14,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from src.data.synergyrx_data import __version__
-from src.data.synergyrx_data.config import Settings
+from src.data.tujya_data import __version__
+from src.data.tujya_data.config import Settings
 
 Layer = Literal["raw", "interim", "processed", "export", "report", "manual"]
 
@@ -154,7 +154,7 @@ class Manifest:
             merged.update({key: self.entries[key] for key in self._changed})
             payload = {
                 "schema_version": 1,
-                "generated_by": f"synergyrx-data {__version__}",
+                "generated_by": f"tujya-data {__version__}",
                 "updated_at": utc_now_iso(),
                 "files": {k: merged[k].model_dump() for k in sorted(merged)},
             }

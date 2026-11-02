@@ -15,7 +15,9 @@ import yaml
 from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
-CONFIG_ENV_VAR = "SYNERGYRX_CONFIG"
+CONFIG_ENV_VAR = "TUJYA_CONFIG"
+# Name before the rename (decision D86), still read when TUJYA_CONFIG is not set.
+LEGACY_CONFIG_ENV_VAR = "SYNERGYRX_CONFIG"
 DEFAULT_CONFIG_NAME = "config.yaml"
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -53,7 +55,7 @@ class NcbiSettings(_Model):
 
 
 class HttpSettings(_Model):
-    product: str = "synergyrx-data"
+    product: str = "tujya-data"
     project_url: str | None = None
     require_contact_email: bool = True
     connect_timeout: float = 10.0
@@ -92,7 +94,7 @@ class Secrets(BaseModel):
 
     ncbi_api_key: SecretStr | None = None
     contact_email: str | None = None
-    ncbi_tool: str = "synergyrx-data"
+    ncbi_tool: str = "tujya-data"
 
     @field_validator("contact_email")
     @classmethod
@@ -202,7 +204,7 @@ def load_secrets(project_root: Path, environ: dict[str, str] | None = None) -> S
         if (key := (values.get("NCBI_API_KEY") or "").strip())
         else None,
         contact_email=values.get("CONTACT_EMAIL") or None,
-        ncbi_tool=(values.get("NCBI_TOOL") or "synergyrx-data").strip(),
+        ncbi_tool=(values.get("NCBI_TOOL") or "tujya-data").strip(),
     )
 
 
@@ -211,7 +213,7 @@ def find_config(explicit: Path | None = None) -> Path | None:
         if not explicit.is_file():
             raise ConfigError(f"config file not found: {explicit}")
         return explicit
-    if env_path := os.environ.get(CONFIG_ENV_VAR):
+    if env_path := os.environ.get(CONFIG_ENV_VAR) or os.environ.get(LEGACY_CONFIG_ENV_VAR):
         return find_config(Path(env_path))
     candidate = Path.cwd() / DEFAULT_CONFIG_NAME
     return candidate if candidate.is_file() else None

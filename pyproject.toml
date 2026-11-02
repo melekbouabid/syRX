@@ -4,7 +4,7 @@
 # root (package `src`) and backend/ (package `app`, the FastAPI core, and the shared test
 # fixtures `tujya_testing`). The API dependencies stay in backend/requirements.txt, also used
 # by the Docker image, which sets PYTHONPATH instead of installing this file; the
-# dependencies below are those of the data collection pipeline (src/data/synergyrx_data).
+# dependencies below are those of the data collection pipeline (src/data/tujya_data).
 # Training (PyTorch, Ultralytics) has its own venv: src/models/requirements-train.txt.
 [build-system]
 requires = ["hatchling>=1.24"]
@@ -29,7 +29,7 @@ dependencies = [
 
 [project.scripts]
 # Polite data collection (DDInter, PubMed, openFDA): docs/data_pipeline/README.md.
-synergyrx = "src.data.synergyrx_data.cli:app"
+tujya-data = "src.data.tujya_data.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src", "backend/app"]
@@ -50,7 +50,7 @@ markers = [
 [tool.mypy]
 python_version = "3.11"
 # The data pipeline and the module 2 corpus steps that run on it.
-files = ["src/data/synergyrx_data", "src/data/corpus"]
+files = ["src/data/tujya_data", "src/data/corpus"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 check_untyped_defs = true

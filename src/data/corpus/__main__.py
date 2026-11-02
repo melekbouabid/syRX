@@ -1,10 +1,10 @@
 """Tujya data steps: `python -m src.data.corpus [--set key=value] <command>`.
 
     ddinter        DDInter 2.0, all 14 ATC files, terms acknowledged for this academic
-                   project (CC BY-NC-SA 4.0); SynergyRx's own config keeps it opt-in
+                   project (CC BY-NC-SA 4.0); the shared pipeline config keeps it opt-in
     ingredients    config/pill_classes.csv -> RxNav -> data/processed/pharma/pill_ingredients.csv,
                    and the ingredient columns of config/pill_classes.csv
-    interactions   DDInter (run `synergyrx fetch --source ddinter` first) ->
+    interactions   DDInter (run `tujya-data fetch --source ddinter` first) ->
                    data/processed/pharma/interactions_between_classes.csv (both drugs are
                    class ingredients), data/processed/pharma/interactions_with_any_drug.csv
                    (at least one is)
@@ -33,10 +33,10 @@ from src.data.corpus.interactions import (
     filter_interactions,
     read_aliases,
 )
-from src.data.synergyrx_data import pipeline
-from src.data.synergyrx_data.config import Settings, find_config, load_settings
-from src.data.synergyrx_data.http.client import PoliteClient
-from src.data.synergyrx_data.provenance import read_parquet, write_parquet
+from src.data.tujya_data import pipeline
+from src.data.tujya_data.config import Settings, find_config, load_settings
+from src.data.tujya_data.http.client import PoliteClient
+from src.data.tujya_data.provenance import read_parquet, write_parquet
 
 # Tujya uses DDInter under its CC BY-NC-SA 4.0 terms (non-commercial student project, owner's
 # decision of 2026-10-27). The shared config.yaml keeps the connector opt-in.
@@ -46,7 +46,7 @@ DDINTER_OVERRIDES = [
     "sources.ddinter.options.codes=[A, B, C, D, G, H, J, L, M, N, P, R, S, V]",
 ]
 # The RAG sources run through the normal connectors, in their own data folder and manifest,
-# so they never mix with the SynergyRx PubMed records under data/raw/pubmed.
+# so they never mix with the original project's PubMed records under data/raw/pubmed.
 RAG_OVERRIDES = ["data_dir=data/rag", "manifest_path=data/rag/manifest.json"]
 LABEL_OVERRIDES = ["sources.openfda_label.enabled=true"]
 PUBMED_OVERRIDES = [
@@ -58,9 +58,9 @@ PUBMED_OVERRIDES = [
     "sources.pubmed.options.start_date=2000/01/01",
 ]
 CLASS_COLUMNS = ["rxcui", "active_ingredients", "ingredient_rxcuis", "ingredient_method"]
-# Module 2 corpus steps run through the SynergyRx pipeline connectors (src/data/synergyrx_data): its
+# Module 2 corpus steps run through the data pipeline connectors (src/data/tujya_data): its
 # configuration (rate limits, sources) is used when the steps run from the repository root,
-# as the DVC stage does; SYNERGYRX_CONFIG or a config.yaml in the working
+# as the DVC stage does; TUJYA_CONFIG or a config.yaml in the working
 # directory still wins.
 PIPELINE_CONFIG = Path(__file__).resolve().parents[3] / "config" / "data_pipeline" / "config.yaml"
 

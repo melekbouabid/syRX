@@ -27,8 +27,8 @@ requêtes, et `models/` pour `identify_pills`. Avec le venv du projet (`.venv`) 
 quel dossier :
 
 ```bash
-# PowerShell : $env:SYNERGYRX_PHARMA_DATABASE_URL = "postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya"
-export SYNERGYRX_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
+# PowerShell : $env:TUJYA_PHARMA_DATABASE_URL = "postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya"
+export TUJYA_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
 python -m src.mcp_server                      # transport stdio
 python -m src.mcp_server --transport streamable-http --port 8765
                                                                  # http://127.0.0.1:8765/mcp
@@ -56,8 +56,8 @@ VS Code `mcp.json` avec `servers` au lieu de `mcpServers`) :
       "command": "C:/chemin/vers/tujya/.venv/Scripts/python.exe",
       "args": ["-m", "src.mcp_server"],
       "env": {
-        "SYNERGYRX_PHARMA_DATABASE_URL": "postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya",
-        "SYNERGYRX_OLLAMA_URL": "http://127.0.0.1:11434"
+        "TUJYA_PHARMA_DATABASE_URL": "postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya",
+        "TUJYA_OLLAMA_URL": "http://127.0.0.1:11434"
       }
     }
   }
@@ -67,7 +67,7 @@ VS Code `mcp.json` avec `servers` au lieu de `mcpServers`) :
 **Claude Code** :
 
 ```bash
-claude mcp add tujya --env SYNERGYRX_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya \
+claude mcp add tujya --env TUJYA_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya \
   -- C:/chemin/vers/tujya/.venv/Scripts/python.exe -m src.mcp_server
 ```
 

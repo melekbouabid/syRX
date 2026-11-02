@@ -7,7 +7,7 @@
 
 Same tools, same code as the LangGraph agent (agent/tools.py): identify_pills,
 check_interaction, get_drug_info, search_documents, predict_toxicity (bonus). Settings come
-from the SYNERGYRX_* environment (database, Ollama URL for the query embeddings, models
+from the TUJYA_* environment (database, Ollama URL for the query embeddings, models
 directory); see docs/module2/mcp.md for client configuration.
 """
 

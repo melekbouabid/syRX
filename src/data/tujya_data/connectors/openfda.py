@@ -18,17 +18,17 @@ from typing import Any, ClassVar
 
 import pandas as pd
 
-from src.data.synergyrx_data.connectors.base import (
+from src.data.tujya_data.connectors.base import (
     Artifact,
     Connector,
     Link,
     PlannedAction,
     SourceInfo,
 )
-from src.data.synergyrx_data.connectors.schemas import LabelSectionRecord, Record
-from src.data.synergyrx_data.http.cache import atomic_write_bytes
-from src.data.synergyrx_data.http.errors import HttpError, NotFoundError
-from src.data.synergyrx_data.literature.queries import read_ingredients
+from src.data.tujya_data.connectors.schemas import LabelSectionRecord, Record
+from src.data.tujya_data.http.cache import atomic_write_bytes
+from src.data.tujya_data.http.errors import HttpError, NotFoundError
+from src.data.tujya_data.literature.queries import read_ingredients
 
 API = "https://api.fda.gov/drug/label.json"
 DAILYMED = "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid="

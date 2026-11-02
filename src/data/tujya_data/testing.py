@@ -2,7 +2,7 @@
 with respx.
 
 Used by the pipeline tests (tests/conftest.py) and by the module 2 corpus tests, which run
-on this pipeline: `pytest_plugins = ["src.data.synergyrx_data.testing"]`. Needs the `dev` extra
+on this pipeline: `pytest_plugins = ["src.data.tujya_data.testing"]`. Needs the `dev` extra
 (pytest, respx); nothing else in the package imports this module.
 """
 
@@ -14,9 +14,9 @@ from pathlib import Path
 import pytest
 import respx
 
-from src.data.synergyrx_data.config import Secrets, Settings, load_settings
-from src.data.synergyrx_data.connectors import allowed_hosts
-from src.data.synergyrx_data.http.client import PoliteClient
+from src.data.tujya_data.config import Secrets, Settings, load_settings
+from src.data.tujya_data.connectors import allowed_hosts
+from src.data.tujya_data.http.client import PoliteClient
 
 # example.org is reserved for documentation (RFC 2606): this is not a real mailbox.
 TEST_EMAIL = "pipeline-tests@example.org"

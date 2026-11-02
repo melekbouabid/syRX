@@ -56,7 +56,7 @@ ingredient_rxcui, ingredient (RxNorm IN en minuscules), method (`ndc` ou `name`)
   académique par l'étape `ddinter`, qui lance le connecteur existant du pipeline avec
   `enabled=true`, `terms_acknowledged=true` et les 14 fichiers. Le
   [`config/data_pipeline/config.yaml`](../../config/data_pipeline/config.yaml) partagé garde DDInter
-  désactivé par défaut pour l'exécution `update` de SynergyRx (deux tests existants fixent
+  désactivé par défaut pour l'exécution `tujya-data update` (deux tests existants fixent
   ce défaut). Pas de redistribution : les tables restent sous `data/`, ignoré par git.
 - Citation : Tian Y, et al. DDInter 2.0: an enhanced drug interaction resource with expanded
   data coverage, new interaction types, and improved user interface. Nucleic Acids Res.

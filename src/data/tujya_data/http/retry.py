@@ -10,8 +10,8 @@ from email.utils import parsedate_to_datetime
 import httpx
 from tenacity import AsyncRetrying, RetryCallState, retry_if_exception, stop_after_attempt
 
-from src.data.synergyrx_data.config import RetrySettings
-from src.data.synergyrx_data.http.errors import RetryableHttpError
+from src.data.tujya_data.config import RetrySettings
+from src.data.tujya_data.http.errors import RetryableHttpError
 
 RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
 

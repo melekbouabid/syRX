@@ -33,7 +33,7 @@ flowchart TB
   BE --> PG
   AG --> OL["Ollama (GPU)<br/>qwen2.5:3b + bge-m3"]
   DATA["data/ (DVC)"] --> TR
-  PIPE["src/data/synergyrx_data<br/>collecte polie"] --> CORP
+  PIPE["src/data/tujya_data<br/>collecte polie"] --> CORP
   CORP --> DATA
   DATA --> RAG
   TR --> MLF["MLflow<br/>tracking + registre"]
@@ -58,7 +58,7 @@ source [docs/diagrams/architecture.mmd](diagrams/architecture.mmd).
 | [src/mcp_server/](../src/mcp_server/) | les mêmes outils par MCP | processus séparé (stdio ou HTTP local) |
 | [src/benchmark/](../src/benchmark/) | questions, scripts, résultats | sur le PC |
 | [src/models/toxicity/](../src/models/toxicity/) | toxicité Tox21, bonus ([docs/bonus/](bonus/README.md)) : outil de l'agent, route, page | dans l'API ; entraînement sur le PC |
-| [src/data/synergyrx_data/](../src/data/synergyrx_data/) | pipeline SynergyRx ([docs/data_pipeline/](data_pipeline/README.md)) : client HTTP poli, connecteurs, manifeste | sur le PC (venv du projet) |
+| [src/data/tujya_data/](../src/data/tujya_data/) | pipeline de collecte ([docs/data_pipeline/](data_pipeline/README.md)) : client HTTP poli, connecteurs, manifeste | sur le PC (venv du projet) |
 | [tests/](../tests/), [backend/tests/](../backend/tests/) | tests du code de `src/` et de l'API | `pytest` à la racine et dans `backend/` |
 | [infra/](../infra/) | images et réglages des services MLflow, PostgreSQL, Ollama | Docker Compose |
 
@@ -95,7 +95,7 @@ publier.
   `app.medicines`). Les outils de l'agent réutilisent les fonctions des routes de scan et
   d'interactions, pour que l'API, l'agent et le serveur MCP donnent exactement la même
   réponse.
-- `src.data.corpus` dépend du pipeline (`src.data.synergyrx_data`), jamais l'inverse.
+- `src.data.corpus` dépend du pipeline (`src.data.tujya_data`), jamais l'inverse.
 - L'entraînement (`src.data.prepare`, `src.models.train`, ...) tourne dans son propre venv
   (PyTorch et Ultralytics) : l'API n'en importe rien, elle ne lit que les fichiers ONNX
   publiés.

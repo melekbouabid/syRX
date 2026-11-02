@@ -7,7 +7,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from src.data.synergyrx_data.config import Settings
+from src.data.tujya_data.config import Settings
 
 # Raw file + parsed copy + working room.
 SPACE_FACTOR = 2.5
@@ -75,7 +75,7 @@ def run_preflight(settings: Settings, planned_bytes: int = 0) -> list[Check]:
     )
     probe_dir = _existing_parent(settings.data_root)
     try:
-        probe = probe_dir / ".synergyrx_write_test"
+        probe = probe_dir / ".tujya_write_test"
         probe.write_text("", encoding="utf-8")
         probe.unlink()
         writable = True

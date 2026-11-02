@@ -10,10 +10,10 @@ import pandas as pd
 import pytest
 import respx
 
-from src.data.synergyrx_data import pipeline
-from src.data.synergyrx_data.config import Settings, SourceConfig
-from src.data.synergyrx_data.manifest import ManifestEntry
-from src.data.synergyrx_data.provenance import PROVENANCE_COLUMNS
+from src.data.tujya_data import pipeline
+from src.data.tujya_data.config import Settings, SourceConfig
+from src.data.tujya_data.manifest import ManifestEntry
+from src.data.tujya_data.provenance import PROVENANCE_COLUMNS
 from tests.data.pipeline.unit.test_connectors_lookup import PUBMED_XML
 
 DICTIONARY = Path(__file__).resolve().parents[4] / "docs" / "data_pipeline" / "data_dictionary.md"

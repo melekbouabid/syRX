@@ -76,11 +76,11 @@ services:
       dockerfile: backend/Dockerfile
     command: ["python", "-m", "app.pharma_loader"]
     environment: &backend-env
-      SYNERGYRX_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tujya}:${POSTGRES_PASSWORD:-tujya}@postgres:5432/${POSTGRES_DB:-tujya}
-      SYNERGYRX_PHARMA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tujya}:${POSTGRES_PASSWORD:-tujya}@postgres:5432/${POSTGRES_DB:-tujya}
+      TUJYA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tujya}:${POSTGRES_PASSWORD:-tujya}@postgres:5432/${POSTGRES_DB:-tujya}
+      TUJYA_PHARMA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tujya}:${POSTGRES_PASSWORD:-tujya}@postgres:5432/${POSTGRES_DB:-tujya}
       # Module 2: the agent's LLM and embeddings (docs/module2/agent.md, docs/module2/rag.md)
-      SYNERGYRX_OLLAMA_URL: http://ollama:11434
-      SYNERGYRX_LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
+      TUJYA_OLLAMA_URL: http://ollama:11434
+      TUJYA_LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
     volumes: &backend-mounts
       # The image keeps the repository layout under /tujya: these are the default paths.
       - ./config:/tujya/config:ro

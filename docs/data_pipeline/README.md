@@ -1,6 +1,6 @@
-# Pipeline de données (hérité de SynergyRx)
+# Pipeline de collecte des données (tujya-data)
 
-Pipeline de collecte d'origine du dépôt, écrit pour **SynergyRx AI** (synergie de
+Pipeline de collecte d'origine du dépôt, écrit pour le premier objectif du projet (synergie de
 combinaisons de médicaments anticancéreux). Tujya n'en garde que ce qui sert au corpus du
 module 2 ([src/data/corpus/](../../src/data/corpus/)) : ses
 briques HTTP « polies » (limites de débit, cache, robots.txt, manifeste, provenance) et trois
@@ -20,7 +20,7 @@ tests dans `tests/data/`, ses réglages dans `config/` et sa documentation ici.
 
 | Élément | Rôle |
 |---|---|
-| [`src/data/synergyrx_data/`](../../src/data/synergyrx_data/) | le paquet Python (`synergyrx`, commande en ligne) |
+| [`src/data/tujya_data/`](../../src/data/tujya_data/) | le paquet Python (`tujya-data`, commande en ligne) |
 | [`tests/data/pipeline/`](../../tests/data/pipeline/) (`unit/`, `live/`) | tests unitaires (HTTP simulé, aucun réseau) et tests de fumée optionnels sur les vrais services |
 | [`config/data_pipeline/config.yaml`](../../config/data_pipeline/config.yaml) | réglages (aucun secret) ; fixe la racine du projet à la racine du dépôt (`project_root: ../..`) |
 | [`config/data_pipeline/manifest.json`](../../config/data_pipeline/manifest.json), [LICENSES.md](LICENSES.md) | SHA-256, taille, URL, version, date et licence de chaque fichier collecté ; licences et citations des sources |
@@ -69,7 +69,7 @@ modèle : `.env.example`) :
 - `NCBI_API_KEY` : optionnel, gratuit depuis votre compte NCBI ; fait passer la limite des
   E-utilities d'environ 3 à environ 10 requêtes par seconde.
 
-Puis vérifier la machine : `synergyrx preflight`.
+Puis vérifier la machine : `tujya-data preflight`.
 
 ## Utilisation
 
@@ -82,16 +82,16 @@ python -m src.data.corpus labels
 python -m src.data.corpus pubmed
 ```
 
-La commande `synergyrx` reste utilisable directement, depuis la racine du dépôt avec
+La commande `tujya-data` reste utilisable directement, depuis la racine du dépôt avec
 `--config config/data_pipeline/config.yaml` (ou depuis `config/data_pipeline/`, où
 `config.yaml` est trouvé) :
 
 ```bash
-synergyrx --config config/data_pipeline/config.yaml fetch --dry-run   # le plan ; rien n'est requêté
+tujya-data --config config/data_pipeline/config.yaml fetch --dry-run   # le plan ; rien n'est requêté
 cd config/data_pipeline                  # les commandes suivantes trouvent config.yaml ici
-synergyrx fetch --source pubmed --sample 20
-synergyrx status                         # état de chaque connecteur
-synergyrx summary                        # bilan de tout ce qui a été collecté
+tujya-data fetch --source pubmed --sample 20
+tujya-data status                         # état de chaque connecteur
+tujya-data summary                        # bilan de tout ce qui a été collecté
 ```
 
 | Commande | Rôle |
@@ -106,7 +106,7 @@ synergyrx summary                        # bilan de tout ce qui a été collect�
 
 Les options globales se placent avant la commande : `--config`, `--set key=value`,
 `--data-dir`, `--log-level`, `--text-logs`. Toute valeur de `config.yaml` peut être
-surchargée, par exemple `synergyrx --set sources.pubmed.enabled=false fetch`. Les journaux
+surchargée, par exemple `tujya-data --set sources.pubmed.enabled=false fetch`. Les journaux
 sont des lignes JSON sur stderr ; les tableaux vont sur stdout.
 
 **Les seconds passages ne coûtent presque rien** : un fichier brut dont l'empreinte
@@ -130,7 +130,7 @@ les étapes Tujya mettent `enabled` et `terms_acknowledged` à `true` pour ce pr
 
 ## Comportement sur le réseau
 
-- S'identifie : `synergyrx-data/<version> (research data pipeline; mailto:<vous>)`.
+- S'identifie : `tujya-data/<version> (research data pipeline; mailto:<vous>)`.
 - Limites de débit par hôte (seau à jetons) et nombre de connexions plafonné, à 90 % de
   chaque limite ; un `Crawl-delay` de robots.txt l'emporte toujours s'il est plus lent.
 - Attente exponentielle avec gigue ; respecte `Retry-After`, 429 et 503.
@@ -143,7 +143,7 @@ les étapes Tujya mettent `enabled` et `terms_acknowledged` à `true` pour ce pr
 
 Une source en échec n'arrête pas l'exécution : les autres continuent, `status` indique
 laquelle demande attention et pourquoi ; `fetch` et `update` sortent alors avec un code non
-nul. `synergyrx update` peut être relancé sans risque.
+nul. `tujya-data update` peut être relancé sans risque.
 
 ## Développement
 
@@ -153,11 +153,11 @@ Depuis la racine du dépôt : `python -m ruff check src tests`, `python -m mypy`
 services, petits échantillons). Règles de lint communes : [ruff.toml](../../ruff.toml).
 
 Ajouter une source, c'est écrire une sous-classe de `Connector` (`discover`, `fetch`,
-`parse`, `validate`) et l'enregistrer dans `src/data/synergyrx_data/connectors/__init__.py`. Lire
+`parse`, `validate`) et l'enregistrer dans `src/data/tujya_data/connectors/__init__.py`. Lire
 d'abord [docs/data_pipeline/code_review.md](code_review.md).
 
 ```
-src/data/synergyrx_data/
+src/data/tujya_data/
   cli.py  pipeline.py  config.py  manifest.py  provenance.py  state.py  preflight.py
   http/         client, ratelimit, retry, cache, robots, circuit, guardrails
   connectors/   base, schemas, ddinter, pubmed, openfda

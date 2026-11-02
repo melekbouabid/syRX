@@ -10,7 +10,7 @@ from typing import Any, ClassVar
 
 import pandas as pd
 
-from src.data.synergyrx_data.connectors.base import (
+from src.data.tujya_data.connectors.base import (
     Artifact,
     Connector,
     Link,
@@ -18,7 +18,7 @@ from src.data.synergyrx_data.connectors.base import (
     PlannedAction,
     SourceInfo,
 )
-from src.data.synergyrx_data.connectors.schemas import InteractionRecord, Record
+from src.data.tujya_data.connectors.schemas import InteractionRecord, Record
 
 TERMS = "https://ddinter2.scbdd.com/terms/"
 

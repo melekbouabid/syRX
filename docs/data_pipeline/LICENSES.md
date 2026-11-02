@@ -1,7 +1,7 @@
 # Data licences
 
 Licences of the data the pipeline collects, from the connector registry (`SourceInfo`) and
-`manifest.json`. Written by hand since the SynergyRx `report` step was removed (decision
+`manifest.json`. Written by hand since the `report` step of the original pipeline was removed (decision
 D85): change it together with the connector's `SourceInfo`.
 
 This file covers the **data** the pipeline collects, not the pipeline's own code. Raw data is

@@ -10,8 +10,8 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from src.data.synergyrx_data.http.errors import GuardrailViolation
-from src.data.synergyrx_data.logging_utils import SECRET_PARAMS
+from src.data.tujya_data.http.errors import GuardrailViolation
+from src.data.tujya_data.logging_utils import SECRET_PARAMS
 
 BROWSER_MARKERS = (
     "mozilla",

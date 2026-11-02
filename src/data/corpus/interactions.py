@@ -1,6 +1,6 @@
 """DDInter interactions restricted to the ingredients of the Tujya pill classes.
 
-Input: the validated DDInter table written by `synergyrx fetch --source ddinter`
+Input: the validated DDInter table written by `tujya-data fetch --source ddinter`
 (`data/interim/ddinter/interactions.parquet`) and the ingredient names from RxNav. DDInter
 names are matched to RxNorm ingredient names case-insensitively, after the aliases of
 `config/ingredient_aliases.csv` (DDInter name -> RxNorm name, e.g. "Valproic acid" ->

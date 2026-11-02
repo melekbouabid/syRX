@@ -4,7 +4,7 @@ Idempotent: each row keeps a hash of its text, metadata and embedding model, so 
 run embeds nothing, a changed chunk is re-embedded, and a chunk gone from the corpus is
 deleted. Changing the embedding model (or its dimension) rebuilds the table.
 
-    python -m src.rag.index          # settings from SYNERGYRX_* env
+    python -m src.rag.index          # settings from TUJYA_* env
     python -m src.rag.index --pull   # also pull the Ollama models first
     python -m src.rag.index --database-url postgresql+psycopg://...
 """

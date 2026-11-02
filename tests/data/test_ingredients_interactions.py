@@ -14,7 +14,7 @@ from src.data.corpus.interactions import (
     filter_interactions,
     read_aliases,
 )
-from src.data.synergyrx_data.testing import ClientFactory
+from src.data.tujya_data.testing import ClientFactory
 
 R = ing.RXNAV
 

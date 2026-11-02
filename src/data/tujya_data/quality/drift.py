@@ -16,7 +16,7 @@ from typing import Any
 
 import pandas as pd
 
-from src.data.synergyrx_data.manifest import utc_now_iso
+from src.data.tujya_data.manifest import utc_now_iso
 
 # Wide matrices (expression) are fingerprinted rather than listed column by column.
 WIDE_TABLE_COLUMNS = 500

@@ -7,7 +7,7 @@ The pipeline writes under the one `data/` folder: `data/raw` (downloaded files, 
 received), `data/interim/<source>/` (the validated tables below), `data/cache` and
 `data/state`. Rows that fail their schema are in `<table>.rejects.parquet` next to each
 table. Only `manifest.json`, the index of all those files, sits beside the folder. The module
-2 corpus (`python -m src.data.corpus`) reads these tables; the SynergyRx
+2 corpus (`python -m src.data.corpus`) reads these tables; the original project's
 processed tables (`data/parquet`, `csv`, `json`, `reports`) were removed with the synergy
 sources (decision D85).
 

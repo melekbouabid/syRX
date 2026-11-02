@@ -86,7 +86,7 @@ meilleur pour les encadrés (1,00) et les interactions (0,96) mais bien moins bo
 résumés (0,67).
 
 **Choix (D65) : recherche dense avec le filtre par principe actif**, réglage par défaut de
-l'agent (`SYNERGYRX_RAG_SEARCH_MODE=dense`) : meilleurs Recall@1, Recall@5 et MRR au total.
+l'agent (`TUJYA_RAG_SEARCH_MODE=dense`) : meilleurs Recall@1, Recall@5 et MRR au total.
 BM25 ne reconnaît que les mots anglais, il échoue donc sur les questions françaises
 (Recall@5 0,59) et tire l'hybride vers le bas ; sur les seules questions anglaises, l'hybride
 est un peu meilleur (MRR 0,944 contre 0,937). Un choix selon la langue (hybride pour
@@ -187,7 +187,7 @@ sans texte des sources).
 
 ```bash
 # venv du projet `.venv`, depuis n'importe quel dossier ; pile lancée (postgres, ollama, mlflow)
-export SYNERGYRX_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
+export TUJYA_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
 python -m src.benchmark.bench_build        # rag_questions.jsonl depuis le corpus
 python -m src.benchmark.bench_retrieval    # six exécutions -> MLflow, results_retrieval.json
 python -m src.benchmark.bench_answers      # l'agent sur les 88 questions -> data/processed/rag/bench/

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from src.data.synergyrx_data.manifest import file_lock, utc_now_iso
+from src.data.tujya_data.manifest import file_lock, utc_now_iso
 
 OK = "ok"
 NEEDS_ATTENTION = "needs_attention"

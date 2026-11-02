@@ -153,7 +153,7 @@ Arborescence du guide des modules, commune aux deux modules (décision D86).
 ```
 src/                      code des deux modules (paquet Python `src`)
   data/                   C3PI (index, téléchargement, boîtes automatiques, jeux YOLO), corpus RAG,
-                          pipeline de collecte polie (synergyrx_data : DDInter, PubMed, openFDA)
+                          pipeline de collecte polie (tujya_data : DDInter, PubMed, openFDA)
   models/                 entraînement, évaluation, export ONNX, publication ; toxicity/ (bonus Tox21)
   rag/  agent/            récupération (pgvector, dense + BM25) ; agent LangGraph, outils, sécurité
   mcp_server/  benchmark/ serveur MCP ; benchmark de la récupération et de la génération
@@ -214,7 +214,7 @@ elles sont sous `data/`, versionnées par DVC avec un remote local hors du dép�
 | [PubMed (E-utilities)](https://www.ncbi.nlm.nih.gov/books/NBK25501/) | conditions NLM | corpus RAG : résumés d'articles |
 | Tox21 (copie MoleculeNet / DeepChem) | aucune licence explicite trouvée (données publiques, citées) | bonus toxicité |
 
-Sources du pipeline SynergyRx et registre complet : [docs/data_pipeline/README.md](docs/data_pipeline/README.md)
+Sources du pipeline de collecte et registre complet : [docs/data_pipeline/README.md](docs/data_pipeline/README.md)
 et [docs/data_pipeline/LICENSES.md](docs/data_pipeline/LICENSES.md). Jeu C3PI en détail :
 [docs/module1/dataset_c3pi.md](docs/module1/dataset_c3pi.md).
 
@@ -224,7 +224,7 @@ et [docs/data_pipeline/LICENSES.md](docs/data_pipeline/LICENSES.md). Jeu C3PI en
   [CD](docs/cd.md), [décisions](docs/decisions.md), [feuille de route](docs/roadmap.md).
 - Soutenance : [script de démonstration](docs/demo.md), [questions probables du jury](docs/questions_jury.md).
 - Règles du projet (sécurité des réponses, usage local) : [docs/project_rules.md](docs/project_rules.md).
-- Historique : `git log` et tags git (`v1.0-avant-restructuration` : état SynergyRx avant la restructuration).
+- Historique : `git log` et tags git (`v1.0-avant-restructuration` : état du projet d'origine avant la restructuration).
 
 ## Auteur
 

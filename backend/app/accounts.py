@@ -15,7 +15,7 @@ from app.db import utc_now
 from app.models import AuthSession, Role, User
 from app.security import hash_password, hash_token, new_session_token, verify_password
 
-log = logging.getLogger("synergyrx.api")
+log = logging.getLogger("tujya.api")
 
 
 def get_user_by_email(db: Session, email: str) -> User | None:

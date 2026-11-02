@@ -1,4 +1,4 @@
-"""Command line interface: `synergyrx <command>`."""
+"""Command line interface: `tujya-data <command>`."""
 
 from __future__ import annotations
 
@@ -12,13 +12,13 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from src.data.synergyrx_data import __version__, pipeline
-from src.data.synergyrx_data.config import ConfigError, Settings, load_settings
-from src.data.synergyrx_data.connectors import REGISTRY, is_enabled, source_names
-from src.data.synergyrx_data.logging_utils import setup_logging
-from src.data.synergyrx_data.manifest import Manifest
-from src.data.synergyrx_data.preflight import run_preflight
-from src.data.synergyrx_data.state import MANUAL_STEP, NEEDS_ATTENTION
+from src.data.tujya_data import __version__, pipeline
+from src.data.tujya_data.config import ConfigError, Settings, load_settings
+from src.data.tujya_data.connectors import REGISTRY, is_enabled, source_names
+from src.data.tujya_data.logging_utils import setup_logging
+from src.data.tujya_data.manifest import Manifest
+from src.data.tujya_data.preflight import run_preflight
+from src.data.tujya_data.state import MANUAL_STEP, NEEDS_ATTENTION
 
 app = typer.Typer(
     add_completion=False,
@@ -95,7 +95,7 @@ def main(
     version: Annotated[bool, typer.Option("--version", help="Print the version.")] = False,
 ) -> None:
     if version:
-        console.print(f"synergyrx-data {__version__}")
+        console.print(f"tujya-data {__version__}")
         raise typer.Exit()
     if ctx.invoked_subcommand is None:
         console.print(ctx.get_help())
@@ -136,7 +136,7 @@ def sources(
         ],
     )
     if check:
-        from src.data.synergyrx_data.quality import linkcheck
+        from src.data.tujya_data.quality import linkcheck
 
         rows = asyncio.run(linkcheck.check_links(settings))
         path = linkcheck.write_sources_doc(settings, rows)
@@ -220,7 +220,7 @@ def validate(ctx: typer.Context, source: SourceOption = None) -> None:
         ],
     )
     if not rows:
-        console.print("Nothing to validate yet: run `synergyrx fetch` first.")
+        console.print("Nothing to validate yet: run `tujya-data fetch` first.")
     if any(not r["ok"] for r in rows):
         raise typer.Exit(1)
 
@@ -312,7 +312,7 @@ def summary(
         ],
     )
     if not payload["outputs"]:
-        console.print("Nothing collected yet: run `synergyrx fetch` first.")
+        console.print("Nothing collected yet: run `tujya-data fetch` first.")
         return
     _table(
         "Interim tables",
@@ -340,7 +340,7 @@ def update(
     attention = [run.source for run in runs if run.outcome == NEEDS_ATTENTION]
     manual = [run.source for run in runs if run.outcome == MANUAL_STEP]
     if manual:
-        console.print(f"Manual step required for: {', '.join(manual)} (see `synergyrx status`).")
+        console.print(f"Manual step required for: {', '.join(manual)} (see `tujya-data status`).")
     if attention:
         console.print(f"[red]Needs attention:[/red] {', '.join(attention)}")
         raise typer.Exit(1)

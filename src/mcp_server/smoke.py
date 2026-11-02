@@ -1,7 +1,7 @@
 """Start the MCP server as a subprocess (stdio), list its tools and call two of them.
 
 python -m src.mcp_server.smoke
-(project venv; uses the SYNERGYRX_* environment of this shell)
+(project venv; uses the TUJYA_* environment of this shell)
 """
 
 from __future__ import annotations
