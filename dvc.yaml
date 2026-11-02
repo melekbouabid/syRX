@@ -1,31 +1,31 @@
-# DVC pipeline. The raw C3PI images and metadata are tracked with `dvc add`
-# (data/vision/c3pi/*.dvc); the datasets built from them are a pipeline stage, so
+# DVC pipeline. Data layout of the module guide: data/raw (downloaded sources) and
+# data/processed (what the pipeline builds). The raw C3PI images and metadata are tracked with
+# `dvc add` (data/raw/c3pi/*.dvc); the datasets built from them are a pipeline stage, so
 # `dvc repro` rebuilds them when the images, the split list or the labelling code change.
-# `prepare`: run from the repository root with the training venv active
-# (module1_vision_mlops/training/.venv).
-# `rag_corpus`: from the repository root with the pipeline venv active (data_pipeline/.venv);
-# its inputs, the openFDA labels and PubMed abstracts under data/rag/raw and data/rag/interim,
-# are fetched by `python -m module2_ai_engineering.corpus labels` / `pubmed` and tracked with
-# `dvc add` (module2_ai_engineering/docs/rag.md).
+# `prepare`: run from the repository root with the training venv active (.venv-train).
+# `rag_corpus`: from the repository root with the project venv active (.venv); its inputs,
+# the openFDA labels and PubMed abstracts under data/rag/raw and data/rag/interim (the
+# collection workspace of the RAG sources, whose manifest records these paths: D86), are
+# fetched by `python -m src.data.corpus labels` / `pubmed` and tracked with `dvc add`
+# (docs/module2/rag.md).
 stages:
   prepare:
-    wdir: module1_vision_mlops/training
-    cmd: python -m tujya_vision.prepare
+    cmd: python -m src.data.prepare
     deps:
-      - ../../data/vision/c3pi/images
-      - ../../config/splits/selected_images.csv
-      - tujya_vision/autolabel.py
-      - tujya_vision/prepare.py
+      - data/raw/c3pi/images
+      - config/splits/selected_images.csv
+      - src/data/autolabel.py
+      - src/data/prepare.py
     outs:
-      - ../../data/vision/c3pi/labels
-      - ../../data/vision/datasets
+      - data/processed/c3pi/labels
+      - data/processed/c3pi/datasets
   rag_corpus:
-    cmd: python -m module2_ai_engineering.corpus corpus
+    cmd: python -m src.data.corpus corpus
     deps:
       - data/rag/interim
       - data/rag/raw/pubmed
-      - data/tujya/interactions_between_classes.csv
-      - data/tujya/pill_ingredients.csv
-      - module2_ai_engineering/corpus/corpus.py
+      - data/processed/pharma/interactions_between_classes.csv
+      - data/processed/pharma/pill_ingredients.csv
+      - src/data/corpus/corpus.py
     outs:
-      - data/rag/corpus
+      - data/processed/rag/corpus

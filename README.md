@@ -21,30 +21,31 @@ Projet étudiant solo, évalué dans deux modules : **Industrialisation Vision &
 
 | | Module 1 : Vision & MLOps | Module 2 : AI Engineering |
 |---|---|---|
-| Dossier | [module1_vision_mlops/](module1_vision_mlops/) | [module2_ai_engineering/](module2_ai_engineering/) |
-| Exigences → fichiers | [README du module 1](module1_vision_mlops/README.md#exigences-du-module-et-fichiers-correspondants) | [README du module 2](module2_ai_engineering/README.md#exigences-du-module-et-fichiers-correspondants) |
-| Rapport technique | [PDF](module1_vision_mlops/docs/rapport_module1_vision_mlops.pdf) · [Markdown](module1_vision_mlops/docs/rapport_module1_vision_mlops.md) | [PDF](module2_ai_engineering/docs/rapport_module2_ai_engineering.pdf) · [Markdown](module2_ai_engineering/docs/rapport_module2_ai_engineering.md) |
+| Code | [src/data/](src/data/), [src/models/](src/models/), [backend/app/inference.py](backend/app/inference.py) | [src/data/corpus/](src/data/corpus/), [src/rag/](src/rag/), [src/agent/](src/agent/), [src/mcp_server/](src/mcp_server/), [src/benchmark/](src/benchmark/) |
+| Documentation | [docs/module1/](docs/module1/README.md) | [docs/module2/](docs/module2/README.md) |
+| Exigences → fichiers | [README du module 1](docs/module1/README.md#exigences-du-module-et-fichiers-correspondants) | [README du module 2](docs/module2/README.md#exigences-du-module-et-fichiers-correspondants) |
+| Rapport technique | [PDF](docs/module1/rapport_module1_vision_mlops.pdf) · [Markdown](docs/module1/rapport_module1_vision_mlops.md) | [PDF](docs/module2/rapport_module2_ai_engineering.pdf) · [Markdown](docs/module2/rapport_module2_ai_engineering.md) |
 | Contenu | entraînement YOLO (détection + identification), MLflow, ONNX, chaîne de scan servie | corpus, RAG pgvector, agent LangGraph, outils et MCP, benchmark |
 | Évaluation | démonstration technique en direct | dépôt et commits, rapport, démonstration |
 
-L'application web commune est dans [app/](app/) ; le travail en plus des exigences dans
-[bonus/](bonus/).
+L'application web commune ([backend/](backend/), [frontend/](frontend/)) est décrite dans
+[docs/app.md](docs/app.md) ; le travail en plus des exigences dans [docs/bonus/](docs/bonus/README.md).
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  U["Navigateur<br/>localhost:8080"] --> FE["app/frontend<br/>React + nginx"]
-  FE --> BE["app/backend<br/>FastAPI"]
-  BE --> M1["Module 1<br/>serving : ONNX Runtime<br/>détection + identification"]
+  U["Navigateur<br/>localhost:8080"] --> FE["frontend<br/>React + nginx"]
+  FE --> BE["backend<br/>FastAPI"]
+  BE --> M1["Module 1<br/>backend/app/inference.py : ONNX Runtime<br/>détection + identification"]
   BE --> M2["Module 2<br/>agent LangGraph + RAG"]
   MCP["Module 2<br/>serveur MCP"] --> M2
   M2 --> OL["Ollama<br/>qwen2.5:3b, bge-m3"]
   M2 --> PG[("PostgreSQL<br/>+ pgvector")]
   BE --> PG
-  TR["Module 1<br/>training : YOLO11"] --> MLF["MLflow<br/>Model Registry"]
+  TR["Module 1<br/>src/data, src/models : YOLO11"] --> MLF["MLflow<br/>Model Registry"]
   MLF -- "ONNX" --> M1
-  D["data/ (DVC)"] --> TR
+  D["data/raw, data/processed (DVC)"] --> TR
   D --> M2
 ```
 
@@ -68,7 +69,7 @@ modèles publiés.
 
 ```bash
 dvc pull                       # données (images C3PI, tables DDInter, corpus RAG), remote local
-# modèles ONNX dans models/ : cd module1_vision_mlops/training && python -m tujya_vision.publish
+# modèles ONNX dans models/ : python -m src.models.publish  (venv d'entraînement .venv-train)
 docker compose up -d --build   # toute l'application, depuis la racine du dépôt
 ```
 
@@ -86,7 +87,7 @@ docker compose up -d --build   # toute l'application, depuis la racine du dépô
 Au premier démarrage, `rag-init` télécharge les modèles Ollama puis indexe le corpus dans
 pgvector (quelques minutes) ; scan et interactions marchent sans attendre. Sans GPU :
 `docker compose -f docker-compose.yml -f infra/docker/ollama/cpu.yml up -d`. Arrêt :
-`docker compose down` (garde les volumes). Développement sans Docker : [app/README.md](app/README.md) ;
+`docker compose down` (garde les volumes). Développement sans Docker : [docs/app.md](docs/app.md) ;
 script de la soutenance : [docs/demo.md](docs/demo.md).
 
 ## Exigences des modules
@@ -98,14 +99,14 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 
 | Exigence | État | Où |
 |---|:---:|---|
-| Détection des comprimés avec YOLOv8/v11 | ✅ | [training/](module1_vision_mlops/training/) (YOLO11n) |
-| Identification de chaque comprimé par transfer learning | ✅ | [training/](module1_vision_mlops/training/) (YOLO11s-cls) |
-| Backend FastAPI asynchrone, schémas Pydantic, Swagger sur `/docs` | ✅ | [app/backend/](app/backend/), [serving/](module1_vision_mlops/serving/) |
-| Frontend React : upload, webcam, prédictions et boîtes | ✅ | [app/frontend/](app/frontend/) |
+| Détection des comprimés avec YOLOv8/v11 | ✅ | [src/models/](src/models/) (YOLO11n) |
+| Identification de chaque comprimé par transfer learning | ✅ | [src/models/](src/models/) (YOLO11s-cls) |
+| Backend FastAPI asynchrone, schémas Pydantic, Swagger sur `/docs` | ✅ | [backend/](backend/), [backend/app/inference.py](backend/app/inference.py) |
+| Frontend React : upload, webcam, prédictions et boîtes | ✅ | [frontend/](frontend/) |
 | DVC (versionnement des données) | ✅ | [dvc.yaml](dvc.yaml), [docs/infra.md](docs/infra.md) |
 | MLflow : tracking des expériences | ✅ | expérience `tujya-vision` |
 | MLflow : Model Registry | ✅ | `tujya-pill-detector`, `tujya-pill-classifier` |
-| Export ONNX et inférence ONNX Runtime | ✅ | [serving/scanner.py](module1_vision_mlops/serving/scanner.py) |
+| Export ONNX et inférence ONNX Runtime | ✅ | [backend/app/inference.py](backend/app/inference.py) |
 | Docker Compose | ✅ | [docker-compose.yml](docker-compose.yml) |
 | Git avancé : branches, tags annotés, hooks (secrets, messages de commit) | ✅ | [docs/git_workflow.md](docs/git_workflow.md), [tools/hooks/](tools/hooks/) |
 | GitHub Actions CI/CD | ✅ | [.github/workflows/](.github/workflows/), [docs/cd.md](docs/cd.md) |
@@ -115,13 +116,13 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 
 | Exigence | État | Où |
 |---|:---:|---|
-| RAG avec gestion des documents, métadonnées, citations, documentation | ✅ | [corpus/](module2_ai_engineering/corpus/), [rag/](module2_ai_engineering/rag/), [docs/rag.md](module2_ai_engineering/docs/rag.md) |
-| Tool calling / MCP | ✅ | [agent/tools.py](module2_ai_engineering/agent/tools.py), [mcp_server/](module2_ai_engineering/mcp_server/) |
-| LangChain et/ou LangGraph | ✅ | [agent/graph.py](module2_ai_engineering/agent/graph.py) |
-| Benchmark de la récupération et de la génération | ✅ | [benchmark/](module2_ai_engineering/benchmark/) |
-| Interface web | ✅ | chat dans [app/frontend/](app/frontend/) |
+| RAG avec gestion des documents, métadonnées, citations, documentation | ✅ | [src/data/corpus/](src/data/corpus/), [src/rag/](src/rag/), [docs/module2/rag.md](docs/module2/rag.md) |
+| Tool calling / MCP | ✅ | [src/agent/tools.py](src/agent/tools.py), [src/mcp_server/](src/mcp_server/) |
+| LangChain et/ou LangGraph | ✅ | [src/agent/graph.py](src/agent/graph.py) |
+| Benchmark de la récupération et de la génération | ✅ | [src/benchmark/](src/benchmark/) |
+| Interface web | ✅ | chat dans [frontend/](frontend/) |
 | Dépôt GitHub documenté avec commits réguliers | ✅ | `git log`, tags git, [docs/git_workflow.md](docs/git_workflow.md) (branches, Conventional Commits, hooks) |
-| Rapport technique | ✅ | [rapport du module 2](module2_ai_engineering/docs/rapport_module2_ai_engineering.pdf) |
+| Rapport technique | ✅ | [rapport du module 2](docs/module2/rapport_module2_ai_engineering.pdf) |
 | Démonstration | ⬜ | [docs/demo.md](docs/demo.md) |
 
 ## Résultats
@@ -141,27 +142,37 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | RAGAS : fidélité / précision du contexte | 0,979 / 0,809 |
 | Temps de réponse moyen (RTX 2050) | 4,7 s |
 
-Détails : [module 1](module1_vision_mlops/README.md#résultats),
-[module 2](module2_ai_engineering/README.md#résultats-du-benchmark). Bonus : toxicité Tox21,
-ROC-AUC moyen 0,725 en test (split par scaffold) ([bonus/](bonus/)).
+Détails : [module 1](docs/module1/README.md#résultats),
+[module 2](docs/module2/README.md#résultats-du-benchmark). Bonus : toxicité Tox21,
+ROC-AUC moyen 0,725 en test (split par scaffold) ([docs/bonus/](docs/bonus/README.md)).
 
 ## Organisation du dépôt
 
+Arborescence du guide des modules, commune aux deux modules (décision D86).
+
 ```
-module1_vision_mlops/     Module 1 : training/ (YOLO, MLflow, ONNX), serving/ (scan ONNX Runtime), tests/, docs/
-module2_ai_engineering/   Module 2 : corpus/, rag/, agent/, mcp_server/, benchmark/, tests/, docs/
-app/                      application web commune : backend/ (FastAPI), frontend/ (React)
-bonus/                    outil de toxicité (Tox21)
-data_pipeline/            pipeline de collecte SynergyRx d'origine (connecteurs utilisés par le module 2)
+src/                      code des deux modules (paquet Python `src`)
+  data/                   C3PI (index, téléchargement, boîtes automatiques, jeux YOLO), corpus RAG,
+                          pipeline de collecte polie (tujya_data : DDInter, PubMed, openFDA)
+  models/                 entraînement, évaluation, export ONNX, publication ; toxicity/ (bonus Tox21)
+  rag/  agent/            récupération (pgvector, dense + BM25) ; agent LangGraph, outils, sécurité
+  mcp_server/  benchmark/ serveur MCP ; benchmark de la récupération et de la génération
+  utils/                  utilitaires partagés
+backend/                  API FastAPI : Dockerfile, requirements.txt, app/ (main, schemas, inference, routers), tests/
+frontend/                 site React : Dockerfile, package.json, src/ (components, services/api, pages)
+tests/                    tests du code de src/ (data, models, rag, agent, mcp_server)
+notebooks/                notebooks d'entraînement (Kaggle)
+data/raw  data/processed  données (DVC, jamais dans git) ; data/rag : collecte des sources RAG
+models/                   modèles servis par l'API (jamais dans git)
+config/                   listes tenues à la main : 150 classes, split, alias, galerie, réglages du pipeline
+docs/                     architecture, API, infra, CD, démo, décisions ; module1/, module2/, bonus/, data_pipeline/
 infra/                    MLflow, initialisation PostgreSQL, variante Ollama sans GPU
-docs/                     architecture, API, infra, CD, démo, décisions, règles, captures, archive
-config/                   listes tenues à la main : 150 classes, split, alias, galerie de démo
-data/  models/            données (DVC) et modèles servis : jamais dans git
+tools/                    hooks Git du dépôt (secrets, messages de commit) et leurs tests
 docker-compose.yml        toute l'application en une commande
 dvc.yaml  dvc.lock        étapes DVC : prepare (module 1), rag_corpus (module 2)
-tools/                    hooks Git du dépôt (secrets, messages de commit) et leurs tests
+pyproject.toml            paquet, dépendances, pytest et mypy ; requirements-dev.txt : venv unique .venv
 ruff.toml                 règles de lint communes à tout le code Python
-.github/workflows/        CI (lint et tests de chaque paquet, messages de commit, lint et build du site) et CD (images testées, non publiées)
+.github/workflows/        CI (lint et tests, messages de commit, lint et build du site) et CD (images testées, non publiées)
 ```
 
 ## Technologies
@@ -185,8 +196,8 @@ git, modèle [.env.example](.env.example)). Détails : [docs/infra.md](docs/infr
 Les règles de sécurité des réponses sont appliquées dans le code, les prompts et l'interface :
 jamais de dose, jamais « sûr », horaires répétés seulement si la source les donne, source
 toujours citée, avertissement toujours affiché, confiance de l'identification toujours
-visible ([agent/safety.py](module2_ai_engineering/agent/safety.py), tests dans
-[module2_ai_engineering/tests/](module2_ai_engineering/tests/)).
+visible ([src/agent/safety.py](src/agent/safety.py), tests dans
+[tests/](tests/)).
 
 ## Données, licences et sources
 
@@ -203,9 +214,9 @@ elles sont sous `data/`, versionnées par DVC avec un remote local hors du dép�
 | [PubMed (E-utilities)](https://www.ncbi.nlm.nih.gov/books/NBK25501/) | conditions NLM | corpus RAG : résumés d'articles |
 | Tox21 (copie MoleculeNet / DeepChem) | aucune licence explicite trouvée (données publiques, citées) | bonus toxicité |
 
-Sources du pipeline SynergyRx et registre complet : [data_pipeline/README.md](data_pipeline/README.md)
-et [data_pipeline/LICENSES.md](data_pipeline/LICENSES.md). Jeu C3PI en détail :
-[module1_vision_mlops/docs/dataset_c3pi.md](module1_vision_mlops/docs/dataset_c3pi.md).
+Sources du pipeline de collecte et registre complet : [docs/data_pipeline/README.md](docs/data_pipeline/README.md)
+et [docs/data_pipeline/LICENSES.md](docs/data_pipeline/LICENSES.md). Jeu C3PI en détail :
+[docs/module1/dataset_c3pi.md](docs/module1/dataset_c3pi.md).
 
 ## Documentation
 
@@ -213,7 +224,7 @@ et [data_pipeline/LICENSES.md](data_pipeline/LICENSES.md). Jeu C3PI en détail :
   [CD](docs/cd.md), [décisions](docs/decisions.md), [feuille de route](docs/roadmap.md).
 - Soutenance : [script de démonstration](docs/demo.md), [questions probables du jury](docs/questions_jury.md).
 - Règles du projet (sécurité des réponses, usage local) : [docs/project_rules.md](docs/project_rules.md).
-- Historique : `git log` et tags git (`v1.0-avant-restructuration` : état SynergyRx avant la restructuration).
+- Historique : `git log` et tags git (`v1.0-avant-restructuration` : état du projet d'origine avant la restructuration).
 
 ## Auteur
 

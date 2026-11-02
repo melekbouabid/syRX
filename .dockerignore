@@ -1,6 +1,6 @@
 # Fallback for builds whose context is the repository root. The images of this repository
 # each have their own allow-list next to their Dockerfile (<Dockerfile>.dockerignore), which
-# replaces this file: app/backend/Dockerfile.dockerignore.
+# replaces this file: backend/Dockerfile.dockerignore.
 # Never send secrets, collected data, models or local environments to a build.
 .env
 .env.*

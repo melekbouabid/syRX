@@ -1,10 +1,10 @@
-# Continuous integration: lint and unit tests of every Python package (data pipeline, web
-# app backend, module 1, module 2, bonus, git hooks), frontend lint and build, and the commit
-# messages of the pushed commits.
+# Continuous integration: lint (ruff, mypy) and unit tests of the Python code (src/ with its
+# tests in tests/, the API in backend/, the git hooks in tools/), frontend lint and build,
+# and the commit messages of the pushed commits. One Python environment for src/ and backend/
+# (requirements-dev.txt at the root, as on the dev machine).
 # No job touches the network beyond installing dependencies: all HTTP in the tests is mocked
 # (live tests are marked `live` and excluded), and no data is downloaded.
 name: ci
-
 on:
   push:
     branches: [main]
@@ -19,75 +19,11 @@ permissions:
   contents: read
 
 jobs:
-  pipeline:
-    name: data pipeline (data_pipeline/)
+  src:
+    name: src (data, models, rag, agent, mcp_server; ruff, mypy, pytest)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: data_pipeline
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: data_pipeline/pyproject.toml
-      - run: pip install -e ".[dev]"
-      - run: python -m ruff check src tests
-      - run: python -m ruff format --check src tests
-      - run: python -m mypy
-      - run: python -m pytest tests/unit
-
-  backend:
-    name: backend (app/backend, FastAPI)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: app/backend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: app/backend/requirements*.txt
-      - run: pip install -r requirements-dev.txt ruff
-      - run: python -m ruff check .
-      - run: python -m ruff format --check .
-      - run: python -m pytest
-
-  module1:
-    name: module 1 (module1_vision_mlops, vision & MLOps, no training)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: module1_vision_mlops
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: app/backend/requirements*.txt
-      # The backend venv: the scan API tests call the web app; the training tests only need
-      # numpy and OpenCV (training itself, with ultralytics and mlflow, is not run in CI).
-      - run: pip install -r requirements-dev.txt ruff
-        working-directory: app/backend
-      - run: python -m ruff check .
-      - run: python -m ruff format --check .
-      - run: python -m pytest
-
-  module2:
-    name: module 2 (module2_ai_engineering, RAG, agent, MCP, corpus)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: module2_ai_engineering
-    # PostgreSQL + pgvector for the RAG store tests (tests/test_rag_pgvector.py). The tests
+    # PostgreSQL + pgvector for the RAG store tests (tests/rag/test_rag_pgvector.py). The tests
     # use fake embeddings and a fake LLM: CI never needs Ollama or a real model.
     services:
       postgres:
@@ -109,34 +45,36 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: app/backend/requirements*.txt
-      # The backend venv: the web app, the module packages and the SynergyRx pipeline the
-      # corpus steps run on (requirements-dev.txt).
-      - run: pip install -r requirements-dev.txt ruff
-        working-directory: app/backend
+          cache-dependency-path: |
+            requirements-dev.txt
+            backend/requirements.txt
+            pyproject.toml
+      - run: pip install -r requirements-dev.txt
+      # The whole repository against the root ruff.toml (src/, tests/, backend/, tools/).
       - run: python -m ruff check .
       - run: python -m ruff format --check .
+      # The data pipeline and the corpus steps (files and options in pyproject.toml).
+      - run: python -m mypy
+      # tests/ (pyproject.toml): data (C3PI, corpus, pipeline), models, rag, agent, mcp_server.
       - run: python -m pytest
 
-  bonus:
-    name: bonus (toxicity tool)
+  backend:
+    name: backend (backend/, FastAPI and the scan pipeline)
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: bonus
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: app/backend/requirements*.txt
-      - run: pip install -r requirements-dev.txt ruff
-        working-directory: app/backend
-      - run: python -m ruff check .
-      - run: python -m ruff format --check .
+          cache-dependency-path: |
+            requirements-dev.txt
+            backend/requirements.txt
+            pyproject.toml
+      - run: pip install -r requirements-dev.txt
       - run: python -m pytest
+        working-directory: backend
 
   hooks:
     name: git hooks (tools/hooks, secrets and commit messages)
@@ -173,12 +111,12 @@ jobs:
           exit $status
 
   frontend:
-    name: frontend (app/frontend, lint, type check and build)
+    name: frontend (frontend/, lint, type check and build)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: app/frontend
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -186,8 +124,8 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: |
-            app/frontend/package-lock.json
-            app/frontend/eslint/package-lock.json
+            frontend/package-lock.json
+            frontend/eslint/package-lock.json
       - run: npm ci
       - run: npm ci --prefix eslint
       - run: npm run lint

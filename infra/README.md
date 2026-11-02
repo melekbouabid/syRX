@@ -13,8 +13,8 @@ Fichiers de l'infrastructure locale lancée par [`docker-compose.yml`](../docker
 | [`infra/docker/ollama/cpu.yml`](docker/ollama/cpu.yml) | surcharge pour une machine sans GPU NVIDIA |
 
 Les images de l'application sont construites depuis leur dossier : l'API depuis la racine
-(`app/backend/Dockerfile`, elle importe les paquets des modules) et le site depuis
-`app/frontend/`.
+(`backend/Dockerfile`, elle importe les paquets des modules) et le site depuis
+`frontend/`.
 
 ```bash
 docker compose up -d --build                                              # tout, GPU pour Ollama

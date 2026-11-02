@@ -790,3 +790,46 @@ depuis le dernier relevé des liens. Rien n'est perdu : tout reste dans l'histor
 (tag `v1.0-avant-restructuration`). Le nom du paquet `synergyrx_data`, la commande
 `synergyrx` et le préfixe de configuration `SYNERGYRX_` ne changent pas ici (ce serait un
 renommage, pas une suppression).
+
+## Arborescence du guide des modules (2026-11-02)
+
+**D86. Le dépôt suit l'arborescence imposée par le guide, pour les deux modules.** Le guide
+du module 1 demande de respecter « scrupuleusement » `src/{data,models,utils}`,
+`backend/{app,tests}`, `frontend/`, `data/{raw,processed}`, `notebooks/`, `params.yaml`,
+`dvc.yaml` et un rapport à la racine, et le professeur a précisé qu'il s'applique aussi au
+module 2. Les dossiers par module de D79 à D82 (`module1_vision_mlops/`,
+`module2_ai_engineering/`, `app/`, `bonus/`, `data_pipeline/`) sont donc remplacés, avec
+`git mv` uniquement (historique conservé), en un commit par bloc :
+- `src/data` : préparation C3PI (`c3pi`, `data_cli`, `autolabel`, `prepare`), corpus RAG
+  (`corpus/`) et pipeline de collecte (`synergyrx_data`, renommé `tujya_data`) ;
+  `src/models` : entraînement, évaluation, publication, et le modèle Tox21 du bonus
+  (`toxicity/`) ; `src/rag`, `src/agent`, `src/mcp_server`, `src/benchmark` ; `src/utils`
+  attend les utilitaires des étapes suivantes (MLflow, Grad-CAM) ;
+- `backend/` : l'API, dont la chaîne de scan ONNX Runtime devenue `app/inference.py` (le
+  guide nomme `app/{main,schemas,inference}.py`) ; ses tests, dont ceux du scan ;
+  `backend/tujya_testing` garde les fixtures partagées (plugin pytest, faux RAG) ;
+- `frontend/` : `src/components` (UI, icônes, mises en page, animations) et `src/services`
+  (client de l'API, session) ;
+- `tests/` à la racine : tests de `src/` rangés comme lui (`data`, `models`, `rag`, `agent`,
+  `mcp_server`) ; une seule configuration pytest (`pyproject.toml`) et un seul `conftest.py` ;
+- réglages et manifeste du pipeline dans `config/data_pipeline/`, documentation dans
+  `docs/` (`module1/`, `module2/`, `bonus/`, `data_pipeline/`, `app.md`) ;
+- un seul venv Python pour l'API, `src/` et tous les tests (`.venv` à la racine,
+  `requirements-dev.txt`, installation éditable du `pyproject.toml` racine) ; l'entraînement
+  garde son venv (`.venv-train`, PyTorch et Ultralytics, `src/models/requirements-train.txt`).
+
+Données : `dvc move` (mêmes empreintes, rien à envoyer au remote) range les images et
+métadonnées C3PI dans `data/raw/c3pi`, Tox21 dans `data/raw/tox21` et les tables des
+médicaments dans `data/processed/pharma` ; les sorties des étapes `prepare` et `rag_corpus`
+vont dans `data/processed/c3pi` et `data/processed/rag/corpus` (`dvc commit -f`, sorties
+inchangées). Exception : l'espace de collecte des sources RAG reste dans `data/rag`
+(`raw/`, `interim/`, `manifest.json`), car son manifeste, suivi par DVC, enregistre ces
+chemins ; le réécrire créerait un contenu qu'on ne peut pas envoyer au remote partagé (pas de
+`dvc push`). Il sera déplacé quand la collecte sera refaite (étape 1.4). `params.yaml`
+arrive avec les étapes d'entraînement (étape 2.1), le rapport LaTeX `rapport_technique.pdf`
+à l'étape 4.2, et les workflows `ci-tests.yml` / `docker-build.yml` à l'étape 1.3.
+
+Renommage : les noms hérités de SynergyRx deviennent ceux de Tujya (paquet `tujya_data`,
+commande `tujya-data`, nom `tujya-data` dans le User-Agent et l'outil NCBI, préfixe de
+configuration `TUJYA_*`). L'ancien préfixe `SYNERGYRX_*` est encore lu en repli, pour les
+`.env` existants (testé) ; les décisions D1 à D85 gardent les anciens noms (historique).

@@ -1,5 +1,5 @@
 # MLflow tracking server + Model Registry, with the PostgreSQL driver the official image
-# lacks. Same MLflow version as module1_vision_mlops/training/requirements.txt so client and server agree.
+# lacks. Same MLflow version as src/models/requirements-train.txt so client and server agree.
 FROM python:3.12-slim
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 PYTHONUNBUFFERED=1
 RUN pip install "mlflow==3.17.2" "psycopg2-binary>=2.9"

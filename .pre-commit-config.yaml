@@ -42,15 +42,15 @@ repos:
         stages: [commit-msg]
 
       - id: eslint
-        name: eslint (app/frontend)
-        entry: npm --prefix app/frontend run lint --silent
+        name: eslint (frontend/)
+        entry: npm --prefix frontend run lint --silent
         language: system
-        files: ^app/frontend/(src/.*\.tsx?|scripts/.*\.mjs|vite\.config\.ts|eslint/eslint\.config\.js)$
+        files: ^frontend/(src/.*\.tsx?|scripts/.*\.mjs|vite\.config\.ts|eslint/eslint\.config\.js)$
         pass_filenames: false
 
   - repo: local
     hooks:
-      # Tools run from the active environment, so their versions match data_pipeline/pyproject.toml.
+      # Tools run from the active environment, so their versions match pyproject.toml.
       # Ruff picks the closest configuration of each file (ruff.toml at the root and the
       # package-level files that extend it).
       - id: ruff
@@ -67,10 +67,10 @@ repos:
 
       - id: mypy
         name: mypy (data pipeline and the module 2 corpus that runs on it)
-        entry: python -m mypy --config-file data_pipeline/pyproject.toml data_pipeline/src module2_ai_engineering/corpus
+        entry: python -m mypy --config-file pyproject.toml src/data/tujya_data src/data/corpus
         language: system
         types: [python]
-        files: ^(data_pipeline/src|module2_ai_engineering/corpus)/
+        files: ^(src/data/tujya_data|src/data/corpus)/
         pass_filenames: false
 
       - id: no-secrets-or-data
@@ -83,7 +83,7 @@ repos:
 
       - id: unit-tests
         name: data pipeline unit tests (mocked HTTP)
-        entry: python -m pytest data_pipeline/tests/unit -q
+        entry: python -m pytest tests/data/pipeline/unit -q
         language: system
         pass_filenames: false
         stages: [pre-push]

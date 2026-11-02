@@ -1,0 +1,15 @@
+# Build context of backend/Dockerfile: the repository root. Allow-list: only the API
+# code and the module code it imports go into the image; no data, model, secret, test or venv.
+*
+!backend/requirements.txt
+!backend/app/
+!src/__init__.py
+!src/rag/
+!src/agent/
+!src/mcp_server/
+!src/models/__init__.py
+!src/models/toxicity/__init__.py
+!src/models/toxicity/model.py
+**/__pycache__/
+**/.env
+**/.env.*

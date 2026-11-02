@@ -1,27 +1,28 @@
 # Architecture
 
-Tujya est une seule application (`app/`) qui assemble le travail de deux modules notés
-séparément. Ce document décrit les composants, les flux, les dépendances entre dossiers et
-les environnements. Choix détaillés : [decisions.md](decisions.md) (D79 à D82 pour
-l'organisation du dépôt).
+Tujya est une seule application (`backend/` et `frontend/`) qui assemble le travail de deux
+modules notés séparément, dans l'arborescence imposée par le guide des modules (`src/`,
+`backend/`, `frontend/`, `data/raw`, `data/processed`, `notebooks/`). Ce document décrit les
+composants, les flux, les dépendances entre dossiers et les environnements. Choix détaillés :
+[docs/decisions.md](decisions.md) (D79 à D82, puis D86 pour l'organisation du dépôt).
 
 ## Vue d'ensemble
 
 ```mermaid
 flowchart TB
   NAV["Navigateur<br/>localhost:8080 (127.0.0.1)"] --> FE
-  subgraph APP["app/ : application web"]
-    FE["frontend<br/>nginx + React"] -- "/api, /docs" --> BE["backend<br/>FastAPI asynchrone, Pydantic"]
+  subgraph APP["application web"]
+    FE["frontend/<br/>nginx + React"] -- "/api, /docs" --> BE["backend/app<br/>FastAPI asynchrone, Pydantic"]
+    SCAN["backend/app/inference.py<br/>ONNX Runtime"]
   end
-  subgraph M1["module1_vision_mlops/ : Module 1"]
-    TR["training/<br/>YOLO11n + YOLO11s-cls"]
-    SCAN["serving/<br/>ONNX Runtime"]
+  subgraph M1["src/ : Module 1"]
+    TR["src/data + src/models<br/>C3PI, YOLO11n + YOLO11s-cls"]
   end
-  subgraph M2["module2_ai_engineering/ : Module 2"]
-    CORP["corpus/<br/>openFDA, PubMed, DDInter"]
-    RAG["rag/<br/>BM25 + dense, filtres"]
-    AG["agent/<br/>LangGraph, outils, sécurité"]
-    MCP["mcp_server/"]
+  subgraph M2["src/ : Module 2"]
+    CORP["src/data/corpus<br/>openFDA, PubMed, DDInter"]
+    RAG["src/rag<br/>BM25 + dense, filtres"]
+    AG["src/agent<br/>LangGraph, outils, sécurité"]
+    MCP["src/mcp_server"]
   end
   BE --> SCAN
   BE --> AG
@@ -32,31 +33,33 @@ flowchart TB
   BE --> PG
   AG --> OL["Ollama (GPU)<br/>qwen2.5:3b + bge-m3"]
   DATA["data/ (DVC)"] --> TR
-  PIPE["data_pipeline/"] --> CORP
+  PIPE["src/data/tujya_data<br/>collecte polie"] --> CORP
   CORP --> DATA
   DATA --> RAG
   TR --> MLF["MLflow<br/>tracking + registre"]
   MLF -- "publish (ONNX) -> models/" --> SCAN
 ```
 
-Version image (utilisée par les rapports) : [assets/architecture.png](assets/architecture.png),
-source [diagrams/architecture.mmd](diagrams/architecture.mmd).
+Version image (utilisée par les rapports) : [docs/assets/architecture.png](assets/architecture.png),
+source [docs/diagrams/architecture.mmd](diagrams/architecture.mmd).
 
 ## Composants
 
 | Dossier | Rôle | Exécution |
 |---|---|---|
-| [app/backend/](../app/backend/) | API FastAPI : configuration, bases (comptes en SQLite ou PostgreSQL, médicaments et interactions dans PostgreSQL), comptes et sessions, administration, routes ; importe le code des modules | conteneur `backend` (et `pharma-init`, `rag-init`) |
-| [app/frontend/](../app/frontend/) | site React : Scanner (upload, webcam, boîtes, interactions), chat, Toxicity, admin | conteneur `frontend` (nginx) |
-| [module1_vision_mlops/training/](../module1_vision_mlops/training/) | sélection C3PI, étiquetage automatique, entraînement, évaluation, export ONNX, Model Registry, publication | sur le PC (venv avec PyTorch, GPU) |
-| [module1_vision_mlops/serving/](../module1_vision_mlops/serving/) | chaîne de scan ONNX Runtime (détecteur, recadrage, classifieur) | dans l'API |
-| [module2_ai_engineering/corpus/](../module2_ai_engineering/corpus/) | principes actifs, interactions DDInter, notices openFDA, résumés PubMed, chunks | sur le PC (venv du pipeline), étape DVC `rag_corpus` |
-| [module2_ai_engineering/rag/](../module2_ai_engineering/rag/) | embeddings, stockage pgvector, recherche, indexation | dans l'API ; indexation par `rag-init` |
-| [module2_ai_engineering/agent/](../module2_ai_engineering/agent/) | graphe LangGraph, outils, règles de sécurité | dans l'API |
-| [module2_ai_engineering/mcp_server/](../module2_ai_engineering/mcp_server/) | les mêmes outils par MCP | processus séparé (stdio ou HTTP local) |
-| [module2_ai_engineering/benchmark/](../module2_ai_engineering/benchmark/) | questions, scripts, résultats | sur le PC |
-| [bonus/](../bonus/) | toxicité Tox21 (outil de l'agent, route, page) | dans l'API ; entraînement sur le PC |
-| [data_pipeline/](../data_pipeline/) | pipeline SynergyRx : client HTTP poli, connecteurs, manifeste | sur le PC (venv du pipeline) |
+| [backend/](../backend/) | API FastAPI : configuration, bases (comptes en SQLite ou PostgreSQL, médicaments et interactions dans PostgreSQL), comptes et sessions, administration, routes ; importe le code de `src/` | conteneur `backend` (et `pharma-init`, `rag-init`) |
+| [frontend/](../frontend/) | site React : Scanner (upload, webcam, boîtes, interactions), chat, Toxicity, admin | conteneur `frontend` (nginx) |
+| [src/data/](../src/data/) | sélection C3PI, téléchargement, étiquetage automatique, jeux YOLO (étape DVC `prepare`) | sur le PC (venv d'entraînement) |
+| [src/models/](../src/models/) | entraînement, évaluation, export ONNX, Model Registry, publication ; modèle Tox21 (bonus) | sur le PC (venv avec PyTorch, GPU) |
+| [backend/app/inference.py](../backend/app/inference.py) | chaîne de scan ONNX Runtime (détecteur, recadrage, classifieur) | dans l'API |
+| [src/data/corpus/](../src/data/corpus/) | principes actifs, interactions DDInter, notices openFDA, résumés PubMed, chunks | sur le PC (venv du projet), étape DVC `rag_corpus` |
+| [src/rag/](../src/rag/) | embeddings, stockage pgvector, recherche, indexation | dans l'API ; indexation par `rag-init` |
+| [src/agent/](../src/agent/) | graphe LangGraph, outils, règles de sécurité | dans l'API |
+| [src/mcp_server/](../src/mcp_server/) | les mêmes outils par MCP | processus séparé (stdio ou HTTP local) |
+| [src/benchmark/](../src/benchmark/) | questions, scripts, résultats | sur le PC |
+| [src/models/toxicity/](../src/models/toxicity/) | toxicité Tox21, bonus ([docs/bonus/](bonus/README.md)) : outil de l'agent, route, page | dans l'API ; entraînement sur le PC |
+| [src/data/tujya_data/](../src/data/tujya_data/) | pipeline de collecte ([docs/data_pipeline/](data_pipeline/README.md)) : client HTTP poli, connecteurs, manifeste | sur le PC (venv du projet) |
+| [tests/](../tests/), [backend/tests/](../backend/tests/) | tests du code de `src/` et de l'API | `pytest` à la racine et dans `backend/` |
 | [infra/](../infra/) | images et réglages des services MLflow, PostgreSQL, Ollama | Docker Compose |
 
 ## Flux principaux
@@ -86,28 +89,27 @@ publier.
 
 ## Dépendances entre dossiers
 
-- `app/backend/app` importe `module1_vision_mlops.serving`, `module2_ai_engineering.{rag,
-  agent}` et `bonus.toxicity`. Les modules importent le cœur de l'application seulement pour
-  ce qui est partagé : configuration (`app.config`), tables des médicaments (`app.pharma`,
+- `backend/app` importe `src.rag`, `src.agent` et `src.models.toxicity` ; la chaîne de scan
+  est dans l'API (`app.inference`). Le code de `src/` importe le cœur de l'application
+  seulement pour ce qui est partagé : configuration (`app.config`), tables des médicaments (`app.pharma`,
   `app.medicines`). Les outils de l'agent réutilisent les fonctions des routes de scan et
   d'interactions, pour que l'API, l'agent et le serveur MCP donnent exactement la même
   réponse.
-- `module2_ai_engineering.corpus` dépend du pipeline (`synergyrx_data`), jamais l'inverse.
-- `module1_vision_mlops/training` est un projet à part (paquet `tujya_vision`, PyTorch et
-  Ultralytics) : l'API n'en importe rien, elle ne lit que les fichiers ONNX publiés.
+- `src.data.corpus` dépend du pipeline (`src.data.tujya_data`), jamais l'inverse.
+- L'entraînement (`src.data.prepare`, `src.models.train`, ...) tourne dans son propre venv
+  (PyTorch et Ultralytics) : l'API n'en importe rien, elle ne lit que les fichiers ONNX
+  publiés.
 
-Les dossiers des modules sont des paquets Python importés depuis la racine du dépôt :
-l'installation éditable de [app/backend/pyproject.toml](../app/backend/pyproject.toml) met la
-racine et `app/backend` sur le chemin du venv du backend ; l'image Docker fait de même avec
-`PYTHONPATH` et la même disposition sous `/tujya`.
+`src` est un paquet Python importé depuis la racine du dépôt : l'installation éditable de
+[pyproject.toml](../pyproject.toml) met la racine et `backend/` sur le chemin du venv du
+projet ; l'image Docker fait de même avec `PYTHONPATH` et la même disposition sous `/tujya`.
 
 ## Environnements Python
 
 | Venv (ignoré par git) | Pour | Installation |
 |---|---|---|
-| `app/backend/.venv` | API, tests de l'API, des modules et du bonus, scripts du module 2 | `uv pip install -r requirements-dev.txt` depuis `app/backend` |
-| `data_pipeline/.venv` | pipeline, étapes du corpus (module 2), mypy | `uv pip install -e ".[dev]"` depuis `data_pipeline` |
-| `module1_vision_mlops/training/.venv` | entraînement, MLflow, DVC | `uv pip install -r requirements.txt` depuis ce dossier |
+| `.venv` | API, code de `src/` hors entraînement (RAG, agent, MCP, benchmark, corpus, pipeline), toutes les suites de tests, ruff, mypy | `uv venv .venv -p 3.12 && uv pip install -p .venv -r requirements-dev.txt` depuis la racine |
+| `.venv-train` | entraînement (PyTorch, Ultralytics), MLflow, DVC | `uv venv .venv-train -p 3.12 && uv pip install -p .venv-train -r src/models/requirements-train.txt` depuis la racine |
 
 ## Conteneurs (docker-compose.yml)
 
@@ -117,8 +119,8 @@ racine et `app/backend` sur le chemin du venv du backend ; l'image Docker fait d
 | `mlflow` | [infra/docker/mlflow](../infra/docker/mlflow/Dockerfile) | 5000 |
 | `ollama` | `ollama/ollama:0.40.12` (GPU NVIDIA) | 11434 |
 | `pharma-init`, `rag-init` | image du backend, tâches ponctuelles | aucun |
-| `backend` | [app/backend/Dockerfile](../app/backend/Dockerfile) | 8000 |
-| `frontend` | [app/frontend/Dockerfile](../app/frontend/Dockerfile) | 8080 |
+| `backend` | [backend/Dockerfile](../backend/Dockerfile) | 8000 |
+| `frontend` | [frontend/Dockerfile](../frontend/Dockerfile) | 8080 |
 
 Tout est lié à `127.0.0.1` : l'application ne tourne que sur ce PC. Détails, volumes et
-remote DVC : [infra.md](infra.md).
+remote DVC : [docs/infra.md](infra.md).

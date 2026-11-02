@@ -1,0 +1,65 @@
+# The project's Python environment (one venv, `.venv` at the repository root, for the API, the
+# code under src/ and every test suite): `uv pip install -p .venv -r requirements-dev.txt`,
+# which includes `-e .`. The editable install adds two folders to sys.path: the repository
+# root (package `src`) and backend/ (package `app`, the FastAPI core, and the shared test
+# fixtures `tujya_testing`). The API dependencies stay in backend/requirements.txt, also used
+# by the Docker image, which sets PYTHONPATH instead of installing this file; the
+# dependencies below are those of the data collection pipeline (src/data/tujya_data).
+# Training (PyTorch, Ultralytics) has its own venv: src/models/requirements-train.txt.
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tujya"
+version = "0.3.0"
+description = "Tujya: pill identification (vision), interaction checks and a cited RAG agent."
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27",
+    "tenacity>=8.2",
+    "pydantic>=2.6",
+    "typer>=0.12",
+    "pandas>=2.2,<3.1",  # pandas 3.1 breaks list columns (see docs/decisions.md D26)
+    "pyarrow>=15",
+    "pyyaml>=6.0",
+    "rich>=13",
+    "python-dotenv>=1.0",
+]
+
+[project.scripts]
+# Polite data collection (DDInter, PubMed, openFDA): docs/data_pipeline/README.md.
+tujya-data = "src.data.tujya_data.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src", "backend/app"]
+dev-mode-dirs = [".", "backend"]
+
+# Tests of src/ (tests/), from the repository root: `python -m pytest`. The API has its own
+# suite in backend/tests (backend/pytest.ini): `cd backend && python -m pytest`.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q -m 'not live'"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = ["ignore::DeprecationWarning:rdkit.*"]
+markers = [
+    "live: hits real public services with tiny samples; run with `pytest -m live`",
+]
+
+[tool.mypy]
+python_version = "3.11"
+# The data pipeline and the module 2 corpus steps that run on it.
+files = ["src/data/tujya_data", "src/data/corpus"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["pandas.*", "pyarrow.*", "dotenv.*"]
+ignore_missing_imports = true
+follow_imports = "skip"

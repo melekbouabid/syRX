@@ -1,0 +1,15 @@
+# Development environment of the whole project (API, src/, tests, lint), from the repository
+# root:  uv venv .venv -p 3.12 && uv pip install -p .venv -r requirements-dev.txt
+-r backend/requirements.txt
+# The repository root and backend/ on sys.path, and the data pipeline's dependencies
+# (pyproject.toml).
+-e .
+pytest>=8
+pytest-asyncio>=0.23
+respx>=0.21
+httpx2>=2.0
+onnx>=1.17
+ruff>=0.5
+mypy>=1.10
+pre-commit>=3.7
+types-PyYAML

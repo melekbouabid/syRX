@@ -1,8 +1,8 @@
 # Questions probables du jury (et réponses courtes, honnêtes)
 
-Réponses tirées des documents du dépôt ([vision.md](../module1_vision_mlops/docs/vision.md),
-[benchmark.md](../module2_ai_engineering/docs/benchmark.md), [decisions.md](decisions.md),
-[rag.md](../module2_ai_engineering/docs/rag.md), [agent.md](../module2_ai_engineering/docs/agent.md)) ;
+Réponses tirées des documents du dépôt ([vision.md](module1/vision.md),
+[benchmark.md](module2/benchmark.md), [docs/decisions.md](decisions.md),
+[rag.md](module2/rag.md), [agent.md](module2/agent.md)) ;
 aucun chiffre n'est inventé. Les numéros Dxx renvoient à docs/decisions.md.
 
 ## Données
@@ -81,7 +81,7 @@ justes. En dessous, l'application demande à l'utilisateur de confirmer ou de ch
 le top-5.
 
 **12. Comment l'API sait-elle quelle version de modèle elle sert ?**
-`python -m tujya_vision.publish` copie les versions enregistrées dans le Model Registry
+`python -m src.models.publish` copie les versions enregistrées dans le Model Registry
 MLflow (classifieur v2, détecteur v1) dans `models/` ; chaque réponse de `/api/scan` renvoie
 ces numéros de version.
 

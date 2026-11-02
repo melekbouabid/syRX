@@ -1,6 +1,6 @@
 # API de Tujya
 
-Application FastAPI dans [`app/backend/`](../app/backend/). Swagger UI : `/docs`, schéma :
+Application FastAPI dans [`backend/`](../backend/). Swagger UI : `/docs`, schéma :
 `/openapi.json` (D44). Toutes les routes ci-dessous demandent un compte connecté (cookie de
 session obtenu par `POST /api/auth/login`) ; la démonstration se connecte avec le compte de
 démonstration (D46).
@@ -10,10 +10,10 @@ démonstration (D46).
 | `POST /api/scan` | identifier les comprimés d'une photo (module 1) | ci-dessous |
 | `GET /api/pills` | chercher parmi les 150 classes | ci-dessous |
 | `POST /api/interactions` | vérifier les interactions entre comprimés et principes actifs | ci-dessous |
-| `POST /api/chat` | question à l'agent, réponse citée (module 2) | [module2_ai_engineering/docs/agent.md](../module2_ai_engineering/docs/agent.md#post-apichat) |
-| `POST /api/toxicity` | probabilités Tox21 d'une ou deux molécules (bonus) | [bonus/docs/toxicity.md](../bonus/docs/toxicity.md#où-il-est-utilisé) |
-| `GET /api/demo/images` | galerie de photos du split de test (lecture seule) | [demo.md](demo.md) |
-| `/api/auth/*`, `/api/admin/*` | comptes, sessions, administration | [app/README.md](../app/README.md#comptes) |
+| `POST /api/chat` | question à l'agent, réponse citée (module 2) | [docs/module2/agent.md](module2/agent.md#post-apichat) |
+| `POST /api/toxicity` | probabilités Tox21 d'une ou deux molécules (bonus) | [docs/bonus/toxicity.md](bonus/toxicity.md#où-il-est-utilisé) |
+| `GET /api/demo/images` | galerie de photos du split de test (lecture seule) | [docs/demo.md](demo.md) |
+| `/api/auth/*`, `/api/admin/*` | comptes, sessions, administration | [docs/app.md](app.md#comptes) |
 
 Chaque réponse sur des médicaments porte `sources` (nom, titre, URL, licence, citation) et
 `disclaimer` = « Information uniquement, consultez un pharmacien ou un médecin. ». Aucune
@@ -22,12 +22,12 @@ route ne renvoie jamais de dose, et aucune ne dit jamais qu'une association est 
 ## POST /api/scan
 
 Formulaire multipart, un champ `image` : JPEG, PNG ou WebP, 10 Mo et 50 mégapixels au plus
-(`SYNERGYRX_SCAN_MAX_BYTES`, `SYNERGYRX_SCAN_MAX_PIXELS`). Erreurs : 401 non connecté, 413
+(`TUJYA_SCAN_MAX_BYTES`, `TUJYA_SCAN_MAX_PIXELS`). Erreurs : 401 non connecté, 413
 trop grand, 415 pas une image, 503 modèles ou tables de médicaments absents (le message dit
 quelle commande corrige le problème).
 
-Chaîne ([`module1_vision_mlops/serving/scanner.py`](../module1_vision_mlops/serving/scanner.py),
-ONNX Runtime, CPU par défaut, CUDA avec `SYNERGYRX_ONNX_PROVIDERS=auto`) :
+Chaîne ([`backend/app/inference.py`](../backend/app/inference.py),
+ONNX Runtime, CPU par défaut, CUDA avec `TUJYA_ONNX_PROVIDERS=auto`) :
 
 1. décodage (OpenCV, orientation EXIF appliquée), letterbox à 640 px, détecteur
    (`tujya-pill-detector`, YOLO11n), confiance >= 0,25, NMS à IoU 0,7, 20 comprimés au plus ;
@@ -62,22 +62,22 @@ Réponse (`ScanResult`), ici sur une photo du split de test :
 ```
 
 `needs_confirmation` est vrai quand la probabilité top-1 est sous `confirm_threshold` (0,85,
-`SYNERGYRX_SCAN_CONFIRM_THRESHOLD`) ; le site demande alors de choisir dans le top-5 ou de
+`TUJYA_SCAN_CONFIRM_THRESHOLD`) ; le site demande alors de choisir dans le top-5 ou de
 chercher avec `GET /api/pills`. Choix de 0,85 :
-[module1_vision_mlops/docs/vision.md](../module1_vision_mlops/docs/vision.md#seuil-de-confirmation)
+[docs/module1/vision.md](module1/vision.md#seuil-de-confirmation)
 (D47). Sans comprimé trouvé, `pills` est vide et `message` le dit.
 
 ### Modèles
 
 L'API charge `detector.onnx`, `classifier.onnx` et `models.json` depuis
-`SYNERGYRX_MODELS_DIR` (par défaut `models/` à la racine du dépôt, ignoré par git), au premier
+`TUJYA_MODELS_DIR` (par défaut `models/` à la racine du dépôt, ignoré par git), au premier
 scan. On le remplit depuis le Model Registry de MLflow (venv d'entraînement, serveur MLflow
 lancé) :
 
 ```bash
-cd module1_vision_mlops/training
-python -m tujya_vision.publish                 # dernières versions enregistrées
-python -m tujya_vision.publish --from-runs     # ou les exports les plus récents de training/runs
+# depuis la racine du dépôt, venv d'entraînement (.venv-train) actif
+python -m src.models.publish                 # dernières versions enregistrées
+python -m src.models.publish --from-runs     # ou les exports les plus récents de runs/
 ```
 
 Les fichiers ONNX enregistrés gardent leurs poids en données externes MLflow ; `publish`
@@ -114,18 +114,18 @@ interaction). « Unknown » est le niveau non gradué de DDInter : une interacti
 `message` général compte les paires avec une interaction et celles qui n'ont pas pu être
 vérifiées.
 
-Données : les tables PostgreSQL chargées par `python -m app.pharma_loader` ([infra.md](infra.md),
-[module2_ai_engineering/docs/interactions.md](../module2_ai_engineering/docs/interactions.md)).
-Tests : [`module1_vision_mlops/tests/test_scan.py`](../module1_vision_mlops/tests/test_scan.py)
+Données : les tables PostgreSQL chargées par `python -m app.pharma_loader` ([docs/infra.md](infra.md),
+[docs/module2/interactions.md](module2/interactions.md)).
+Tests : [`backend/tests/test_scan.py`](../backend/tests/test_scan.py)
 (petits modèles ONNX factices construits dans le test,
-[`fake_models.py`](../module1_vision_mlops/tests/fake_models.py)) et
-[`app/backend/tests/test_medicines.py`](../app/backend/tests/test_medicines.py) (SQLite).
+[`fake_models.py`](../backend/tests/fake_models.py)) et
+[`backend/tests/test_medicines.py`](../backend/tests/test_medicines.py) (SQLite).
 
 ## Mesuré sur les vrais modèles
 
-`python -m module1_vision_mlops.serving.evaluate_scan --split test` (venv du backend) fait
+`python -m src.models.evaluate_scan --split test` (venv du projet `.venv`) fait
 tourner exactement cette chaîne sur les 600 photos « consumer » du split de test : comprimé
 trouvé 98,5 %, top-1 89,3 %, top-5 95,8 %, comme l'évaluation d'Ultralytics
-([vision.md](../module1_vision_mlops/docs/vision.md)) ; environ 50 à 220 ms par photo sur le
+([vision.md](module1/vision.md)) ; environ 50 à 220 ms par photo sur le
 CPU du portable, selon la charge. Vérifié à nouveau sur les conteneurs de la copie
 restructurée (2026-10-29) : la même photo de test donne la classe 0 à 0,982, en 59 ms.

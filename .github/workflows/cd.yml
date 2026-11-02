@@ -42,15 +42,15 @@ jobs:
     strategy:
       fail-fast: false
       # The backend imports the module packages: its build context is the repository root
-      # (allow-list app/backend/Dockerfile.dockerignore); the frontend builds from its folder.
+      # (allow-list backend/Dockerfile.dockerignore); the frontend builds from its folder.
       matrix:
         include:
           - image: backend
             context: .
-            file: app/backend/Dockerfile
+            file: backend/Dockerfile
           - image: frontend
-            context: app/frontend
-            file: app/frontend/Dockerfile
+            context: frontend
+            file: frontend/Dockerfile
     steps:
       - uses: actions/checkout@v4
         with:
@@ -74,7 +74,7 @@ jobs:
         if: matrix.image == 'backend'
         run: |
           docker run -d --name api -p 127.0.0.1:8000:8000 \
-            -e SYNERGYRX_DATABASE_URL=sqlite:////tmp/accounts.db tujya-backend:ci
+            -e TUJYA_DATABASE_URL=sqlite:////tmp/accounts.db tujya-backend:ci
           for i in $(seq 1 30); do
             curl -fsS http://127.0.0.1:8000/api/health && break
             sleep 2
@@ -117,10 +117,10 @@ jobs:
         include:
           - image: backend
             context: .
-            file: app/backend/Dockerfile
+            file: backend/Dockerfile
           - image: frontend
-            context: app/frontend
-            file: app/frontend/Dockerfile
+            context: frontend
+            file: frontend/Dockerfile
     steps:
       - uses: actions/checkout@v4
 

@@ -14,7 +14,7 @@ Ces règles s'appliquent au code, aux prompts et à l'interface de Tujya.
   toujours affichée.
 
 Ces règles sont appliquées après la génération par
-[module2_ai_engineering/agent/safety.py](../module2_ai_engineering/agent/safety.py) et vérifiées
+[src/agent/safety.py](../src/agent/safety.py) et vérifiées
 par les tests et le benchmark.
 
 ## Usage local uniquement
