@@ -34,7 +34,10 @@ export function useInView(ref: RefObject<Element | null>): boolean {
           observer.disconnect();
         }
       },
-      { rootMargin: "0px 0px -6% 0px" },
+      // The root reaches far above the viewport: an element that a jump (End key, anchor,
+      // restored scroll position) carries straight past the screen counts as seen, instead
+      // of staying invisible above it.
+      { rootMargin: "100000px 0px -6% 0px" },
     );
     observer.observe(node);
     return () => observer.disconnect();
