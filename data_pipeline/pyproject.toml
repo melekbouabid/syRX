@@ -56,7 +56,7 @@ src = ["src", "tests"]
 [tool.mypy]
 python_version = "3.11"
 # The module 2 corpus steps run on this pipeline and are type-checked with it.
-files = ["src", "../module2_ai_engineering/corpus"]
+files = ["src", "../src/data/corpus"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 check_untyped_defs = true

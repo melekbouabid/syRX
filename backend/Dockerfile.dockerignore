@@ -3,10 +3,10 @@
 *
 !backend/requirements.txt
 !backend/app/
-!module2_ai_engineering/__init__.py
-!module2_ai_engineering/rag/
-!module2_ai_engineering/agent/
-!module2_ai_engineering/mcp_server/
+!src/__init__.py
+!src/rag/
+!src/agent/
+!src/mcp_server/
 !bonus/__init__.py
 !bonus/toxicity/__init__.py
 !bonus/toxicity/model.py

@@ -47,7 +47,7 @@ class Settings(BaseSettings):
 
     # Module 2: RAG and agent (module2_ai_engineering/docs/rag.md, agent.md). The chunk index
     # lives in the pharma database (table rag_chunks, pgvector);
-    # `python -m module2_ai_engineering.rag.index` fills it from this file. Ollama serves both
+    # `python -m src.rag.index` fills it from this file. Ollama serves both
     # the LLM and the embeddings (docker compose `ollama`).
     rag_chunks_file: Path = PROJECT_DIR / "data" / "rag" / "corpus" / "chunks.parquet"
     ollama_url: str = "http://127.0.0.1:11434"

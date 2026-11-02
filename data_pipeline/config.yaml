@@ -59,7 +59,7 @@ sources:
       max_records_per_query: 200
       start_date: "2000/01/01"
   openfda_label:
-    enabled: false               # Tujya RAG corpus: `python -m module2_ai_engineering.corpus labels`
+    enabled: false               # Tujya RAG corpus: `python -m src.data.corpus labels`
 
 logging:
   level: INFO

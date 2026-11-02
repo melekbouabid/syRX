@@ -30,11 +30,11 @@ from bonus.toxicity.model import (
     standardise,
     tanimoto_max,
 )
-from module2_ai_engineering.agent.runtime import AgentHolder
-from module2_ai_engineering.mcp_server.server import build_server, default_toolbox
-from module2_ai_engineering.rag.embeddings import FakeEmbedder
-from module2_ai_engineering.tests.rag_fakes import DIM, FakeChatModel, build_index
+from src.agent.runtime import AgentHolder
+from src.mcp_server.server import build_server, default_toolbox
+from src.rag.embeddings import FakeEmbedder
 from tujya_testing.fixtures import USER, sign_in
+from tujya_testing.rag_fakes import DIM, FakeChatModel, build_index
 
 WARFARIN = "CC(=O)CC(C1=CC=CC=C1)C2=C(C3=CC=CC=C3OC2=O)O"
 FLUCONAZOLE = "C1=CC(=C(C=C1F)F)C(CN2C=NC=N2)(CN3C=NC=N3)O"

@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
 COPY backend/requirements.txt ./
 RUN pip install -r requirements.txt
 
-COPY module2_ai_engineering /tujya/module2_ai_engineering
+COPY src /tujya/src
 COPY bonus /tujya/bonus
 COPY backend/app ./app
 

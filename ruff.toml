@@ -21,4 +21,4 @@ ignore = [
 # Test fixtures shared by the test suites (fake accounts and passwords).
 "backend/tujya_testing/**" = ["S105", "S106"]
 # One-off generator of the benchmark spec: its long lines are question and reference texts.
-"module2_ai_engineering/benchmark/make_spec.py" = ["E501"]
+"src/benchmark/make_spec.py" = ["E501"]

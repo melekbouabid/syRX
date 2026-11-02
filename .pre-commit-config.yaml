@@ -67,10 +67,10 @@ repos:
 
       - id: mypy
         name: mypy (data pipeline and the module 2 corpus that runs on it)
-        entry: python -m mypy --config-file data_pipeline/pyproject.toml data_pipeline/src module2_ai_engineering/corpus
+        entry: python -m mypy --config-file data_pipeline/pyproject.toml data_pipeline/src src/data/corpus
         language: system
         types: [python]
-        files: ^(data_pipeline/src|module2_ai_engineering/corpus)/
+        files: ^(data_pipeline/src|src/data/corpus)/
         pass_filenames: false
 
       - id: no-secrets-or-data

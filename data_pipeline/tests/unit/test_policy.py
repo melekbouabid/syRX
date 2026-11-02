@@ -15,7 +15,7 @@ from synergyrx_data.quality.linkcheck import ENDPOINTS
 SRC = Path(__file__).resolve().parents[2] / "src" / "synergyrx_data"
 CONNECTOR_FILES = sorted((SRC / "connectors").glob("*.py"))
 # The module 2 corpus steps run on this pipeline and follow the same network policy.
-CORPUS = Path(__file__).resolve().parents[3] / "module2_ai_engineering" / "corpus"
+CORPUS = Path(__file__).resolve().parents[3] / "src" / "data" / "corpus"
 NETWORK_CHECKED = sorted(SRC.rglob("*.py")) + sorted(CORPUS.rglob("*.py"))
 # The links of the original brief for the sources that remain (the SynergyRx synergy sources
 # were removed, decision D85).
