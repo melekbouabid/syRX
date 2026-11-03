@@ -309,3 +309,178 @@ stages:
       hash: md5
       md5: 34068241432af1a48169a7f4520c8481
       size: 1984
+  train_detector:
+    cmd: python -m src.models.train detect
+    deps:
+    - path: data/processed/c3pi/datasets/detect
+      hash: md5
+      md5: fe381b8a6c3cc779c6cb5734757131a0.dir
+      size: 248962417
+      nfiles: 6609
+    - path: src/models/train.py
+      hash: md5
+      md5: ad2102044821f684a55862d003c0342a
+      size: 10923
+    - path: src/utils/mlflow_utils.py
+      hash: md5
+      md5: 07cbe120fe9ae2e7212d86227d7394c5
+      size: 14431
+    params:
+      params.yaml:
+        train.dataset: c3pi-v1
+        train.detector:
+          weights: yolo11n.pt
+          epochs: 30
+          imgsz: 640
+          batch: 8
+          patience: 10
+          fraction: 1.0
+          workers: 6
+        train.seed: 0
+    outs:
+    - path: models/train/detector
+      hash: md5
+      md5: 8bf798c3eb7d014e02e6f07de8dc105b.dir
+      size: 5495759
+      nfiles: 3
+    - path: models/train/detector.json
+      hash: md5
+      md5: 6a8456820b0f3650258d0facc73d05f1
+      size: 343
+  train_classifier:
+    cmd: python -m src.models.train classify
+    deps:
+    - path: data/processed/c3pi/datasets/classify
+      hash: md5
+      md5: 7935dafd333a57c87236c557cfd22b92.dir
+      size: 55626595
+      nfiles: 4108
+    - path: src/models/train.py
+      hash: md5
+      md5: ad2102044821f684a55862d003c0342a
+      size: 10923
+    - path: src/utils/mlflow_utils.py
+      hash: md5
+      md5: 07cbe120fe9ae2e7212d86227d7394c5
+      size: 14431
+    params:
+      params.yaml:
+        train.classifier:
+          weights: yolo11s-cls.pt
+          epochs: 40
+          imgsz: 224
+          batch: 64
+          patience: 10
+          fraction: 1.0
+          workers: 6
+        train.dataset: c3pi-v1
+        train.seed: 0
+    outs:
+    - path: models/train/classifier
+      hash: md5
+      md5: ca66f617e25a7bf27b418b76244af876.dir
+      size: 11414089
+      nfiles: 3
+    - path: models/train/classifier.json
+      hash: md5
+      md5: 35f60b6183da31488a6ba16b6bbde997
+      size: 321
+  export_onnx:
+    cmd: python -m src.models.export_onnx
+    deps:
+    - path: data/processed/c3pi/datasets/classify/test
+      hash: md5
+      md5: 066e05590d9cde63288f691f5a619145.dir
+      size: 8118193
+      nfiles: 588
+    - path: data/processed/c3pi/datasets/detect/images/test
+      hash: md5
+      md5: 85dce54aa7c2a9a0aa155c06345703f6.dir
+      size: 36998375
+      nfiles: 483
+    - path: models/train/classifier
+      hash: md5
+      md5: ca66f617e25a7bf27b418b76244af876.dir
+      size: 11414089
+      nfiles: 3
+    - path: models/train/classifier.json
+      hash: md5
+      md5: 35f60b6183da31488a6ba16b6bbde997
+      size: 321
+    - path: models/train/detector
+      hash: md5
+      md5: 8bf798c3eb7d014e02e6f07de8dc105b.dir
+      size: 5495759
+      nfiles: 3
+    - path: models/train/detector.json
+      hash: md5
+      md5: 6a8456820b0f3650258d0facc73d05f1
+      size: 343
+    - path: src/models/export_onnx.py
+      hash: md5
+      md5: 3af943d82e12a31dc41b255f3c1eedc7
+      size: 8353
+    - path: src/utils/mlflow_utils.py
+      hash: md5
+      md5: 07cbe120fe9ae2e7212d86227d7394c5
+      size: 14431
+    params:
+      params.yaml:
+        export:
+          simplify: true
+          parity_images: 50
+        registry:
+          detector:
+            name: tujya-pill-detector
+            metric: test_mAP50_95
+            min_gain: 0.005
+          classifier:
+            name: tujya-pill-classifier
+            metric: test_top1
+            min_gain: 0.005
+    outs:
+    - path: models/export.json
+      hash: md5
+      md5: 650cc81a8fa73b32ae644a1871afa9d2
+      size: 787
+    - path: models/onnx
+      hash: md5
+      md5: d9d83620d1883e55b860f641340cdffe.dir
+      size: 33217088
+      nfiles: 2
+  evaluate:
+    cmd: python -m src.models.evaluate
+    deps:
+    - path: config/splits/selected_images.csv
+      hash: md5
+      md5: de21c22fc4a8b12ef6e410cea10f1f8b
+      size: 543427
+    - path: data/raw/c3pi/images
+      hash: md5
+      md5: 62051ba2f27a8520e490f4de3467231b.dir
+      size: 39542126444
+      nfiles: 20330
+    - path: models/onnx
+      hash: md5
+      md5: d9d83620d1883e55b860f641340cdffe.dir
+      size: 33217088
+      nfiles: 2
+    - path: src/data/autolabel.py
+      hash: md5
+      md5: 42302ec12c5b8b3baa7c491bf09149a4
+      size: 11304
+    - path: src/models/evaluate.py
+      hash: md5
+      md5: 11d7f596cc75b70c73f7a600ea1c556f
+      size: 4715
+    params:
+      params.yaml:
+        evaluate:
+          conf: 0.25
+        train.dataset: c3pi-v1
+        train.seed: 0
+    outs:
+    - path: models/evaluate.json
+      hash: md5
+      md5: b0bf79bc98614534b3e6d04417d80143
+      size: 174
