@@ -117,11 +117,14 @@ def augment(source: Path, seed: int, size: int) -> tuple[Image.Image, str]:
     operations = []
     with Image.open(source) as opened:
         if opened.format == "JPEG":
-            opened.draft("RGB", (size * 2, size * 2))
+            opened.draft("RGB", (size, size))
         image = opened.copy()
     angle = rng.uniform(-180, 180)
+    # Work at about the output size: rotating and filling a 14-megapixel photo is slow.
     if image.mode == "RGBA":
-        pill = cut_pill(image).rotate(angle, expand=True, resample=Image.Resampling.BICUBIC)
+        pill = cut_pill(image)
+        pill.thumbnail((size // 2, size // 2), Image.Resampling.LANCZOS)
+        pill = pill.rotate(angle, expand=True, resample=Image.Resampling.BICUBIC)
         side = int(max(pill.size) * rng.uniform(1.4, 2.2))
         canvas = background((side, side), rng)
         x = rng.randint(0, side - pill.width)
@@ -131,6 +134,7 @@ def augment(source: Path, seed: int, size: int) -> tuple[Image.Image, str]:
         operations += [f"rotate({angle:.0f})", "background(segmented)"]
     else:
         image = image.convert("RGB")
+        image.thumbnail((size, size), Image.Resampling.LANCZOS)
         fill = background(image.size, rng)
         mask = Image.new("L", image.size, 255).rotate(angle, expand=True)
         rotated = image.rotate(angle, expand=True, resample=Image.Resampling.BICUBIC)
