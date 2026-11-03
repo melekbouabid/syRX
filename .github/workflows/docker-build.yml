@@ -1,0 +1,115 @@
+# Docker build, as the module guide asks: build the multi-stage images of the backend
+# (backend/Dockerfile: `build` installs the dependencies, `runtime` keeps the venv and the
+# code) and of the frontend (frontend/Dockerfile: `build` runs Vite, nginx serves the result),
+# then smoke-test each one: the container starts, becomes healthy and answers.
+# Nothing is published: the images stay in the runner's local Docker and disappear with it.
+# The app runs only on the owner's PC (docs/project_rules.md, D69, D70, D87; docs/cd.md).
+# The images contain code only (no data, no model, no secret).
+name: docker-build
+on:
+  push:
+    branches: ["**"]   # every branch (a pushed tag does not run it again)
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: docker-build-${{ github.ref }}
+  cancel-in-progress: true
+
+# Read only: this workflow cannot write packages, so it cannot publish an image.
+permissions:
+  contents: read
+
+jobs:
+  compose:
+    name: docker-compose.yml is valid
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      # Every variable has a default in the file, so no .env is needed.
+      - run: docker compose config --quiet
+
+  images:
+    name: ${{ matrix.image }} image (multi-stage build + smoke test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # No build record artifact attached to the run either: nothing leaves the runner.
+      DOCKER_BUILD_RECORD_UPLOAD: "false"
+    strategy:
+      fail-fast: false
+      # The backend imports the module packages: its build context is the repository root
+      # (allow-list backend/Dockerfile.dockerignore); the frontend builds from its folder.
+      matrix:
+        include:
+          - image: backend
+            context: .
+            file: backend/Dockerfile
+          - image: frontend
+            context: frontend
+            file: frontend/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build (local image only, never pushed)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          load: true
+          push: false
+          tags: tujia2-${{ matrix.image }}:ci
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,scope=${{ matrix.image }},mode=max
+
+      # Ports are published on the runner's 127.0.0.1 only.
+      - name: Smoke test of the backend image
+        if: matrix.image == 'backend'
+        run: |
+          docker run -d --name app -p 127.0.0.1:8000:8000 \
+            -e TUJYA_DATABASE_URL=sqlite:////tmp/accounts.db tujia2-backend:ci
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8000/api/health && break
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8000/api/health
+          curl -fsS -o /dev/null http://127.0.0.1:8000/docs
+          curl -fsS http://127.0.0.1:8000/openapi.json | grep -q '"/api/scan"'
+          curl -fsS http://127.0.0.1:8000/openapi.json | grep -q '"/api/chat"'
+
+      - name: Smoke test of the frontend image
+        if: matrix.image == 'frontend'
+        run: |
+          docker run -d --name app --add-host backend:127.0.0.1 -p 127.0.0.1:8080:80 tujia2-frontend:ci
+          for i in $(seq 1 15); do
+            curl -fsS -o /dev/null http://127.0.0.1:8080/ && break
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8080/ | grep -q '<div id="root">'
+          curl -fsS -o /dev/null http://127.0.0.1:8080/scan
+
+      # The image's own HEALTHCHECK (Dockerfile) must report the container healthy.
+      - name: Container reports healthy
+        run: |
+          for i in $(seq 1 30); do
+            status="$(docker inspect --format '{{.State.Health.Status}}' app)"
+            echo "health: $status"
+            [ "$status" = healthy ] && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Container logs
+        if: always()
+        run: docker logs app || true
+
+      - name: Summary
+        run: |
+          {
+            echo "### tujia2-${{ matrix.image }}"
+            echo "Built (multi-stage) and smoke-tested at $(git rev-parse --short HEAD). **Not pushed** (strictly local app, docs/cd.md)."
+            docker image ls tujia2-${{ matrix.image }}:ci --format 'Size: {{.Size}}'
+          } >> "$GITHUB_STEP_SUMMARY"
