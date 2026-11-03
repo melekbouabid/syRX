@@ -27,6 +27,8 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Remote DVC configuré et alimenté (dossier local hors du dépôt, D71 ; `dvc pull` vérifié sur un clone neuf)
 - [x] Chaque classe reliée à ses principes actifs (RxNav, 149/150)
 - [x] DDInter activé ; interactions entre ces principes actifs dans une table propre ([interactions.md](module2/interactions.md))
+- [x] Plus de données et Big Data (étape 1.4, demande du professeur) : cluster Spark dans Docker Compose, jobs PySpark index / qualité / split sans fuite / augmentation des classes rares / ePillID / corpus RAG, étapes DVC, statistiques dans MLflow ([big_data.md](module1/big_data.md), D88-D90)
+- [ ] Entraîner les modèles sur le jeu C3PI v2 (étapes 2.2 et 2.3)
 
 ## 2. Modèles de vision
 - [x] Matériel vérifié, entraînement dans son propre venv (`.venv-train` depuis l'étape 1.2 ; RTX 2050, CUDA 13.0)

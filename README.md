@@ -103,7 +103,8 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | Identification de chaque comprimé par transfer learning | ✅ | [src/models/](src/models/) (YOLO11s-cls) |
 | Backend FastAPI asynchrone, schémas Pydantic, Swagger sur `/docs` | ✅ | [backend/](backend/), [backend/app/inference.py](backend/app/inference.py) |
 | Frontend React : upload, webcam, prédictions et boîtes | ✅ | [frontend/](frontend/) |
-| DVC (versionnement des données) | ✅ | [dvc.yaml](dvc.yaml), [docs/infra.md](docs/infra.md) |
+| DVC (versionnement des données) | ✅ | [dvc.yaml](dvc.yaml), [params.yaml](params.yaml), [docs/infra.md](docs/infra.md) |
+| Plus de données et Big Data avec PySpark (demande du professeur) | ✅ | [src/data/spark/](src/data/spark/), cluster Spark de [docker-compose.yml](docker-compose.yml), [docs/module1/big_data.md](docs/module1/big_data.md) (data card) |
 | MLflow : tracking des expériences | ✅ | expérience `tujya-vision` |
 | MLflow : Model Registry | ✅ | `tujya-pill-detector`, `tujya-pill-classifier` |
 | Export ONNX et inférence ONNX Runtime | ✅ | [backend/app/inference.py](backend/app/inference.py) |
