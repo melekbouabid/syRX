@@ -159,6 +159,47 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Big Data (step 1.4, docs/module1/big_data.md): a Spark standalone cluster, one master and
+  # one worker, for the PySpark jobs of src/data/spark (C3PI index, quality, split,
+  # augmentation, RAG corpus). Not part of the app: it starts only with its profile,
+  #   docker compose --profile spark up -d spark-master spark-worker
+  # and the jobs are submitted with `python -m src.data.spark.submit <job>` (or `dvc repro`).
+  # UIs on the host: master http://localhost:8090, worker http://localhost:8091, running
+  # application http://localhost:4040 (the driver runs in the master container).
+  spark-master:
+    build: ./infra/docker/spark
+    image: tujia2-spark:4.1.1
+    profiles: ["spark"]
+    hostname: spark-master
+    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master",
+              "--host", "spark-master", "--port", "7077", "--webui-port", "8080"]
+    environment: &spark-env
+      PYTHONPATH: /opt/tujia:/opt/spark/python:/opt/spark/python/lib/py4j-0.10.9.9-src.zip
+      SPARK_NO_DAEMONIZE: "true"
+    ports:
+      - "127.0.0.1:${SPARK_UI_PORT:-8090}:8080"
+      - "127.0.0.1:${SPARK_APP_UI_PORT:-4040}:4040"
+    # The repository (code, params.yaml, data/ and config/splits/) at the same path in every
+    # Spark container, so the driver and the executors see the same files.
+    volumes: &spark-mounts
+      - .:/opt/tujia
+    restart: unless-stopped
+
+  spark-worker:
+    image: tujia2-spark:4.1.1
+    profiles: ["spark"]
+    hostname: spark-worker
+    command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.worker.Worker",
+              "spark://spark-master:7077", "--cores", "${SPARK_WORKER_CORES:-8}",
+              "--memory", "${SPARK_WORKER_MEMORY:-8g}", "--webui-port", "8081"]
+    environment: *spark-env
+    ports:
+      - "127.0.0.1:${SPARK_WORKER_UI_PORT:-8091}:8081"
+    volumes: *spark-mounts
+    depends_on:
+      - spark-master
+    restart: unless-stopped
+
 volumes:
   pgdata:
   mlartifacts:

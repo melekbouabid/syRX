@@ -1,0 +1,11 @@
+# Python packages of the Spark image (infra/docker/spark/Dockerfile), on top of the PySpark
+# 4.1.1 that apache/spark:4.1.1-python3 ships in /opt/spark/python. The jobs of src/data/spark
+# read images (Pillow, NumPy), use pandas UDFs (pandas, PyArrow) and read params.yaml (PyYAML);
+# pytest runs tests/data/spark inside the container (no Java on the Windows host).
+# The same pins are installed with pyspark==4.1.1 by src/data/spark/requirements.txt (CI).
+pillow==11.3.0
+numpy==2.2.6
+pandas==2.3.3
+pyarrow==21.0.0
+pyyaml==6.0.3
+pytest==8.4.2
