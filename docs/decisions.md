@@ -934,3 +934,50 @@ aux paramètres et aux dépendances de `spark_rag`, `dvc repro`. Périmètre ré
 `interactions_with_any_drug.csv` (au moins un principe actif v1), la table DDInter complète
 n'étant plus sur le disque ; les paires entre deux nouveaux principes actifs viendront quand
 elle sera reconstruite (étape 3.x).
+
+## MLflow conforme au lab et baseline officielle (2026-11-03)
+
+**D91. La baseline est ré-enregistrée sans réentraînement ; les étapes d'entraînement DVC
+sont gelées.** Les modèles servis depuis le 28/10 (détecteur YOLO11n, classifieur YOLO11s-cls,
+jeu C3PI v1 de 150 classes) ont leurs runs MLflow sur le serveur de la première copie du
+projet, pas sur celui-ci (D83) ; leurs sorties Ultralytics (poids, `results.csv`, `args.yaml`,
+`summary.json`) sont restées dans `runs/`. Sans GPU ici (l'entraînement passera sur Kaggle
+aux étapes 2.2 et 2.3), `src/models/register_baseline.py` les ré-enregistre au lieu de les
+réentraîner : il vérifie que leurs hyperparamètres sont exactement ceux de `params.yaml`
+(`train.*`, sinon il refuse), crée un run suivi par modèle dans `tujya-vision` (tags
+`git_commit`, `dvc_rev`, `dataset`, `seed`, `baseline=true`, `origin_*` vers le run
+d'origine ; historique par époque, poids, figures, `requirements.txt`, `dvc.lock`) et
+réévalue les poids maintenant, sur CPU, sur le split de test. Résultats identiques à ceux du
+28/10 à l'arrondi près : détecteur mAP50 0,972 et mAP@[.5:.95] 0,861 (0,8606 contre 0,8615) ;
+classifieur top-1 93,7 % et top-5 98,5 % sur 588 crops (93,5 % et 98,1 % sur 589 à l'origine :
+l'étape `prepare` refaite dans cette copie a produit un crop de test de moins).
+Côté DVC, un stage jamais exécuté reste « changed » dans `dvc status`, même gelé (essai fait :
+`frozen` masque les dépendances, pas les sorties absentes). Choix retenu : les stages
+`train_detector` et `train_classifier` sont définis (commande, dépendances, paramètres,
+sorties), marqués `frozen: true`, et leur sortie enregistrée par `dvc commit` est la baseline
+(`models/train/<modèle>/` et `models/train/<modèle>.json`). Le `dvc.lock` décrit donc les poids
+de la baseline produits avec ces hyperparamètres, mais pas par cette version du code : c'est
+écrit ici et dans `dvc.yaml`, et le run MLflow le dit (`origin`). Le gel évite aussi qu'un
+`dvc repro` sur CPU lance un entraînement de plusieurs heures ; on dégèle (`dvc unfreeze`) sur
+la machine GPU. Les stages `export_onnx` et `evaluate`, courts, ont réellement tourné
+(`dvc repro export_onnx evaluate`). Rejeté : un mini-entraînement « de fumée » pour remplir
+le lock (des poids sans valeur seraient devenus la sortie officielle) et laisser `dvc status`
+sale jusqu'à l'étape 2.2.
+
+**D92. Registry par alias, promotion automatique, client MLflow dans la CI.** Le guide du
+module 1 parle de statut Staging / Production ; le lab MLflow utilise les alias, et les stages
+sont dépréciés depuis MLflow 2.9 : la version servie porte l'alias `champion`, la deuxième
+meilleure `challenger`, et chaque version reçoit un tag `status` (champion / challenger /
+archived) et un tag `promotion` qui explique la décision. `promote_if_better(name, version,
+metric, min_gain)` (`src/utils/mlflow_utils.py`) promeut une version seulement si elle bat le
+champion d'au moins `min_gain` (strictement mieux : un score égal ne promeut pas) ; sinon elle
+devient challenger si elle bat le challenger actuel, sinon archivée. Métriques de promotion
+(`params.yaml`, `registry`) : mAP@[.5:.95] de test pour le détecteur (métrique du guide), top-1
+de test pour le classifieur, gain minimal 0,005 pour les deux. `dvc_rev` est l'identifiant
+d'objet git de `dvc.lock` (`git hash-object`) : il fixe la version de toutes les données DVC,
+et `git log --find-object=<dvc_rev>` retrouve les commits qui la contiennent. Les modèles sont
+journalisés avec l'API MLflow 3 (`name=`, un LoggedModel par export ONNX, métriques liées) et
+`publish` copie par défaut les versions `champion` vers `models/`. Tests : `mlflow-skinny`
+3.17.2 (même version que le serveur) et `alembic` rejoignent `requirements-dev.txt`, et les
+tests tournent sur une base SQLite temporaire : le stockage par fichiers (`./mlruns`) est en
+mode maintenance dans MLflow 3.17 et refuse de démarrer sans option.
