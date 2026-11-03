@@ -42,9 +42,8 @@ def test_no_connector_fetches_or_parses_html(path: Path) -> None:
             continue  # links are only probed for their status by `sources --check`
         for keyword in call.keywords:
             if keyword.arg in ("kind", "expect"):
-                assert "html" not in ast.unparse(keyword.value), (
-                    f"{path.name} requests HTML: see docs/data_pipeline/code_review.md"
-                )
+                message = f"{path.name} requests HTML: see docs/data_pipeline/code_review.md"
+                assert "html" not in ast.unparse(keyword.value), message
     assert not re.search(
         r"\b(bs4|BeautifulSoup|lxml\.html|html\.parser|selenium|playwright)\b", source
     )

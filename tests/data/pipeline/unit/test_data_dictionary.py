@@ -93,9 +93,8 @@ async def test_every_output_column_is_documented(outputs: Settings) -> None:
         assert relative in sections, f"no section for {relative} in data_dictionary.md"
         described = sections[relative] | set(PROVENANCE_COLUMNS)  # explained once, at the top
         actual = set(pd.read_parquet(outputs.resolve(relative)).columns)
-        assert not actual - described, (
-            f"undocumented columns in {relative}: {sorted(actual - described)}"
-        )
+        undocumented = actual - described
+        assert not undocumented, f"undocumented columns in {relative}: {sorted(undocumented)}"
         stale = sections[relative] - actual
         assert not stale, f"documented but not produced in {relative}: {sorted(stale)}"
 

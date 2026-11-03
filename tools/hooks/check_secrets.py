@@ -26,15 +26,13 @@ ALLOWLIST_MARKER = "pragma: allowlist secret"
 PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     (
         "hard-coded credential",
-        re.compile(
-            r"""(?ix)
+        re.compile(r"""(?ix)
             (?<![a-z0-9])[a-z0-9_-]*?(?:api[_-]?key|secret|token|password)(?:[_-]key)?(?![a-z0-9])
             ["']?\s*                    # closing quote of a dict key
             (?::\s*[\w\[\]|., ]+?\s*)?  # type annotation: password: str = "..."
             [:=]\s*
             [rbuf]{0,2}(["'])[^"'\n]{8,}\1
-            """
-        ),
+            """),
     ),
     ("AWS access key id", re.compile(r"(?<![A-Z0-9])AKIA[0-9A-Z]{16}(?![A-Z0-9])")),
     ("API key sk-...", re.compile(r"(?<![\w-])sk-[A-Za-z0-9_-]{10,}")),
