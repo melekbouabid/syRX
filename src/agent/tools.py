@@ -13,7 +13,7 @@ from __future__ import annotations
 import base64
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from langchain_core.tools import BaseTool, StructuredTool
 from pydantic import BaseModel, Field
@@ -27,7 +27,7 @@ from app.medicines import DISCLAIMER, PharmaUnavailable, search_pills
 from app.pharma import Ingredient
 from src.models.toxicity.model import ToxHolder, ToxicityUnavailable, predict_molecules
 from src.rag.names import NameIndex
-from src.rag.retrieval import Hit, RetrieverHolder
+from src.rag.retrieval import Hit, Mode, RetrieverHolder
 from src.rag.store import Filters
 
 DOC_TYPES = ("label", "abstract", "interaction")
@@ -205,7 +205,7 @@ class Toolbox:
         retriever = self.retriever()
         k = max(1, min(int(k), 20))
         mode = mode or self.settings.rag_search_mode
-        hits = await retriever.search(query, k=k, mode=mode, filters=filters)  # type: ignore[arg-type]
+        hits = await retriever.search(query, k=k, mode=cast(Mode, mode), filters=filters)
         return {
             "query": query,
             "filters": {

@@ -2,7 +2,8 @@
 
 # from the repository root, project venv (.venv) active
 python -m src.agent.ask "La warfarine interagit-elle avec le fluconazole ?"
-python -m src.agent.ask "Effets indésirables ?" --pills 9 120 --database-url postgresql+psycopg://...
+python -m src.agent.ask "Effets indésirables ?" --pills 9 120
+python -m src.agent.ask "Effets indésirables ?" --database-url postgresql+psycopg://...
 """
 
 from __future__ import annotations

@@ -23,7 +23,7 @@ import os
 import tempfile
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -33,7 +33,7 @@ from app.db import make_engine
 from app.pharma import Ingredient
 from src.rag.embeddings import OllamaEmbedder
 from src.rag.names import NameIndex
-from src.rag.retrieval import Retriever
+from src.rag.retrieval import Mode, Retriever
 from src.rag.store import ChunkStore, Filters
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -70,7 +70,9 @@ async def run_config(
     for item in questions:
         found = names.find(item["question"]) if filt == "names" else []
         filters = Filters(ingredients=tuple(found))
-        hits = await retriever.search(item["question"], k=10, mode=mode, filters=filters)  # type: ignore[arg-type]
+        hits = await retriever.search(
+            item["question"], k=10, mode=cast(Mode, mode), filters=filters
+        )
         ranked = [h.chunk.chunk_id for h in hits]
         scores = score(ranked, set(item["expected_chunks"]))
         per_question.append(
