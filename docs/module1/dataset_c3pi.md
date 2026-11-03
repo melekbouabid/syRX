@@ -115,6 +115,11 @@ les deux images de l'API RxImage en six résolutions (de 120 px à l'original).
 
 ## Ce que Tujya utilise
 
+Depuis l'étape 1.4, un jeu v2 plus grand (380 classes, 12 505 photos « consumer », images
+segmentées et du challenge, augmentation des classes rares) est construit par les jobs
+PySpark de `src/data/spark` : voir [big_data.md](big_data.md). Le jeu v1 ci-dessous reste
+celui des modèles servis.
+
 - Classes d'identification : les 150 produits ayant le plus de photos « consumer », après
   avoir écarté les deux appareils haute résolution (Canon G10 et Nikon S3000 : 28 % des photos
   mais 60 % des octets). Voir `config/pill_classes.csv` et

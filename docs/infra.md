@@ -195,9 +195,36 @@ comprimé-principe actif, 40 508 interactions. Tests :
 
 Les scripts d'entraînement lisent `MLFLOW_TRACKING_URI` (par défaut
 `http://127.0.0.1:5000`). L'interface sur http://localhost:5000 montre les expériences
-(`tujya-vision`, `tujya-rag`, `tujya-tox`, et `tujya-synergy` de l'étude retirée, D85) et les modèles enregistrés
+(`tujya-vision`, `tujya-rag`, `tujya-tox`, `tujya-data` pour les statistiques des jeux de données, et `tujya-synergy` de l'étude retirée, D85) et les modèles enregistrés
 `tujya-pill-classifier`, `tujya-pill-detector` et `tujya-tox21`. Le tracking et les artefacts
 vivent dans les volumes `pgdata` et `mlartifacts` du projet compose.
+
+## Spark (Big Data, étape 1.4)
+
+Un cluster Spark autonome (un master, un worker) pour les jobs PySpark de
+[src/data/spark/](../src/data/spark/) : image officielle `apache/spark:4.1.1-python3` plus
+Pillow, NumPy, pandas, PyArrow et PyYAML ([infra/docker/spark/](../infra/docker/spark/)),
+image locale `tujia2-spark:4.1.1`. Pas de Java ni de winutils sous Windows : tout tourne dans
+les conteneurs, le dépôt est monté sur `/opt/tujia` (même chemin pour le driver et les
+executors). Il ne fait pas partie de l'application : il démarre seulement avec son profil.
+
+```bash
+docker compose --profile spark up -d spark-master spark-worker
+python -m src.data.spark.submit index        # un job (index, quality, split, augment, epillid, rag)
+dvc repro spark_split                         # ou par DVC (les étapes appellent submit)
+docker compose --profile spark exec spark-master     python3 -m pytest tests/data/spark --noconftest -p tests.data.spark.fixtures
+docker compose --profile spark stop spark-master spark-worker
+```
+
+| Interface | Adresse (127.0.0.1 seulement) |
+|---|---|
+| Master : workers, applications en cours et terminées | http://localhost:8090 (`SPARK_UI_PORT`) |
+| Worker : executors | http://localhost:8091 (`SPARK_WORKER_UI_PORT`) |
+| Application en cours (jobs, stages, SQL) | http://localhost:4040 (`SPARK_APP_UI_PORT`) |
+
+Le worker a 8 cœurs et 8 Go (`SPARK_WORKER_CORES`, `SPARK_WORKER_MEMORY`) ; `submit` lance
+`spark-submit` en mode client dans le conteneur du master (driver 3 Go, executor 6 Go).
+Données, jobs et chiffres : [docs/module1/big_data.md](module1/big_data.md).
 
 ## Ollama (LLM local, module 2)
 

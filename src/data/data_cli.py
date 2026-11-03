@@ -75,8 +75,17 @@ def cmd_select(args: argparse.Namespace) -> None:
     print(Counter(split.values()))
 
 
+def _listed(index: Path, listing: Path) -> list[c3pi.ImageRecord]:
+    """Images of a download list (CSV with a `path` column), e.g. the one of the Spark index
+    job (data/processed/c3pi/bigdata/index/download_list.csv), in that order."""
+    by_path: dict[str, c3pi.ImageRecord] = {}
+    for record in c3pi.read_index(index):
+        by_path.setdefault(record.path, record)
+    return [by_path[row["path"]] for row in _read_csv(listing)]
+
+
 def cmd_download(args: argparse.Namespace) -> None:
-    records = _selected(args.index)
+    records = _listed(args.index, args.list) if args.list else _selected(args.index)
     if args.limit:
         records = records[: args.limit]
     done, skipped, failed = c3pi.download(records, args.images, workers=args.workers)
@@ -117,6 +126,12 @@ def main(argv: list[str] | None = None) -> None:
     p = sub.add_parser("download", help="download the selected images (resumable)")
     p.add_argument("--workers", type=int, default=4)
     p.add_argument("--limit", type=int, default=0)
+    p.add_argument(
+        "--list",
+        type=Path,
+        default=None,
+        help="CSV of paths to download instead of config/splits/selected_images.csv",
+    )
     p.set_defaults(func=cmd_download)
 
     args = parser.parse_args(argv)

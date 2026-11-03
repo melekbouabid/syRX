@@ -1,0 +1,28 @@
+{
+  "by_split_and_role": {
+    "test consumer": 1777,
+    "train challenge": 870,
+    "train consumer": 9148,
+    "train reference": 374,
+    "train seg": 3040,
+    "val consumer": 1580
+  },
+  "candidates_dropped_after_quality": 0,
+  "classes": 380,
+  "classes_in_v1": 150,
+  "consumer_per_class_max": 100,
+  "consumer_per_class_min": 20,
+  "groups": 9175,
+  "images": 16789,
+  "leakage": {
+    "files_in_train_and_heldout": 0,
+    "groups_in_two_splits": 0,
+    "near_duplicates_across_splits": 0
+  },
+  "params": {
+    "min_images": 20,
+    "seed": 0,
+    "test": 0.15,
+    "val": 0.15
+  }
+}

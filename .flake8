@@ -23,3 +23,8 @@ per-file-ignores =
     # OPENCV_IO_MAX_IMAGE_PIXELS must be set before cv2 is imported (ruff accepts an
     # os.environ line above the imports, flake8 does not).
     backend/app/inference.py: E402
+    # Spark job tests: pytest.importorskip("pyspark") comes before the imports that need it
+    # (ruff accepts it, flake8 does not).
+    tests/data/spark/test_*.py: E402
+    # spark-submit runs this file as a script: the repository root goes on sys.path first.
+    src/data/spark/run.py: E402

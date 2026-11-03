@@ -1,6 +1,7 @@
 # Continuous integration, as the module guide asks: Python lint (flake8, black --check, plus
 # ruff and mypy), frontend lint (ESLint), unit tests of src/ (tests/) and of the API
-# (backend/tests), frontend build, and the git hooks with the commit messages of the push.
+# (backend/tests), the PySpark jobs (tests/data/spark, with Java), frontend build, and the
+# git hooks with the commit messages of the push.
 # One Python environment for src/ and backend/ (requirements-dev.txt at the root, as on the
 # dev machine). The Docker images are built and smoke-tested by docker-build.yml.
 # No job touches the network beyond installing dependencies: all HTTP in the tests is mocked
@@ -95,6 +96,30 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: python -m pytest
         working-directory: backend
+
+  # The PySpark jobs of src/data/spark (tests/data/spark) need Java and pyspark, which the
+  # other jobs do not install: their own environment, as in the Spark image (same pins,
+  # src/data/spark/requirements.txt). The fixtures are loaded without the root conftest
+  # (web app fixtures); the job `src` skips these tests (no pyspark there).
+  spark:
+    name: pytest Spark jobs (PySpark 4.1.1, Java 17)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            src/data/spark/requirements.txt
+            infra/docker/spark/requirements.txt
+      - run: pip install -r src/data/spark/requirements.txt
+      - run: python -m pytest tests/data/spark --noconftest -p tests.data.spark.fixtures
 
   hooks:
     name: git hooks (tools/hooks, secrets and commit messages)

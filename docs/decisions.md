@@ -861,3 +861,76 @@ qu'aucune image ne soit publiée et docs/project_rules.md interdit de publier le
 l'application ; le workflow n'a que `contents: read`. Les images s'appellent `tujia2-*:ci`
 (nom du projet Compose). Le test de fumée interroge `/api/health` : la route `GET /health`
 du guide arrive avec l'API de l'étape 2.5.
+
+## Big Data avec PySpark (2026-11-03)
+
+**D88. Plan de données de l'étape 1.4 : C3PI v2, 380 classes candidates, 39,5 Go, ePillID
+en benchmark.** Demande du professeur (plus de classes, plus d'images par classe,
+augmentation). Sources fixées par le propriétaire du projet : C3PI (serveur NLM) et ePillID
+seulement ; budget de 50 Go de nouvelles données au plus, au moins 30 Go libres sur C: après
+téléchargement, REFERENCE_SEG abandonné en premier si nécessaire, jamais
+`MC_COOKED_CALIBRATED`. Le plan, écrit ici au lieu d'être soumis (le propriétaire étant
+absent), a été calculé par le job `index` sur l'index complet (133 458 fichiers,
+2,7 To) : N = 20 photos « consumer » JPG par produit (NDC9 + partie), comptées sur les
+9 appareils (l'étape 1.2 en excluait 2 pour tenir dans 4 Go, D32 ; le budget le permet
+maintenant), donne 380 classes candidates (les 150 de v1 comprises). Sont téléchargées pour
+ces classes toutes les photos « consumer » (12 508, 26,7 Go), une image RxImage par paquet
+NDC11 (374, 0,2 Go) et 8 images segmentées REFERENCE_SEG par classe (3 040, 10,4 Go), plus
+les 4 408 images de `MC_CHALLENGE_V1.0` (2,2 Go) : 20 330 fichiers, 39,5 Go, dont 4,8 Go
+déjà présents (v1), soit 34,8 Go nouveaux. Espace libre mesuré avant : 203 Go ; le cache DVC
+copie les fichiers (pas de reflink sur NTFS), donc environ 70 Go consommés au total.
+Les options écartées : N = 10 (1 456 classes mais 15 photos par classe en médiane, moins
+qu'en v1 : contraire à « plus d'images par classe ») ; toutes les REFERENCE_SEG (139 Go).
+Seuils de qualité choisis sur les photos mesurées : luminosité moyenne < 10 ou > 245
+seulement (un fond de jean donne ~15, ce n'est pas un défaut). Le jeu v1 (150 classes,
+`config/pill_classes.csv`, `selected_images.csv`, étape `prepare`) reste celui des modèles
+servis et de la baseline de l'étape 2.1 ; v2 vit dans `config/splits/c3pi_v2/` et
+`data/processed/c3pi/bigdata/` et sera utilisé aux étapes 2.2 et 2.3. Spark tourne en
+cluster autonome dans Docker (image officielle `apache/spark:4.1.1-python3`, un master, un
+worker), sans Java sur l'hôte ; `pyspark==4.1.1` est figé pour la CI.
+
+**D89. Split v2 sans fuite : la session de prise de vue est l'unité indivisible.** C3PI ne
+donne aucun identifiant du comprimé physique photographié : un paquet NDC11 correspond à un
+spécimen, et 347 des 380 classes de v2 n'ont qu'un paquet. Mettre
+tout un spécimen dans un seul split retirerait la classe de val et de test, ce qui rend la
+classification en ensemble fermé impossible. L'unité gardée ensemble est donc la session :
+même paquet, même appareil, même fond, même éclairage, même date (recto et verso, prises
+répétées) ; les sessions reliées par une photo quasi identique (dHash 256 bits, au plus
+3 bits d'écart) ou par un fichier identique sont fusionnées (union-find). Le test mesure
+donc la généralisation à une nouvelle prise de vue (appareil, fond ou lumière), pas à un
+autre comprimé du même produit ; c'est écrit dans la data card. Remplissage par classe :
+test puis val au plus près de 15 % chacun sans dépasser (une session trop grande est sautée),
+le reste en train ; images de studio en train sauf si un quasi-doublon les lie à val/test.
+Le job échoue si un groupe, un fichier ou une paire de quasi-doublons traverse les splits.
+Résultat : 380 classes, 12 505 photos « consumer » en 4 891 sessions, 9 148 / 1 580 / 1 777
+photos en train / val / test (73 / 13 / 14 %), chaque classe a au moins une photo en val et
+en test, 0 fuite sur les trois contrôles.
+Un essai sur données partielles a corrigé deux défauts avant le run final : remplissage
+glouton qui donnait 22 % de test, et faux doublons entre images de studio de produits
+différents (petit comprimé sur fond uni : 1 468 paires, toutes studio-studio), désormais
+comptés seulement si une photo « consumer » est dans la paire.
+
+**D90. ePillID reste un benchmark ; corpus RAG v2 dans son propre espace.** ePillID
+(13 532 images 224 px, 4 902 types) est construit à partir des images du NLM Pill Image
+Recognition Challenge (tirées de C3PI) et de Pillbox : ses 3 728 photos « consumer » sont
+toutes des produits de l'archive C3PI, donc des recadrages de photos que v2 contient déjà
+(986 d'entre elles concernent 197 des 380 classes de v2 ; 2 483 des 4 902 types ePillID sont
+dans l'archive C3PI).
+Les ajouter à l'entraînement dupliquerait des images et pourrait mettre la copie d'une photo
+de test en train : ePillID sert seulement à comparer nos modèles à la littérature (job
+`epillid` : recouvrement par NDC9 avec l'archive et avec les classes v1 / v2). Module 2 : le
+même cluster traite le corpus RAG ; les sources des nouvelles classes (RxNav, openFDA, PubMed
+avec 40 résumés par principe actif au lieu de 20) sont collectées par les connecteurs polis
+du pipeline dans `data/rag_v2` (`python -m src.data.spark.rag_sources`, testé), pour ne pas
+toucher l'espace `data/rag` du corpus servi. Le job `rag` nettoie, déduplique (PMID, texte
+identique, MinHash LSH) et découpe en Parquet (`data/processed/rag/corpus_v2`) les espaces
+listés dans `params.yaml` (`bigdata.rag.workspaces`) ; l'index servi reste le corpus v1
+jusqu'à la phase 3. Périmètre réduit (en l'absence du propriétaire) : le client poli
+refuse toute requête sans `CONTACT_EMAIL` dans `.env`, absent de cette copie du dépôt ; on
+ne met pas l'adresse du propriétaire dans des requêtes à sa place. Le job a donc tourné sur
+l'espace v1 seulement ; la collecte v2 attend que le propriétaire renseigne `CONTACT_EMAIL`,
+puis `rag_sources ingredients|labels|pubmed`, `dvc add data/rag_v2`, ajout de `data/rag_v2`
+aux paramètres et aux dépendances de `spark_rag`, `dvc repro`. Périmètre réduit : les paires DDInter du corpus v2 viennent de
+`interactions_with_any_drug.csv` (au moins un principe actif v1), la table DDInter complète
+n'étant plus sur le disque ; les paires entre deux nouveaux principes actifs viendront quand
+elle sera reconstruite (étape 3.x).
