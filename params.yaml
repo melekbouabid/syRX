@@ -1,0 +1,38 @@
+# Parameters of the DVC pipeline (dvc.yaml): each stage lists the keys it reads, so
+# `dvc repro` reruns a stage when one of them changes and `dvc params diff` shows the change.
+#
+# bigdata: the PySpark jobs of src/data/spark (step 1.4, docs/module1/big_data.md), which
+# build the C3PI dataset v2 (more classes, more images per class, offline augmentation of the
+# rare classes) and the larger RAG corpus.
+bigdata:
+  seed: 0
+  index:
+    # N: a pill product (NDC9 + part) becomes a class when it has at least N consumer photos.
+    # The split stage applies N again after the quality checks (usable photos only).
+    min_images: 20
+    # Cameras left out (step 1.2 had dropped the two high-resolution ones to stay within a
+    # 4 GB budget, D32); empty = the 9 cameras.
+    exclude_cameras: []
+    # Studio images segmented by NLM (MC_C3PI_REFERENCE_SEG_V1.6, alpha mask) per class.
+    seg_per_class: 8
+    # NLM Pill Image Recognition Challenge images (MC_CHALLENGE_V1.0): all | classes | none.
+    challenge: all
+  quality:
+    min_side: 200          # pixels; smaller images are rejected
+    min_brightness: 10     # mean grey level (0-255) of consumer and challenge photos:
+                           # only near-black or near-white frames (a denim background is ~15)
+    max_brightness: 245
+    hash_size: 16          # difference hash (dHash) of hash_size x hash_size bits
+    near_duplicate_bits: 3 # hashes at most this many bits apart = near-identical photos
+  split:
+    val: 0.15
+    test: 0.15
+  augment:
+    # Train images per class after augmentation: a class whose train set (consumer photos and
+    # segmented studio images) is below the target gets new images up to it.
+    target_per_class: 40
+    size: 512              # long side of the generated JPEGs
+  rag:
+    # Chunks keep the size of the module 2 corpus (1,500 characters, src/data/corpus/corpus.py).
+    min_chars: 80          # shorter cleaned texts are dropped
+    near_duplicate: 0.2    # MinHash Jaccard distance under which two abstracts are duplicates
