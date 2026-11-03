@@ -833,3 +833,31 @@ Renommage : les noms hérités de SynergyRx deviennent ceux de Tujya (paquet `tu
 commande `tujya-data`, nom `tujya-data` dans le User-Agent et l'outil NCBI, préfixe de
 configuration `TUJYA_*`). L'ancien préfixe `SYNERGYRX_*` est encore lu en repli, pour les
 `.env` existants (testé) ; les décisions D1 à D85 gardent les anciens noms (historique).
+
+## Workflows du guide (2026-11-03)
+
+**D87. Deux workflows, `ci-tests.yml` et `docker-build.yml`, remplacent `ci.yml` et
+`cd.yml` ; aucune image publiée.** Le guide du module 1 nomme ces deux fichiers et demande
+flake8, black --check, ESLint, pytest et le build des images multi-stage avec un test de
+fumée. `ci-tests.yml` reprend tous les jobs de l'ancien `ci.yml` (ruff, mypy, pytest de
+`src/` avec PostgreSQL + pgvector, pytest de `backend/`, hooks et messages de commit,
+ESLint et build du frontend) et ajoute flake8 et black dans un job `lint`. Ruff reste
+l'outil principal ; flake8 (`.flake8`) et black (`[tool.black]` du `pyproject.toml`)
+utilisent sa longueur de ligne (100). Black aurait remis en forme 7 fichiers d'une façon
+que `ruff format` défaisait : ces passages ont été réécrits pour que les deux outils donnent
+la même mise en page (expressions de message sorties des `assert`, en-têtes HTTP dans une
+variable), sans changer le comportement ; les 4 lignes de plus de 100 caractères que ruff
+tolérait (expressions régulières, `# type: ignore`) sont coupées, la regex des doses reste
+identique (vérifié). Deux exceptions flake8 copient celles de ruff : `make_spec.py` (E501)
+et `inference.py` (E402, variable d'OpenCV posée avant l'import de cv2). Dans pre-commit,
+flake8 et black ne font que vérifier (ruff corrige). `docker-build.yml` ne dépend plus de la
+CI (`workflow_run`) : il tourne sur chaque push de branche et chaque pull request, en
+parallèle, pour qu'une branche soit vérifiée avant sa fusion ; il valide aussi
+`docker-compose.yml` et attend que le `HEALTHCHECK` de chaque image soit `healthy`. Le
+Dockerfile du backend devient multi-stage comme celui du frontend (`build` installe les
+dépendances dans un venv, `runtime` ne copie que ce venv et le code). Le job manuel
+`publish` (envoi sur ghcr.io à la demande, gardé par D70) est retiré : l'étape demande
+qu'aucune image ne soit publiée et docs/project_rules.md interdit de publier les images de
+l'application ; le workflow n'a que `contents: read`. Les images s'appellent `tujia2-*:ci`
+(nom du projet Compose). Le test de fumée interroge `/api/health` : la route `GET /health`
+du guide arrive avec l'API de l'étape 2.5.

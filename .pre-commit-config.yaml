@@ -65,6 +65,20 @@ repos:
         language: system
         types: [python]
 
+      # The module guide's linters, run as checks only: ruff fixes and formats, flake8 and
+      # black confirm (same line length; ruff format and black agree on the layout).
+      - id: flake8
+        name: flake8 (.flake8)
+        entry: python -m flake8
+        language: system
+        types: [python]
+
+      - id: black
+        name: black --check ([tool.black] in pyproject.toml)
+        entry: python -m black --check --quiet
+        language: system
+        types: [python]
+
       - id: mypy
         name: mypy (data pipeline and the module 2 corpus that runs on it)
         entry: python -m mypy --config-file pyproject.toml src/data/tujya_data src/data/corpus

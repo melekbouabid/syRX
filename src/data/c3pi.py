@@ -331,7 +331,8 @@ def download_metadata(dest: Path, *, timeout: float = 600) -> list[Path]:
             except ET.ParseError:
                 pass  # interrupted earlier: fetch again
         target.parent.mkdir(parents=True, exist_ok=True)
-        request = urllib.request.Request(BASE_URL + name, headers={"User-Agent": USER_AGENT})  # noqa: S310
+        headers = {"User-Agent": USER_AGENT}
+        request = urllib.request.Request(BASE_URL + name, headers=headers)  # noqa: S310
         with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
             target.write_bytes(response.read())
         written.append(target)

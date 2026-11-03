@@ -225,10 +225,12 @@ class PoliteClient:
         if not allowed:
             unreachable = (await self.robots.policy(url)).unreachable
             raise RobotsDisallowedError(
-                f"robots.txt of {host} could not be fetched (host down or server error), so "
-                "nothing is requested from it"
-                if unreachable
-                else f"robots.txt of {host} disallows this path for automated clients",
+                (
+                    f"robots.txt of {host} could not be fetched (host down or server error), so "
+                    "nothing is requested from it"
+                    if unreachable
+                    else f"robots.txt of {host} disallows this path for automated clients"
+                ),
                 url=strip_secret_params(url),
             )
 

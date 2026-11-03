@@ -36,8 +36,10 @@ DOSE = re.compile(
     r"|\b(?:once|twice|three times)\s+(?:a|per)\s+(?:day|week)\b"
     r"|\bmg\s*/\s*(?:kg|j|jour|day)\b|\bposologie\b|\bdosage recommande\b"
     # dosing advice without a number: "ajuster la dose", "dose adjustment", "reduce the dose"
-    r"|\b(?:ajust|adapt|redui|redu|diminu|augment|modifi|baiss)\w*\s+(?:de\s+)?(?:la\s+|les\s+)?doses?\b"
-    r"|\bdoses?\b[^.;]{0,40}?\b(?:adjust|modif|reduc|increas|titrat|lower|decreas|ajust|adapt|redui|diminu|augment)\w*"
+    r"|\b(?:ajust|adapt|redui|redu|diminu|augment|modifi|baiss)\w*"
+    r"\s+(?:de\s+)?(?:la\s+|les\s+)?doses?\b"
+    r"|\bdoses?\b[^.;]{0,40}?"
+    r"\b(?:adjust|modif|reduc|increas|titrat|lower|decreas|ajust|adapt|redui|diminu|augment)\w*"
     r"|\b(?:adjust|reduc|increas|lower|decreas|titrat)\w*\s+(?:the\s+)?(?:doses?|dosage)\b"
     r"|\bdosage\s+(?:adjust|modif|reduc)\w*",
     re.IGNORECASE,

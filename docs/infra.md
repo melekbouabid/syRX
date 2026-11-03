@@ -50,8 +50,8 @@ démarrage crée l'administrateur par défaut et le compte de démonstration (`u
 le serveur.
 
 Les images sont toujours construites en local par `docker compose up -d --build`. Le workflow
-de CD construit et teste les mêmes images sur GitHub mais ne les publie plus (D70,
-[docs/cd.md](cd.md)).
+`docker-build.yml` construit et teste les mêmes images sur GitHub mais ne les publie pas
+(D70, D87, [docs/cd.md](cd.md)).
 
 [`infra/docker/postgres/init/01-init.sql`](../infra/docker/postgres/init/01-init.sql) s'exécute
 une fois, sur un volume vide : il active `vector` dans la base `tujya` et crée la base

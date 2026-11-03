@@ -1,45 +1,62 @@
-# Livraison continue sans publication (GitHub Actions)
+# CI/CD sans publication (GitHub Actions)
 
 Tujya ne tourne **que sur le PC du propriétaire** (docs/project_rules.md, D69) : aucun déploiement
 public et aucune image de l'application publiée. Le dépôt GitHub reste public (code et
-documentation seulement), ce qui garde GitHub Actions gratuit. Depuis le 2026-10-28 (D70),
-le workflow de CD **construit et teste** donc les images à chaque push vert sur `main`, mais
-**ne les envoie** nulle part.
+documentation seulement), ce qui garde GitHub Actions gratuit. Les images Docker sont donc
+**construites et testées** à chaque push, mais **envoyées nulle part** (D70, D87).
 
-Deux workflows dans [`.github/workflows/`](../.github/workflows/) :
+Deux workflows dans [`.github/workflows/`](../.github/workflows/), ceux que demande le guide du
+module (depuis l'étape 1.3, ils remplacent les anciens `ci.yml` et `cd.yml`, D87) :
 
 | Workflow | Quand | Quoi |
 |---|---|---|
-| [`ci.yml`](../.github/workflows/ci.yml) | chaque push et pull request | lint (ruff, mypy) et tests unitaires : `src` (tout le code de `src/`, tests dans `tests/`, avec un service PostgreSQL + pgvector), `backend` (l'API, dont la chaîne de scan), `hooks` (hooks Git et messages de commit) ; lint, typage et build du site (`frontend`) |
-| [`cd.yml`](../.github/workflows/cd.yml) | quand `ci` **réussit sur un push vers `main`** (`workflow_run`), ou lancé à la main | construit les images du backend et du frontend du commit testé par la CI et les teste ; **aucun envoi** |
+| [`ci-tests.yml`](../.github/workflows/ci-tests.yml) | chaque push sur une branche, chaque pull request, ou à la main | lint Python (flake8, black --check, ruff, mypy), tests pytest de `src/` (dans `tests/`, avec PostgreSQL + pgvector) et de `backend/`, hooks Git et messages de commit, ESLint, typage et build du frontend |
+| [`docker-build.yml`](../.github/workflows/docker-build.yml) | chaque push sur une branche, chaque pull request, ou à la main | `docker-compose.yml` valide ; construction des images multi-stage du backend et du frontend, test de fumée de chacune ; **aucun envoi** |
 
-Fonctionnement de `cd.yml`, par image (job `images`, une matrice de deux jobs) :
+Les deux workflows tournent en parallèle et indépendamment : une branche poussée est vérifiée
+entière (tests et images) avant sa fusion dans `main`. Un tag poussé ne les relance pas.
 
-1. récupère `workflow_run.head_sha`, le commit exact qui a passé la CI ;
-2. construit l'image avec Buildx dans le Docker local du runner (`load: true`,
-   `push: false` ; cache des couches dans le cache de GitHub Actions). Le backend se construit
-   depuis la racine du dépôt avec `backend/Dockerfile` (il importe le paquet `src` ; liste
-   blanche `backend/Dockerfile.dockerignore`), le frontend depuis `frontend/` ;
-3. test de fumée, avec le port du conteneur publié seulement sur le `127.0.0.1` du runner :
+## `ci-tests.yml` : lint et tests
+
+| Job | Ce qu'il vérifie |
+|---|---|
+| `lint` | `flake8 .` ([.flake8](../.flake8)), `black --check .` (`[tool.black]` du [pyproject.toml](../pyproject.toml)), `ruff check .` et `ruff format --check .` ([ruff.toml](../ruff.toml)), `mypy` (pipeline de données et corpus du Module 2). Les quatre outils ont la même longueur de ligne (100) : `ruff format` et black donnent la même mise en page. |
+| `src` | `pytest` à la racine : tests de `src/` rangés dans `tests/` (données C3PI, corpus, pipeline, modèles, RAG, agent, serveur MCP), avec un service `pgvector/pgvector:pg16` pour les tests du magasin de vecteurs. Les tests réseau, marqués `live`, sont exclus (`pyproject.toml`). |
+| `backend` | `pytest` dans `backend/` : l'API FastAPI, dont la chaîne de scan ONNX Runtime. |
+| `hooks` | tests des hooks Git du dépôt (`tools/tests`), puis vérification Conventional Commits des messages de tous les commits poussés (la moitié serveur du hook `commit-msg`, qu'un `git commit --no-verify` ne contourne pas). |
+| `frontend` | `npm ci`, ESLint (`npm run lint`, paquet à part `frontend/eslint`, D84), puis `npm run build` (vérification des types `tsc --noEmit` et build Vite). |
+
+Aucun test ne touche le réseau en dehors de l'installation des dépendances : tous les appels
+HTTP des tests sont simulés, et aucune donnée n'est téléchargée ; l'agent et le RAG utilisent
+des embeddings et un LLM factices (pas d'Ollama dans la CI).
+
+## `docker-build.yml` : images multi-stage et test de fumée
+
+Job `compose` : `docker compose config --quiet` (chaque variable du fichier a une valeur par
+défaut, aucun `.env` n'est nécessaire).
+
+Job `images`, une matrice de deux jobs (backend, frontend) :
+
+1. construit l'image avec Buildx dans le Docker local du runner (`load: true`,
+   `push: false` ; cache des couches dans le cache de GitHub Actions), étiquette
+   `tujia2-<image>:ci` :
+   - backend ([backend/Dockerfile](../backend/Dockerfile)), depuis la racine du dépôt (il
+     importe le paquet `src` ; liste blanche `backend/Dockerfile.dockerignore`) : l'étape
+     `build` installe les dépendances dans un environnement virtuel, l'étape `runtime` ne
+     garde que cet environnement et le code (ni pip, ni cache) ;
+   - frontend ([frontend/Dockerfile](../frontend/Dockerfile)), depuis `frontend/` : l'étape
+     `build` (Node) lance Vite, l'étape finale (nginx) ne sert que le résultat ;
+2. test de fumée, avec le port du conteneur publié seulement sur le `127.0.0.1` du runner :
    le backend doit répondre à `/api/health`, servir `/docs` et lister `/api/scan` et
    `/api/chat` dans `/openapi.json` (comptes dans un fichier SQLite jetable, aucune donnée
    montée) ; le frontend doit servir le site et sa route `/scan` ;
-4. écrit un résumé (« Built and smoke-tested ... Not pushed ») sur la page de l'exécution.
+3. le `HEALTHCHECK` de l'image doit déclarer le conteneur `healthy` ;
+4. affiche les journaux du conteneur et écrit un résumé (« Built (multi-stage) and
+   smoke-tested ... Not pushed ») sur la page de l'exécution.
 
-Le workflow n'a que `permissions: contents: read` : sur un push, il ne peut pas écrire de
-paquets du tout. Un échec de la CI signifie aucun job de CD.
-
-## Envoi manuel, sur demande explicite (désactivé par défaut)
-
-L'ancien comportement (envoi sur GitHub Container Registry) est gardé comme second job,
-`publish`, qui ne s'exécute que si le workflow est **lancé à la main avec `push_images`
-coché**. C'est le seul job avec `packages: write`. Ne pas l'utiliser tant que l'application
-doit rester locale ([docs/project_rules.md](project_rules.md)).
-
-```bash
-gh workflow run cd                         # construction + test seulement (push_images=false)
-gh workflow run cd -f push_images=true     # sur demande : envoie aussi ghcr.io/<owner>/tujya-*:latest et :sha-<commit>
-```
+Le workflow n'a que `permissions: contents: read` : il ne peut pas écrire de paquets, donc pas
+publier d'image. L'ancien job manuel `publish` (envoi sur ghcr.io à la demande) a été retiré
+avec `cd.yml` (D87).
 
 ## Images publiées avant le 2026-10-28
 
@@ -63,14 +80,28 @@ manuelle.
   gh auth refresh -h github.com -r read:packages,delete:packages  # retirer de nouveau les droits
   ```
 
+## Lancer les mêmes vérifications en local
+
+```bash
+.venv/Scripts/python -m flake8 .
+.venv/Scripts/python -m black --check .
+.venv/Scripts/python -m ruff check . && .venv/Scripts/python -m ruff format --check .
+.venv/Scripts/python -m mypy
+.venv/Scripts/python -m pytest                      # tests/ (live exclus)
+(cd backend && ../.venv/Scripts/python -m pytest)
+(cd frontend && npm run lint && npm run build)
+docker build -f backend/Dockerfile -t tujia2-backend:ci .
+docker build -t tujia2-frontend:ci frontend
+```
+
 ## Vérifier une exécution
 
 ```bash
-gh run list --workflow ci --limit 3        # état de la CI
-gh run list --workflow cd --limit 3        # état de la CD (construction + test)
-gh run view <id d'exécution>               # jobs ; « publish » apparaît comme ignoré
-gh run view <id d'exécution> --log-failed  # ce qui a échoué
+gh run list --workflow ci-tests --limit 3       # lint et tests
+gh run list --workflow docker-build --limit 3   # images (construction + test de fumée)
+gh run view <id d'exécution>                    # jobs
+gh run view <id d'exécution> --log-failed       # ce qui a échoué
 ```
 
-ou sur GitHub : l'onglet Actions (workflows « ci » et « cd ») ; le résumé de la CD indique
-« Not pushed ».
+ou sur GitHub : l'onglet Actions (workflows « ci-tests » et « docker-build ») ; le résumé de
+chaque image indique « Not pushed ».

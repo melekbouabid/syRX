@@ -131,7 +131,8 @@ pre-commit run --all-files              # vérifier tout le dépôt
 
 | Hook | Ce qu'il vérifie |
 |---|---|
-| `ruff`, `ruff-format` | Lint et formatage Python (équivalents de flake8 et black). |
+| `ruff`, `ruff-format` | Lint (corrigé automatiquement) et formatage Python ([ruff.toml](../ruff.toml)). |
+| `flake8`, `black` | Les outils du guide, en vérification seulement ([.flake8](../.flake8), `[tool.black]` du [pyproject.toml](../pyproject.toml)) : même longueur de ligne que ruff, et `ruff format` donne la mise en page de black. |
 | `mypy` | Types du pipeline de données et du corpus du Module 2. |
 | `eslint` | Lint du frontend React ([frontend/eslint/](../frontend/eslint/eslint.config.js)). |
 | `check-added-large-files` | Refuse un fichier de plus de 500 Ko : les données vont dans DVC. |
@@ -157,5 +158,5 @@ Les tests des deux hooks du dépôt sont dans [tools/tests/](../tools/tests/test
 (`cd tools && python -m pytest`).
 
 **Les hooks locaux ne suffisent pas** : `git commit --no-verify` les contourne. La CI
-(GitHub Actions, job `hooks`) refait donc côté serveur la vérification des messages de tous
+(GitHub Actions, job `hooks` de [ci-tests.yml](../.github/workflows/ci-tests.yml)) refait donc côté serveur la vérification des messages de tous
 les commits poussés, en plus du lint et des tests de chaque partie du dépôt.

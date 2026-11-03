@@ -74,9 +74,11 @@ def compare(
         findings.append(
             DriftFinding(
                 table,
-                "column_removed"
-                if current["n_columns"] < previous["n_columns"]
-                else "column_added",
+                (
+                    "column_removed"
+                    if current["n_columns"] < previous["n_columns"]
+                    else "column_added"
+                ),
                 f"column set changed: {previous['n_columns']} -> {current['n_columns']} columns",
             )
         )

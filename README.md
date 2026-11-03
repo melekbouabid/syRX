@@ -1,7 +1,7 @@
 # Tujya
 
-[![CI](https://github.com/melekbouabid/syRX/actions/workflows/ci.yml/badge.svg)](https://github.com/melekbouabid/syRX/actions/workflows/ci.yml)
-[![CD](https://github.com/melekbouabid/syRX/actions/workflows/cd.yml/badge.svg)](https://github.com/melekbouabid/syRX/actions/workflows/cd.yml)
+[![ci-tests](https://github.com/melekbouabid/syRX/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/melekbouabid/syRX/actions/workflows/ci-tests.yml)
+[![docker-build](https://github.com/melekbouabid/syRX/actions/workflows/docker-build.yml/badge.svg)](https://github.com/melekbouabid/syRX/actions/workflows/docker-build.yml)
 
 **Tujya** est une application de sécurité du médicament. On photographie un ou plusieurs
 comprimés (upload ou webcam) : un modèle YOLO **détecte** chaque comprimé, un classifieur
@@ -109,7 +109,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | Export ONNX et inférence ONNX Runtime | ✅ | [backend/app/inference.py](backend/app/inference.py) |
 | Docker Compose | ✅ | [docker-compose.yml](docker-compose.yml) |
 | Git avancé : branches, tags annotés, hooks (secrets, messages de commit) | ✅ | [docs/git_workflow.md](docs/git_workflow.md), [tools/hooks/](tools/hooks/) |
-| GitHub Actions CI/CD | ✅ | [.github/workflows/](.github/workflows/), [docs/cd.md](docs/cd.md) |
+| GitHub Actions CI/CD | ✅ | [ci-tests.yml](.github/workflows/ci-tests.yml) (flake8, black, ESLint, pytest, build), [docker-build.yml](.github/workflows/docker-build.yml) (images multi-stage + test de fumée), [docs/cd.md](docs/cd.md) |
 | Soutenance pratique (démonstration technique en direct) | ⬜ | [docs/demo.md](docs/demo.md) |
 
 ### Module 2 : AI Engineering
@@ -172,7 +172,7 @@ docker-compose.yml        toute l'application en une commande
 dvc.yaml  dvc.lock        étapes DVC : prepare (module 1), rag_corpus (module 2)
 pyproject.toml            paquet, dépendances, pytest et mypy ; requirements-dev.txt : venv unique .venv
 ruff.toml                 règles de lint communes à tout le code Python
-.github/workflows/        CI (lint et tests, messages de commit, lint et build du site) et CD (images testées, non publiées)
+.github/workflows/        ci-tests.yml (lint, tests, messages de commit, build du site), docker-build.yml (images testées, non publiées)
 ```
 
 ## Technologies

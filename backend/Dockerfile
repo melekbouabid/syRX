@@ -3,12 +3,34 @@
 # The build context is the repository root, because the API imports the module packages
 # (src/rag, src/agent, ...); Dockerfile.dockerignore next to this file is the allow-list.
 #   docker build -f backend/Dockerfile -t tujya-backend .      # from the repository root
-FROM python:3.12-slim
+#
+# Two stages: `build` installs the Python dependencies into a virtual environment, `runtime`
+# copies only that environment and the code, so pip, its cache and the build layers stay out
+# of the final image.
+
+FROM python:3.12-slim AS build
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN python -m venv /opt/venv
+ENV PATH=/opt/venv/bin:$PATH
+COPY backend/requirements.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
+
+
+FROM python:3.12-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PATH=/opt/venv/bin:$PATH
+
+# LightGBM (bonus toxicity tool) needs the OpenMP runtime, absent from the slim image.
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /opt/venv /opt/venv
 
 # Same layout as the repository under /tujya: the backend folder is /tujya/backend, so
 # the default paths of app/config.py are /tujya/models, /tujya/config/..., /tujya/data/...,
@@ -16,11 +38,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # (pyproject.toml): package `app` and the repository root.
 WORKDIR /tujya/backend
 ENV PYTHONPATH=/tujya:/tujya/backend
-# LightGBM (bonus toxicity tool) needs the OpenMP runtime, absent from the slim image.
-RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
-COPY backend/requirements.txt ./
-RUN pip install -r requirements.txt
 
 COPY src /tujya/src
 COPY backend/app ./app

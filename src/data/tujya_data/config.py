@@ -200,9 +200,9 @@ def load_secrets(project_root: Path, environ: dict[str, str] | None = None) -> S
         values.update(dotenv_values(env_file))
     values.update(os.environ if environ is None else environ)
     return Secrets(
-        ncbi_api_key=SecretStr(key)
-        if (key := (values.get("NCBI_API_KEY") or "").strip())
-        else None,
+        ncbi_api_key=(
+            SecretStr(key) if (key := (values.get("NCBI_API_KEY") or "").strip()) else None
+        ),
         contact_email=values.get("CONTACT_EMAIL") or None,
         ncbi_tool=(values.get("NCBI_TOOL") or "tujya-data").strip(),
     )

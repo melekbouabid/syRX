@@ -184,11 +184,13 @@ et temps mesurés à cette occasion.
 ## 12. GitHub Actions CI/CD (45 s)
 
 - **Faire** : `gh run list --limit 4`, ou l'onglet Actions du dépôt.
-- **Le jury voit** : runs `ci` et `cd` verts ; dans un run `cd` : « backend image (build +
-  smoke test) », « frontend image (build + smoke test) », job `publish` ignoré.
-- **Dire** : « À chaque push : lint, types, tests (pipeline, backend, vision) et build du
-  frontend ; puis la CD construit et teste les images Docker, sans les publier, puisque
-  l'application ne doit tourner que sur ce PC. »
+- **Le jury voit** : runs `ci-tests` et `docker-build` verts ; dans `ci-tests` : les jobs
+  `lint` (flake8, black, ruff, mypy), `src`, `backend`, `hooks`, `frontend` ; dans
+  `docker-build` : « backend image (multi-stage build + smoke test) », « frontend image
+  (multi-stage build + smoke test) » et le résumé « Not pushed ».
+- **Dire** : « À chaque push : lint, types, tests (`src/` avec pgvector, backend) et build du
+  frontend ; en parallèle, les images Docker multi-stage sont construites et testées, sans
+  être publiées, puisque l'application ne doit tourner que sur ce PC. »
 
 ## 13. Serveur MCP (45 s)
 
