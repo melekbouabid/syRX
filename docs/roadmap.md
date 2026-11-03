@@ -77,6 +77,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Docker Compose : service ollama avec le GPU NVIDIA
 - [x] CI GitHub Actions (lint, tests, build du site)
 - [x] CD GitHub Actions : images construites et testées après une CI verte, non publiées (D70, [docs/cd.md](cd.md))
+- [x] Workflows du guide : `ci-tests.yml` (flake8, black --check, ruff, mypy, ESLint, pytest de `src/` et `backend/`, build du frontend) et `docker-build.yml` (images multi-stage backend et frontend + test de fumée, rien de publié) ; anciens `ci.yml` et `cd.yml` fusionnés (D87, `v2.1.0-ci`)
 - [ ] Supprimer les deux anciens paquets sur ghcr.io (manuel : pas de droit `delete:packages`, [docs/cd.md](cd.md))
 - [x] Usage strictement local : chaque port sur 127.0.0.1, vérifié avec netstat (D69, [docs/infra.md](infra.md))
 - Pas de déploiement sur un serveur, par choix : le projet ne tourne que sur ce PC (D69)
