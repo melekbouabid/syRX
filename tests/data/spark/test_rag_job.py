@@ -162,3 +162,17 @@ def test_job_builds_one_corpus_from_both_workspaces(spark, params, workspaces):
     assert summary["articles"]["near_duplicates"] == 1
     assert summary["interaction_pairs"] == 1  # aspirin is not a class ingredient
     assert summary["ingredients_covered"] == 2
+
+
+def test_job_reads_the_workspaces_listed_in_params(spark, params, workspaces):
+    v1 = workspaces / "rag"
+    params["rag"].update(
+        workspaces=[str(v1)], ingredient_files=[str(workspaces / "ingredients.csv")]
+    )
+    summary = rag_job.run(spark, params, out=workspaces / "corpus_v1_only")
+    assert summary["workspaces"] == [str(v1)]
+    assert summary["label_sections"] == {"read": 2, "kept": 1}  # the dosage section is out
+    assert summary["articles"]["read"] == 1
+    chunks = spark.read.parquet(str(workspaces / "corpus_v1_only" / "chunks"))
+    abstract = chunks.where("doc_type = 'abstract'").first()
+    assert list(abstract.ingredients) == ["warfarin"]  # only the v1 query found it

@@ -33,6 +33,12 @@ bigdata:
     target_per_class: 40
     size: 512              # long side of the generated JPEGs
   rag:
+    # Collection workspaces read by the job, and the ingredient lists of their classes.
+    # data/rag_v2 (classes of v2, `python -m src.data.spark.rag_sources`) is added here, and
+    # to the deps of the stage spark_rag, once collected: the polite client needs a
+    # CONTACT_EMAIL in .env (D90).
+    workspaces: [data/rag]
+    ingredient_files: [data/processed/pharma/pill_ingredients.csv]
     # Chunks keep the size of the module 2 corpus (1,500 characters, src/data/corpus/corpus.py).
     min_chars: 80          # shorter cleaned texts are dropped
     near_duplicate: 0.2    # MinHash Jaccard distance under which two abstracts are duplicates

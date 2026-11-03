@@ -1,7 +1,8 @@
 """Job `rag`: the RAG corpus of module 2 at a larger scale, cleaned, deduplicated, chunked.
 
-Inputs (DVC): the two collection workspaces, data/rag (v1: 150 classes, 20 abstracts per
-ingredient) and data/rag_v2 (classes of the C3PI dataset v2, 40 abstracts per ingredient,
+Inputs (DVC): the collection workspaces listed in params.yaml (`bigdata.rag.workspaces`):
+data/rag (v1: 150 classes, 20 abstracts per ingredient) and, once collected, data/rag_v2
+(classes of the C3PI dataset v2, 40 abstracts per ingredient,
 `python -m src.data.spark.rag_sources`): openFDA label sections, PubMed articles, query hits
 and the queries (raw/pubmed/*/*/query.json, which ingredient each query is about); the
 ingredients of both class lists; DDInter pairs (data/processed/pharma).
@@ -73,9 +74,11 @@ def _existing(paths: list[Path]) -> list[str]:
     return [str(p) for p in paths if p.exists()]
 
 
-def read_union(spark: SparkSession, relative: str) -> DataFrame | None:
+def read_union(
+    spark: SparkSession, relative: str, workspaces: tuple[Path, ...] = WORKSPACES
+) -> DataFrame | None:
     """The same interim table of every workspace that has it, stacked."""
-    paths = _existing([w / relative for w in WORKSPACES])
+    paths = _existing([w / relative for w in workspaces])
     if not paths:
         return None
     frames = [spark.read.parquet(p) for p in paths]
@@ -137,9 +140,11 @@ def near_duplicate_pmids(articles: DataFrame, threshold: float, seed: int) -> Da
     )
 
 
-def pmid_ingredients(spark: SparkSession, hits: DataFrame) -> DataFrame:
+def pmid_ingredients(
+    spark: SparkSession, hits: DataFrame, workspaces: tuple[Path, ...] = WORKSPACES
+) -> DataFrame:
     """PMID -> ingredients whose query returned it (query.json of each raw query folder)."""
-    files = _existing([w / "raw" / "pubmed" for w in WORKSPACES])
+    files = _existing([w / "raw" / "pubmed" for w in workspaces])
     queries = spark.read.option("multiLine", True).json([f"{f}/*/*/query.json" for f in files])
     queries = queries.where(F.col("kind") == "ingredient").select(
         "query_id", F.lower(F.col("drug_names")[0]).alias("ingredient")
@@ -151,8 +156,8 @@ def pmid_ingredients(spark: SparkSession, hits: DataFrame) -> DataFrame:
     )
 
 
-def ingredient_names(spark: SparkSession) -> list[str]:
-    paths = _existing(list(INGREDIENT_FILES))
+def ingredient_names(spark: SparkSession, files: tuple[Path, ...] = INGREDIENT_FILES) -> list[str]:
+    paths = _existing(list(files))
     frame = spark.read.option("header", True).csv(paths)
     return sorted(r[0] for r in frame.select(F.lower("ingredient")).distinct().collect() if r[0])
 
@@ -179,20 +184,31 @@ def _chunker(kind: str, names: list[str]) -> Any:
 def run(spark: SparkSession, params: dict[str, Any], *, out: Path = OUT) -> dict[str, Any]:
     p = params["rag"]
     min_chars = int(p["min_chars"])
-    names = ingredient_names(spark)
-    stats: dict[str, Any] = {"ingredients": len(names)}
+    # Workspaces and ingredient lists from params.yaml (paths from the repository root);
+    # the module constants when the parameters do not list them.
+    workspaces = tuple(ROOT / w for w in p["workspaces"]) if "workspaces" in p else WORKSPACES
+    files = INGREDIENT_FILES
+    if "ingredient_files" in p:
+        files = tuple(ROOT / f for f in p["ingredient_files"])
+    names = ingredient_names(spark, files)
+    stats: dict[str, Any] = {
+        "ingredients": len(names),
+        "workspaces": [
+            w.relative_to(ROOT).as_posix() if w.is_relative_to(ROOT) else str(w) for w in workspaces
+        ],
+    }
     parts: list[DataFrame] = []
 
-    labels = read_union(spark, "interim/openfda_label/label_sections.parquet")
+    labels = read_union(spark, "interim/openfda_label/label_sections.parquet", workspaces)
     if labels is not None:
         cleaned = clean_labels(labels, min_chars).cache()
         stats["label_sections"] = {"read": labels.count(), "kept": cleaned.count()}
         parts.append(cleaned.mapInPandas(_chunker("label", names), CHUNK_SCHEMA))
 
-    articles = read_union(spark, "interim/pubmed/articles.parquet")
-    hits = read_union(spark, "interim/pubmed/query_hits.parquet")
+    articles = read_union(spark, "interim/pubmed/articles.parquet", workspaces)
+    hits = read_union(spark, "interim/pubmed/query_hits.parquet", workspaces)
     if articles is not None and hits is not None:
-        about = pmid_ingredients(spark, hits)
+        about = pmid_ingredients(spark, hits, workspaces)
         cleaned = clean_articles(articles.join(about, "pmid"), min_chars).cache()
         near = near_duplicate_pmids(cleaned, float(p["near_duplicate"]), int(params["seed"]))
         near = near.cache()
