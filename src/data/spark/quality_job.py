@@ -14,7 +14,8 @@ Reasons for rejection (one per image, first that applies): `missing`, `corrupt`,
 `too_small` (short side under min_side), `too_dark` / `too_bright` (consumer and challenge
 photos only: the segmented studio PNGs are mostly transparent), `duplicate_file` (same
 SHA-1 as an image kept), `duplicate_other_class` (perceptually identical to an image of
-another pill: the label is ambiguous). Near-identical photos of the same pill are kept but
+another pill: the label is ambiguous; pairs of two studio shots do not count, see
+`near_duplicates`). Near-identical photos of the same pill are kept but
 recorded (`near_duplicates/`), so the split job puts them in the same split.
 
 Outputs (data/processed/c3pi/bigdata/quality, DVC): metrics/ (one row per image, Parquet),
@@ -137,6 +138,11 @@ def near_duplicates(table: DataFrame, max_bits: int, hash_size: int) -> DataFram
     hashes share at least one identical block, so an equi-join on (block index, block value)
     finds every candidate pair without comparing all pairs; the exact distance is then
     computed on the candidates only.
+
+    Only pairs with at least one consumer photo count: studio shots (challenge, segmented,
+    reference) show a small pill on a plain background, so their hashes are close across
+    different pills (measured on the v2 selection: 1,468 such pairs, all studio-studio),
+    while a copy of a consumer photo is still found whatever its role.
     """
     if max_bits >= HASH_BLOCKS:
         raise ValueError(f"banding finds pairs up to {HASH_BLOCKS - 1} bits apart")
@@ -145,12 +151,14 @@ def near_duplicates(table: DataFrame, max_bits: int, hash_size: int) -> DataFram
         "path",
         "class_key",
         "dhash",
+        (F.col("role") == "consumer").alias("photo"),
         F.posexplode(F.array(*_blocks("dhash", hash_size))).alias("block", "value"),
     )
     a, b = banded.alias("a"), banded.alias("b")
     pairs = (
         a.join(b, (F.col("a.block") == F.col("b.block")) & (F.col("a.value") == F.col("b.value")))
         .where(F.col("a.path") < F.col("b.path"))
+        .where(F.col("a.photo") | F.col("b.photo"))
         .select(
             F.col("a.path").alias("path_a"),
             F.col("b.path").alias("path_b"),

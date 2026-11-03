@@ -44,6 +44,8 @@ def fake(tmp_path):
         "g_other.JPG": ("Y", "C3PI_Test", resave(d / "a_ok3.JPG", d / "g_other.JPG")),
         "h_seg.PNG": ("Y", "MC_C3PI_REFERENCE_SEG_V1.6", segmented(d / "h_seg.PNG")),
         "i_white.JPG": ("Y", "MC_CHALLENGE_V1.0", photo(d / "i_white.JPG", 6, value=250)),
+        # Another pill's studio shot that hashes like h_seg: two studio shots never count.
+        "j_seg.PNG": ("X", "MC_C3PI_REFERENCE_SEG_V1.6", segmented(d / "j_seg.PNG", (124, 100))),
     }
     good = (d / "a_ok1.JPG").read_bytes()
     (d / "c_corrupt.JPG").write_bytes(good[: len(good) // 2])
@@ -114,7 +116,7 @@ def test_job_rejects_with_reasons_and_records_near_duplicates(spark, params, tmp
         "g_other.JPG": "duplicate_other_class",
         "i_white.JPG": "too_bright",
     }
-    assert summary["checked"] == 12 and summary["rejected"] == 8
+    assert summary["checked"] == 13 and summary["rejected"] == 8
     pairs = {
         (r.path_a.split("/")[-1], r.path_b.split("/")[-1])
         for r in spark.read.parquet(str(out / "near_duplicates")).collect()
@@ -122,4 +124,5 @@ def test_job_rejects_with_reasons_and_records_near_duplicates(spark, params, tmp
     # Same class, near-identical: kept, but recorded for the split.
     assert ("a_ok1.JPG", "b_near1.JPG") in pairs
     assert ("a_ok3.JPG", "g_other.JPG") in pairs
+    assert ("h_seg.PNG", "j_seg.PNG") not in pairs
     assert summary["near_duplicate_pairs_other_class"] == 1
