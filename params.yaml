@@ -42,3 +42,45 @@ bigdata:
     # Chunks keep the size of the module 2 corpus (1,500 characters, src/data/corpus/corpus.py).
     min_chars: 80          # shorter cleaned texts are dropped
     near_duplicate: 0.2    # MinHash Jaccard distance under which two abstracts are duplicates
+
+# Module 1 vision models (step 2.1, src/models, docs/module1/mlflow.md): hyperparameters of
+# the stages train_detector / train_classifier (src/models/train.py reads them; a command-line
+# flag overrides them for a quick experiment). The values are those of the baseline, the GPU
+# runs of 2026-10-28 served by the API (D91).
+train:
+  seed: 0
+  dataset: c3pi-v1         # 150 classes, data/processed/c3pi/datasets (stage prepare)
+  detector:
+    weights: yolo11n.pt    # pretrained COCO weights (transfer learning), one class: pill
+    epochs: 30
+    imgsz: 640
+    batch: 8
+    patience: 10           # early stopping on the validation mAP
+    fraction: 1.0          # share of the train set
+    workers: 6
+  classifier:
+    weights: yolo11s-cls.pt  # pretrained ImageNet weights
+    epochs: 40
+    imgsz: 224
+    batch: 64
+    patience: 10
+    fraction: 1.0
+    workers: 6
+# Stage export_onnx (src/models/export_onnx.py).
+export:
+  simplify: true           # onnxslim graph simplification
+  parity_images: 50        # test images on which ONNX Runtime must agree with PyTorch
+# Model Registry: metric and minimum gain for promote_if_better (alias champion /
+# challenger, src/utils/mlflow_utils.py). mAP@[.5:.95] is the metric of the module guide.
+registry:
+  detector:
+    name: tujya-pill-detector
+    metric: test_mAP50_95
+    min_gain: 0.005
+  classifier:
+    name: tujya-pill-classifier
+    metric: test_top1
+    min_gain: 0.005
+# Stage evaluate (src/models/evaluate.py): detector confidence threshold, end to end.
+evaluate:
+  conf: 0.25

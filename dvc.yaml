@@ -16,6 +16,14 @@
 # the v2 RAG sources collected (`python -m src.data.spark.rag_sources`, needs CONTACT_EMAIL in
 # .env) between the stages, then tracked with `dvc add`, like every network input. `dataset_stats` needs the training venv
 # (.venv-train: mlflow) and the MLflow server (`docker compose up -d mlflow`).
+# Vision models (step 2.1, docs/module1/mlflow.md): train_detector and train_classifier train
+# the two YOLO models with the hyperparameters of params.yaml `train`, export_onnx exports,
+# checks, registers them in the MLflow Model Registry and promotes the better one (alias
+# champion), evaluate measures the ONNX pair end to end on the test photos. Training venv
+# (.venv-train) and MLflow server. The two training stages are frozen (`frozen: true`): their
+# recorded output is the baseline of 2026-10-28 (src/models/register_baseline.py, D91), and a
+# CPU-only `dvc repro` never starts a long training; `dvc unfreeze train_classifier` on a GPU
+# machine (Kaggle, steps 2.2 and 2.3), then `dvc repro`.
 stages:
   prepare:
     cmd: python -m src.data.prepare
@@ -121,3 +129,70 @@ stages:
       - src/data/spark/log_stats.py
     metrics:
       - data/processed/c3pi/bigdata/stats.json
+  train_detector:
+    cmd: python -m src.models.train detect
+    frozen: true
+    deps:
+      - data/processed/c3pi/datasets/detect
+      - src/models/train.py
+      - src/utils/mlflow_utils.py
+    params:
+      - train.seed
+      - train.dataset
+      - train.detector
+    outs:
+      - models/train/detector
+    metrics:
+      - models/train/detector.json:
+          cache: false
+  train_classifier:
+    cmd: python -m src.models.train classify
+    frozen: true
+    deps:
+      - data/processed/c3pi/datasets/classify
+      - src/models/train.py
+      - src/utils/mlflow_utils.py
+    params:
+      - train.seed
+      - train.dataset
+      - train.classifier
+    outs:
+      - models/train/classifier
+    metrics:
+      - models/train/classifier.json:
+          cache: false
+  export_onnx:
+    cmd: python -m src.models.export_onnx
+    deps:
+      - models/train/detector
+      - models/train/detector.json
+      - models/train/classifier
+      - models/train/classifier.json
+      # Test images on which ONNX Runtime is compared with PyTorch.
+      - data/processed/c3pi/datasets/detect/images/test
+      - data/processed/c3pi/datasets/classify/test
+      - src/models/export_onnx.py
+      - src/utils/mlflow_utils.py
+    params:
+      - export
+      - registry
+    outs:
+      - models/onnx
+    metrics:
+      - models/export.json:
+          cache: false
+  evaluate:
+    cmd: python -m src.models.evaluate
+    deps:
+      - models/onnx
+      - config/splits/selected_images.csv
+      - data/raw/c3pi/images
+      - src/data/autolabel.py
+      - src/models/evaluate.py
+    params:
+      - evaluate
+      - train.seed
+      - train.dataset
+    metrics:
+      - models/evaluate.json:
+          cache: false
