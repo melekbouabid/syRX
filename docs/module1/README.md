@@ -21,15 +21,15 @@ Rapport technique : [docs/module1/rapport_module1_vision_mlops.pdf](rapport_modu
 | Données (C3PI, sous-ensemble, split) | [src/data/c3pi.py](../../src/data/c3pi.py), [data_cli.py](../../src/data/data_cli.py), [config/pill_classes.csv](../../config/pill_classes.csv), [config/splits/](../../config/splits/) ; [docs/module1/dataset_c3pi.md](dataset_c3pi.md) |
 | Plus de données et Big Data avec PySpark (demande du professeur) | jobs PySpark [src/data/spark/](../../src/data/spark/) (index, qualité, split sans fuite, augmentation des classes rares, ePillID, corpus RAG), cluster Spark ([docker-compose.yml](../../docker-compose.yml), [infra/docker/spark/](../../infra/docker/spark/)), étapes DVC `spark_*` et `dataset_stats` ([dvc.yaml](../../dvc.yaml), [params.yaml](../../params.yaml)), split v2 [config/splits/c3pi_v2/](../../config/splits/c3pi_v2/), statistiques dans MLflow (`tujya-data`), tests [tests/data/spark/](../../tests/data/spark/) ; data card : [big_data.md](big_data.md) |
 | Backend FastAPI asynchrone, schémas Pydantic, Swagger sur `/docs` | `POST /api/scan` : [backend/app/routers/scan.py](../../backend/app/routers/scan.py) ; schémas : [backend/app/schemas.py](../../backend/app/schemas.py) ; Swagger : [backend/app/main.py](../../backend/app/main.py) ; [docs/api.md](../api.md) |
-| Export ONNX et inférence ONNX Runtime | export et vérification ONNX = PyTorch : [src/models/train.py](../../src/models/train.py) ; inférence servie : [backend/app/inference.py](../../backend/app/inference.py) ; contrôle sur le split de test : [src/models/evaluate_scan.py](../../src/models/evaluate_scan.py) |
+| Export ONNX et inférence ONNX Runtime | export et vérification ONNX = PyTorch : [src/models/export_onnx.py](../../src/models/export_onnx.py) (étape DVC `export_onnx`) ; inférence servie : [backend/app/inference.py](../../backend/app/inference.py) ; contrôle sur le split de test : [src/models/evaluate_scan.py](../../src/models/evaluate_scan.py) |
 | Frontend React : upload, webcam, prédictions et boîtes en direct | [frontend/src/pages/ScanPage.tsx](../../frontend/src/pages/ScanPage.tsx), [frontend/src/services/api.ts](../../frontend/src/services/api.ts) ; captures [01](../screenshots/01-scanner.jpg) à [07](../screenshots/07-swagger.jpg) |
-| DVC (versionnement des données) | [dvc.yaml](../../dvc.yaml) (étapes `prepare`, `spark_*`, `dataset_stats`), [params.yaml](../../params.yaml), [dvc.lock](../../dvc.lock), [.dvc/config](../../.dvc/config), pointeurs `../data/**/*.dvc` ; [docs/infra.md](../infra.md#remote-dvc-depuis-le-2026-10-28) |
-| MLflow : tracking des expériences | expérience `tujya-vision` : [src/models/train.py](../../src/models/train.py), [evaluate.py](../../src/models/evaluate.py) ; serveur : [infra/docker/mlflow/Dockerfile](../../infra/docker/mlflow/Dockerfile) ; capture [12](../screenshots/12-mlflow-vision.jpg) |
-| MLflow : Model Registry | modèles `tujya-pill-detector` et `tujya-pill-classifier` enregistrés par [train.py](../../src/models/train.py), copiés vers `models/` pour l'API par [publish.py](../../src/models/publish.py) ; captures [14](../screenshots/14-mlflow-registry.jpg), [15](../screenshots/15-mlflow-classifier.jpg) |
+| DVC (versionnement des données) | [dvc.yaml](../../dvc.yaml) (étapes `prepare`, `spark_*`, `dataset_stats`, et pour les modèles `train_detector`, `train_classifier`, `export_onnx`, `evaluate` : `dvc dag`), [params.yaml](../../params.yaml) (hyperparamètres `train`, règles de promotion `registry`), [dvc.lock](../../dvc.lock), [.dvc/config](../../.dvc/config), pointeurs `../data/**/*.dvc` ; [docs/infra.md](../infra.md#remote-dvc-depuis-le-2026-10-28) |
+| MLflow : tracking des expériences | expérience `tujya-vision` : [src/models/train.py](../../src/models/train.py), [evaluate.py](../../src/models/evaluate.py) ; chaque run via [src/utils/mlflow_utils.py](../../src/utils/mlflow_utils.py) (tags `git_commit`, `dvc_rev`, `dataset`, `seed` ; `requirements.txt` figé, `dvc.lock`, `params.yaml`) ; [mlflow.md](mlflow.md) ; serveur : [infra/docker/mlflow/Dockerfile](../../infra/docker/mlflow/Dockerfile) ; capture [12](../screenshots/12-mlflow-vision.jpg) |
+| MLflow : Model Registry | modèles `tujya-pill-detector` et `tujya-pill-classifier` (LoggedModel MLflow 3) enregistrés par [export_onnx.py](../../src/models/export_onnx.py), alias `champion` / `challenger` donnés par `promote_if_better` ([mlflow_utils.py](../../src/utils/mlflow_utils.py)), baseline v1 ré-enregistrée par [register_baseline.py](../../src/models/register_baseline.py) ; champions copiés vers `models/` pour l'API par [publish.py](../../src/models/publish.py) ; [mlflow.md](mlflow.md) ; captures [14](../screenshots/14-mlflow-registry.jpg), [15](../screenshots/15-mlflow-classifier.jpg) |
 | Docker Compose | [docker-compose.yml](../../docker-compose.yml), [backend/Dockerfile](../../backend/Dockerfile), [frontend/Dockerfile](../../frontend/Dockerfile), [infra/](../../infra/) ; [docs/infra.md](../infra.md) |
 | Git avancé : branches, tags annotés, hooks pre-commit (secrets, messages de commit) | [docs/git_workflow.md](../git_workflow.md), [.pre-commit-config.yaml](../../.pre-commit-config.yaml), [tools/hooks/](../../tools/hooks/) et leurs tests [tools/tests/](../../tools/tests/test_hooks.py) |
 | GitHub Actions CI/CD | [.github/workflows/ci-tests.yml](../../.github/workflows/ci-tests.yml) (flake8, black, ruff, mypy, ESLint, pytest de `src/` et de `backend/`, build du frontend), [.github/workflows/docker-build.yml](../../.github/workflows/docker-build.yml) (images multi-stage construites et testées, jamais publiées) ; [docs/cd.md](../cd.md) |
-| Tests | [tests/data/](../../tests/data/) et [backend/tests/](../../backend/tests/) : API de scan avec de petits modèles ONNX factices ([test_scan.py](../../backend/tests/test_scan.py), [fake_models.py](../../backend/tests/fake_models.py)), étiquetage automatique ([test_autolabel.py](../../tests/data/test_autolabel.py)), métadonnées C3PI ([test_c3pi.py](../../tests/data/test_c3pi.py)) |
+| Tests | [tests/data/](../../tests/data/) et [backend/tests/](../../backend/tests/) : API de scan avec de petits modèles ONNX factices ([test_scan.py](../../backend/tests/test_scan.py), [fake_models.py](../../backend/tests/fake_models.py)), étiquetage automatique ([test_autolabel.py](../../tests/data/test_autolabel.py)), métadonnées C3PI ([test_c3pi.py](../../tests/data/test_c3pi.py)), MLflow et `promote_if_better` sur un serveur local temporaire ([tests/utils/](../../tests/utils/test_mlflow_utils.py)) |
 | Soutenance pratique (démonstration en direct) | script de démonstration : [docs/demo.md](../demo.md) ; questions probables : [docs/questions_jury.md](../questions_jury.md) |
 
 ## Résultats
@@ -59,15 +59,19 @@ src/data/              préparation des données C3PI
   autolabel.py         boîtes automatiques (aucune annotation à la main)
   prepare.py           jeux YOLO de détection et de classification (étape DVC `prepare`)
 src/models/            entraînement et évaluation (venv d'entraînement .venv-train, PyTorch)
-  train.py             YOLO11 detect / classify, MLflow, export ONNX, Model Registry
-  evaluate.py          évaluation de bout en bout (détecteur -> crop -> classifieur)
+  train.py             YOLO11 detect / classify (params.yaml), test, run MLflow (étapes train_*)
+  export_onnx.py       export ONNX, contrôle, Model Registry, promote_if_better (étape export_onnx)
+  register_baseline.py modèles du 28/10 ré-enregistrés comme baseline (sans réentraînement)
+  evaluate.py          évaluation de bout en bout (détecteur -> crop -> classifieur, étape evaluate)
   evaluate_scan.py     même code que l'API, mesuré sur un split
-  publish.py           versions du Model Registry -> models/ (lu par l'API)
+  publish.py           champions du Model Registry -> models/ (lu par l'API)
   requirements-train.txt  ultralytics, mlflow, dvc, onnx
+src/utils/mlflow_utils.py  runs tracés, log_model, register, alias, promote_if_better
 backend/app/inference.py  chaîne de scan servie par l'API (ONNX Runtime, numpy, OpenCV)
 tests/data/            tests des données (C3PI, étiquetage automatique)
+tests/utils/           MLflow (runs tracés, Registry, promote_if_better)
 backend/tests/test_scan.py  API de scan avec de petits modèles ONNX factices
-docs/module1/          vision.md, dataset_c3pi.md, rapport (md + pdf), diagrams/, assets/
+docs/module1/          vision.md, dataset_c3pi.md, mlflow.md, rapport (md + pdf), diagrams/, assets/
 ```
 
 ## Commandes
@@ -77,14 +81,20 @@ Depuis la racine du dépôt.
 ```bash
 # Entraînement (venv dédié, GPU conseillé)
 uv venv .venv-train -p 3.12 && uv pip install -p .venv-train -r src/models/requirements-train.txt
-.venv-train/Scripts/python -m src.models.train classify --weights yolo11s-cls.pt --epochs 40   # MLflow tujya-vision
-.venv-train/Scripts/python -m src.models.publish        # versions du Model Registry -> models/ (lu par l'API)
+.venv-train/Scripts/python -m src.models.train classify      # hyperparamètres de params.yaml, MLflow tujya-vision
+.venv-train/Scripts/python -m src.models.export_onnx          # ONNX, Model Registry, promote_if_better
+.venv-train/Scripts/python -m src.models.publish              # champions du Model Registry -> models/ (lu par l'API)
+
+# Pipeline des modèles (étapes d'entraînement gelées, D91)
+.venv-train/Scripts/python -m dvc dag
+.venv-train/Scripts/python -m dvc repro export_onnx evaluate
 
 # Jeux d'entraînement depuis les images DVC (venv d'entraînement)
 .venv-train/Scripts/python -m dvc repro prepare
 
 # Tests (venv du projet : .venv, voir docs/app.md)
 .venv/Scripts/python -m pytest tests/data
+.venv/Scripts/python -m pytest tests/utils
 cd backend && ../.venv/Scripts/python -m pytest tests/test_scan.py
 
 # Chaîne de l'API sur le split de test (venv du projet, modèles publiés)
