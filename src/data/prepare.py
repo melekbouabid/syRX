@@ -197,10 +197,8 @@ def main(argv: list[str] | None = None) -> None:
     ok = sum(1 for r in consumer if r["ok"] == "1")
     n_boxes = [len(_parse_boxes(r["boxes"])) for r in consumer if r["boxes"]]
     print(f"{len(rows)} images, {len(consumer)} consumer: {ok} ok, flags {counts}")
-    print(
-        f"boxes per labelled consumer photo: "
-        f"{ {k: n_boxes.count(k) for k in sorted(set(n_boxes))} }"
-    )
+    per_photo = {k: n_boxes.count(k) for k in sorted(set(n_boxes))}
+    print(f"boxes per labelled consumer photo: {per_photo}")
     if args.sheet:
         contact_sheet(rows, args.sheet)
         print(f"contact sheet: {args.sheet}")
