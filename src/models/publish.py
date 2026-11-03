@@ -51,9 +51,11 @@ def from_registry(
     if not versions:
         raise SystemExit(f"no registered versions of {name} on {mlflow.get_tracking_uri()}")
     if version is None:
-        chosen = next((v for v in versions if alias in (v.aliases or [])), None)
-        if chosen is None:
-            raise SystemExit(f"no version of {name} has the alias {alias!r}")
+        # search_model_versions does not return the aliases: ask for the alias directly.
+        try:
+            chosen = client.get_model_version_by_alias(name, alias)
+        except mlflow.exceptions.MlflowException:
+            raise SystemExit(f"no version of {name} has the alias {alias!r}") from None
     else:
         chosen = next((v for v in versions if int(v.version) == version), None)
         if chosen is None:
