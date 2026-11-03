@@ -9,9 +9,9 @@ stages:
       size: 543427
     - path: data/raw/c3pi/images
       hash: md5
-      md5: d578e15638468a663cfe3c2b418a75df.dir
-      size: 4770826176
-      nfiles: 4206
+      md5: 62051ba2f27a8520e490f4de3467231b.dir
+      size: 39542126444
+      nfiles: 20330
     - path: src/data/autolabel.py
       hash: md5
       md5: 42302ec12c5b8b3baa7c491bf09149a4
@@ -23,13 +23,13 @@ stages:
     outs:
     - path: data/processed/c3pi/datasets
       hash: md5
-      md5: 955353297ec68253f1e925a7304ec275.dir
-      size: 304693171
-      nfiles: 10726
+      md5: 5cb2cd2c3526eb63d114a5dbcdb4f032.dir
+      size: 304589012
+      nfiles: 10717
     - path: data/processed/c3pi/labels
       hash: md5
-      md5: e1f992c2edc160b47053b0e938f9ebfd.dir
-      size: 499067
+      md5: c3021cce1b2777d1873c446aa368b54a.dir
+      size: 499041
       nfiles: 1
   rag_corpus:
     cmd: python -m src.data.corpus corpus
@@ -62,3 +62,250 @@ stages:
       md5: 67ab752e53fb16523e9e01787320cf55.dir
       size: 1832839
       nfiles: 2
+  spark_index:
+    cmd: python -m src.data.spark.submit index
+    deps:
+    - path: data/raw/c3pi/metadata
+      hash: md5
+      md5: 5a3a7449e9d40bf61f9f12a646054229.dir
+      size: 204885737
+      nfiles: 117
+    - path: src/data/spark/index_job.py
+      hash: md5
+      md5: 9804277a4838aa932e6f4422f6c38f0a
+      size: 14960
+    - path: src/data/spark/session.py
+      hash: md5
+      md5: 93ade7d0e973aca3d121d27cbac53fff
+      size: 2435
+    params:
+      params.yaml:
+        bigdata.index:
+          min_images: 20
+          exclude_cameras: []
+          seg_per_class: 8
+          challenge: all
+    outs:
+    - path: data/processed/c3pi/bigdata/index
+      hash: md5
+      md5: 9c8969b6704eb8b8cc17ddbdc045f337.dir
+      size: 29234602
+      nfiles: 282
+  spark_quality:
+    cmd: python -m src.data.spark.submit quality
+    deps:
+    - path: data/processed/c3pi/bigdata/index
+      hash: md5
+      md5: 9c8969b6704eb8b8cc17ddbdc045f337.dir
+      size: 29234602
+      nfiles: 282
+    - path: data/raw/c3pi/images
+      hash: md5
+      md5: 62051ba2f27a8520e490f4de3467231b.dir
+      size: 39542126444
+      nfiles: 20330
+    - path: src/data/spark/quality_job.py
+      hash: md5
+      md5: c615913693eb200cb725fd00bf3ceb19
+      size: 12010
+    params:
+      params.yaml:
+        bigdata.quality:
+          min_side: 200
+          min_brightness: 10
+          max_brightness: 245
+          hash_size: 16
+          near_duplicate_bits: 3
+    outs:
+    - path: data/processed/c3pi/bigdata/quality
+      hash: md5
+      md5: be6878d8e709617d9a2975ef44975dd8.dir
+      size: 5381805
+      nfiles: 146
+  spark_split:
+    cmd: python -m src.data.spark.submit split
+    deps:
+    - path: config/pill_classes.csv
+      hash: md5
+      md5: f3ae1e6b96a9b8a6caacfc27e9091f36
+      size: 24518
+    - path: data/processed/c3pi/bigdata/index
+      hash: md5
+      md5: 9c8969b6704eb8b8cc17ddbdc045f337.dir
+      size: 29234602
+      nfiles: 282
+    - path: data/processed/c3pi/bigdata/quality
+      hash: md5
+      md5: be6878d8e709617d9a2975ef44975dd8.dir
+      size: 5381805
+      nfiles: 146
+    - path: src/data/spark/split_job.py
+      hash: md5
+      md5: f8b7b00a2eb7e1353a549554f9ada052
+      size: 11493
+    params:
+      params.yaml:
+        bigdata.index.min_images: 20
+        bigdata.seed: 0
+        bigdata.split:
+          val: 0.15
+          test: 0.15
+    outs:
+    - path: config/splits/c3pi_v2
+      hash: md5
+      md5: 58fbd12ab46e9ea98aee918a6e5f482a.dir
+      size: 497489
+      nfiles: 4
+    - path: data/processed/c3pi/bigdata/split
+      hash: md5
+      md5: 6d8fa00a9fc68ae49ef49e2a829d96b4.dir
+      size: 3711092
+      nfiles: 35
+  spark_augment:
+    cmd: python -m src.data.spark.submit augment
+    deps:
+    - path: data/processed/c3pi/bigdata/split
+      hash: md5
+      md5: 6d8fa00a9fc68ae49ef49e2a829d96b4.dir
+      size: 3711092
+      nfiles: 35
+    - path: data/raw/c3pi/images
+      hash: md5
+      md5: 62051ba2f27a8520e490f4de3467231b.dir
+      size: 39542126444
+      nfiles: 20330
+    - path: src/data/spark/augment_job.py
+      hash: md5
+      md5: 7b24850ebf014717ab37a93fd9f96b72
+      size: 10614
+    params:
+      params.yaml:
+        bigdata.augment:
+          target_per_class: 40
+          size: 512
+        bigdata.seed: 0
+    outs:
+    - path: data/processed/c3pi/bigdata/augmented
+      hash: md5
+      md5: 1bfc0bf30f5409f60c918020e02940b4.dir
+      size: 113173348
+      nfiles: 3369
+  spark_epillid:
+    cmd: python -m src.data.spark.submit epillid
+    deps:
+    - path: config/pill_classes.csv
+      hash: md5
+      md5: f3ae1e6b96a9b8a6caacfc27e9091f36
+      size: 24518
+    - path: config/splits/c3pi_v2/classes.csv
+      hash: md5
+      md5: 4abd75ad9980dd48e453a013a6a90da6
+      size: 52899
+    - path: data/processed/c3pi/bigdata/index
+      hash: md5
+      md5: 9c8969b6704eb8b8cc17ddbdc045f337.dir
+      size: 29234602
+      nfiles: 282
+    - path: data/raw/epillid
+      hash: md5
+      md5: f35e41ce0561d37453915306db49a8f2.dir
+      size: 170046991
+      nfiles: 33005
+    - path: src/data/spark/epillid_job.py
+      hash: md5
+      md5: 2993cee0ac0c51395f616979ae38c001
+      size: 5119
+    outs:
+    - path: data/processed/c3pi/bigdata/epillid
+      hash: md5
+      md5: 2ad9708ada526703d10fb50ac956361c.dir
+      size: 414222
+      nfiles: 9
+  spark_rag:
+    cmd: python -m src.data.spark.submit rag
+    deps:
+    - path: data/processed/pharma
+      hash: md5
+      md5: 35a18547ea9f852ec72371eaa1343d59.dir
+      size: 10208886
+      nfiles: 3
+    - path: data/rag/interim
+      hash: md5
+      md5: 0419ea6313c8ca6eba822de3bd8c76be.dir
+      size: 1858114
+      nfiles: 4
+    - path: data/rag/raw/pubmed
+      hash: md5
+      md5: c95d50e0b58af134900dc7d81420654a.dir
+      size: 22134557
+      nfiles: 164
+    - path: src/data/corpus/corpus.py
+      hash: md5
+      md5: 9d85a1cdf051850c775a51e602037eb3
+      size: 11672
+    - path: src/data/spark/rag_job.py
+      hash: md5
+      md5: 586bc052ac2e4309e714c3ad555260e1
+      size: 11789
+    params:
+      params.yaml:
+        bigdata.rag:
+          workspaces:
+          - data/rag
+          ingredient_files:
+          - data/processed/pharma/pill_ingredients.csv
+          min_chars: 80
+          near_duplicate: 0.2
+        bigdata.seed: 0
+    outs:
+    - path: data/processed/rag/corpus_v2
+      hash: md5
+      md5: 38707b09805dedb3988263878cbfbca2.dir
+      size: 3823607
+      nfiles: 33
+  dataset_stats:
+    cmd: python -m src.data.spark.log_stats
+    deps:
+    - path: config/splits/c3pi_v2
+      hash: md5
+      md5: 58fbd12ab46e9ea98aee918a6e5f482a.dir
+      size: 497489
+      nfiles: 4
+    - path: config/splits/selected_images.csv
+      hash: md5
+      md5: de21c22fc4a8b12ef6e410cea10f1f8b
+      size: 543427
+    - path: data/processed/c3pi/bigdata/augmented
+      hash: md5
+      md5: 1bfc0bf30f5409f60c918020e02940b4.dir
+      size: 113173348
+      nfiles: 3369
+    - path: data/processed/c3pi/bigdata/epillid
+      hash: md5
+      md5: 2ad9708ada526703d10fb50ac956361c.dir
+      size: 414222
+      nfiles: 9
+    - path: data/processed/c3pi/bigdata/quality
+      hash: md5
+      md5: be6878d8e709617d9a2975ef44975dd8.dir
+      size: 5381805
+      nfiles: 146
+    - path: data/processed/c3pi/bigdata/split
+      hash: md5
+      md5: 6d8fa00a9fc68ae49ef49e2a829d96b4.dir
+      size: 3711092
+      nfiles: 35
+    - path: data/processed/rag/corpus_v2
+      hash: md5
+      md5: 38707b09805dedb3988263878cbfbca2.dir
+      size: 3823607
+      nfiles: 33
+    - path: src/data/spark/log_stats.py
+      hash: md5
+      md5: de080eed342da6d9434e10528e1411b0
+      size: 10967
+    outs:
+    - path: data/processed/c3pi/bigdata/stats.json
+      hash: md5
+      md5: 34068241432af1a48169a7f4520c8481
+      size: 1984

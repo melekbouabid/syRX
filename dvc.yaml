@@ -8,6 +8,14 @@
 # collection workspace of the RAG sources, whose manifest records these paths: D86), are
 # fetched by `python -m src.data.corpus labels` / `pubmed` and tracked with `dvc add`
 # (docs/module2/rag.md).
+# Big Data (step 1.4, docs/module1/big_data.md): the PySpark jobs of src/data/spark build the
+# C3PI dataset v2 and the larger RAG corpus. `python -m src.data.spark.submit <job>` starts the
+# Spark cluster of docker-compose.yml if needed and runs the job there (no Java on the host);
+# any venv works, the launcher only needs the standard library. Their parameters are the
+# `bigdata` keys of params.yaml. The v2 images are downloaded (`data_cli download --list`) and
+# the v2 RAG sources collected (`python -m src.data.spark.rag_sources`, needs CONTACT_EMAIL in
+# .env) between the stages, then tracked with `dvc add`, like every network input. `dataset_stats` needs the training venv
+# (.venv-train: mlflow) and the MLflow server (`docker compose up -d mlflow`).
 stages:
   prepare:
     cmd: python -m src.data.prepare
@@ -29,3 +37,87 @@ stages:
       - src/data/corpus/corpus.py
     outs:
       - data/processed/rag/corpus
+  spark_index:
+    cmd: python -m src.data.spark.submit index
+    deps:
+      - data/raw/c3pi/metadata
+      - src/data/spark/index_job.py
+      - src/data/spark/session.py
+    params:
+      - bigdata.index
+    outs:
+      - data/processed/c3pi/bigdata/index
+  spark_quality:
+    cmd: python -m src.data.spark.submit quality
+    deps:
+      - data/processed/c3pi/bigdata/index
+      - data/raw/c3pi/images
+      - src/data/spark/quality_job.py
+    params:
+      - bigdata.quality
+    outs:
+      - data/processed/c3pi/bigdata/quality
+  spark_split:
+    cmd: python -m src.data.spark.submit split
+    deps:
+      - data/processed/c3pi/bigdata/index
+      - data/processed/c3pi/bigdata/quality
+      - config/pill_classes.csv
+      - src/data/spark/split_job.py
+    params:
+      - bigdata.seed
+      - bigdata.split
+      - bigdata.index.min_images
+    outs:
+      - data/processed/c3pi/bigdata/split
+      # Class list and held-out images of v2, small enough for git (train = the rest).
+      - config/splits/c3pi_v2:
+          cache: false
+  spark_augment:
+    cmd: python -m src.data.spark.submit augment
+    deps:
+      - data/processed/c3pi/bigdata/split
+      - data/raw/c3pi/images
+      - src/data/spark/augment_job.py
+    params:
+      - bigdata.seed
+      - bigdata.augment
+    outs:
+      - data/processed/c3pi/bigdata/augmented
+  spark_epillid:
+    cmd: python -m src.data.spark.submit epillid
+    deps:
+      - data/raw/epillid
+      - data/processed/c3pi/bigdata/index
+      - config/splits/c3pi_v2/classes.csv
+      - config/pill_classes.csv
+      - src/data/spark/epillid_job.py
+    outs:
+      - data/processed/c3pi/bigdata/epillid
+  spark_rag:
+    cmd: python -m src.data.spark.submit rag
+    deps:
+      # The workspaces of params.yaml bigdata.rag (data/rag_v2 joins them once collected).
+      - data/rag/interim
+      - data/rag/raw/pubmed
+      - data/processed/pharma
+      - src/data/corpus/corpus.py
+      - src/data/spark/rag_job.py
+    params:
+      - bigdata.seed
+      - bigdata.rag
+    outs:
+      - data/processed/rag/corpus_v2
+  dataset_stats:
+    cmd: python -m src.data.spark.log_stats
+    deps:
+      - config/splits/c3pi_v2
+      - config/splits/selected_images.csv
+      - data/processed/c3pi/bigdata/split
+      - data/processed/c3pi/bigdata/augmented
+      - data/processed/c3pi/bigdata/quality
+      - data/processed/c3pi/bigdata/epillid
+      - data/processed/rag/corpus_v2
+      - src/data/spark/log_stats.py
+    metrics:
+      - data/processed/c3pi/bigdata/stats.json
