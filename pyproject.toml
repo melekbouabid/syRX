@@ -63,3 +63,10 @@ plugins = ["pydantic.mypy"]
 module = ["pandas.*", "pyarrow.*", "dotenv.*"]
 ignore_missing_imports = true
 follow_imports = "skip"
+
+# black, as the module guide asks (CI: .github/workflows/ci-tests.yml, `black --check .`).
+# Same line length and target as ruff.toml: `ruff format` and black give the same layout, so
+# either one may format the code and both checks pass.
+[tool.black]
+line-length = 100
+target-version = ["py311"]

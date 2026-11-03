@@ -10,6 +10,10 @@ respx>=0.21
 httpx2>=2.0
 onnx>=1.17
 ruff>=0.5
+# The module guide's linters (.flake8, [tool.black] in pyproject.toml); black's stable
+# style only changes once a year, so the major version is pinned.
+flake8>=7,<8
+black>=26.1,<27
 mypy>=1.10
 pre-commit>=3.7
 types-PyYAML

@@ -1,0 +1,23 @@
+# flake8, as the module guide asks (CI: .github/workflows/ci-tests.yml). Ruff (ruff.toml)
+# stays the main linter; flake8 checks the same code with the same line length, and these
+# settings keep it compatible with the formatters (black and ruff format, line length 100).
+[flake8]
+max-line-length = 100
+# E203 (space before ':' in slices), W503 (line break before a binary operator) and
+# E701/E704 (one-line stubs `...`) are how black and ruff format the code.
+extend-ignore = E203, W503, E701, E704
+extend-exclude =
+    .venv*,
+    node_modules,
+    frontend,
+    data,
+    models,
+    runs,
+    notebooks
+per-file-ignores =
+    # One-off generator of the benchmark spec: its long lines are question and reference
+    # texts (same exception as ruff.toml).
+    src/benchmark/make_spec.py: E501
+    # OPENCV_IO_MAX_IMAGE_PIXELS must be set before cv2 is imported (ruff accepts an
+    # os.environ line above the imports, flake8 does not).
+    backend/app/inference.py: E402
