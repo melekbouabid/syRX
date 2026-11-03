@@ -941,13 +941,13 @@ elle sera reconstruite (étape 3.x).
 sont gelées.** Les modèles servis depuis le 28/10 (détecteur YOLO11n, classifieur YOLO11s-cls,
 jeu C3PI v1 de 150 classes) ont leurs runs MLflow sur le serveur de la première copie du
 projet, pas sur celui-ci (D83) ; leurs sorties Ultralytics (poids, `results.csv`, `args.yaml`,
-`summary.json`) sont restées dans `runs/`. Sans GPU ici (l'entraînement passera sur Kaggle
-aux étapes 2.2 et 2.3), `src/models/register_baseline.py` les ré-enregistre au lieu de les
-réentraîner : il vérifie que leurs hyperparamètres sont exactement ceux de `params.yaml`
+`summary.json`) sont restées dans `runs/`. Aucun entraînement long n'est lancé à cette étape
+(les nouveaux entraînements passeront sur le GPU de Kaggle aux étapes 2.2 et 2.3) :
+`src/models/register_baseline.py` les ré-enregistre au lieu de les réentraîner : il vérifie que leurs hyperparamètres sont exactement ceux de `params.yaml`
 (`train.*`, sinon il refuse), crée un run suivi par modèle dans `tujya-vision` (tags
 `git_commit`, `dvc_rev`, `dataset`, `seed`, `baseline=true`, `origin_*` vers le run
 d'origine ; historique par époque, poids, figures, `requirements.txt`, `dvc.lock`) et
-réévalue les poids maintenant, sur CPU, sur le split de test. Résultats identiques à ceux du
+réévalue les poids maintenant sur le split de test (GPU local, tag `eval_device`). Résultats identiques à ceux du
 28/10 à l'arrondi près : détecteur mAP50 0,972 et mAP@[.5:.95] 0,861 (0,8606 contre 0,8615) ;
 classifieur top-1 93,7 % et top-5 98,5 % sur 588 crops (93,5 % et 98,1 % sur 589 à l'origine :
 l'étape `prepare` refaite dans cette copie a produit un crop de test de moins).
@@ -958,8 +958,8 @@ sorties), marqués `frozen: true`, et leur sortie enregistrée par `dvc commit` 
 (`models/train/<modèle>/` et `models/train/<modèle>.json`). Le `dvc.lock` décrit donc les poids
 de la baseline produits avec ces hyperparamètres, mais pas par cette version du code : c'est
 écrit ici et dans `dvc.yaml`, et le run MLflow le dit (`origin`). Le gel évite aussi qu'un
-`dvc repro` sur CPU lance un entraînement de plusieurs heures ; on dégèle (`dvc unfreeze`) sur
-la machine GPU. Les stages `export_onnx` et `evaluate`, courts, ont réellement tourné
+`dvc repro` lance par accident un entraînement de plusieurs heures ; on dégèle
+(`dvc unfreeze`) quand un entraînement est voulu (Kaggle). Les stages `export_onnx` et `evaluate`, courts, ont réellement tourné
 (`dvc repro export_onnx evaluate`). Rejeté : un mini-entraînement « de fumée » pour remplir
 le lock (des poids sans valeur seraient devenus la sortie officielle) et laisser `dvc status`
 sale jusqu'à l'étape 2.2.

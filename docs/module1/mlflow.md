@@ -37,8 +37,8 @@ prepare -> train_detector   -\
 | `evaluate` | `python -m src.models.evaluate` : détecteur puis classifieur ONNX sur les 600 photos de test | métriques `models/evaluate.json`, run `evaluate-end-to-end` |
 
 Les deux étapes d'entraînement sont gelées (`frozen: true`) : leur sortie enregistrée est la
-baseline (D91), et un `dvc repro` sur une machine sans GPU ne lance pas plusieurs heures
-d'entraînement. Sur la machine GPU : `dvc unfreeze train_classifier`, `dvc repro`.
+baseline (D91), et un `dvc repro` ne lance pas par accident plusieurs heures
+d'entraînement. Pour réentraîner (GPU, Kaggle) : `dvc unfreeze train_classifier`, `dvc repro`.
 
 ```bash
 # venv d'entraînement, serveur MLflow lancé (docker compose up -d mlflow)

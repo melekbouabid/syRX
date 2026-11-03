@@ -15,8 +15,8 @@ this one (docs/decisions.md D83). Rather than retrain them, this script, for eac
    requirements.txt, dvc.lock, params.yaml) in the experiment tujya-vision, with the
    training parameters, the per-epoch history, the weights and plots, and tags pointing to the
    original run (`origin_*`, `baseline=true`);
-3. evaluates the weights again on the test split, now, and logs these test metrics (the
-   original ones are kept as `origin_test_*` tags for comparison);
+3. evaluates the weights again on the test split, now (GPU if available, tag `eval_device`),
+   and logs these test metrics (the original ones are kept as `origin_test_*` tags);
 4. writes the outputs of the stage train_<model> (models/train/<model>/ and
    models/train/<model>.json), exactly as src/models/train.py does.
 """

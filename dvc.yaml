@@ -21,9 +21,9 @@
 # checks, registers them in the MLflow Model Registry and promotes the better one (alias
 # champion), evaluate measures the ONNX pair end to end on the test photos. Training venv
 # (.venv-train) and MLflow server. The two training stages are frozen (`frozen: true`): their
-# recorded output is the baseline of 2026-10-28 (src/models/register_baseline.py, D91), and a
-# CPU-only `dvc repro` never starts a long training; `dvc unfreeze train_classifier` on a GPU
-# machine (Kaggle, steps 2.2 and 2.3), then `dvc repro`.
+# recorded output is the baseline of 2026-10-28 (src/models/register_baseline.py, D91), and
+# `dvc repro` never starts a long training by accident; to retrain (GPU, Kaggle, steps 2.2
+# and 2.3): `dvc unfreeze train_classifier`, then `dvc repro`.
 stages:
   prepare:
     cmd: python -m src.data.prepare
