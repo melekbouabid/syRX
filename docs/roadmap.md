@@ -36,6 +36,8 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Détection : boîtes englobantes des comprimés (étiquettes automatiques, D38 ; YOLO11n, mAP50 test 0,972)
 - [x] Runs MLflow (paramètres, métriques, artefacts)
 - [x] Meilleur modèle enregistré dans le Model Registry de MLflow
+- [x] MLflow conforme au lab (étape 2.1) : runs tracés (`git_commit`, `dvc_rev`, `dataset`, `seed`, requirements + `dvc.lock`), LoggedModel MLflow 3, alias `champion` / `challenger`, `promote_if_better` ; étapes DVC `train_detector`, `train_classifier`, `export_onnx`, `evaluate` ; baseline YOLO11n + YOLO11s-cls champion ([mlflow.md](module1/mlflow.md), D91-D92)
+- [ ] Comparer d'autres détecteurs et classifieurs, recherche d'hyperparamètres (étapes 2.2 et 2.3, GPU Kaggle)
 - [x] Export ONNX, inférence avec ONNX Runtime, sorties identiques à PyTorch
 - [x] Mesurer top-1 / top-5 (identification) et mAP (détection)
 - [ ] Comparer avec ePillID sur son propre split et ses métriques ([vision.md](module1/vision.md))

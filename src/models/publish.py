@@ -1,13 +1,15 @@
 """Copy the deployment models into the directory the API loads them from.
 
-    python -m src.models.publish                          # latest registered versions (MLflow)
+    python -m src.models.publish                          # versions with the alias champion
+    python -m src.models.publish --alias challenger       # another alias (MLflow Registry)
     python -m src.models.publish --classifier-version 2 --detector-version 1
     python -m src.models.publish --from-runs              # newest runs/*/weights/best.onnx
 
 Writes `detector.onnx`, `classifier.onnx` and `models.json` (origin and SHA-256 of each file)
 into `--out` (default `models/` at the repository root, git-ignored; the API reads it from
 TUJYA_MODELS_DIR, same default). The files are the ONNX exports registered by
-`src.models.train`, so the API serves exactly the versions shown in the Model Registry.
+`src.models.export_onnx`, so the API serves exactly the versions shown in the Model Registry:
+by default the champions chosen by promote_if_better (src/utils/mlflow_utils.py).
 """
 
 from __future__ import annotations
@@ -36,7 +38,10 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def from_registry(task: str, version: int | None, work: Path) -> tuple[Path, dict[str, Any]]:
+def from_registry(
+    task: str, version: int | None, work: Path, alias: str = "champion"
+) -> tuple[Path, dict[str, Any]]:
+    """The registered ONNX model of `task`: version `version`, else the one holding `alias`."""
     import mlflow
     from mlflow import MlflowClient
 
@@ -45,13 +50,16 @@ def from_registry(task: str, version: int | None, work: Path) -> tuple[Path, dic
     versions = client.search_model_versions(f"name='{name}'")
     if not versions:
         raise SystemExit(f"no registered versions of {name} on {mlflow.get_tracking_uri()}")
-    chosen = (
-        max(versions, key=lambda v: int(v.version))
-        if version is None
-        else next((v for v in versions if int(v.version) == version), None)
-    )
-    if chosen is None:
-        raise SystemExit(f"{name} has no version {version}")
+    if version is None:
+        # search_model_versions does not return the aliases: ask for the alias directly.
+        try:
+            chosen = client.get_model_version_by_alias(name, alias)
+        except mlflow.exceptions.MlflowException:
+            raise SystemExit(f"no version of {name} has the alias {alias!r}") from None
+    else:
+        chosen = next((v for v in versions if int(v.version) == version), None)
+        if chosen is None:
+            raise SystemExit(f"{name} has no version {version}")
     target = work / task
     mlflow.artifacts.download_artifacts(
         artifact_uri=f"models:/{name}/{chosen.version}", dst_path=str(target)
@@ -63,6 +71,7 @@ def from_registry(task: str, version: int | None, work: Path) -> tuple[Path, dic
         "source": "mlflow",
         "registered_model": name,
         "version": int(chosen.version),
+        "aliases": sorted(client.get_model_version(name, chosen.version).aliases or []),
         "run_id": chosen.run_id,
         "tracking_uri": mlflow.get_tracking_uri(),
     }
@@ -80,7 +89,9 @@ def from_runs(task: str) -> tuple[Path, dict[str, Any]]:
     return path, {"source": "runs", "run": path.parents[1].name}
 
 
-def publish(out: Path, *, use_runs: bool, versions: dict[str, int | None]) -> dict[str, Any]:
+def publish(
+    out: Path, *, use_runs: bool, versions: dict[str, int | None], alias: str = "champion"
+) -> dict[str, Any]:
     out.mkdir(parents=True, exist_ok=True)
     manifest: dict[str, Any] = {"published_at": datetime.now(UTC).isoformat(timespec="seconds")}
     with tempfile.TemporaryDirectory() as tmp:
@@ -88,7 +99,7 @@ def publish(out: Path, *, use_runs: bool, versions: dict[str, int | None]) -> di
             if use_runs:
                 path, info = from_runs(task)
             else:
-                path, info = from_registry(task, versions[task], Path(tmp))
+                path, info = from_registry(task, versions[task], Path(tmp), alias)
             # MLflow stores the weights as external data next to model.onnx; loading and
             # saving again gives one self-contained file (these models are far below 2 GB).
             onnx.save_model(onnx.load(str(path)), str(out / filename))
@@ -101,6 +112,7 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m src.models.publish")
     parser.add_argument("--out", type=Path, default=ROOT / "models")
     parser.add_argument("--from-runs", action="store_true", help="skip MLflow, use runs/")
+    parser.add_argument("--alias", default="champion", help="Model Registry alias to publish")
     parser.add_argument("--classifier-version", type=int, default=None)
     parser.add_argument("--detector-version", type=int, default=None)
     args = parser.parse_args(argv)
@@ -112,6 +124,7 @@ def main(argv: list[str] | None = None) -> None:
         args.out,
         use_runs=args.from_runs,
         versions={"classify": args.classifier_version, "detect": args.detector_version},
+        alias=args.alias,
     )
     print(json.dumps(manifest, indent=2))
 

@@ -1,16 +1,24 @@
-"""Train, evaluate, export and register the two Tujya vision models.
+"""Train and test the two Tujya vision models (DVC stages train_detector, train_classifier).
 
-    python -m src.models.train classify --epochs 10            # pill identification
-    python -m src.models.train detect --epochs 5 --imgsz 416   # pill detection
+    python -m src.models.train detect                  # hyperparameters: params.yaml train.detector
+    python -m src.models.train classify --epochs 5     # a flag overrides params.yaml (experiments)
 
 Each run:
-1. trains an Ultralytics YOLO model from pretrained weights (transfer learning);
-2. evaluates it on the test split (top-1 / top-5 for identification, mAP for detection);
-3. exports it to ONNX and checks that ONNX Runtime gives the same predictions as PyTorch;
-4. logs params, per-epoch metrics, test metrics and artefacts to MLflow, and registers the
-   ONNX model in the Model Registry ("tujya-pill-classifier" / "tujya-pill-detector").
+1. trains an Ultralytics YOLO model from pretrained weights (transfer learning) with the
+   hyperparameters of params.yaml (`train.detector` / `train.classifier`, seed `train.seed`);
+2. tests the best weights on the test split (mAP for detection, top-1 / top-5 for
+   identification);
+3. logs it to MLflow (experiment tujya-vision) through src/utils/mlflow_utils.py: tags
+   git_commit, dvc_rev, dataset, seed; requirements.txt, dvc.lock and params.yaml; per-epoch
+   metrics, test metrics, weights and plots;
+4. writes the stage outputs: models/train/<model>/ (weights/best.pt, results.csv, args.yaml)
+   and models/train/<model>.json (test metrics and MLflow run_id, read by `dvc metrics show`
+   and by the next stage).
 
-MLflow server: MLFLOW_TRACKING_URI, default http://127.0.0.1:5000 (docker compose up -d).
+The next stage, src/models/export_onnx.py, exports the weights to ONNX, checks ONNX Runtime
+against PyTorch, registers the ONNX model and promotes it if it beats the champion.
+
+MLflow server: MLFLOW_TRACKING_URI, default http://127.0.0.1:5000 (docker compose up -d mlflow).
 """
 
 from __future__ import annotations
@@ -20,27 +28,33 @@ import csv
 import json
 import os
 import platform
+import shutil
 import time
 from pathlib import Path
 from typing import Any
 
-import cv2
 import mlflow
-import numpy as np
-import onnx
-import onnxruntime as ort
 import torch
+import yaml
 from ultralytics import YOLO, settings
 
-from src.data.autolabel import read_image
 from src.data.prepare import CLASSIFY, DETECT
+from src.utils import mlflow_utils as mu
 
 ROOT = Path(__file__).resolve().parents[2]  # repository root
-# Ultralytics training runs (git-ignored; the results that matter are in MLflow).
+# Ultralytics training runs (git-ignored; the results that matter are in MLflow and DVC).
 RUNS = ROOT / "runs"
 CLASSES = ROOT / "config" / "pill_classes.csv"
+PARAMS = ROOT / "params.yaml"
+# Outputs of the DVC stages train_detector / train_classifier (git-ignored, cached by DVC).
+OUT = ROOT / "models" / "train"
+# The DVC output the training images come from (its hash becomes the run tag dataset_md5).
+DATASET_PATH = "data/processed/c3pi/datasets"
+MODELS = {"detect": "detector", "classify": "classifier"}  # keys of params.yaml, file names
 REGISTERED = {"classify": "tujya-pill-classifier", "detect": "tujya-pill-detector"}
 EXPERIMENT = "tujya-vision"
+# Hyperparameters read from params.yaml train.<model> (a command-line flag overrides them).
+HYPERPARAMETERS = ("weights", "epochs", "imgsz", "batch", "patience", "fraction", "workers")
 
 
 def device() -> str:
@@ -59,6 +73,36 @@ def hardware() -> dict[str, str]:
     return info
 
 
+def load_params(path: Path = PARAMS) -> dict[str, Any]:
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+def hyperparameters(
+    task: str, params: dict[str, Any], overrides: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """params.yaml train.<model> plus the seed, with the non-empty overrides applied."""
+    section = params["train"]
+    hp: dict[str, Any] = {key: section[MODELS[task]][key] for key in HYPERPARAMETERS}
+    hp["seed"] = section["seed"]
+    for key, value in (overrides or {}).items():
+        if key in hp and value not in (None, ""):
+            hp[key] = value
+    return hp
+
+
+def data_source(task: str) -> str:
+    return str(CLASSIFY) if task == "classify" else str(DETECT / "data.yaml")
+
+
+def split_sizes(task: str) -> dict[str, int]:
+    sizes = {}
+    for split in ("train", "val", "test"):
+        folder = CLASSIFY / split if task == "classify" else DETECT / "images" / split
+        pattern = "*/*.jpg" if task == "classify" else "*.jpg"
+        sizes[f"n_{split}_images"] = len(list(folder.glob(pattern)))
+    return sizes
+
+
 def _log_epochs(results_csv: Path) -> None:
     """Per-epoch metrics from Ultralytics' results.csv, as MLflow metric histories."""
     with results_csv.open(newline="", encoding="utf-8") as handle:
@@ -72,65 +116,6 @@ def _log_epochs(results_csv: Path) -> None:
                 except (TypeError, ValueError):
                     continue
             mlflow.log_metrics(metrics, step=step)
-
-
-def _onnx_check_classify(
-    model: YOLO, onnx_path: Path, images: list[Path], imgsz: int
-) -> dict[str, float]:
-    """Top-1 agreement and largest probability gap between PyTorch and ONNX Runtime."""
-    session = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
-    name = session.get_inputs()[0].name
-    agree, gaps = 0, []
-    for path in images:
-        torch_probs = model.predict(str(path), imgsz=imgsz, verbose=False, device="cpu")[0]
-        torch_probs = torch_probs.probs.data.cpu().numpy()
-        image = read_image(path)
-        rgb = image[:, :, ::-1]
-        # Same preprocessing as Ultralytics classification at inference: resize the short
-        # side, centre crop, scale to [0, 1], CHW (the crops are already square).
-        h, w = rgb.shape[:2]
-        scale = imgsz / min(h, w)
-        resized = cv2.resize(
-            rgb, (round(w * scale), round(h * scale)), interpolation=cv2.INTER_LINEAR
-        )
-        top = (resized.shape[0] - imgsz) // 2
-        left = (resized.shape[1] - imgsz) // 2
-        crop = resized[top : top + imgsz, left : left + imgsz]
-        tensor = np.ascontiguousarray(crop.transpose(2, 0, 1)[None], dtype=np.float32) / 255.0
-        onnx_probs = session.run(None, {name: tensor})[0][0]
-        agree += int(onnx_probs.argmax() == torch_probs.argmax())
-        gaps.append(float(np.abs(onnx_probs - torch_probs).max()))
-    return {
-        "onnx_top1_agreement": agree / max(1, len(images)),
-        "onnx_max_prob_diff": max(gaps) if gaps else 0.0,
-    }
-
-
-def _onnx_check_detect(
-    model: YOLO, onnx_path: Path, images: list[Path], imgsz: int
-) -> dict[str, float]:
-    """Same number of boxes and matching boxes between PyTorch and the ONNX export."""
-    onnx_model = YOLO(str(onnx_path), task="detect")
-    same_count, ious = 0, []
-    for path in images:
-        a = model.predict(str(path), imgsz=imgsz, verbose=False, device="cpu")[0].boxes
-        b = onnx_model.predict(str(path), imgsz=imgsz, verbose=False, device="cpu")[0].boxes
-        same_count += int(len(a) == len(b))
-        for box in a.xyxy.cpu().numpy():
-            if len(b):
-                other = b.xyxy.cpu().numpy()
-                x1 = np.maximum(box[0], other[:, 0])
-                y1 = np.maximum(box[1], other[:, 1])
-                x2 = np.minimum(box[2], other[:, 2])
-                y2 = np.minimum(box[3], other[:, 3])
-                inter = (x2 - x1).clip(0) * (y2 - y1).clip(0)
-                area = (box[2] - box[0]) * (box[3] - box[1])
-                areas = (other[:, 2] - other[:, 0]) * (other[:, 3] - other[:, 1])
-                ious.append(float((inter / (area + areas - inter)).max()))
-    return {
-        "onnx_same_box_count": same_count / max(1, len(images)),
-        "onnx_mean_box_iou": float(np.mean(ious)) if ious else 0.0,
-    }
 
 
 def classify_test(model: YOLO, folder: Path, imgsz: int, batch: int) -> dict[str, float]:
@@ -162,125 +147,130 @@ def classify_test(model: YOLO, folder: Path, imgsz: int, batch: int) -> dict[str
     }
 
 
-def _sample_images(task: str, n: int = 50) -> list[Path]:
+def test_metrics(task: str, model: YOLO, imgsz: int, batch: int, name: str) -> dict[str, float]:
+    """Scores of `model` on the test split: mAP (detection) or top-1 / top-5 (identification)."""
     if task == "classify":
-        return sorted((CLASSIFY / "test").glob("*/*.jpg"))[:: max(1, 600 // n)][:n]
-    return sorted((DETECT / "images" / "test").glob("*.jpg"))[:n]
-
-
-def run(args: argparse.Namespace) -> None:
-    task = args.task
-    settings.update({"mlflow": False})  # MLflow logging is done here, explicitly
-    weights = args.weights or ("yolo11n-cls.pt" if task == "classify" else "yolo11n.pt")
-    data = str(CLASSIFY) if task == "classify" else str(DETECT / "data.yaml")
-    imgsz = args.imgsz or (224 if task == "classify" else 640)
-    name = f"{task}-{time.strftime('%Y%m%d-%H%M%S')}"
-    params: dict[str, Any] = {
-        "task": task,
-        "weights": weights,
-        "epochs": args.epochs,
-        "imgsz": imgsz,
-        "batch": args.batch,
-        "device": device(),
-        "seed": args.seed,
-        "data": Path(data).relative_to(ROOT).as_posix(),
-        "fraction": args.fraction,
-        "patience": args.patience,
+        return classify_test(model, CLASSIFY / "test", imgsz, batch)
+    test = model.val(
+        data=data_source(task),
+        split="test",
+        imgsz=imgsz,
+        batch=batch,
+        device=device(),
+        project=str(RUNS),
+        name=f"{name}-test",
+        exist_ok=True,
+        plots=True,
+        verbose=False,
+    )
+    return {
+        "test_mAP50": float(test.box.map50),
+        "test_mAP50_95": float(test.box.map),
+        "test_precision": float(test.box.mp),
+        "test_recall": float(test.box.mr),
     }
 
-    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000"))
-    mlflow.set_experiment(EXPERIMENT)
-    with mlflow.start_run(run_name=name) as active:
-        mlflow.log_params(params)
-        mlflow.set_tags({**hardware(), "dataset": "NLM C3PI subset (150 classes)"})
-        for split in ("train", "val", "test"):
-            folder = CLASSIFY / split if task == "classify" else DETECT / "images" / split
-            pattern = "*/*.jpg" if task == "classify" else "*.jpg"
-            mlflow.log_param(f"n_{split}_images", len(list(folder.glob(pattern))))
-        if CLASSES.exists():
-            mlflow.log_artifact(str(CLASSES), "config")
 
-        model = YOLO(weights)
+def log_training_artifacts(run_dir: Path) -> None:
+    """Per-epoch history, best weights, plots and Ultralytics arguments of a training run."""
+    _log_epochs(run_dir / "results.csv")
+    mlflow.log_artifact(str(run_dir / "weights" / "best.pt"), "weights")
+    for extra in sorted(run_dir.glob("*.png")):
+        mlflow.log_artifact(str(extra), "plots")
+    mlflow.log_artifact(str(run_dir / "results.csv"), "training")
+    mlflow.log_artifact(str(run_dir / "args.yaml"), "training")
+    if CLASSES.exists():
+        mlflow.log_artifact(str(CLASSES), "config")
+
+
+def write_outputs(out: Path, run_dir: Path, summary: dict[str, Any]) -> Path:
+    """Stage outputs: out/ (weights/best.pt, results.csv, args.yaml) and out.json (summary)."""
+    if out.exists():
+        shutil.rmtree(out)
+    (out / "weights").mkdir(parents=True)
+    shutil.copy2(run_dir / "weights" / "best.pt", out / "weights" / "best.pt")
+    for name in ("results.csv", "args.yaml"):
+        shutil.copy2(run_dir / name, out / name)
+    metrics = out.with_suffix(".json")
+    metrics.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return metrics
+
+
+def run(args: argparse.Namespace) -> dict[str, Any]:
+    task = args.task
+    settings.update({"mlflow": False})  # MLflow logging is done here, explicitly
+    params = load_params()
+    hp = hyperparameters(task, params, vars(args))
+    dataset = params["train"]["dataset"]
+    data = data_source(task)
+    name = f"{task}-{time.strftime('%Y%m%d-%H%M%S')}"
+    logged = {
+        **hp,
+        "task": task,
+        "device": device(),
+        "data": Path(data).relative_to(ROOT).as_posix(),
+        **split_sizes(task),
+    }
+    mu.configure()
+    with mu.start_tracked_run(
+        EXPERIMENT,
+        name,
+        seed=hp["seed"],
+        dataset=dataset,
+        dataset_path=DATASET_PATH,
+        params={k: v for k, v in logged.items() if k != "seed"},
+        tags={**hardware(), "task": task, "model": MODELS[task], "stage": "train"},
+    ) as active:
+        model = YOLO(hp["weights"])
         started = time.monotonic()
         model.train(
             data=data,
-            epochs=args.epochs,
-            imgsz=imgsz,
-            batch=args.batch,
+            epochs=hp["epochs"],
+            imgsz=hp["imgsz"],
+            batch=hp["batch"],
             device=device(),
-            workers=args.workers,
+            workers=hp["workers"],
             project=str(RUNS),
             name=name,
-            seed=args.seed,
+            seed=hp["seed"],
             deterministic=True,
-            fraction=args.fraction,
-            patience=args.patience,
+            fraction=hp["fraction"],
+            patience=hp["patience"],
             plots=True,
             verbose=False,
         )
         mlflow.log_metric("train_minutes", (time.monotonic() - started) / 60)
         run_dir = RUNS / name
-        _log_epochs(run_dir / "results.csv")
-        best = run_dir / "weights" / "best.pt"
-        model = YOLO(str(best))
-
-        if task == "classify":
-            metrics = classify_test(model, CLASSIFY / "test", imgsz, args.batch)
-        else:
-            test = model.val(
-                data=data,
-                split="test",
-                imgsz=imgsz,
-                batch=args.batch,
-                device=device(),
-                project=str(RUNS),
-                name=f"{name}-test",
-                plots=True,
-                verbose=False,
-            )
-            metrics = {
-                "test_mAP50": float(test.box.map50),
-                "test_mAP50_95": float(test.box.map),
-                "test_precision": float(test.box.mp),
-                "test_recall": float(test.box.mr),
-            }
+        model = YOLO(str(run_dir / "weights" / "best.pt"))
+        metrics = test_metrics(task, model, hp["imgsz"], hp["batch"], name)
         mlflow.log_metrics(metrics)
-
-        onnx_path = Path(model.export(format="onnx", imgsz=imgsz, simplify=True, dynamic=False))
-        sample = _sample_images(task)
-        check = (_onnx_check_classify if task == "classify" else _onnx_check_detect)(
-            model, onnx_path, sample, imgsz
-        )
-        mlflow.log_metrics(check)
-        metrics.update(check)
-
-        mlflow.log_artifact(str(best), "weights")
-        for extra in run_dir.glob("*.png"):
-            mlflow.log_artifact(str(extra), "plots")
-        mlflow.log_artifact(str(run_dir / "results.csv"), "training")
-        mlflow.log_artifact(str(run_dir / "args.yaml"), "training")
-        mlflow.onnx.log_model(
-            onnx.load(str(onnx_path)),
-            name="model",
-            registered_model_name=REGISTERED[task],
-            input_example=None,
-        )
-        summary = {"run_id": active.info.run_id, "run_dir": str(run_dir), **params, **metrics}
-        (run_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
-        print(json.dumps(summary, indent=2))
+        log_training_artifacts(run_dir)
+        summary = {
+            "run_id": active.info.run_id,
+            "task": task,
+            "model": MODELS[task],
+            "weights": hp["weights"],
+            "imgsz": hp["imgsz"],
+            "dataset": dataset,
+            **metrics,
+        }
+        write_outputs(Path(args.out) if args.out else OUT / MODELS[task], run_dir, summary)
+    print(json.dumps(summary, indent=2))
+    return summary
 
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m src.models.train")
     parser.add_argument("task", choices=["classify", "detect"])
-    parser.add_argument("--epochs", type=int, default=10)
-    parser.add_argument("--imgsz", type=int, default=0, help="default 224 (classify), 640 (detect)")
-    parser.add_argument("--batch", type=int, default=32)
-    parser.add_argument("--workers", type=int, default=4)
-    parser.add_argument("--weights", default="")
-    parser.add_argument("--fraction", type=float, default=1.0, help="share of train set used")
-    parser.add_argument("--patience", type=int, default=20)
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--epochs", type=int, help="default: params.yaml")
+    parser.add_argument("--imgsz", type=int, help="default: params.yaml")
+    parser.add_argument("--batch", type=int, help="default: params.yaml")
+    parser.add_argument("--workers", type=int, help="default: params.yaml")
+    parser.add_argument("--weights", help="pretrained weights, default: params.yaml")
+    parser.add_argument("--fraction", type=float, help="share of the train set used")
+    parser.add_argument("--patience", type=int, help="default: params.yaml")
+    parser.add_argument("--seed", type=int, help="default: params.yaml train.seed")
+    parser.add_argument("--out", help="output folder, default models/train/<model>")
     run(parser.parse_args(argv))
 
 
