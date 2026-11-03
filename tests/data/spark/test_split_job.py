@@ -31,6 +31,17 @@ def test_assign_groups_fills_test_then_val_by_photo_share():
     )  # independent of the row order (Spark partitioning)
 
 
+def test_assign_groups_skips_a_session_too_large_for_the_share():
+    sizes = [12, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]  # 36 photos: test and val want 5 each
+    groups = pd.DataFrame(
+        {"class_key": "X", "group_id": [f"g{i}" for i in range(13)], "n_consumer": sizes}
+    )
+    out = split_job.assign_groups(groups, val=0.15, test=0.15, seed=0)
+    photos = out.groupby("split")["n_consumer"].sum().to_dict()
+    assert photos["test"] == photos["val"] == 4  # never above the share of 5
+    assert out.loc[out["n_consumer"] == 12, "split"].item() == "train"
+
+
 def test_assign_groups_keeps_one_group_for_train():
     two = pd.DataFrame({"class_key": "X", "group_id": ["a", "b"], "n_consumer": [5, 5]})
     assert sorted(split_job.assign_groups(two, 0.15, 0.15, 0)["split"]) == ["test", "train"]

@@ -14,8 +14,8 @@ only to flag them).
    photo (perceptual hash, job `quality`) or by an identical file are merged (union-find),
    so a duplicate can never sit on both sides of a split.
 3. Each class's groups are shuffled (seeded hash of the group, independent of Spark's
-   partitioning) and the first ones fill test, then val, until each holds its share of the
-   class's consumer photos; the rest is train. Studio and challenge images (reference, seg,
+   partitioning) and fill test, then val, best fit up to each split's share of the class's
+   consumer photos; the rest is train. Studio and challenge images (reference, seg,
    challenge roles) stay in train unless a near-duplicate ties them to a val/test group.
 4. `check_leakage` verifies that no group, file (SHA-1) or near-duplicate pair spans train
    and val/test; the job fails otherwise.
@@ -110,28 +110,32 @@ def _order(seed: int, group_id: str) -> str:
 def assign_groups(groups: pd.DataFrame, val: float, test: float, seed: int) -> pd.DataFrame:
     """Split the groups of ONE class; used per class with Spark's applyInPandas.
 
-    Groups are visited in a seeded pseudo-random order: test is filled first, then val,
-    each up to its share of the class's consumer photos (at least one group each when the
-    class has three groups or more); the remaining groups are train.
+    Groups are visited in a seeded pseudo-random order (independent of the row order). Test
+    is filled first, then val, each with the groups that still fit in its share of the
+    class's consumer photos (best fit: a large session is skipped rather than overshooting);
+    a split that no group fits gets the smallest one. At least one group with consumer
+    photos always stays in train; groups without consumer photos are train.
     """
     groups = groups.copy()
     groups["_order"] = [_order(seed, g) for g in groups["group_id"]]
     groups = groups.sort_values("_order").reset_index(drop=True)
-    total = int(groups["n_consumer"].sum())
-    want = {"test": max(1, round(total * test)), "val": max(1, round(total * val))}
-    filled = {"test": 0, "val": 0}
-    splits = []
-    for i, n in enumerate(groups["n_consumer"]):
-        left = len(groups) - i  # groups not assigned yet, this one included
-        split = "train"
-        if n > 0 and left > 1:  # always keep one group for train
-            for name in ("test", "val"):
-                if filled[name] < want[name]:
-                    split = name
-                    filled[name] += int(n)
-                    break
-        splits.append(split)
-    groups["split"] = splits
+    sizes = [int(n) for n in groups["n_consumer"]]
+    total = sum(sizes)
+    split = ["train"] * len(groups)
+    free = [i for i, n in enumerate(sizes) if n > 0]  # groups with photos, not assigned yet
+    for name, share in (("test", test), ("val", val)):
+        want, filled = max(1, round(total * share)), 0
+        for i in list(free):
+            if len(free) <= 1:  # keep one group for train
+                break
+            if filled + sizes[i] <= want:
+                split[i], filled = name, filled + sizes[i]
+                free.remove(i)
+        if filled == 0 and len(free) > 1:
+            smallest = min(free, key=lambda i: (sizes[i], i))
+            split[smallest] = name
+            free.remove(smallest)
+    groups["split"] = split
     return groups.drop(columns="_order")
 
 
