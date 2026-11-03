@@ -22,6 +22,7 @@ import csv
 import json
 import os
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -238,6 +239,11 @@ def log_to_mlflow(stats: dict[str, Any], split: pd.DataFrame, classes: pd.DataFr
 
 
 def main(argv: list[str] | None = None) -> None:
+    # MLflow prints the run link with an emoji: a Windows console or a DVC pipe in cp1252
+    # cannot encode it.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(prog="python -m src.data.spark.log_stats")
     parser.add_argument("--no-mlflow", action="store_true", help="only write stats.json")
     args = parser.parse_args(argv)
