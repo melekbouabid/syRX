@@ -227,16 +227,19 @@ Swagger, `/openapi.json` (18 routes à l'époque), scan réel d'une photo de tes
 
 ### 5.4 GitHub Actions CI/CD
 
-- **CI** (`ci.yml`, chaque push et pull request) : 4 jobs : pipeline de données (ruff,
-  format, mypy, 287 tests unitaires), backend (ruff, format, 113 tests, avec un service
-  PostgreSQL + pgvector), vision (ruff, format, 14 tests sans entraînement), frontend
-  (`npm ci`, vérification de types, build). Aucun appel réseau réel.
-- **CD** (`cd.yml`, après une CI verte sur `main`) : construction des images backend et
-  frontend du commit testé et **test de fumée** des conteneurs (santé, `/docs`, routes
-  `/api/scan` et `/api/chat` ; site et route `/scan`). Depuis le 2026-10-28 la CD **ne
-  publie plus les images** (D70) : l'application ne doit tourner que sur ce PC (section 7).
-  La publication sur ghcr.io n'existe plus qu'en option manuelle, désactivée par défaut.
-  Runs vérifiés avec `gh` : CI 40768873414 et CD 40769096658 verts, job `publish` ignoré.
+Les deux workflows demandés par le guide (étape 1.3, D87 ; détail dans `docs/cd.md`),
+lancés à chaque push sur une branche et à chaque pull request :
+
+- **`ci-tests.yml`** : 5 jobs : `lint` (flake8, black --check, ruff, mypy), `src` (pytest
+  des tests de `src/`, avec un service PostgreSQL + pgvector), `backend` (pytest de l'API et
+  de la chaîne de scan), `hooks` (hooks Git et messages Conventional Commits des commits
+  poussés), `frontend` (ESLint, vérification de types, build). Tests réseau (`live`) exclus,
+  aucun appel réseau réel.
+- **`docker-build.yml`** : `docker-compose.yml` validé, puis construction des images
+  **multi-stage** du backend et du frontend et **test de fumée** des conteneurs (santé,
+  `/docs`, routes `/api/scan` et `/api/chat` ; site et route `/scan` ; `HEALTHCHECK`
+  à `healthy`). Les images **ne sont publiées nulle part** (D70, D87) : l'application ne
+  doit tourner que sur ce PC (section 7), et le workflow n'a que le droit de lecture.
 
 ## 6. Application web
 
