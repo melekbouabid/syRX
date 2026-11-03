@@ -49,6 +49,10 @@ jobs:
           - image: frontend
             context: frontend
             file: frontend/Dockerfile
+          # Spark for the Big Data jobs (compose profile `spark`, src/data/spark).
+          - image: spark
+            context: infra/docker/spark
+            file: infra/docker/spark/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
@@ -90,6 +94,24 @@ jobs:
           done
           curl -fsS http://127.0.0.1:8080/ | grep -q '<div id="root">'
           curl -fsS -o /dev/null http://127.0.0.1:8080/scan
+
+      # A Spark master answers on its UI, and a PySpark job runs in local mode in the image.
+      - name: Smoke test of the Spark image
+        if: matrix.image == 'spark'
+        run: |
+          docker run -d --name app -p 127.0.0.1:8090:8080 tujia2-spark:ci             /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master --host 0.0.0.0
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8090/json/ && break
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8090/json/ | grep -q '"status" : "ALIVE"'
+          docker run --rm tujia2-spark:ci python3 -c "
+          from pyspark.sql import SparkSession
+          spark = SparkSession.builder.master('local[1]').getOrCreate()
+          assert spark.range(10).count() == 10
+          import PIL, pandas, pyarrow, yaml
+          print('pyspark', spark.version)
+          "
 
       # The image's own HEALTHCHECK (Dockerfile) must report the container healthy.
       - name: Container reports healthy
