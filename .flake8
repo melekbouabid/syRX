@@ -6,14 +6,16 @@ max-line-length = 100
 # E203 (space before ':' in slices), W503 (line break before a binary operator) and
 # E701/E704 (one-line stubs `...`) are how black and ruff format the code.
 extend-ignore = E203, W503, E701, E704
+# Top-level folders only (`./`): a bare `data` or `models` would also skip src/data and
+# src/models, since flake8 matches a bare name against every folder name.
 extend-exclude =
     .venv*,
     node_modules,
-    frontend,
-    data,
-    models,
-    runs,
-    notebooks
+    ./frontend,
+    ./data,
+    ./models,
+    ./runs,
+    ./notebooks
 per-file-ignores =
     # One-off generator of the benchmark spec: its long lines are question and reference
     # texts (same exception as ruff.toml).
