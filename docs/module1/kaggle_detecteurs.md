@@ -237,12 +237,31 @@ config/hpo/detector_<archi>.yaml --smoke`) prend 64 / 16 / 16 images, 2 essais O
 leurs métriques n'ont aucune valeur (une époque sur 64 images) : ils prouvent seulement que
 le code, l'export et l'import fonctionnent.
 
+Résultats du 04/11 (RTX 2050 4 Go, notebooks exécutés localement avec `TUJYA_SMOKE=1`, puis
+importés avec `--smoke` ; aucune version ajoutée au Registry, le champion reste la version 1) :
+
+| Notebook (commit) | Durée | Essais | Run parent MLflow | mAP@[.5:.95] PyTorch / ONNX (parité, 16 images) | Latence ONNX CPU |
+|---|---:|---:|---|---:|---:|
+| `detector_yolov8n.ipynb` (`c6dae36`) | 1,7 min | 2 (terminés) | `smoke-detector-yolov8n` (`748e2533`) | 0,420 / 0,421 | 8,2 ms (320 px) |
+| `detector_fasterrcnn.ipynb` (`3e37d0f`) | 5,5 min | 2 (terminés) | `smoke-detector-fasterrcnn` (`3be3675c`) | 0,524 / 0,538 | 2 084 ms (320 px) |
+
+Ce qu'ils vérifient : clonage ou dépôt local, lecture du jeu, recherche Optuna (runs enfants),
+réentraînement, évaluation sur les deux splits de test, export ONNX lu au format de l'API
+(parité PyTorch / ONNX), latence dans un processus séparé, zip, import MLflow avec les tags
+de provenance. Les trois autres notebooks sont générés par le même modèle et testés
+(`tests/models/detection/test_tools.py` : JSON valide, code Python compilable, identiques au
+générateur) ; seules leurs configurations Optuna diffèrent (validées par `test_hpo.py`).
+
 ## Limites
 
 - Les boîtes de test sont produites automatiquement (pas d'annotation manuelle) : la
   comparaison mesure l'accord avec cet étiquetage, comme pour la baseline.
 - Le split de comparaison est plus petit que le test v2 complet (sessions vues par la
   baseline retirées) ; le test complet est rapporté à côté.
+- Faster R-CNN est très lent sur CPU en ONNX (2 s par image à 320 px au test de fumée : NMS
+  et RoIAlign de torchvision exportés pour 1 000 propositions et un seuil de score de 0,001) ;
+  la latence fait partie de la comparaison, c'est le prix du détecteur à deux étapes.
 - YOLOv10 : Ultralytics 8.4 exporte en ONNX la tête « un-à-plusieurs » (`end2end: False`,
   même format que YOLOv8, NMS dans l'API), alors que la prédiction PyTorch de l'évaluation
-  utilise la tête « un-à-un » sans NMS ; l'écart sera mesuré à l'import (parité ONNX).
+  utilise la tête « un-à-un » sans NMS ; l'écart est mesuré par les métriques `parity_torch_*` / `parity_onnx_*` (100 images de test,
+  ONNX décodé comme dans l'API).
