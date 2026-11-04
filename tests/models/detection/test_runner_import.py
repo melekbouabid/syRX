@@ -263,3 +263,17 @@ def test_bad_exports_are_refused(tmp_path: Path, exported: SimpleNamespace) -> N
     (broken / "run.json").write_text(json.dumps(run), encoding="utf-8")
     with pytest.raises(import_kaggle.ImportErrorKaggle, match="schema"):
         import_kaggle.read_run(broken)
+
+
+def test_runner_reports_why_every_trial_failed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tests.models.detection import helpers
+
+    def broken(*args: object, **kwargs: object) -> None:
+        raise KeyError("no such setting")
+
+    monkeypatch.setattr(helpers, "train", broken)
+    data = make_dataset(tmp_path / "data")
+    with pytest.raises(RuntimeError, match="no such setting"):
+        runner.run_experiment(FAKE, data, tmp_path / "out", smoke=True, log=lambda _: None)

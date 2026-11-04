@@ -53,7 +53,8 @@ def device() -> str:
 def quiet_integrations() -> None:
     from ultralytics import settings
 
-    settings.update(dict.fromkeys(INTEGRATIONS, False))
+    # Only the keys this Ultralytics version knows (update() refuses unknown ones).
+    settings.update({name: False for name in INTEGRATIONS if name in settings})
 
 
 def read_history(results_csv: Path) -> list[dict[str, float]]:

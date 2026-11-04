@@ -324,6 +324,9 @@ def run_experiment(
     trials = [
         json.loads(p.read_text(encoding="utf-8")) for p in sorted((out / "trials").glob("*.json"))
     ]
+    if not any(t.state == optuna.trial.TrialState.COMPLETE for t in study.trials):
+        errors = sorted({t.get("error", "") for t in trials if t.get("state") == "FAIL"})
+        raise RuntimeError(f"no Optuna trial completed; errors: {errors}")
     best = study.best_trial
     best_hp = next(t["params"] for t in trials if t["number"] == best.number)
     search_minutes = (time.monotonic() - started) / 60
