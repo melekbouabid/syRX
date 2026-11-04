@@ -210,7 +210,7 @@ Puis, une fois tous les modèles importés (branche du champion) :
 
 ### 8. Fin de l'étape
 
-1. Tests et lint (CLAUDE.md « Working rules »), `dvc status` propre.
+1. Tests et lint ([docs/project_rules.md](../project_rules.md) ; `pytest` à la racine, dans `backend/` et `tools/`, `ruff`, `flake8`, `black`, `mypy`), `dvc status` propre.
 2. `python -m src.models.publish` copie le champion vers `models/` ; vérifier que l'API le
    sert (`/api/scan`, `models.json`). Faster R-CNN est exporté au format des YOLO
    (entrée 1x3xSxS, sortie 1x5xN), l'API le sert sans changement.
