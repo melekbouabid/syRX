@@ -81,6 +81,14 @@ registry:
     name: tujya-pill-classifier
     metric: test_top1
     min_gain: 0.005
+# Step 2.2, comparison of detectors (src/models/detection, docs/module1/kaggle_detecteurs.md,
+# D93): candidates trained on C3PI v2 (Kaggle) and the baseline are all scored on the same
+# comparison split (test_holdout.txt of stage prepare_detect_v2) and promoted on this metric,
+# with registry.detector.min_gain. The search spaces are in config/hpo/detector_<arch>.yaml.
+compare:
+  detector:
+    dataset: c3pi-v2-detect
+    metric: test_v2_mAP50_95
 # Stage evaluate (src/models/evaluate.py): detector confidence threshold, end to end.
 evaluate:
   conf: 0.25
