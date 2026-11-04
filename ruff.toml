@@ -24,3 +24,6 @@ ignore = [
 "backend/tujya_testing/**" = ["S105", "S106"]
 # One-off generator of the benchmark spec: its long lines are question and reference texts.
 "src/benchmark/make_spec.py" = ["E501"]
+# Kaggle notebooks (step 2.2) run fixed commands: git clone of the project, pip install of
+# its pinned packages (notebooks/kaggle/requirements.txt).
+"notebooks/kaggle/*.ipynb" = ["S603", "S607"]

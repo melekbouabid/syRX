@@ -8,3 +8,7 @@ Notebooks d'entraînement et d'exploration, rangés comme le demande le guide de
   jamais dans git.
 - Les notebooks sont commités **sans leurs sorties** (hook `nbstripout`,
   [.pre-commit-config.yaml](../.pre-commit-config.yaml)).
+- Étape 2.2 (détecteurs) : un notebook par modèle, `kaggle/detector_<archi>.ipynb`, sur sa
+  branche `experiment/detector-<archi>`, généré par `python -m src.models.detection.notebook`
+  (paquets installés sur Kaggle : [kaggle/requirements.txt](kaggle/requirements.txt)).
+  Mode d'emploi : [docs/module1/kaggle_detecteurs.md](../docs/module1/kaggle_detecteurs.md).
