@@ -32,6 +32,7 @@ from src.models.detection.import_kaggle import EXPERIMENT, LOCAL_DATA, compare_r
 from src.models.detection.latency import cpu_name
 from src.models.detection.runner import backend, dataset_info, test_metrics
 from src.utils import mlflow_utils as mu
+from src.utils.console import console_utf8
 
 
 def family_of(arch: str, tags: dict[str, str]) -> str:
@@ -124,7 +125,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--data", type=Path, default=LOCAL_DATA)
     parser.add_argument("--weights", type=Path, help="local weights instead of the run's")
     args = parser.parse_args(argv)
-    mu.console_utf8()
+    console_utf8()
     mu.configure()
     result = evaluate_version(
         args.version, alias=args.alias, data_dir=args.data, weights=args.weights

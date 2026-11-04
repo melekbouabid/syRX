@@ -313,18 +313,3 @@ def test_missing_metric_raises(tracking: SimpleNamespace) -> None:
     with pytest.raises(ValueError, match="no metric 'top5'"):
         mu.promote_if_better(tracking.model, v1, "top5")
     assert mu.alias_version(tracking.model, mu.CHAMPION) is None
-
-
-def test_console_utf8_escapes_what_the_console_cannot_encode(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    import io
-    import sys
-
-    buffer = io.BytesIO()
-    stream = io.TextIOWrapper(buffer, encoding="cp1252")
-    monkeypatch.setattr(sys, "stdout", stream)
-    mu.console_utf8()
-    print("run \U0001f3c3 done")
-    stream.flush()
-    assert buffer.getvalue().decode("cp1252").strip() == r"run \U0001f3c3 done"
