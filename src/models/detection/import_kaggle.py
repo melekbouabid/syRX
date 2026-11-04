@@ -42,6 +42,7 @@ from mlflow import MlflowClient
 from src.models.detection.labels import samples
 from src.models.detection.latency import cpu_name, isolated_latency
 from src.utils import mlflow_utils as mu
+from src.utils.console import console_utf8
 
 ROOT = mu.ROOT
 PARAMS = ROOT / "params.yaml"
@@ -351,7 +352,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--experiment", default=EXPERIMENT)
     parser.add_argument("--data", type=Path, default=LOCAL_DATA, help="test images for timing")
     args = parser.parse_args(argv)
-    mu.console_utf8()
+    console_utf8()
     mu.configure()
     for export in args.exports:
         with tempfile.TemporaryDirectory() as tmp:
