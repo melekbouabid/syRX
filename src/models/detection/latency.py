@@ -7,7 +7,10 @@ to the model's square input, RGB, [0, 1]), otherwise random noise of the right s
 
 Latency depends on the machine: the notebooks log the Kaggle CPU figure
 (`kaggle_onnx_cpu_latency_ms`), and the import script measures every model again on the
-same local PC (`onnx_cpu_latency_ms`), which is the figure compared.
+same local PC (`onnx_cpu_latency_ms`), which is the figure compared. Both are measured in a
+fresh Python process (`isolated_latency`): in the process that just ran PyTorch, its idle
+worker threads slow ONNX Runtime down by an order of magnitude (552 ms instead of 26 ms for
+YOLO11n on the development PC).
 
 `onnx_predict` decodes the exported model exactly as the API does (letterbox, output
 1 x (4 + classes) x N in cx cy w h, non-maximum suppression): the runner scores it on a few
@@ -17,7 +20,11 @@ evaluated model and the served one shows up.
 
 from __future__ import annotations
 
+import argparse
+import json
 import platform
+import subprocess
+import sys
 import time
 from collections.abc import Sequence
 from pathlib import Path
@@ -152,3 +159,42 @@ def onnx_predict(
 def cpu_name() -> str:
     """A short description of the CPU the latency was measured on (MLflow tag)."""
     return platform.processor() or platform.machine() or "unknown"
+
+
+def isolated_latency(
+    model: str | Path, image_files: Sequence[Path] = (), *, runs: int = 30, warmup: int = 5
+) -> dict[str, float]:
+    """onnx_cpu_latency in a new Python process (no PyTorch threads competing for the CPU)."""
+    command = [
+        sys.executable,
+        "-m",
+        "src.models.detection.latency",
+        str(model),
+        "--runs",
+        str(runs),
+        "--warmup",
+        str(warmup),
+        *[str(f) for f in image_files],
+    ]
+    root = Path(__file__).resolve().parents[3]
+    # The current interpreter on this repository's own module, fixed arguments.
+    done = subprocess.run(  # noqa: S603
+        command, cwd=root, capture_output=True, text=True, check=True, timeout=3600
+    )
+    return json.loads(done.stdout.strip().splitlines()[-1])
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(prog="python -m src.models.detection.latency")
+    parser.add_argument("model", type=Path)
+    parser.add_argument("images", nargs="*", type=Path, help="images (default: random noise)")
+    parser.add_argument("--runs", type=int, default=30)
+    parser.add_argument("--warmup", type=int, default=5)
+    args = parser.parse_args(argv)
+    images = [cv2.imdecode(np.fromfile(str(f), np.uint8), cv2.IMREAD_COLOR) for f in args.images]
+    result = onnx_cpu_latency(args.model, images=images, runs=args.runs, warmup=args.warmup)
+    print(json.dumps(result))
+
+
+if __name__ == "__main__":
+    main()

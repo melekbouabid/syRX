@@ -39,8 +39,8 @@ import mlflow
 import yaml
 from mlflow import MlflowClient
 
-from src.models.detection.labels import read_bgr, samples
-from src.models.detection.latency import cpu_name, onnx_cpu_latency
+from src.models.detection.labels import samples
+from src.models.detection.latency import cpu_name, isolated_latency
 from src.utils import mlflow_utils as mu
 
 ROOT = mu.ROOT
@@ -134,10 +134,10 @@ def parent_tags(run: dict[str, Any], smoke: bool) -> dict[str, str]:
 
 def local_latency(onnx_path: Path, data_dir: Path = LOCAL_DATA) -> dict[str, float]:
     """CPU latency of the ONNX model on this PC (real test images when they are here)."""
-    images = []
+    files = []
     if (data_dir / "images" / "test").is_dir():
-        images = [read_bgr(s.image) for s in samples(data_dir, "test")[:LATENCY_IMAGES]]
-    return onnx_cpu_latency(onnx_path, images=images)
+        files = [s.image for s in samples(data_dir, "test")[:LATENCY_IMAGES]]
+    return isolated_latency(onnx_path, files)
 
 
 def log_trials(run: dict[str, Any], smoke: bool) -> list[str]:

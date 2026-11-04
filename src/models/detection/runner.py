@@ -44,7 +44,7 @@ import yaml
 
 from src.models.detection import hpo
 from src.models.detection.labels import holdout_names, make_subset, read_bgr, samples
-from src.models.detection.latency import cpu_name, onnx_cpu_latency, onnx_predict
+from src.models.detection.latency import cpu_name, isolated_latency, onnx_predict
 from src.models.detection.metrics import evaluate, prefixed
 
 SCHEMA = 1
@@ -357,8 +357,8 @@ def run_experiment(
     onnx_path = module.export_onnx(
         out / "weights" / "best.pt", imgsz, out / "model" / "detector.onnx"
     )
-    images = [read_bgr(s.image) for s in samples(data_dir, "test")[:LATENCY_IMAGES]]
-    latency = {f"kaggle_{k}": v for k, v in onnx_cpu_latency(onnx_path, images=images).items()}
+    files = [s.image for s in samples(data_dir, "test")[:LATENCY_IMAGES]]
+    latency = {f"kaggle_{k}": v for k, v in isolated_latency(onnx_path, files).items()}
     metrics.update(onnx_parity(module, result.weights, onnx_path, data_dir, imgsz))
     training = out / "training"
     training.mkdir(exist_ok=True)

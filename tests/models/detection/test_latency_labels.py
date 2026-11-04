@@ -18,7 +18,13 @@ from src.models.detection.labels import (
     xyxy_to_yolo,
     yolo_to_xyxy,
 )
-from src.models.detection.latency import letterbox, onnx_cpu_latency, onnx_predict, to_tensor
+from src.models.detection.latency import (
+    isolated_latency,
+    letterbox,
+    onnx_cpu_latency,
+    onnx_predict,
+    to_tensor,
+)
 from tests.models.detection.helpers import make_dataset, tiny_detector
 
 
@@ -127,3 +133,13 @@ def test_onnx_predict_decodes_like_the_api(tmp_path: Path) -> None:
     assert pred.scores.tolist() == pytest.approx([0.9, 0.7])  # the 0.8 overlap is suppressed
     np.testing.assert_allclose(pred.boxes[0], [30, 0, 50, 18])  # y clipped at the border
     np.testing.assert_allclose(pred.boxes[1], [92, 40, 108, 56])
+
+
+def test_isolated_latency_runs_in_a_new_process(tmp_path: Path) -> None:
+    path = tmp_path / "tiny.onnx"
+    onnx.save(tiny_detector(32), str(path))
+    root = make_dataset(tmp_path / "data")
+    images = [s.image for s in samples(root, "test")[:2]]
+    result = isolated_latency(path, images, runs=3, warmup=1)
+    assert result["onnx_cpu_runs"] == 3
+    assert result["onnx_cpu_latency_ms"] > 0
