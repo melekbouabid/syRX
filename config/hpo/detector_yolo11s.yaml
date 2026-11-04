@@ -1,0 +1,49 @@
+# Hyperparameter search of experiment/detector-yolo11s (step 2.2): Optuna, one child MLflow run
+# per trial (src/models/detection/hpo.py, runner.py; docs/module1/kaggle_detecteurs.md).
+# Ultralytics yolo11s (9.4 M parameters), pretrained on COCO (transfer learning), one class.
+arch: yolo11s
+family: yolo
+weights: yolo11s.pt
+branch: experiment/detector-yolo11s
+seed: 0
+search:
+  # Each trial: 10 epochs on 0.3 of the train images, scored on the validation split.
+  n_trials: 10
+  epochs: 10
+  fraction: 0.3
+  patience: 10
+  metric: val_mAP50_95
+  sampler: tpe
+  timeout_hours: 3.5        # Kaggle sessions stop after 12 h: the search stops in time
+  space:
+    optimizer: {type: categorical, choices: [SGD, AdamW]}
+    # Learning rate per optimiser (AdamW needs a much smaller one).
+    lr0:
+      type: float
+      log: true
+      depends_on: optimizer
+      ranges: {SGD: [1.0e-3, 2.0e-2], AdamW: [1.0e-4, 2.0e-3]}
+    imgsz: {type: categorical, choices: [480, 640]}   # the images are 640 px on the long side
+    batch: {type: categorical, choices: [8, 16, 32]}
+    # Augmentation (train split only, applied by Ultralytics on the fly).
+    mosaic: {type: float, low: 0.0, high: 1.0}
+    mixup: {type: float, low: 0.0, high: 0.3}
+    hsv_h: {type: float, low: 0.0, high: 0.03}
+    hsv_s: {type: float, low: 0.2, high: 0.9}
+    hsv_v: {type: float, low: 0.1, high: 0.6}
+    fliplr: {type: float, low: 0.0, high: 0.5}
+    flipud: {type: float, low: 0.0, high: 0.5}
+fixed:
+  workers: 4                # Kaggle: 4 CPU cores
+  close_mosaic: 3           # last epochs without mosaic (default 10 = a whole trial)
+final:
+  # Retraining of the best trial on the whole train split, early stopping on validation.
+  epochs: 50
+  patience: 15
+smoke:
+  # Local check of the code (not an experiment): tiny subset, 2 trials, 1 epoch.
+  n_trials: 2
+  epochs: 1
+  final_epochs: 1
+  images: {train: 64, val: 16, test: 16}
+  fixed: {imgsz: 320, batch: 8, workers: 2}
