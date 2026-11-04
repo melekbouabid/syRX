@@ -1,0 +1,47 @@
+# Hyperparameter search of experiment/detector-fasterrcnn (step 2.2): Optuna, one child MLflow
+# run per trial (src/models/detection/hpo.py, runner.py; docs/module1/kaggle_detecteurs.md).
+# torchvision Faster R-CNN ResNet-50 FPN (two-stage, 41 M parameters), pretrained on COCO
+# (transfer learning), new 2-class head (src/models/detection/fasterrcnn.py).
+arch: fasterrcnn
+family: fasterrcnn
+weights: fasterrcnn_resnet50_fpn
+branch: experiment/detector-fasterrcnn
+seed: 0
+search:
+  # Each trial: 3 epochs on 20 % of the train images, scored on the validation split
+  # (a two-stage detector is about 6 times slower per image than YOLOv8n).
+  n_trials: 8
+  epochs: 3
+  fraction: 0.2
+  patience: 3
+  metric: val_mAP50_95
+  sampler: tpe
+  timeout_hours: 3.0        # Kaggle sessions stop after 12 h
+  space:
+    optimizer: {type: categorical, choices: [SGD, AdamW]}
+    lr0:
+      type: float
+      log: true
+      depends_on: optimizer
+      ranges: {SGD: [2.0e-3, 4.0e-2], AdamW: [1.0e-5, 3.0e-4]}
+    imgsz: {type: categorical, choices: [480, 640]}
+    batch: {type: categorical, choices: [2, 4, 8]}
+    # Augmentation (train split only). Mosaic and MixUp are YOLO training tricks with no
+    # torchvision counterpart: flips and HSV jitter only (same ranges as the YOLO searches).
+    hsv_h: {type: float, low: 0.0, high: 0.03}
+    hsv_s: {type: float, low: 0.2, high: 0.9}
+    hsv_v: {type: float, low: 0.1, high: 0.6}
+    fliplr: {type: float, low: 0.0, high: 0.5}
+    flipud: {type: float, low: 0.0, high: 0.5}
+fixed:
+  workers: 4
+  weight_decay: 1.0e-4
+final:
+  epochs: 12
+  patience: 4
+smoke:
+  n_trials: 2
+  epochs: 1
+  final_epochs: 1
+  images: {train: 64, val: 16, test: 16}
+  fixed: {imgsz: 320, batch: 2, workers: 0}
