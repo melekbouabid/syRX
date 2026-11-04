@@ -121,6 +121,28 @@ jobs:
       - run: pip install -r src/data/spark/requirements.txt
       - run: python -m pytest tests/data/spark --noconftest -p tests.data.spark.fixtures
 
+  # Faster R-CNN (src/models/detection/fasterrcnn.py, step 2.2): its tests need PyTorch and
+  # torchvision, which the other jobs do not install. CPU wheels only (no GPU, no CUDA
+  # download), and the tests build the model without pretrained weights: no data, no
+  # download beyond the packages. The job `src` runs the same folder and skips these tests.
+  vision:
+    name: pytest detectors with PyTorch (CPU, Faster R-CNN)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            backend/requirements.txt
+            pyproject.toml
+      - run: pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest tests/models/detection
+
   hooks:
     name: git hooks (tools/hooks, secrets and commit messages)
     runs-on: ubuntu-latest
