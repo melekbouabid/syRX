@@ -124,6 +124,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--data", type=Path, default=LOCAL_DATA)
     parser.add_argument("--weights", type=Path, help="local weights instead of the run's")
     args = parser.parse_args(argv)
+    mu.console_utf8()
     mu.configure()
     result = evaluate_version(
         args.version, alias=args.alias, data_dir=args.data, weights=args.weights

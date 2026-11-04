@@ -351,6 +351,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--experiment", default=EXPERIMENT)
     parser.add_argument("--data", type=Path, default=LOCAL_DATA, help="test images for timing")
     args = parser.parse_args(argv)
+    mu.console_utf8()
     mu.configure()
     for export in args.exports:
         with tempfile.TemporaryDirectory() as tmp:

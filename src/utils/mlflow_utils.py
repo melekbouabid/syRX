@@ -24,6 +24,7 @@ from __future__ import annotations
 import hashlib
 import os
 import subprocess
+import sys
 import tempfile
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
@@ -57,6 +58,15 @@ def configure(tracking_uri: str | None = None) -> str:
     uri = tracking_uri or os.environ.get("MLFLOW_TRACKING_URI", DEFAULT_TRACKING_URI)
     mlflow.set_tracking_uri(uri)
     return uri
+
+
+def console_utf8() -> None:
+    """MLflow prints run links with emoji: on a Windows console or pipe in cp1252 that raises
+    UnicodeEncodeError in the middle of a run. Undecodable characters are escaped instead."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(errors="backslashreplace")
 
 
 # --- provenance ---------------------------------------------------------------------------

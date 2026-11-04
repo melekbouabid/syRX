@@ -170,6 +170,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--doc", type=Path, default=DOC)
     parser.add_argument("--figure", type=Path, default=FIGURE)
     args = parser.parse_args(argv)
+    mu.console_utf8()
     mu.configure()
     rows = collect()
     table = markdown_table(rows)
