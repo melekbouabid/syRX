@@ -148,7 +148,7 @@ print(archive, round(Path(archive).stat().st_size / 1e6, 1), "MB")"""),
    docs/module1/kaggle_detecteurs.md."""),
     ]
     for index, cell in enumerate(cells):
-        cell["id"] = f"{arch}-{index:02d}"
+        cell["id"] = str(index)  # the ids nbstripout gives (pre-commit hook)
     notebook = new_notebook(
         cells=cells,
         metadata={
