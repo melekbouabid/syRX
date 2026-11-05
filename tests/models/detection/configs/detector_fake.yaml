@@ -1,0 +1,33 @@
+# Search of the fake model family of tests/models/detection/helpers.py.
+arch: fake
+family: yolo
+weights: fake.pt
+branch: experiment/detector-fake
+seed: 0
+search:
+  n_trials: 3
+  epochs: 2
+  fraction: 0.5
+  metric: val_mAP50_95
+  sampler: tpe
+  space:
+    optimizer: {type: categorical, choices: [SGD, AdamW]}
+    lr0:
+      type: float
+      log: true
+      depends_on: optimizer
+      ranges: {SGD: [1.0e-3, 1.0e-1], AdamW: [1.0e-4, 1.0e-2]}
+    imgsz: {type: categorical, choices: [64, 96]}
+    batch: {type: int, low: 2, high: 8, step: 2}
+    mosaic: {type: float, low: 0.0, high: 1.0}
+fixed:
+  workers: 0
+final:
+  epochs: 3
+  patience: 2
+smoke:
+  n_trials: 2
+  epochs: 1
+  final_epochs: 1
+  images: {train: 4, val: 2, test: 3}
+  fixed: {imgsz: 64, optimizer: SGD}

@@ -105,6 +105,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | Frontend React : upload, webcam, prédictions et boîtes | ✅ | [frontend/](frontend/) |
 | DVC (versionnement des données) | ✅ | [dvc.yaml](dvc.yaml) (données, puis `train_detector`, `train_classifier`, `export_onnx`, `evaluate`), [params.yaml](params.yaml), [docs/infra.md](docs/infra.md) |
 | Plus de données et Big Data avec PySpark (demande du professeur) | ✅ | [src/data/spark/](src/data/spark/), cluster Spark de [docker-compose.yml](docker-compose.yml), [docs/module1/big_data.md](docs/module1/big_data.md) (data card) |
+| Comparaison de détecteurs (YOLOv8n/s, YOLO11s, YOLOv10n, Faster R-CNN) et recherche d'hyperparamètres Optuna, une branche par modèle | ⬜ | code, notebooks Kaggle et import MLflow prêts, entraînements Kaggle à lancer : [docs/module1/kaggle_detecteurs.md](docs/module1/kaggle_detecteurs.md) |
 | MLflow : tracking des expériences | ✅ | expérience `tujya-vision`, runs tracés (`git_commit`, `dvc_rev`, `dataset`, `seed`, requirements + `dvc.lock`) : [src/utils/mlflow_utils.py](src/utils/mlflow_utils.py), [docs/module1/mlflow.md](docs/module1/mlflow.md) |
 | MLflow : Model Registry | ✅ | `tujya-pill-detector`, `tujya-pill-classifier`, alias `champion` / `challenger`, `promote_if_better` ; baseline v1 champion |
 | Export ONNX et inférence ONNX Runtime | ✅ | [backend/app/inference.py](backend/app/inference.py) |

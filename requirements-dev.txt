@@ -14,6 +14,10 @@ onnx>=1.17
 # (src/models/requirements-train.txt installs the full package).
 mlflow-skinny==3.17.2
 alembic>=1.13,<2
+# Detector comparison (step 2.2, src/models/detection): Optuna search spaces and the
+# notebook generator are tested here (same Optuna version as the training venv and Kaggle).
+optuna==5.0.0
+nbformat>=5.10
 ruff>=0.5
 # The module guide's linters (.flake8, [tool.black] in pyproject.toml); black's stable
 # style only changes once a year, so the major version is pinned.
