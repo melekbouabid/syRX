@@ -237,7 +237,11 @@ def measure(task: str, path: Path, data: Path) -> dict[str, float]:
 
 
 def measure_latency(
-    task: str, paths: dict[str, Path], data: Path, settings: dict[str, Any]
+    task: str,
+    paths: dict[str, Path],
+    data: Path,
+    settings: dict[str, Any],
+    rounds_out: dict[str, list[dict[str, float]]] | None = None,
 ) -> dict[str, dict[str, float]]:
     """CPU latency of every variant, in interleaved short rounds separated by a pause.
 
@@ -246,6 +250,7 @@ def measure_latency(
     variant would compare the first variant on a cool CPU with the next ones on a throttled
     CPU. Each round times every variant once (`latency_runs` passes, in a fresh process) after
     `latency_cooldown_s` seconds of rest; the figures kept are the medians over the rounds.
+    `rounds_out`, when given, receives the figures of every round (to check for throttling).
     """
     files = latency_files(task, data, int(settings.get("latency_images", 20)))
     rounds = max(1, int(settings.get("latency_rounds", 1)))
@@ -263,6 +268,8 @@ def measure_latency(
                     warmup=int(settings.get("latency_warmup", 5)),
                 )
             )
+    if rounds_out is not None:
+        rounds_out.update(measured)
     out: dict[str, dict[str, float]] = {}
     for precision, rows in measured.items():
         out[precision] = {key: float(np.median([row[key] for row in rows])) for key in rows[0]}
