@@ -1069,3 +1069,20 @@ runs Kaggle (D94). Rejeté : un modèle enregistré séparé par précision (la 
 lien avec son champion dans la vue du Registry) ; mettre l'alias `champion` sur la variante
 quantifiée (`promote_if_better` comparerait les candidats FP32 au score de la variante) ;
 dupliquer les métriques et la latence dans un autre module (deux codes de mesure divergeraient).
+
+**D96. INT8 du détecteur : tête YOLO gardée en float ; latence mesurée en tours entrelacés.**
+Quantification statique (QDQ, int8 par canal, calibration MinMax sur 200 photos du val v2,
+jamais le test) : les nœuds de la tête de détection (`/model.22/`, trouvés depuis la sortie du
+graphe par `output_module_prefix`) restent en float, car le décodage des boîtes manipule des
+coordonnées en pixels (0 à 640) qu'un seul facteur d'échelle int8 arrondit trop. Essai sur 200
+photos de test de comparaison : tête en float mAP@[.5:.95] 0,854 ; seul le décodage en float
+0,848 ; quantification dynamique 0,832 (FP32 0,876). Le classifieur est quantifié en entier
+(300 crops du val v1). Latence : le PC portable de développement se bride sous charge soutenue
+(YOLOv8n passe de 24 ms à 570 ms par image après une centaine de passes enchaînées) ; une
+mesure longue par variante avantageait la première mesurée. Chaque variante est donc chronométrée
+en 5 tours entrelacés (30 passes dans un processus neuf, 20 s de pause avant chaque mesure),
+médiane des tours (`params.yaml`, `optimize`). Les 8 runs et versions d'une première exécution
+mesurés avec l'ancienne méthode (200 passes d'affilée) restent dans MLflow avec le tag
+`status=superseded`. Rejeté : quantifier aussi la tête (perte de localisation), exclure en plus
+la première convolution (gain de 0,008 sur l'essai, non retenu pour garder une règle simple par
+architecture), mesurer sur GPU (l'API sert sur CPU).
