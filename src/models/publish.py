@@ -1,6 +1,7 @@
 """Copy the deployment models into the directory the API loads them from.
 
-    python -m src.models.publish                          # versions with the alias champion
+    python -m src.models.publish                          # served variant of each champion
+    python -m src.models.publish --exact                  # the champions themselves (FP32)
     python -m src.models.publish --alias challenger       # another alias (MLflow Registry)
     python -m src.models.publish --classifier-version 2 --detector-version 1
     python -m src.models.publish --from-runs              # newest runs/*/weights/best.onnx
@@ -9,7 +10,9 @@ Writes `detector.onnx`, `classifier.onnx` and `models.json` (origin and SHA-256 
 into `--out` (default `models/` at the repository root, git-ignored; the API reads it from
 TUJYA_MODELS_DIR, same default). The files are the ONNX exports registered by
 `src.models.export_onnx`, so the API serves exactly the versions shown in the Model Registry:
-by default the champions chosen by promote_if_better (src/utils/mlflow_utils.py).
+by default the champions chosen by promote_if_better (src/utils/mlflow_utils.py), in the
+precision chosen by `python -m src.models.optimize` (alias `served`: FP32, FP16 or INT8 variant
+of the champion, src/models/serving.py). `--exact` publishes the alias as it is.
 """
 
 from __future__ import annotations
@@ -25,7 +28,10 @@ from typing import Any
 
 import onnx
 
-from src.models.train import REGISTERED, ROOT, RUNS
+from src.models.serving import CHAMPION, PRECISION_TAG, REGISTERED, served_version
+
+ROOT = Path(__file__).resolve().parents[2]  # repository root
+RUNS = ROOT / "runs"  # Ultralytics training runs (src/models/train.py)
 
 FILES = {"detect": "detector.onnx", "classify": "classifier.onnx"}
 
@@ -39,9 +45,13 @@ def sha256(path: Path) -> str:
 
 
 def from_registry(
-    task: str, version: int | None, work: Path, alias: str = "champion"
+    task: str, version: int | None, work: Path, alias: str = CHAMPION, *, exact: bool = True
 ) -> tuple[Path, dict[str, Any]]:
-    """The registered ONNX model of `task`: version `version`, else the one holding `alias`."""
+    """The registered ONNX model of `task`: version `version`, else the one holding `alias`.
+
+    With `exact=False` and the alias `champion`, the served variant of the champion
+    (src/models/serving.py) instead of the champion itself.
+    """
     import mlflow
     from mlflow import MlflowClient
 
@@ -50,6 +60,13 @@ def from_registry(
     versions = client.search_model_versions(f"name='{name}'")
     if not versions:
         raise SystemExit(f"no registered versions of {name} on {mlflow.get_tracking_uri()}")
+    note = None
+    if version is None and alias == CHAMPION and not exact:
+        try:
+            resolved = served_version(name, client)
+        except LookupError as error:
+            raise SystemExit(str(error)) from None
+        version, note = int(resolved.version), resolved.note
     if version is None:
         # search_model_versions does not return the aliases: ask for the alias directly.
         try:
@@ -67,14 +84,21 @@ def from_registry(
     onnx_files = sorted(target.rglob("*.onnx"))
     if not onnx_files:
         raise SystemExit(f"{name} version {chosen.version} has no .onnx file")
-    return onnx_files[0], {
+    details = client.get_model_version(name, chosen.version)
+    info: dict[str, Any] = {
         "source": "mlflow",
         "registered_model": name,
         "version": int(chosen.version),
-        "aliases": sorted(client.get_model_version(name, chosen.version).aliases or []),
+        "aliases": sorted(details.aliases or []),
+        "precision": (details.tags or {}).get(PRECISION_TAG, "fp32"),
         "run_id": chosen.run_id,
         "tracking_uri": mlflow.get_tracking_uri(),
     }
+    if (details.tags or {}).get("variant_of"):
+        info["variant_of"] = int(details.tags["variant_of"])
+    if note:
+        info["resolution"] = note
+    return onnx_files[0], info
 
 
 def from_runs(task: str) -> tuple[Path, dict[str, Any]]:
@@ -90,7 +114,12 @@ def from_runs(task: str) -> tuple[Path, dict[str, Any]]:
 
 
 def publish(
-    out: Path, *, use_runs: bool, versions: dict[str, int | None], alias: str = "champion"
+    out: Path,
+    *,
+    use_runs: bool,
+    versions: dict[str, int | None],
+    alias: str = CHAMPION,
+    exact: bool = False,
 ) -> dict[str, Any]:
     out.mkdir(parents=True, exist_ok=True)
     manifest: dict[str, Any] = {"published_at": datetime.now(UTC).isoformat(timespec="seconds")}
@@ -99,7 +128,7 @@ def publish(
             if use_runs:
                 path, info = from_runs(task)
             else:
-                path, info = from_registry(task, versions[task], Path(tmp), alias)
+                path, info = from_registry(task, versions[task], Path(tmp), alias, exact=exact)
             # MLflow stores the weights as external data next to model.onnx; loading and
             # saving again gives one self-contained file (these models are far below 2 GB).
             onnx.save_model(onnx.load(str(path)), str(out / filename))
@@ -112,7 +141,12 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m src.models.publish")
     parser.add_argument("--out", type=Path, default=ROOT / "models")
     parser.add_argument("--from-runs", action="store_true", help="skip MLflow, use runs/")
-    parser.add_argument("--alias", default="champion", help="Model Registry alias to publish")
+    parser.add_argument("--alias", default=CHAMPION, help="Model Registry alias to publish")
+    parser.add_argument(
+        "--exact",
+        action="store_true",
+        help="publish the alias itself, not the served variant of the champion (alias served)",
+    )
     parser.add_argument("--classifier-version", type=int, default=None)
     parser.add_argument("--detector-version", type=int, default=None)
     args = parser.parse_args(argv)
@@ -125,6 +159,7 @@ def main(argv: list[str] | None = None) -> None:
         use_runs=args.from_runs,
         versions={"classify": args.classifier_version, "detect": args.detector_version},
         alias=args.alias,
+        exact=args.exact,
     )
     print(json.dumps(manifest, indent=2))
 
