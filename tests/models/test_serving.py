@@ -149,3 +149,35 @@ def test_publish_copies_the_served_variant(
         tmp_path / "pinned", use_runs=False, versions={"detect": int(v1), "classify": int(v2)}
     )
     assert (pinned["detect"]["version"], pinned["classify"]["version"]) == (int(v1), int(v2))
+
+
+def test_manifest_carries_architecture_and_metrics(
+    tracking: SimpleNamespace, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with mlflow.start_run():
+        mlflow.log_metrics({"val_mAP50_95": 0.85, "test_v2_mAP50_95": 0.87, "train_box_loss": 1.0})
+        mlflow.log_metric("val_box_loss", 0.5)
+        info = mu.log_model(tiny_onnx("Identity"), name="model")
+    v1 = str(mu.register(info.model_uri, tracking.model, tags={"arch": "yolov8n"}).version)
+    champion(tracking, v1)
+    with mlflow.start_run():
+        mlflow.log_metrics({"test_v2_mAP50_95": 0.86, "onnx_cpu_latency_ms": 20.0, "time": 3.0})
+        info = mu.log_model(tiny_onnx("Relu"), name="model")
+    tags = {"arch": "yolov8n", "precision": "fp16", "variant_of": v1}
+    v2 = str(mu.register(info.model_uri, tracking.model, tags=tags).version)
+    serving.set_served(tracking.model, v2, v1, "fp16", tracking.client)
+    monkeypatch.setitem(publish.REGISTERED, "detect", tracking.model)
+    monkeypatch.setitem(publish.REGISTERED, "classify", tracking.model)
+
+    manifest = publish.publish(
+        tmp_path / "models", use_runs=False, versions={"detect": None, "classify": None}
+    )
+
+    entry = manifest["detect"]
+    assert entry["arch"] == "yolov8n"
+    # The variant's own scores, completed by the validation scores of its champion.
+    assert entry["metrics"] == {
+        "onnx_cpu_latency_ms": 20.0,
+        "test_v2_mAP50_95": 0.86,
+        "val_mAP50_95": 0.85,
+    }

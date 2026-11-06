@@ -1086,3 +1086,25 @@ mesurés avec l'ancienne méthode (200 passes d'affilée) restent dans MLflow av
 `status=superseded`. Rejeté : quantifier aussi la tête (perte de localisation), exclure en plus
 la première convolution (gain de 0,008 sur l'essai, non retenu pour garder une règle simple par
 architecture), mesurer sur GPU (l'API sert sur CPU).
+
+## Endpoints du guide (2026-11-06)
+
+**D97. `/health`, `/model/metadata`, `/predict`, `/predict/visualize` : le modèle seul, sans
+compte ; métadonnées lues dans `models.json` ; pas de Grad-CAM dans l'API.** Le guide du module 1
+impose ces quatre routes (Swagger sur :8000/docs, 400 image invalide, 503 modèle non chargé).
+Elles sont ajoutées à côté de `POST /api/scan` sans la modifier : elles renvoient seulement ce
+que produisent les modèles (boîtes, top-5, confiances, latence serveur), sans tables de
+médicaments ni compte, pour se tester directement depuis Swagger ou `curl`. Pas de compte : elles
+ne lisent ni n'écrivent aucune donnée personnelle, gardent les limites de taille de `/api/scan`
+(10 Mo, 50 mégapixels) et l'API n'écoute que sur 127.0.0.1 (règle du projet) ; `/api/scan` reste
+derrière la connexion (D46). Les erreurs suivent le guide : 400 pour un type ou un contenu qui
+n'est pas une image (`/api/scan` garde son 415), 413 trop grande, 503 sans modèles ; `/health`
+répond toujours 200 avec `status=degraded` pour qu'une sonde voie la raison. `/model/metadata` lit
+`models.json`, que `python -m src.models.publish` enrichit de l'architecture (tag `arch` du
+Registry) et des métriques de la version publiée (celles d'une variante FP16 / INT8 complétées
+par les scores de validation de son champion) : l'API ne contacte jamais MLflow à l'exécution.
+`/predict/visualize` renvoie un PNG annoté (couleur stable par classe). Grad-CAM n'est pas servi :
+il demande les gradients du modèle PyTorch et l'API n'exécute que l'ONNX, sans PyTorch ; il est
+reporté à l'étape 2.6. Rejeté : protéger ces routes par la session (le guide les teste sans
+compte), interroger le Registry à chaque requête (dépendance réseau et latence), une carte de
+saillance par occlusion présentée comme Grad-CAM (ce n'en est pas un).

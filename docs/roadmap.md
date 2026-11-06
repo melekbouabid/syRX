@@ -49,6 +49,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Schéma SQL (pills, ingredients, pill_ingredients, interactions, sources) + chargeur
 - [x] `POST /api/scan` asynchrone (image -> boîtes, top-5, confiance ; confirmation sous 0,85, [docs/api.md](api.md))
 - [x] `python -m src.models.publish` : modèles enregistrés -> `models/` pour l'API
+- [x] Endpoints du guide (étape 2.5) : `GET /health`, `GET /model/metadata`, `POST /predict`, `POST /predict/visualize`, erreurs 400 / 413 / 503, schémas stricts, tests de chaque route et code d'erreur ([api.md](api.md#endpoints-du-guide-du-module-1-sans-compte), D97)
 - [x] `POST /api/interactions` asynchrone (sévérité DDInter, description, source ; jamais « sûr »)
 - [x] `GET /api/pills?q=` : recherche parmi les 150 classes (confirmation manuelle)
 - [x] Swagger sur `/docs` et schéma sur `/openapi.json` (`/api/docs` redirige, D44)

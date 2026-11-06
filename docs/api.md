@@ -1,9 +1,10 @@
 # API de Tujya
 
 Application FastAPI dans [`backend/`](../backend/). Swagger UI : `/docs`, schéma :
-`/openapi.json` (D44). Toutes les routes ci-dessous demandent un compte connecté (cookie de
+`/openapi.json` (D44). Les routes `/api/*` ci-dessous demandent un compte connecté (cookie de
 session obtenu par `POST /api/auth/login`) ; la démonstration se connecte avec le compte de
-démonstration (D46).
+démonstration (D46). Les quatre routes du guide du module 1 (`/health`, `/model/metadata`,
+`/predict`, `/predict/visualize`) n'en demandent pas (D97, section dédiée plus bas).
 
 | Route | Rôle | Documentation |
 |---|---|---|
@@ -14,10 +15,47 @@ démonstration (D46).
 | `POST /api/toxicity` | probabilités Tox21 d'une ou deux molécules (bonus) | [docs/bonus/toxicity.md](bonus/toxicity.md#où-il-est-utilisé) |
 | `GET /api/demo/images` | galerie de photos du split de test (lecture seule) | [docs/demo.md](demo.md) |
 | `/api/auth/*`, `/api/admin/*` | comptes, sessions, administration | [docs/app.md](app.md#comptes) |
+| `GET /health`, `GET /model/metadata`, `POST /predict`, `POST /predict/visualize` | endpoints du guide : état, métadonnées, prédiction JSON, image annotée (sans compte) | [ci-dessous](#endpoints-du-guide-du-module-1-sans-compte) |
 
 Chaque réponse sur des médicaments porte `sources` (nom, titre, URL, licence, citation) et
 `disclaimer` = « Information uniquement, consultez un pharmacien ou un médecin. ». Aucune
 route ne renvoie jamais de dose, et aucune ne dit jamais qu'une association est sûre.
+
+## Endpoints du guide du module 1 (sans compte)
+
+Le guide du projet impose quatre routes sur le port 8000, avec Swagger sur `/docs`. Elles
+exposent **le modèle seul** (pas de compte, pas de tables de médicaments ; D97) et sont dans
+[`backend/app/routers/vision.py`](../backend/app/routers/vision.py), schémas Pydantic stricts
+(`extra="forbid"`) dans [`backend/app/schemas.py`](../backend/app/schemas.py). L'application
+garde `POST /api/scan`, qui ajoute noms, principes actifs, sources et règle de confirmation.
+
+| Route | Réponse | Erreurs |
+|---|---|---|
+| `GET /health` | `status` (`ok` / `degraded`), `model_loaded`, `gpu` (CUDA disponible, fournisseurs ONNX Runtime disponibles et actifs), version de l'API, et pour chaque modèle chargé : modèle enregistré, version, alias MLflow (`champion`, `served`), précision (fp32 / fp16 / int8), `variant_of`, run, SHA-256 | aucune : toujours 200 (`degraded` + `detail` si les modèles manquent) |
+| `GET /model/metadata` | pour le détecteur et le classifieur : nom, architecture (tag `arch` du Registry), version, alias, précision, run, taille d'entrée, métriques de validation et de test (celles de la version publiée, `models.json`), classes et leur nombre | 503 modèles non chargés |
+| `POST /predict` (multipart, champ `image`) | `count`, `pills` (boîte en pixels et normalisée, confiance de détection, `top5` = classes et probabilités), `timings` (`detection_ms`, `classification_ms`, `inference_ms`, `server_ms` = toute la requête), versions des modèles, avertissement | 400 pas une image lisible (type ou contenu), 413 trop grande, 422 champ manquant, 503 modèles non chargés |
+| `POST /predict/visualize` (multipart, champ `image`, `?max_side=1280`) | image PNG annotée : une boîte par comprimé, couleur stable par classe, étiquette « classe probabilité (det confiance) » ; en-têtes `X-Pill-Count`, `X-Inference-Ms`, `X-Server-Ms` | mêmes erreurs que `/predict` |
+
+L'ancienne route `GET /api/health` (sonde de Docker Compose) reste inchangée.
+
+```bash
+curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8000/model/metadata
+curl -F "image=@photo.jpg;type=image/jpeg" http://127.0.0.1:8000/predict
+curl -F "image=@photo.jpg;type=image/jpeg" -o annotee.png http://127.0.0.1:8000/predict/visualize
+```
+
+Sur les modèles servis (06/11/2026 : détecteur YOLOv8n FP16 v6, classifieur YOLO11s-cls FP32
+v1) et une photo du split de comparaison : `/health` `ok`, fournisseur `CPUExecutionProvider` ;
+`/predict` 1 comprimé, confiance 0,94, `inference_ms` 49, `server_ms` 51.
+
+Tests : [`backend/tests/test_vision.py`](../backend/tests/test_vision.py), chaque route et
+chaque code d'erreur avec les modèles ONNX factices ; test de fumée de l'image Docker dans
+[docker-build.yml](../.github/workflows/docker-build.yml) (`/health` dégradé et `/predict` 503
+sans modèles).
+
+Grad-CAM n'est pas servi par l'API : il demande les gradients du modèle PyTorch, alors que
+l'API n'exécute que l'ONNX (sans PyTorch, D97) ; il est prévu à l'étape 2.6.
 
 ## POST /api/scan
 

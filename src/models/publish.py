@@ -94,11 +94,40 @@ def from_registry(
         "run_id": chosen.run_id,
         "tracking_uri": mlflow.get_tracking_uri(),
     }
+    if (details.tags or {}).get("arch"):
+        info["arch"] = details.tags["arch"]
     if (details.tags or {}).get("variant_of"):
         info["variant_of"] = int(details.tags["variant_of"])
+    info["metrics"] = served_metrics(client, name, details)
     if note:
         info["resolution"] = note
     return onnx_files[0], info
+
+
+METRIC_PREFIXES = ("test_", "val_", "metrics/")
+METRIC_KEYS = {"onnx_cpu_latency_ms", "onnx_cpu_latency_p95_ms", "model_size_mb", "accuracy_drop"}
+
+
+def run_metrics(client: Any, run_id: str | None) -> dict[str, float]:
+    """Evaluation metrics of a run (validation and test scores, latency, size), no losses."""
+    if not run_id:
+        return {}
+    metrics = client.get_run(run_id).data.metrics
+    return {
+        key: float(value)
+        for key, value in sorted(metrics.items())
+        if (key.startswith(METRIC_PREFIXES) or key in METRIC_KEYS) and "loss" not in key
+    }
+
+
+def served_metrics(client: Any, name: str, details: Any) -> dict[str, float]:
+    """Metrics of the published version; a variant adds its own to its champion's (val_*...)."""
+    metrics: dict[str, float] = {}
+    of = (details.tags or {}).get("variant_of")
+    if of:
+        metrics.update(run_metrics(client, client.get_model_version(name, of).run_id))
+    metrics.update(run_metrics(client, details.run_id))
+    return metrics
 
 
 def from_runs(task: str) -> tuple[Path, dict[str, Any]]:
