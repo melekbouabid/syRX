@@ -165,3 +165,50 @@ def test_optimise_registers_variants_and_sets_served(
     manifest = publish.publish(out, use_runs=False, versions={"detect": None, "classify": None})
     assert manifest["classify"]["precision"] == report["chosen"]
     assert json.loads((out / "models.json").read_text(encoding="utf-8")) == manifest
+
+
+def test_latency_rounds_are_interleaved_and_kept_as_medians(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[str] = []
+    timings = {"a": iter([10.0, 30.0, 20.0]), "b": iter([5.0, 7.0, 6.0])}
+
+    def fake_latency(path: Path, files: object, *, runs: int, warmup: int) -> dict[str, float]:
+        calls.append(path.name)
+        value = next(timings[path.name])
+        return {"onnx_cpu_latency_ms": value, "onnx_cpu_latency_p95_ms": 2 * value}
+
+    monkeypatch.setattr(optimize, "isolated_latency", fake_latency)
+    monkeypatch.setattr(optimize, "latency_files", lambda task, data, n: [])
+    settings = {"latency_rounds": 3, "latency_cooldown_s": 0, "latency_runs": 2}
+    out = optimize.measure_latency(
+        "classify", {"fp32": tmp_path / "a", "fp16": tmp_path / "b"}, tmp_path, settings
+    )
+    assert calls == ["a", "b", "a", "b", "a", "b"]  # one pass over every variant per round
+    assert out["fp32"]["onnx_cpu_latency_ms"] == 20.0
+    assert out["fp32"]["onnx_cpu_latency_p95_ms"] == 40.0
+    assert out["fp16"]["onnx_cpu_latency_ms"] == 6.0
+    assert out["fp16"]["latency_rounds"] == 3.0
+
+
+def test_a_new_optimisation_supersedes_the_older_variants(
+    tracking: SimpleNamespace, crops: Path
+) -> None:
+    mlflow.set_experiment(optimize.EXPERIMENT)
+    with mlflow.start_run():
+        info = mu.log_model(tiny_classifier(), name="classifier")
+    champion = mu.register(info.model_uri, tracking.model, alias=serving.CHAMPION).version
+
+    first = optimize.optimise("classify", settings=SETTINGS, data=crops, client=tracking.client)
+    second = optimize.optimise("classify", settings=SETTINGS, data=crops, client=tracking.client)
+
+    def status(report: dict) -> set[str]:
+        return {
+            tracking.client.get_model_version(tracking.model, v["version"]).tags["status"]
+            for v in report["variants"].values()
+            if v["version"]
+        }
+
+    assert status(first) == {"superseded"}
+    assert status(second) == {"variant"}
+    assert mu.alias_version(tracking.model, serving.CHAMPION, tracking.client) == str(champion)

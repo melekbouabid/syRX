@@ -34,6 +34,7 @@ import argparse
 import json
 import os
 import tempfile
+import time
 from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -228,19 +229,45 @@ def build_variants(
     return out
 
 
-def measure(task: str, path: Path, data: Path, settings: dict[str, Any]) -> dict[str, float]:
+def measure(task: str, path: Path, data: Path) -> dict[str, float]:
     scorer: Callable[[Path, Path], dict[str, float]] = (
         score_detector if task == "detect" else score_classifier
     )
-    metrics = scorer(path, data)
+    return {**scorer(path, data), "model_size_mb": q.size_mb(path)}
+
+
+def measure_latency(
+    task: str, paths: dict[str, Path], data: Path, settings: dict[str, Any]
+) -> dict[str, dict[str, float]]:
+    """CPU latency of every variant, in interleaved short rounds separated by a pause.
+
+    A laptop CPU slows down under a sustained load (on the development PC YOLOv8n goes from
+    24 ms to 570 ms per image after about 100 back-to-back passes): one long measurement per
+    variant would compare the first variant on a cool CPU with the next ones on a throttled
+    CPU. Each round times every variant once (`latency_runs` passes, in a fresh process) after
+    `latency_cooldown_s` seconds of rest; the figures kept are the medians over the rounds.
+    """
     files = latency_files(task, data, int(settings.get("latency_images", 20)))
-    latency = isolated_latency(
-        path,
-        files,
-        runs=int(settings.get("latency_runs", 200)),
-        warmup=int(settings.get("latency_warmup", 20)),
-    )
-    return {**metrics, **latency, "model_size_mb": q.size_mb(path)}
+    rounds = max(1, int(settings.get("latency_rounds", 1)))
+    cooldown = float(settings.get("latency_cooldown_s", 0))
+    measured: dict[str, list[dict[str, float]]] = {precision: [] for precision in paths}
+    for _ in range(rounds):
+        for precision, path in paths.items():
+            if cooldown > 0:
+                time.sleep(cooldown)
+            measured[precision].append(
+                isolated_latency(
+                    path,
+                    files,
+                    runs=int(settings.get("latency_runs", 30)),
+                    warmup=int(settings.get("latency_warmup", 5)),
+                )
+            )
+    out: dict[str, dict[str, float]] = {}
+    for precision, rows in measured.items():
+        out[precision] = {key: float(np.median([row[key] for row in rows])) for key in rows[0]}
+        out[precision]["latency_rounds"] = float(rounds)
+    return out
 
 
 # --- MLflow -------------------------------------------------------------------------------
@@ -319,6 +346,22 @@ def log_variant(
     return result
 
 
+def supersede_variants(
+    name: str, champion: str, *, keep: set[str], client: MlflowClient
+) -> list[str]:
+    """Tag `status=superseded` on the older variants of `champion` (a new optimisation ran)."""
+    old = [
+        str(v.version)
+        for v in client.search_model_versions(f"name='{name}'")
+        if (v.tags or {}).get(serving.VARIANT_OF_TAG) == champion
+        and (v.tags or {}).get("status") == "variant"
+        and str(v.version) not in keep
+    ]
+    for version in old:
+        client.set_model_version_tag(name, version, "status", "superseded")
+    return old
+
+
 def optimise(
     task: str,
     *,
@@ -346,8 +389,11 @@ def optimise(
         onnx.save_model(onnx.load(str(sorted(downloaded.rglob("*.onnx"))[0])), str(fp32))
         variants = build_variants(task, fp32, work, settings, data)
         rows: dict[str, dict[str, Any]] = {}
+        latency = measure_latency(
+            task, {precision: path for precision, (path, _) in variants.items()}, data, settings
+        )
         for precision, (path, how) in variants.items():
-            metrics = measure(task, path, data, settings)
+            metrics = {**measure(task, path, data), **latency[precision]}
             print(
                 f"{task} {precision}: {spec.metric}={metrics[spec.metric]:.4f} "
                 f"{metrics['onnx_cpu_latency_ms']:.1f} ms",
@@ -388,6 +434,8 @@ def optimise(
         }
     served = None
     if register:
+        new = {str(v["version"]) for v in logged.values() if v["version"]}
+        supersede_variants(name, str(champion.version), keep=new, client=client)
         chosen = logged[choice.precision]["version"] or str(champion.version)
         serving.set_served(name, chosen, str(champion.version), choice.precision, client)
         client.set_model_version_tag(name, chosen, "served_reason", choice.reason[:5000])

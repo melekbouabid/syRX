@@ -98,8 +98,10 @@ optimize:
   max_drop: 0.01           # absolute: one point of mAP@[.5:.95] or of top-1
   min_speedup: 0.05        # relative: below 5 % the gain is within the measurement noise
   latency_images: 20       # test images cycled through by the latency measurement
-  latency_runs: 200        # timed forward passes (mean and p95), in a fresh process
-  latency_warmup: 20
+  latency_runs: 30         # timed forward passes per round (mean and p95), in a fresh process
+  latency_warmup: 10
+  latency_rounds: 5        # interleaved rounds over the variants, medians kept (D96)
+  latency_cooldown_s: 20   # rest before each timing: the laptop CPU throttles under load
   detector:
     calibration_images: 200   # spread over the 1,315 validation photos of C3PI v2
     calibration_method: minmax
