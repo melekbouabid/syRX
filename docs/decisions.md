@@ -1043,3 +1043,29 @@ changement. Vérification locale : runs « smoke » (tag `smoke=true`, nom `smok
 quelques dizaines d'images, 2 essais, 1 époque), jamais enregistrés dans le Model Registry.
 Aucune fusion dans `main`, aucun tag `model/` ni `v3.1.0-detecteurs` avant les vrais
 entraînements ; les étapes DVC d'entraînement restent gelées sur `main` (D91).
+
+## Optimisation ONNX des champions (2026-11-06)
+
+**D95. Variantes optimisées enregistrées à côté du champion, alias `served` ; l'outillage
+détecteurs est fusionné pour mesurer sur le même split.** L'étape 2.4 compare FP32, FP16 et
+INT8 des deux champions et sert la meilleure variante. Deux contraintes : (1) la promotion
+des détecteurs de l'étape 2.2 encore à importer (`import_kaggle` -> `promote_if_better` sur
+`test_v2_mAP50_95` contre l'alias `champion`) doit rester une comparaison FP32 contre FP32 ;
+(2) le détecteur champion (YOLOv8n, importé le 06/11) doit être mesuré sur le même split et
+par le même code que l'étape 2.2, sans fuite. Choix : chaque variante FP16 / INT8 est un run
+MLflow (`stage=optimize`) et une nouvelle version du même modèle enregistré, avec les tags
+`precision` et `variant_of` (numéro de la version champion) et `status=variant` ; l'alias
+`champion` ne quitte jamais le modèle FP32 ; la variante retenue reçoit l'alias `served` (la
+version champion elle-même si FP32 l'emporte) et la version champion le tag
+`served_precision`. `python -m src.models.publish` publie par défaut la version `served` si
+elle est le champion ou une variante du champion actuel, sinon le champion FP32 (cas d'un
+nouveau champion promu depuis la dernière optimisation, jusqu'à ce que
+`python -m src.models.optimize` soit relancé) ; `--exact` publie l'alias tel quel
+(`src/models/serving.py`). Pour mesurer, la branche `feature/detector-kaggle-tooling` (outillage
+commun de l'étape 2.2 : jeu de détection v2 et `test_holdout.txt`, métriques COCO, latence
+ONNX CPU en processus isolé, import Kaggle) est fusionnée dans `perf/onnx-quantization`, donc
+dans `main` ; aucune branche `experiment/*` n'est fusionnée et l'étape 2.2 reste en attente des
+runs Kaggle (D94). Rejeté : un modèle enregistré séparé par précision (la variante perd le
+lien avec son champion dans la vue du Registry) ; mettre l'alias `champion` sur la variante
+quantifiée (`promote_if_better` comparerait les candidats FP32 au score de la variante) ;
+dupliquer les métriques et la latence dans un autre module (deux codes de mesure divergeraient).
