@@ -212,3 +212,21 @@ def test_a_new_optimisation_supersedes_the_older_variants(
     assert status(first) == {"superseded"}
     assert status(second) == {"variant"}
     assert mu.alias_version(tracking.model, serving.CHAMPION, tracking.client) == str(champion)
+
+
+def test_latency_budget_reaches_every_timing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: list[float] = []
+
+    def fake_latency(path: Path, files: object, **kwargs: float) -> dict[str, float]:
+        seen.append(kwargs["budget_s"])
+        return {"onnx_cpu_latency_ms": 1.0}
+
+    monkeypatch.setattr(optimize, "isolated_latency", fake_latency)
+    monkeypatch.setattr(optimize, "latency_files", lambda task, data, n: [])
+    settings = {"latency_rounds": 2, "latency_cooldown_s": 0, "latency_budget_s": 1.5}
+    optimize.measure_latency(
+        "detect", {"a": tmp_path / "a", "b": tmp_path / "b"}, tmp_path, settings
+    )
+    assert seen == [1.5] * 4

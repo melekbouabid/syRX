@@ -82,7 +82,8 @@ def protocol(settings: dict[str, Any]) -> str:
         f"interleaved rounds (D96): {int(settings.get('latency_rounds', 1))} rounds x "
         f"{int(settings.get('latency_runs', 30))} passes after "
         f"{int(settings.get('latency_warmup', 5))} warm-up, "
-        f"{float(settings.get('latency_cooldown_s', 0)):g} s rest before each, "
+        f"{float(settings.get('latency_cooldown_s', 0)):g} s rest before each, at most "
+        f"{float(settings.get('latency_budget_s', 0)):g} s of load each (0 = no limit), "
         f"{int(settings.get('latency_images', 20))} test images, medians of the rounds"
     )
 

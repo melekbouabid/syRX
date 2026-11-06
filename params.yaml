@@ -102,6 +102,8 @@ optimize:
   latency_warmup: 10
   latency_rounds: 5        # interleaved rounds over the variants, medians kept (D96)
   latency_cooldown_s: 20   # rest before each timing: the laptop CPU throttles under load
+  latency_budget_s: 1.5    # seconds of load per timing at most: past ~2 s the laptop CPU
+                           # slows down ~15x (D98); one API request is far below that
   detector:
     calibration_images: 200   # spread over the 1,315 validation photos of C3PI v2
     calibration_method: minmax
