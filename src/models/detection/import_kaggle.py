@@ -3,6 +3,13 @@
     # training venv, MLflow server running (docker compose up -d mlflow)
     python -m src.models.detection.import_kaggle runs/kaggle/out/detector-yolov8n
     python -m src.models.detection.import_kaggle <folder or .zip> --smoke   # never registered
+    python -m src.models.detection.import_kaggle --no-latency a.zip b.zip   # several, best first
+
+Several exports are imported best first (promotion metric of their run.json, `promotion_order`)
+so that the result of promote_if_better does not depend on the order of the arguments (D98);
+`--keep-order` keeps the given order. `--no-latency` skips the single local timing: the
+comparable figure is then measured for every detector together, in interleaved rounds, by
+src/models/detection/compare_latency.py (D96, D98).
 
 What it creates in the experiment `tujya-vision`:
 
@@ -76,13 +83,51 @@ def load_export(path: Path, work: Path) -> Path:
 
 
 def read_run(folder: Path) -> dict[str, Any]:
-    run = json.loads((folder / "run.json").read_text(encoding="utf-8"))
+    return check_run(json.loads((folder / "run.json").read_text(encoding="utf-8")))
+
+
+def check_run(run: dict[str, Any]) -> dict[str, Any]:
     if run.get("schema") != SUPPORTED_SCHEMA:
         raise ImportErrorKaggle(f"run.json schema {run.get('schema')} (expected 1)")
     for key in ("arch", "family", "trials", "final", "code", "dataset"):
         if key not in run:
             raise ImportErrorKaggle(f"run.json has no {key!r}")
     return run
+
+
+def peek_run(path: Path) -> dict[str, Any]:
+    """run.json of an export folder or .zip, without extracting the archive."""
+    if path.is_file() and path.suffix == ".zip":
+        with zipfile.ZipFile(path) as archive:
+            members = sorted(
+                (m for m in archive.namelist() if m.rsplit("/", 1)[-1] == "run.json"), key=len
+            )
+            if not members:
+                raise ImportErrorKaggle(f"no run.json in {path}")
+            return check_run(json.loads(archive.read(members[0]).decode("utf-8")))
+    if not (path / "run.json").is_file():
+        raise ImportErrorKaggle(f"no run.json in {path}")
+    return read_run(path)
+
+
+def promotion_order(exports: list[Path], metric: str) -> list[Path]:
+    """The exports by decreasing promotion metric (final test score in run.json).
+
+    promote_if_better compares each candidate with the champion in place, with a minimal
+    gain, so a sequence of imports depends on its order: a candidate imported after a
+    slightly weaker one that was just promoted may no longer beat it by the minimal gain.
+    Imported best first, the result is the same for any order given on the command line:
+    the champion is the best candidate if it beats the champion in place by the minimal gain
+    (otherwise none does), and the challenger is the best of the others and of the former
+    champion (docs/decisions.md D98). Exports without the metric come last, in their order.
+    """
+
+    def score(path: Path) -> float:
+        value = peek_run(path)["final"].get("metrics", {}).get(metric)
+        return float(value) if isinstance(value, int | float) else float("-inf")
+
+    scores = {path: score(path) for path in exports}
+    return sorted(exports, key=lambda path: -scores[path])
 
 
 def _flat(values: Mapping[str, Any]) -> dict[str, float]:
@@ -351,10 +396,19 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--no-latency", action="store_true", help="skip the local CPU timing")
     parser.add_argument("--experiment", default=EXPERIMENT)
     parser.add_argument("--data", type=Path, default=LOCAL_DATA, help="test images for timing")
+    parser.add_argument(
+        "--keep-order",
+        action="store_true",
+        help="import in the order given (default: best promotion metric first, D98)",
+    )
     args = parser.parse_args(argv)
     console_utf8()
     mu.configure()
-    for export in args.exports:
+    exports = list(args.exports)
+    if not args.keep_order:
+        exports = promotion_order(exports, compare_rules()["metric"])
+        print("import order:", ", ".join(str(e) for e in exports))
+    for export in exports:
         with tempfile.TemporaryDirectory() as tmp:
             folder = load_export(export, Path(tmp))
             result = import_export(

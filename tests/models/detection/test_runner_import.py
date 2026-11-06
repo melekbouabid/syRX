@@ -277,3 +277,38 @@ def test_runner_reports_why_every_trial_failed(
     data = make_dataset(tmp_path / "data")
     with pytest.raises(RuntimeError, match="no such setting"):
         runner.run_experiment(FAKE, data, tmp_path / "out", smoke=True, log=lambda _: None)
+
+
+def _fake_export(base: Path, arch: str, score: float | None, *, archive: bool) -> Path:
+    run = {
+        "schema": 1,
+        "arch": arch,
+        "family": "fake",
+        "trials": [],
+        "code": {},
+        "dataset": {},
+        "final": {"metrics": {} if score is None else {"test_v2_mAP50_95": score}},
+    }
+    folder = base / f"detector-{arch}"
+    folder.mkdir(parents=True)
+    (folder / "run.json").write_text(json.dumps(run), encoding="utf-8")
+    if not archive:
+        return folder
+    path = base / f"detector_{arch}_export.zip"
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.write(folder / "run.json", f"detector-{arch}/run.json")
+    return path
+
+
+def test_exports_are_imported_best_first(tmp_path: Path) -> None:
+    exports = [
+        _fake_export(tmp_path, "a", 0.8830, archive=True),
+        _fake_export(tmp_path, "b", None, archive=False),
+        _fake_export(tmp_path, "c", 0.8885, archive=False),
+        _fake_export(tmp_path, "d", 0.8218, archive=True),
+        _fake_export(tmp_path, "e", 0.8860, archive=True),
+    ]
+    ordered = import_kaggle.promotion_order(exports, "test_v2_mAP50_95")
+    assert [import_kaggle.peek_run(p)["arch"] for p in ordered] == ["c", "e", "a", "d", "b"]
+    with pytest.raises(import_kaggle.ImportErrorKaggle, match=r"no run\.json"):
+        import_kaggle.peek_run(tmp_path)
