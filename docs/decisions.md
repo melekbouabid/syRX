@@ -981,3 +981,108 @@ journalisés avec l'API MLflow 3 (`name=`, un LoggedModel par export ONNX, métr
 3.17.2 (même version que le serveur) et `alembic` rejoignent `requirements-dev.txt`, et les
 tests tournent sur une base SQLite temporaire : le stockage par fichiers (`./mlruns`) est en
 mode maintenance dans MLflow 3.17 et refuse de démarrer sans option.
+
+## Comparaison des détecteurs (2026-11-04)
+
+**D93. Les détecteurs de l'étape 2.2 sont entraînés sur C3PI v2 et tous comparés sur le
+même split de test, baseline comprise.** L'étape 1.4 prévoit que les modèles soient
+« ensuite entraînés et comparés sur les nouvelles données » (D88) : les cinq candidats
+(YOLOv8n, YOLOv8s, YOLO11s, YOLOv10n, Faster R-CNN) sont entraînés sur v2. La détection n'a
+qu'une classe (« pill ») : le jeu de détection v2 reprend les photos « consumer » du split v2
+(D89), étiquetées par le même `src/data/autolabel.py` que v1, avec la même règle (les photos
+douteuses sont écartées) ; les images de studio, RxImage et du challenge (comprimé seul sur
+fond uni) restent pour le classifieur. Nouvelle étape DVC `prepare_detect_v2`
+(`data/processed/c3pi/datasets_v2/detect`, images 640 px). Problème d'équité constaté : le
+split v1 n'était pas fait par session, et 436 photos d'entraînement de la baseline (YOLO11n,
+entraînée sur v1) tombent dans le test v2. Le comparer sur tout le test v2 le favoriserait.
+Choix : un split de comparaison `test_holdout.txt` = les photos de test v2 dont la session
+(groupe D89) ne contient aucune photo vue par la baseline en train ou en val ; tous les
+modèles, baseline comprise, sont mesurés dessus par le même code
+(`src/models/detection/metrics.py`, protocole COCO à 101 points, au plus 100 détections par
+image, précision et rappel au seuil de meilleur F1), métrique `test_v2_mAP50_95`, qui devient
+la métrique de promotion de l'étape (`params.yaml`, `compare.detector.metric`, avec le gain
+minimal de `registry.detector.min_gain`). Le test v2 complet est aussi rapporté
+(`test_v2_all_*`). La baseline est réévaluée sur ce split par
+`python -m src.models.detection.evaluate_champion` (run `evaluate-detector-v1-c3pi-v2`, et
+métriques ajoutées au run de la version, où `promote_if_better` les lit) ; l'import refuse de
+promouvoir tant que le champion n'a pas cette métrique. `registry.detector.metric` (split v1)
+reste celui de l'étape DVC `export_onnx`, inchangée. La latence comparée est celle de ONNX
+Runtime sur le CPU du PC de développement, mesurée à l'import pour chaque modèle et pour la
+baseline (même machine) ; celle du CPU de Kaggle est gardée à part (`kaggle_*`). Rejeté :
+rester sur v1 (contraire à l'étape 1.4, et le split v1 a des sessions partagées entre
+splits) ; comparer la baseline sur tout le test v2 (fuite) ; réentraîner la baseline sur v2
+dans cette étape (c'est le rôle de la branche `experiment/detector-yolo11s` et des autres
+candidats ; la baseline reste la référence servie).
+
+**D94. Étape 2.2 en mode « en attente Kaggle » : branche commune d'outillage, une branche
+par modèle, runs exportés puis importés dans MLflow.** Il n'y a ni compte ni jeton Kaggle sur
+ce PC (et le GPU local, 4 Go, ne suffit pas pour cinq recherches d'hyperparamètres). Tout ce
+qui ne demande pas le GPU de Kaggle est fait et testé : le code commun est sur
+`feature/detector-kaggle-tooling` (jeu de détection v2, métriques, latence ONNX CPU, espaces
+Optuna, exécuteur d'expérience, empaquetage du dataset Kaggle, import MLflow, réévaluation du
+champion, tableau et figure de comparaison, générateur de notebooks), et chaque branche
+`experiment/detector-<archi>` part de cette branche et ajoute ce qui est propre au modèle :
+sa configuration Optuna `config/hpo/detector_<archi>.yaml`, son notebook
+`notebooks/kaggle/detector_<archi>.ipynb` et, pour `experiment/detector-fasterrcnn`, le code
+torchvision et ses tests (job CI `vision` avec PyTorch CPU). Ainsi l'historique montre
+l'outillage une fois, puis une branche par expérience ; seule la branche du champion sera
+fusionnée dans `main` (avec l'outillage qu'elle contient). Les notebooks clonent leur branche
+(le `git_commit` du run est celui du code exécuté), lisent le dataset Kaggle privé (avec son
+`MANIFEST.json` : hash DVC et `dvc_rev`) et n'écrivent que dans un dossier d'export
+(`run.json`, poids, ONNX, essais) : aucun serveur MLflow n'est exposé, aucun secret n'est mis
+dans un notebook (D69). `python -m src.models.detection.import_kaggle` crée un run parent par
+modèle et un run enfant par essai Optuna dans `tujya-vision` (vues Compare et Parallel
+Coordinates), puis enregistre l'ONNX et appelle `promote_if_better`. Recherche : Optuna (TPE
+avec graine), 8 à 12 essais par modèle sur `lr0` (plage selon l'optimiseur), `imgsz`,
+`batch`, l'optimiseur (SGD / AdamW) et les augmentations (mosaic, mixup, HSV, flips ; pour
+Faster R-CNN, HSV et flips seulement, mosaic et mixup n'ayant pas d'équivalent torchvision),
+chaque essai sur une partie du train et noté sur la validation, puis le meilleur réentraîné
+sur tout le train et évalué une seule fois sur le test. Faster R-CNN est exporté au même
+format ONNX que les YOLO (entrée 1x3xSxS, sortie 1x5xN), donc l'API le servirait sans
+changement. Vérification locale : runs « smoke » (tag `smoke=true`, nom `smoke-...`,
+quelques dizaines d'images, 2 essais, 1 époque), jamais enregistrés dans le Model Registry.
+Aucune fusion dans `main`, aucun tag `model/` ni `v3.1.0-detecteurs` avant les vrais
+entraînements ; les étapes DVC d'entraînement restent gelées sur `main` (D91).
+
+## Optimisation ONNX des champions (2026-11-06)
+
+**D95. Variantes optimisées enregistrées à côté du champion, alias `served` ; l'outillage
+détecteurs est fusionné pour mesurer sur le même split.** L'étape 2.4 compare FP32, FP16 et
+INT8 des deux champions et sert la meilleure variante. Deux contraintes : (1) la promotion
+des détecteurs de l'étape 2.2 encore à importer (`import_kaggle` -> `promote_if_better` sur
+`test_v2_mAP50_95` contre l'alias `champion`) doit rester une comparaison FP32 contre FP32 ;
+(2) le détecteur champion (YOLOv8n, importé le 06/11) doit être mesuré sur le même split et
+par le même code que l'étape 2.2, sans fuite. Choix : chaque variante FP16 / INT8 est un run
+MLflow (`stage=optimize`) et une nouvelle version du même modèle enregistré, avec les tags
+`precision` et `variant_of` (numéro de la version champion) et `status=variant` ; l'alias
+`champion` ne quitte jamais le modèle FP32 ; la variante retenue reçoit l'alias `served` (la
+version champion elle-même si FP32 l'emporte) et la version champion le tag
+`served_precision`. `python -m src.models.publish` publie par défaut la version `served` si
+elle est le champion ou une variante du champion actuel, sinon le champion FP32 (cas d'un
+nouveau champion promu depuis la dernière optimisation, jusqu'à ce que
+`python -m src.models.optimize` soit relancé) ; `--exact` publie l'alias tel quel
+(`src/models/serving.py`). Pour mesurer, la branche `feature/detector-kaggle-tooling` (outillage
+commun de l'étape 2.2 : jeu de détection v2 et `test_holdout.txt`, métriques COCO, latence
+ONNX CPU en processus isolé, import Kaggle) est fusionnée dans `perf/onnx-quantization`, donc
+dans `main` ; aucune branche `experiment/*` n'est fusionnée et l'étape 2.2 reste en attente des
+runs Kaggle (D94). Rejeté : un modèle enregistré séparé par précision (la variante perd le
+lien avec son champion dans la vue du Registry) ; mettre l'alias `champion` sur la variante
+quantifiée (`promote_if_better` comparerait les candidats FP32 au score de la variante) ;
+dupliquer les métriques et la latence dans un autre module (deux codes de mesure divergeraient).
+
+**D96. INT8 du détecteur : tête YOLO gardée en float ; latence mesurée en tours entrelacés.**
+Quantification statique (QDQ, int8 par canal, calibration MinMax sur 200 photos du val v2,
+jamais le test) : les nœuds de la tête de détection (`/model.22/`, trouvés depuis la sortie du
+graphe par `output_module_prefix`) restent en float, car le décodage des boîtes manipule des
+coordonnées en pixels (0 à 640) qu'un seul facteur d'échelle int8 arrondit trop. Essai sur 200
+photos de test de comparaison : tête en float mAP@[.5:.95] 0,854 ; seul le décodage en float
+0,848 ; quantification dynamique 0,832 (FP32 0,876). Le classifieur est quantifié en entier
+(300 crops du val v1). Latence : le PC portable de développement se bride sous charge soutenue
+(YOLOv8n passe de 24 ms à 570 ms par image après une centaine de passes enchaînées) ; une
+mesure longue par variante avantageait la première mesurée. Chaque variante est donc chronométrée
+en 5 tours entrelacés (30 passes dans un processus neuf, 20 s de pause avant chaque mesure),
+médiane des tours (`params.yaml`, `optimize`). Les 8 runs et versions d'une première exécution
+mesurés avec l'ancienne méthode (200 passes d'affilée) restent dans MLflow avec le tag
+`status=superseded`. Rejeté : quantifier aussi la tête (perte de localisation), exclure en plus
+la première convolution (gain de 0,008 sur l'essai, non retenu pour garder une règle simple par
+architecture), mesurer sur GPU (l'API sert sur CPU).

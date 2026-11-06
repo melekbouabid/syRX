@@ -51,7 +51,6 @@ OUT = ROOT / "models" / "train"
 # The DVC output the training images come from (its hash becomes the run tag dataset_md5).
 DATASET_PATH = "data/processed/c3pi/datasets"
 MODELS = {"detect": "detector", "classify": "classifier"}  # keys of params.yaml, file names
-REGISTERED = {"classify": "tujya-pill-classifier", "detect": "tujya-pill-detector"}
 EXPERIMENT = "tujya-vision"
 # Hyperparameters read from params.yaml train.<model> (a command-line flag overrides them).
 HYPERPARAMETERS = ("weights", "epochs", "imgsz", "batch", "patience", "fraction", "workers")

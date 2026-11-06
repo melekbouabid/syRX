@@ -38,7 +38,9 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Meilleur modèle enregistré dans le Model Registry de MLflow
 - [x] MLflow conforme au lab (étape 2.1) : runs tracés (`git_commit`, `dvc_rev`, `dataset`, `seed`, requirements + `dvc.lock`), LoggedModel MLflow 3, alias `champion` / `challenger`, `promote_if_better` ; étapes DVC `train_detector`, `train_classifier`, `export_onnx`, `evaluate` ; baseline YOLO11n + YOLO11s-cls champion ([mlflow.md](module1/mlflow.md), D91-D92)
 - [ ] Comparer d'autres détecteurs et classifieurs, recherche d'hyperparamètres (étapes 2.2 et 2.3, GPU Kaggle)
+  - Détecteurs (étape 2.2) : code, espaces Optuna, notebooks Kaggle et import MLflow prêts sur `feature/detector-kaggle-tooling` et les branches `experiment/detector-*` ; entraînements Kaggle à lancer ([kaggle_detecteurs.md](module1/kaggle_detecteurs.md), D93-D94)
 - [x] Export ONNX, inférence avec ONNX Runtime, sorties identiques à PyTorch
+- [x] Optimisation des champions (étape 2.4) : variantes FP16 / INT8 (statique calibrée sur le val, dynamique), précision, latence moyenne / p95 et taille dans MLflow ; détecteur YOLOv8n servi en FP16 (-0,0016 mAP, 7 % plus rapide), classifieur en FP32 ; INT8 plus lent sur ce CPU ([optimisation_onnx.md](module1/optimisation_onnx.md), D95-D96)
 - [x] Mesurer top-1 / top-5 (identification) et mAP (détection)
 - [ ] Comparer avec ePillID sur son propre split et ses métriques ([vision.md](module1/vision.md))
 - [ ] Vérifier à la main les boîtes de test ; second passage d'étiquetage avec le détecteur entraîné

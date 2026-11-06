@@ -10,3 +10,8 @@ onnx>=1.17
 onnxruntime>=1.20
 onnxslim>=0.1.50
 pytest>=8
+# Detector comparison (step 2.2): hyperparameter search, notebooks run locally in smoke mode.
+optuna==5.0.0
+nbformat>=5.10
+nbclient>=0.10
+ipykernel>=6.29
