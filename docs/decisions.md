@@ -1166,3 +1166,148 @@ garderait des décisions contradictoires) ; promouvoir YOLOv10n pour sa vitesse 
 règle de promotion annoncée) ; garder la latence mesurée à l'import (une mesure isolée par
 modèle, sur un processeur plus ou moins chaud) ; changer le nombre de fils d'ONNX Runtime pour
 éviter le ralentissement (l'API garde le réglage par défaut).
+
+## Comparaison des classifieurs (2026-11-08)
+
+**D99. Les classifieurs de l'étape 2.3 sont entraînés sur les crops de C3PI v2 et tous comparés
+sur le même split, champion v1 compris.** Comme les détecteurs (D93), les six candidats sont
+entraînés sur v2 (380 classes, étape 1.4). Nouvelle étape DVC `prepare_classify_v2`
+(`src/data/prepare_classify_v2.py`, sortie `data/processed/c3pi/datasets_v2/classify`) : le crop
+carré (marge de 20 %, 256 px) de chaque comprimé de chaque image du split v2 (D89), c'est-à-dire
+le crop que l'API donne au classifieur (`square_crop`) ; boîtes des photos « consumer » par
+`autolabel.py` (photos douteuses écartées, même règle que v1 et que la détection), images de
+référence RxNav, images du challenge NLM, images de studio segmentées (masque alpha, comprimé
+posé sur un fond gris) et augmentation hors ligne des classes rares (étape `spark_augment`,
+tirée du train seulement). La validation et le test ne contiennent que des photos « consumer »,
+les conditions de l'application. Résultat : 15 424 / 1 461 / 1 713 crops (train / val / test),
+au moins 10 crops de train par classe. Problème d'équité, le même qu'en D93 : 582 crops de test
+v2 viennent de sessions de prise de vue dont le champion v1 (YOLO11s-cls, 150 classes) a vu des
+photos en train ou en val. Split de comparaison `test_holdout.txt` : les 1 131 crops de test dont
+la session ne contient aucune photo vue par v1 (`baseline_groups` de D93), dont 275 des 150
+classes v1 ; 57 classes n'y ont aucun crop. Un seul code de mesure pour tous les modèles et pour
+le champion (`src/models/classification/metrics.py`, à partir des probabilités) : top-1, top-5,
+F1 macro (moyenne sur les classes présentes dans la vérité ou dans la prédiction), matrice de
+confusion et scores par classe ; métriques `test_v2_*` (split de comparaison), `test_v2_all_*`
+(test v2 complet, contient le split, donc pas une mesure indépendante) et `test_v2_v1c_*` (D100).
+Métrique de promotion `test_v2_top1` (`params.yaml`, `compare.classifier.metric`), gain minimal
+`registry.classifier.min_gain` (0,005) ; `registry.classifier.metric` (`test_top1`, split v1)
+reste celui de l'étape DVC `export_onnx`. Rejeté : rester sur les 150 classes de v1 (contraire à
+l'étape 1.4, split v1 non fait par session) ; mesurer le champion sur tout le test v2 (fuite) ;
+mettre des images de studio ou augmentées dans la validation (le choix des hyperparamètres se
+ferait sur d'autres images que celles de l'application).
+
+**D100. Le champion v1 est noté sur les 380 classes, ses classes inconnues comptant comme
+erreurs ; promotion sur `test_v2_top1` avec un garde-fou sur les 150 classes de v1, indépendante
+de l'ordre d'import.** Le champion ne connaît que 150 classes. `python -m
+src.models.classification.evaluate_champion` note le fichier ONNX enregistré (celui que sert
+l'API) avec le prétraitement de l'API : ses 150 sorties sont reportées sur les identifiants v2
+par la clé C3PI du produit (`class_key`, colonne `v1_class_id` de `classes.csv`), les 230 autres
+classes reçoivent un score de -1 (jamais classées avant une classe connue), donc leurs crops
+comptent comme des erreurs dans `test_v2_*` : c'est ce que verrait un utilisateur, le modèle
+servi ne peut pas reconnaître ces comprimés (au mieux 275 / 1 131 = 24,3 % de top-1). Pour
+comparer à classes égales, `test_v2_v1c_*` note tous les modèles, champion compris, sur les
+crops de comparaison des 150 classes v1, la prédiction étant restreinte à ces 150 classes (même
+espace d'étiquettes). Champion (version 1) mesuré le 08/11 (run `evaluate-classifier-v1-c3pi-v2`) :
+`test_v2_top1` 0,1830 (207 crops justes sur 1 131, tous parmi ses classes), top-5 0,2246, F1
+macro 0,1119 ; `test_v2_v1c_top1` 0,7527 (top-5 0,9236, contre 0,937 de top-1 sur le test v1 :
+les nouvelles sessions sont plus difficiles) ; sur le test v2 complet, qui contient 582 crops de
+sessions qu'il a vues, 0,4466 (la fuite que le split retire). Règle
+de promotion : un candidat est promu s'il bat le champion en place d'au moins 0,005 sur
+`test_v2_top1` ; garde-fou : un candidat dont `test_v2_v1c_top1` est plus de 0,01 en dessous de
+celui de la baseline v1 (version marquée `baseline=true`, `compare.classifier.guard_max_drop`,
+environ 3 des 275 crops, la tolérance de l'étape 2.4) est archivé quel que soit son score
+(`promote_if_better(..., eligible=False)`, tag `promotion` « not eligible ») : un modèle à
+380 classes ne doit pas reconnaître moins bien les 150 comprimés que l'application identifie
+aujourd'hui. L'import refuse de promouvoir tant que le champion n'a pas `test_v2_top1` et la
+référence `test_v2_v1c_top1`. Ordre d'import (D98) : plusieurs exports donnés en un appel sont
+importés du meilleur au moins bon sur `test_v2_top1` ; un candidat inéligible est archivé sans
+toucher aux alias ; le résultat est donc, pour tout ordre des arguments : parmi les candidats
+éligibles, le meilleur devient champion s'il bat le champion en place du gain minimal, et le
+challenger est le meilleur des autres et de l'ancien champion. La réévaluation ajoute les scores
+`test_v2_*` au run de la version (où `promote_if_better` les lit) mais pas sa latence, mesurée
+seule : la latence comparée reste celle du protocole entrelacé (D96, `compare_latency --task
+classify`). Rejeté : comparer seulement sur les 150 classes de v1 (ignorerait les 230 nouvelles
+classes, le but de l'étape 1.4) ; promouvoir sur `test_v2_top1` sans garde-fou (le champion
+plafonne à 24,3 %, tout modèle v2 le battrait même en reconnaissant moins bien les comprimés
+actuels) ; réentraîner v1 sur v2 dans cette décision (c'est la branche
+`experiment/classifier-yolo11s-cls`).
+
+**D101. Export ONNX au format du classifieur servi, liste de classes livrée dans le modèle ; la
+table de classes de l'API passe à v2 avant de servir un classifieur v2.** Tous les candidats
+sont exportés comme le YOLO11s-cls servi : une entrée `images` 1x3xSxS (RGB en float dans
+[0, 1], le crop carré redimensionné en INTER_AREA par `backend/app/inference.py`), une sortie
+`output0` 1xN de probabilités (softmax dans le graphe, comme l'export Ultralytics), opset 17 ; la
+normalisation ImageNet est faite dans le réseau (`ClassifierNet`), donc l'API ne change pas. La
+parité PyTorch / ONNX est mesurée sur 100 crops de test (`parity_*`). Les métadonnées ONNX
+portent la liste de classes : `names` (index de sortie -> dossier `000` à `379`, ce que lit
+l'API), `class_keys` (index -> clé C3PI, NDC9 et partie, stable d'une version des données à
+l'autre), `label_space=c3pi-v2`, `num_classes`, `imgsz`, `arch` ; `classes.csv` est copié dans
+chaque export. Problème : l'API lit `names` comme le `class_id` de `config/pill_classes.csv`
+(les 150 classes de v1) ; les identifiants v2 ne sont pas ceux de v1 (7 sur 150 coïncident) et
+230 classes n'y sont pas : servi tel quel, un classifieur v2 afficherait le mauvais médicament.
+Choix : `python -m src.models.publish` refuse un classifieur dont les `class_keys` ne désignent
+pas, pour chaque sortie, le même produit que la ligne de `config/pill_classes.csv` nommée par
+`names` (`check_class_table`) ; l'export Ultralytics de v1 n'a pas de `class_keys` et passe comme
+avant. Pour servir le champion de l'étape 2.3 (fin d'étape, après Kaggle), `config/pill_classes.csv`
+devra décrire les 380 classes v2 avec leurs identifiants v2 (mêmes colonnes, principes actifs
+par RxNorm comme pour v1) et les tables de médicaments être rechargées ; `models/` n'est pas
+modifié à cette étape. Rejeté : réécrire `names` vers les identifiants v1 à la publication
+(impossible pour 230 classes) ; un adaptateur dans l'API avec deux tables de classes (deux
+sources de vérité) ; un export Ultralytics pour les modèles torchvision (pas de format commun).
+
+**D102. Une recette d'entraînement pour les six classifieurs, recherchée par Optuna.** Une seule
+boucle (`src/models/classification/torch_backend.py`) et une seule enveloppe
+(`src/models/architecture.py`) pour : un petit CNN maison entraîné sans poids préentraînés (la
+baseline, 4 blocs de convolutions, 1,3 M paramètres), ResNet-50, EfficientNetV2-S,
+ConvNeXt-Tiny, ViT-B/16 (224 px, imposé par ses plongements de position ; retenu plutôt que
+Swin-T : même bibliothèque, Grad-CAM sur ses jetons) et YOLO11s-cls (l'architecture servie,
+réentraînée sur v2), tous préentraînés sur ImageNet-1k sauf la baseline. *Transfer learning*
+puis *fine-tuning* sélectif : `head_epochs` époques avec la tête seule (colonne vertébrale gelée,
+batch norm en évaluation), puis les `unfreeze` derniers blocs dégelés et entraînés à
+`lr x backbone_lr_mult` (AdamW, décroissance cosinus, pas de *weight decay* sur les biais et les
+normalisations) ; la baseline entraîne tout le réseau au même taux. Déséquilibre (10 à 80 crops
+de train par classe) : `imbalance` = aucun, poids de classe ((n_c / moyenne)^-0,5, comptes du
+train) ou *focal loss* (gamma 2, mêmes poids), choisi par la recherche. Augmentation du train
+seulement : rotation quelconque puis crop redimensionné aléatoire (70 à 100 % de la surface),
+RandAugment (magnitude 0 à 12), MixUp ou CutMix sur une part `mix_prob` des lots, *label
+smoothing* ; pas de miroir (une empreinte inversée n'existe pas sur un vrai comprimé) ; la
+validation et le test ne reçoivent que le redimensionnement de l'API (aucune fuite). Recherche
+(`config/hpo/classifier_<archi>.yaml`, une par branche) : TPE avec graine (5 essais aléatoires
+d'abord) sur `lr`, `weight_decay`, `backbone_lr_mult`, `unfreeze` (blocs dégelés), `imgsz` (192
+ou 224 ; baseline 128 à 192 avec sa largeur et son dropout), `randaugment`, `mix_prob`,
+`label_smoothing` et `imbalance` ; chaque essai sur une part stratifiée du train, noté sur
+`val_top1` ; le meilleur est réentraîné sur tout le train (arrêt précoce sur la validation) et
+évalué une seule fois sur le test. Mesures sur le PC qui ont changé le code de la session
+précédente : `channels_last` rendait la rétropropagation des réseaux à batch norm 10 à 13 fois
+plus lente (RTX 2050, torch 2.14 : ResNet-50 10 contre 113 images/s), d'où le format mémoire par
+défaut ; la rotation et le crop redimensionné de torchvision coûtaient 8,7 ms par crop sur un
+cœur, un seul `cv2.warpAffine` 0,3 ms (chargement à 4 processus : 133 -> 615 crops/s sans
+RandAugment, 378 avec). Grad-CAM (`src/utils/gradcam.py`) : 8 images par export (moitié justes,
+moitié fausses) sur la dernière carte de convolution de chaque architecture, sur la norme
+d'entrée du dernier bloc pour ViT (jetons remis en grille 14 x 14) ; il n'est pas servi par l'API
+(D97). Rejeté : un code d'entraînement par bibliothèque (Ultralytics pour YOLO, torchvision pour
+les autres : deux recettes, comparaison inéquitable) ; une recherche par Ultralytics `tune`
+(YOLO seulement).
+
+**D103. Étape 2.3 en mode « en attente Kaggle », comme D94 ; budget de 20 h de GPU.** Pas de
+compte Kaggle sur ce PC et un GPU de 4 Go : le code commun est sur
+`feature/classifier-kaggle-tooling`, chaque branche `experiment/classifier-<archi>` (baseline-cnn,
+resnet50, efficientnetv2s, convnext-tiny, vit-b16, yolo11s-cls) en part et ajoute sa
+configuration Optuna et son notebook (`notebooks/kaggle/classifier_<archi>.ipynb`, qui clone sa
+branche) ; le job CI `vision` installe PyTorch CPU et Ultralytics pour les tests des
+architectures, de l'entraînement, de l'export ONNX et de Grad-CAM. Runs « smoke » locaux
+(`smoke=true`, nom `smoke-...`) jamais enregistrés dans le Model Registry. Budget : débit
+d'entraînement mesuré sur le PC (précision mixte, lot de 16 à 64) multiplié par 2,5 pour un T4
+(bande passante mémoire et calcul FP16), et plafonné à environ 250 crops/s par le chargement des
+données sur les 4 cœurs de Kaggle (débit du PC divisé par deux) : environ 1,1 min par époque
+complète pour la baseline, ResNet-50 et YOLO11s-cls, 1,6 min pour ConvNeXt-Tiny, 2,2 min pour
+EfficientNetV2-S et 2,5 min pour ViT-B/16. Essais, époques et part du train de chaque
+configuration sont réglés pour environ 15,5 h attendues au total (installation, test, export et
+Grad-CAM compris, environ 15 min par notebook), et les limites de temps (`timeout_hours` de la
+recherche, `max_hours` du réentraînement) bornent le total à environ 18,7 h si les estimations sont
+trop optimistes : moins que le budget de 20 h fixé, que le quota gratuit d'environ 30 h par
+semaine et que la limite de 12 h par session. Calcul détaillé par notebook dans
+`docs/module1/kaggle_classifieurs.md`. Aucune fusion dans `main`, aucun tag `model/` ni
+`v3.2.0-classifieurs` avant les vrais entraînements. Rejeté : entraîner sur le GPU du PC (4 Go,
+environ 2,5 fois plus lent qu'un T4, plusieurs jours) ; une seule branche pour les six modèles
+(contraire à la remarque 5 du professeur).
