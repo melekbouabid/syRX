@@ -109,18 +109,60 @@ def smooth(targets: torch.Tensor, epsilon: float) -> torch.Tensor:
 # --- data ---------------------------------------------------------------------------------
 
 
-def train_transform(imgsz: int, randaugment: int = 0, ops: int = 2) -> Callable[..., Any]:
-    """Augmentation of the train crops (uint8 CHW tensor in, float CHW in [0, 1] out)."""
-    from torchvision.transforms import v2
+def random_view(image: np.ndarray, size: int, rng: np.random.Generator | None = None) -> np.ndarray:
+    """A random rotation (any angle, grey corners) then a random resized crop (70 to 100 % of
+    the area, aspect ratio 0.85 to 1.18) of a BGR crop, size x size, in one cv2.warpAffine.
 
-    steps: list[Any] = [
-        v2.RandomRotation(degrees=180, fill=ROTATION_FILL),
-        v2.RandomResizedCrop(imgsz, scale=(0.7, 1.0), ratio=(0.85, 1.18), antialias=True),
-    ]
-    if randaugment > 0:
-        steps.append(v2.RandAugment(num_ops=ops, magnitude=int(randaugment)))
-    steps.append(v2.ToDtype(torch.float32, scale=True))
-    return v2.Compose(steps)
+    The same augmentation as torchvision RandomRotation(180) + RandomResizedCrop, about 25
+    times cheaper on the CPU (8.7 ms -> 0.3 ms per crop, D102): the Kaggle notebooks have 4
+    CPU cores to feed the GPU. A large downscale goes through INTER_AREA first (no aliasing).
+    """
+    draw = rng.random if rng is not None else np.random.random
+    h, w = image.shape[:2]
+    angle = float(draw()) * 360.0 - 180.0
+    area = 0.7 + 0.3 * float(draw())
+    ratio = math.exp(math.log(0.85) + float(draw()) * (math.log(1.18) - math.log(0.85)))
+    cw, ch = min(w, w * math.sqrt(area * ratio)), min(h, h * math.sqrt(area / ratio))
+    x0, y0 = float(draw()) * (w - cw), float(draw()) * (h - ch)
+    rotation = np.vstack([cv2.getRotationMatrix2D((w / 2, h / 2), angle, 1.0), [0.0, 0.0, 1.0]])
+    crop = np.array([[size / cw, 0, -x0 * size / cw], [0, size / ch, -y0 * size / ch], [0, 0, 1]])
+    matrix = crop @ rotation  # original pixel -> output pixel
+    factor = size / max(cw, ch)
+    if factor < 0.75:
+        image = cv2.resize(image, None, fx=factor, fy=factor, interpolation=cv2.INTER_AREA)
+        matrix = matrix @ np.diag([1 / factor, 1 / factor, 1.0])
+    return cv2.warpAffine(
+        image,
+        matrix[:2],
+        (size, size),
+        flags=cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=(ROTATION_FILL,) * 3,
+    )
+
+
+class TrainView:
+    """Augmentation of the train crops: BGR uint8 image in, RGB float CHW in [0, 1] out."""
+
+    def __init__(self, imgsz: int, randaugment: int = 0, ops: int = 2) -> None:
+        from torchvision.transforms import v2
+
+        self.imgsz = imgsz
+        self.augment = (
+            v2.RandAugment(num_ops=ops, magnitude=int(randaugment)) if randaugment > 0 else None
+        )
+
+    def __call__(self, image: np.ndarray) -> torch.Tensor:
+        view = random_view(image, self.imgsz)
+        tensor = torch.from_numpy(np.ascontiguousarray(view[:, :, ::-1].transpose(2, 0, 1)))
+        if self.augment is not None:
+            tensor = self.augment(tensor)  # on the uint8 crop, as torchvision expects
+        return tensor.float().div_(255.0)
+
+
+def train_transform(imgsz: int, randaugment: int = 0, ops: int = 2) -> TrainView:
+    """Augmentation of the train crops (rotation, resized crop, RandAugment)."""
+    return TrainView(imgsz, randaugment, ops)
 
 
 class TrainCrops(Dataset):
@@ -132,9 +174,7 @@ class TrainCrops(Dataset):
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, int]:
         crop = self.items[index]
-        rgb = read_bgr(crop.path)[:, :, ::-1]
-        image = torch.from_numpy(np.ascontiguousarray(rgb.transpose(2, 0, 1)))
-        return self.transform(image), crop.label
+        return self.transform(read_bgr(crop.path)), crop.label
 
 
 class EvalCrops(Dataset):
@@ -311,9 +351,9 @@ def train(
         raise ValueError(f"no train or validation crops in {data_root}")
     batch, workers = int(hp.get("batch", 64)), int(hp.get("workers", 4))
     options = model_options(hp)
+    # Default memory format: channels_last made the backward pass of the batch-norm networks
+    # 10 to 13 times slower on the development GPU (torch 2.14, measured in D102).
     net = A.build(model, num_classes, pretrained=pretrained, **options).to(where)
-    if where.type == "cuda":
-        net = net.to(memory_format=torch.channels_last)
 
     transform = train_transform(
         imgsz, int(hp.get("randaugment", 0)), int(hp.get("randaugment_ops", 2))
@@ -376,8 +416,6 @@ def train(
             else:
                 targets = nn.functional.one_hot(labels, num_classes).float()
             targets = smooth(targets, epsilon)
-            if where.type == "cuda":
-                images = images.contiguous(memory_format=torch.channels_last)
             with torch.autocast(where.type, dtype=torch.float16, enabled=use_amp):
                 logits = net(images)
             loss = soft_target_loss(logits, targets, weights, gamma)

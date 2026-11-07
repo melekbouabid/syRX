@@ -50,6 +50,22 @@ def test_class_weights_favour_rare_classes() -> None:
     assert weights[:2].mean() == pytest.approx(1.0)
 
 
+def test_random_view_rotates_and_crops_in_one_warp() -> None:
+    image = np.full((256, 256, 3), 200, np.uint8)
+    image[:, :128] = 30  # left half dark: a rotation moves it
+    views = [T.random_view(image, 64, np.random.default_rng(seed)) for seed in range(12)]
+    assert all(v.shape == (64, 64, 3) and v.dtype == np.uint8 for v in views)
+    # Same generator, same view; different generators, different views.
+    assert np.array_equal(views[0], T.random_view(image, 64, np.random.default_rng(0)))
+    assert len({v.tobytes() for v in views}) == len(views)
+    # Rotations by large angles leave grey corners (the fill of RandomRotation).
+    assert any((v[0, 0] == T.ROTATION_FILL).all() for v in views)
+    # A large downscale (256 -> 64 px) keeps the mean colour (INTER_AREA, no aliasing).
+    flat = np.full((256, 256, 3), 77, np.uint8)
+    view = T.random_view(flat, 64, np.random.default_rng(1))
+    assert (np.abs(view[28:36, 28:36].astype(int) - 77) <= 1).all()
+
+
 def test_augmentation_only_touches_the_train_split(tmp_path: Path) -> None:
     root = make_dataset(tmp_path / "data")
     train = T.TrainCrops(D.crops(root, "train")[:1], T.train_transform(24, randaugment=9))
