@@ -248,13 +248,16 @@ def measure_latency(
     A laptop CPU slows down under a sustained load (on the development PC YOLOv8n goes from
     24 ms to 570 ms per image after about 100 back-to-back passes): one long measurement per
     variant would compare the first variant on a cool CPU with the next ones on a throttled
-    CPU. Each round times every variant once (`latency_runs` passes, in a fresh process) after
+    CPU. Each round times every variant once (`latency_runs` passes, in a fresh process, at most
+    `latency_budget_s` seconds of load: src/models/detection/latency.py) after
     `latency_cooldown_s` seconds of rest; the figures kept are the medians over the rounds.
     `rounds_out`, when given, receives the figures of every round (to check for throttling).
     """
     files = latency_files(task, data, int(settings.get("latency_images", 20)))
     rounds = max(1, int(settings.get("latency_rounds", 1)))
     cooldown = float(settings.get("latency_cooldown_s", 0))
+    budget = float(settings.get("latency_budget_s", 0))
+    limits = {"budget_s": budget} if budget > 0 else {}  # no budget: the timing of D96
     measured: dict[str, list[dict[str, float]]] = {precision: [] for precision in paths}
     for _ in range(rounds):
         for precision, path in paths.items():
@@ -266,6 +269,7 @@ def measure_latency(
                     files,
                     runs=int(settings.get("latency_runs", 30)),
                     warmup=int(settings.get("latency_warmup", 5)),
+                    **limits,
                 )
             )
     if rounds_out is not None:

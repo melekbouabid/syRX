@@ -143,3 +143,15 @@ def test_isolated_latency_runs_in_a_new_process(tmp_path: Path) -> None:
     result = isolated_latency(path, images, runs=3, warmup=1)
     assert result["onnx_cpu_runs"] == 3
     assert result["onnx_cpu_latency_ms"] > 0
+
+
+def test_load_budget_stops_the_timing_early(tmp_path: Path) -> None:
+    path = tmp_path / "tiny.onnx"
+    onnx.save(tiny_detector(32), str(path))
+    # A budget already spent after the first warm-up pass: one timed pass, never zero.
+    capped = onnx_cpu_latency(path, warmup=50, runs=1000, budget_s=1e-9)
+    assert capped["onnx_cpu_runs"] == 1
+    # No budget: every pass is timed.
+    assert onnx_cpu_latency(path, warmup=1, runs=7, budget_s=0)["onnx_cpu_runs"] == 7
+    isolated = isolated_latency(path, runs=500, warmup=1, budget_s=1e-9)
+    assert isolated["onnx_cpu_runs"] == 1
