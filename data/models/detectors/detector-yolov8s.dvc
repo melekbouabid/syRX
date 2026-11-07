@@ -1,0 +1,6 @@
+outs:
+- md5: 327e2c0ac83176e8ecfdf91b81e0f819.dir
+  size: 68451790
+  nfiles: 25
+  hash: md5
+  path: detector-yolov8s
