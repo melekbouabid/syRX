@@ -148,3 +148,11 @@ def test_baseline_trains_predicts_and_exports_like_the_api(tmp_path: Path) -> No
     )
     assert len(pictures) == 2 and all(p.stat().st_size > 0 for p in pictures)
     assert T.parameter_count(result.weights) > 0
+
+
+def test_gradcam_caption_keeps_long_names_inside_the_picture() -> None:
+    lines = ["true: 015 FLUTAMIDE 125MG CAP", "pred: 123 A VERY LONG NAME FOR A PILL 0.12 (error)"]
+    band = T.caption(lines, 128)
+    assert band.shape[1] == 128 and band.shape[0] > 40  # one line each
+    assert (band[:, -5:] == 255).all()  # the font shrinks: nothing written past the margin
+    assert (band < 255).any()
