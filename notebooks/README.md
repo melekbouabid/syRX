@@ -12,3 +12,7 @@ Notebooks d'entraînement et d'exploration, rangés comme le demande le guide de
   branche `experiment/detector-<archi>`, généré par `python -m src.models.detection.notebook`
   (paquets installés sur Kaggle : [kaggle/requirements.txt](kaggle/requirements.txt)).
   Mode d'emploi : [docs/module1/kaggle_detecteurs.md](../docs/module1/kaggle_detecteurs.md).
+- Étape 2.3 (classifieurs) : un notebook par modèle, `kaggle/classifier_<archi>.ipynb`, sur sa
+  branche `experiment/classifier-<archi>`, généré par
+  `python -m src.models.classification.notebook`. Mode d'emploi, ordre de lancement et budget
+  GPU : [docs/module1/kaggle_classifieurs.md](../docs/module1/kaggle_classifieurs.md).
