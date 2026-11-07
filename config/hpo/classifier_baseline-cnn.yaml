@@ -1,0 +1,56 @@
+# Hyperparameter search of experiment/classifier-baseline-cnn (step 2.3): Optuna, one child MLflow
+# run per trial (src/models/classification/hpo.py, runner.py;
+# docs/module1/kaggle_classifieurs.md).
+# The baseline: a small CNN (src/models/architecture.py SmallCNN, 4 convolution blocks, 1.3 M
+# parameters with width 32), trained from scratch (no pretrained weights, no transfer).
+arch: baseline-cnn
+model: baseline-cnn
+family: torch
+pretrained: false
+branch: experiment/classifier-baseline-cnn
+seed: 0
+search:
+  # Each trial: 10 epochs on 0.5 of the train crops of every class, scored on validation.
+  n_trials: 14
+  epochs: 10
+  fraction: 0.5
+  metric: val_top1
+  sampler: tpe
+  startup_trials: 5         # random trials before TPE models the results
+  timeout_hours: 1.6        # no new trial after this time (Kaggle GPU budget, D103)
+  space:
+    lr: {type: float, low: 3.0e-4, high: 5.0e-3, log: true}  # AdamW, the whole network
+    weight_decay: {type: float, low: 1.0e-4, high: 0.1, log: true}
+    imgsz: {type: categorical, choices: [128, 160, 192]}
+    width: {type: categorical, choices: [32, 48]}            # channels of the first block
+    dropout: {type: float, low: 0.0, high: 0.4}
+    # Augmentation of the train split only (validation and test: the API's resize).
+    randaugment: {type: int, low: 0, high: 12, step: 3}   # magnitude, 0 = off
+    mix_prob: {type: float, low: 0.0, high: 0.6}          # batches mixed by MixUp or CutMix
+    label_smoothing: {type: float, low: 0.0, high: 0.15}
+    # Class imbalance (10 to 80 train crops per class).
+    imbalance: {type: categorical, choices: [none, class_weights, focal]}
+fixed:
+  batch: 64
+  workers: 4                # Kaggle: 4 CPU cores
+  backbone_lr_mult: 1.0     # trained from scratch: the same learning rate everywhere
+  randaugment_ops: 2
+  mixup_alpha: 0.2
+  cutmix_alpha: 1.0
+  focal_gamma: 2.0
+  class_weight_power: 0.5
+final:
+  # Retraining of the best trial on the whole train split, early stopping on validation.
+  epochs: 60
+  patience: 12
+  max_hours: 1.3
+# Budget (D103, T4 estimates): about 1.1 min per epoch of the whole train split (data loading
+# bound); search 14 x 10 x 0.5 = 70 epochs, about 84 min; final at most 60 epochs, about 66 min;
+# with installation, test and export about 2.75 h (time limits: 1.6 h + 1.3 h).
+smoke:
+  # Local check of the code (not an experiment): tiny subset, 2 trials, 1 epoch.
+  n_trials: 2
+  epochs: 1
+  final_epochs: 1
+  images: {train: 96, val: 32, test: 32}
+  fixed: {imgsz: 64, batch: 16, workers: 2}
