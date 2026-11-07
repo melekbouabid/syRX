@@ -1,0 +1,6 @@
+outs:
+- md5: dfaca233c9f41cf1b0f6c783cf4e9374.dir
+  size: 331495024
+  nfiles: 16
+  hash: md5
+  path: detector-fasterrcnn
