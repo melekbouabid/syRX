@@ -301,6 +301,8 @@ def promote_if_better(
     min_gain: float = 0.0,
     *,
     greater_is_better: bool = True,
+    eligible: bool = True,
+    ineligible_reason: str = "",
     client: MlflowClient | None = None,
 ) -> Promotion:
     """Give the alias `champion` to `version` only if it beats the champion by `min_gain`.
@@ -313,6 +315,9 @@ def promote_if_better(
 
     The versions involved get the tag `status` (champion / challenger / archived) and the
     candidate a tag `promotion` explaining the decision, so the Registry shows the history.
+
+    `eligible=False` (a guard the caller checked failed, `ineligible_reason` says which) keeps
+    the candidate away from both aliases: it is archived whatever its score (D100).
     """
     client = client or MlflowClient()
     version = str(version)
@@ -325,6 +330,13 @@ def promote_if_better(
         return sign * (value - other)
 
     champion = alias_version(name, CHAMPION, client)
+    if not eligible:
+        reason = (
+            f"not eligible: {ineligible_reason or 'guard failed'} ({metric}={value:.4f}); archived"
+        )
+        client.set_model_version_tag(name, version, STATUS_TAG, ARCHIVED)
+        client.set_model_version_tag(name, version, "promotion", reason)
+        return Promotion(name, version, metric, value, False, ARCHIVED, champion, None, reason)
     if champion == version:
         return Promotion(
             name, version, metric, value, True, CHAMPION, champion, value, "already champion"
