@@ -500,6 +500,22 @@ def export_onnx(
 # --- Grad-CAM -----------------------------------------------------------------------------
 
 
+CAM_PICTURE = 224  # smallest side of the crop in a Grad-CAM picture (pixels)
+
+
+def caption(lines: Sequence[str], width: int, scale: float = 0.5) -> np.ndarray:
+    """White band with one text line per entry, the font shrunk until every line fits."""
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    widest = max(cv2.getTextSize(line, font, scale, 1)[0][0] for line in lines)
+    if widest > width - 12:
+        scale *= (width - 12) / widest
+    step = int(30 * max(scale, 0.3) / 0.5)
+    band = np.full((step * len(lines) + 8, width, 3), 255, np.uint8)
+    for k, line in enumerate(lines):
+        cv2.putText(band, line, (6, step * (k + 1)), font, scale, (0, 0, 0), 1, cv2.LINE_AA)
+    return band
+
+
 def gradcam_pictures(
     weights: Path | str,
     items: Sequence[tuple[Path, int]],
@@ -523,16 +539,15 @@ def gradcam_pictures(
                 probs = torch.softmax(net(tensor), dim=1)[0]
             predicted = int(probs.argmax())
             heatmap = cam(tensor, predicted)
-            image = cv2.resize(read_bgr(path), (imgsz, imgsz), interpolation=cv2.INTER_AREA)
+            side = max(imgsz, CAM_PICTURE)  # small inputs are enlarged to stay readable
+            image = cv2.resize(read_bgr(path), (side, side), interpolation=cv2.INTER_AREA)
             panel = np.hstack([image, overlay(image, heatmap)])
-            caption = np.full((40, panel.shape[1], 3), 255, np.uint8)
             ok = "ok" if predicted == label else "error"
-            text = (
-                f"true {names.get(label, label)}  pred {names.get(predicted, predicted)} "
-                f"{float(probs[predicted]):.2f} ({ok})"
-            )
-            cv2.putText(caption, text, (6, 26), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+            lines = [
+                f"true: {names.get(label, label)}",
+                f"pred: {names.get(predicted, predicted)} {float(probs[predicted]):.2f} ({ok})",
+            ]
             target = out_dir / f"gradcam_{index:02d}_{ok}.png"
-            cv2.imwrite(str(target), np.vstack([panel, caption]))
+            cv2.imwrite(str(target), np.vstack([panel, caption(lines, panel.shape[1])]))
             written.append(target)
     return written
