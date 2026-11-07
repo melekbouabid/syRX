@@ -143,6 +143,25 @@ stages:
       - src/data/prepare_detect_v2.py
     outs:
       - data/processed/c3pi/datasets_v2/detect
+  # Step 2.3 (docs/module1/kaggle_classifieurs.md, D99): classification dataset of C3PI v2
+  # (square pill crops of every image of the v2 split and of the offline augmentation, the
+  # crop the API feeds the classifier) and its comparison split test_holdout.txt (v2 test
+  # sessions the v1 champion never saw). Packaged for Kaggle by
+  # `python -m src.models.classification.package_kaggle`.
+  prepare_classify_v2:
+    cmd: python -m src.data.prepare_classify_v2
+    deps:
+      - data/raw/c3pi/images
+      - data/processed/c3pi/bigdata/split
+      - data/processed/c3pi/bigdata/augmented
+      - config/splits/selected_images.csv
+      - config/splits/c3pi_v2/classes.csv
+      - config/pill_classes.csv
+      - src/data/autolabel.py
+      - src/data/prepare_detect_v2.py
+      - src/data/prepare_classify_v2.py
+    outs:
+      - data/processed/c3pi/datasets_v2/classify
   train_detector:
     cmd: python -m src.models.train detect
     frozen: true

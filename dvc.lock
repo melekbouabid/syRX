@@ -515,3 +515,51 @@ stages:
       md5: 54e01c08c54fac7c6ea92c0f95b21028.dir
       size: 756022335
       nfiles: 20756
+  prepare_classify_v2:
+    cmd: python -m src.data.prepare_classify_v2
+    deps:
+    - path: config/pill_classes.csv
+      hash: md5
+      md5: f3ae1e6b96a9b8a6caacfc27e9091f36
+      size: 24518
+    - path: config/splits/c3pi_v2/classes.csv
+      hash: md5
+      md5: 4abd75ad9980dd48e453a013a6a90da6
+      size: 52899
+    - path: config/splits/selected_images.csv
+      hash: md5
+      md5: de21c22fc4a8b12ef6e410cea10f1f8b
+      size: 543427
+    - path: data/processed/c3pi/bigdata/augmented
+      hash: md5
+      md5: 1bfc0bf30f5409f60c918020e02940b4.dir
+      size: 113173348
+      nfiles: 3369
+    - path: data/processed/c3pi/bigdata/split
+      hash: md5
+      md5: 6d8fa00a9fc68ae49ef49e2a829d96b4.dir
+      size: 3711092
+      nfiles: 35
+    - path: data/raw/c3pi/images
+      hash: md5
+      md5: 62051ba2f27a8520e490f4de3467231b.dir
+      size: 39542126444
+      nfiles: 20330
+    - path: src/data/autolabel.py
+      hash: md5
+      md5: 42302ec12c5b8b3baa7c491bf09149a4
+      size: 11304
+    - path: src/data/prepare_classify_v2.py
+      hash: md5
+      md5: 64b28a22b18bd9b8111bb25739b5796d
+      size: 14251
+    - path: src/data/prepare_detect_v2.py
+      hash: md5
+      md5: c4e4b01683781455879d114f3c346682
+      size: 8416
+    outs:
+    - path: data/processed/c3pi/datasets_v2/classify
+      hash: md5
+      md5: e14eb016f21452999a7abb4aa4fe88d5.dir
+      size: 278653491
+      nfiles: 18602
