@@ -173,6 +173,20 @@ PANELS = (
 )
 
 
+LOG_TICKS = [5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000]
+
+
+def _crowded(row: Row, points: list[Row], field: str) -> bool:
+    """A better point sits just above and close on x: put this label under its point."""
+    x = getattr(row, field)
+    return any(
+        other is not row
+        and 0 < (other.test_map or 0) - (row.test_map or 0) < 0.006
+        and 0.5 < getattr(other, field) / x < 2.5
+        for other in points
+    )
+
+
 def plot(rows: list[Row], path: Path) -> Path:
     """mAP@[.5:.95] (comparison split) against CPU latency and ONNX size, champion in orange.
 
@@ -183,6 +197,7 @@ def plot(rows: list[Row], path: Path) -> Path:
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    from matplotlib.ticker import FixedLocator, FuncFormatter, NullFormatter
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.6), dpi=150, sharey=True)
     for ax, (field, xlabel) in zip(axes, PANELS, strict=True):
@@ -200,16 +215,19 @@ def plot(rows: list[Row], path: Path) -> Path:
                 linewidths=2,
                 zorder=3,
             )
-            label = f"{r.arch} ({r.status})" if r.status else r.arch
+            label = f"{r.arch}\n({r.status})" if r.status else r.arch
             ax.annotate(
                 label,
                 (x, r.test_map),
-                xytext=(7, 5),
+                xytext=(7, -22 if _crowded(r, points, field) else 4),
                 textcoords="offset points",
                 fontsize=7.5,
                 color=INK,
             )
         ax.set_xscale("log")
+        ax.xaxis.set_major_locator(FixedLocator(LOG_TICKS))
+        ax.xaxis.set_major_formatter(FuncFormatter(lambda value, _: f"{value:g}"))
+        ax.xaxis.set_minor_formatter(NullFormatter())
         ax.set_xlabel(xlabel, color=MUTED)
         ax.grid(True, color=GRID, linewidth=0.6)
         for side in ("top", "right"):
