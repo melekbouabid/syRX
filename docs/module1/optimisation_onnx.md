@@ -33,26 +33,64 @@ les mêmes informations quelle que soit la précision.
 
 ## Mesure ([src/models/optimize.py](../../src/models/optimize.py))
 
-- Détecteur (YOLOv8n, version 2, champion depuis l'import Kaggle de l'étape 2.2) : mAP@[.5:.95]
-  sur le split de comparaison de l'étape 2.2 (`test_holdout.txt` de C3PI v2, 995 photos, 1 133
+- Détecteur (champion du Registry : YOLO11s, version 9, depuis la fin de l'étape 2.2 ; YOLOv8n,
+  version 2, le 06/11) : mAP@[.5:.95] sur le split de comparaison de l'étape 2.2 (`test_holdout.txt` de C3PI v2, 995 photos, 1 133
   boîtes), par le même code ([metrics.py](../../src/models/detection/metrics.py), décodage comme
   l'API). Pas de mesure sur le test v1 : des photos du train v2 peuvent y figurer.
 - Classifieur (YOLO11s-cls, version 1) : top-1 et top-5 sur les 588 crops de test de C3PI v1.
 - Latence : ONNX Runtime CPU, une image par appel, dans un processus neuf
   ([latency.py](../../src/models/detection/latency.py)), 20 images de test, 5 tours entrelacés
   de 30 passes avec 20 s de pause avant chaque mesure, médiane des tours (le PC portable se bride
-  sous charge soutenue, D96). Processeur : celui du PC de développement (tag `latency_cpu`).
+  sous charge soutenue, D96) ; depuis le 07/11, chaque mesure est limitée à 1,5 s de charge
+  (`latency_budget_s`, D98) : au-delà d'environ deux secondes d'inférence continue, ce PC
+  ralentit d'environ 15 fois, ce qui touchait les modèles plus lourds que YOLOv8n. Processeur :
+  celui du PC de développement (tag `latency_cpu`).
 - Taille : fichier ONNX autonome.
 - MLflow : un run par variante dans `tujya-vision` (tag `stage=optimize`, `precision`,
   `variant_of`, provenance `git_commit` / `dvc_rev`) ; chaque variante FP16 / INT8 est une
   version du même modèle enregistré.
 
-## Résultats (06/11/2026)
+## Résultats du champion de l'étape 2.2 (07/11/2026)
+
+Détecteur YOLO11s (version 9, champion depuis la fin de l'étape 2.2, D98), même code et même
+split ; latence avec la limite de 1,5 s de charge par mesure (16 à 17 passes chronométrées par
+tour en FP32 / FP16, 7 à 9 en INT8).
+
+| Modèle | Variante | Précision | Écart vs FP32 | Latence moyenne (ms) | Latence p95 (ms) | Taille (Mo) | Version Registry | Run MLflow |
+|---|---|---:|---:|---:|---:|---:|---|---|
+| tujya-pill-detector (YOLO11s 640) | **FP32 (servie)** | 0,8886 (mAP@[.5:.95]) | - | **61,9** | 65,3 | 37,9 | v9 (`champion`, `served`) | `313d04a1` |
+| | FP16 | 0,8886 | 0,0000 | 59,5 | 63,0 | 19,0 | v13 | `10ffbd94` |
+| | INT8 statique | 0,8247 | -0,0639 | 138,5 | 164,3 | 12,6 | v14 | `3100ee5c` |
+| | INT8 dynamique | 0,8615 | -0,0271 | 104,6 | 113,0 | 9,9 | v15 | `25f25f7f` |
+
+mAP50 : FP32 et FP16 0,974, INT8 statique 0,966, INT8 dynamique 0,968. Le FP32 ONNX mesuré ici
+(0,8886) ne diffère que de 0,0001 de l'évaluation de Kaggle (0,8885).
+
+- **Variante servie : FP32** (règle `choose_variant` inchangée) : le FP16 garde exactement la
+  même précision mais n'est que 3,9 % plus rapide, sous le seuil de 5 % (bruit de mesure) ; il
+  divise seulement la taille par deux.
+- **INT8 écarté** : plus lent (1,7 à 2,2 fois) et moins précis. Contrairement à YOLOv8n,
+  l'INT8 statique (tête en float, 84 nœuds exclus) perd plus que le dynamique (-0,064 contre
+  -0,027) ; la cause n'est pas étudiée ici (piste : le bloc d'attention C2PSA de YOLO11, qui
+  n'existe pas dans YOLOv8).
+- Les variantes de l'ancien champion (versions 6 à 8, YOLOv8n) restent dans le Registry avec
+  `status=variant` et `variant_of=2` ; l'alias `served` est passé de la version 6 à la version 9.
+
+Vérification dans l'API (07/11, modèles publiés par `python -m src.models.publish`) :
+`GET /health` `ok`, `GET /model/metadata` détecteur `yolo11s` version 9, alias `champion` et
+`served`, FP32 ; `POST /predict` sur 30 photos du split de comparaison réparties sur tout le
+split : 34 boîtes sur 34 trouvées (IoU >= 0,5), 36 prédites (rappel 1,000, précision 0,944).
+Temps serveur médian 66 ms (détection 59 ms) mesuré par les routes de l'API dans un processus au
+premier plan ; le même serveur uvicorn lancé comme tâche d'arrière-plan sur ce PC portable
+mesurait environ 400 ms de détection (processus d'arrière-plan ralenti par Windows, même modèle
+et même code).
+
+## Résultats du 06/11/2026 (YOLOv8n, champion avant la fin de l'étape 2.2)
 
 | Modèle | Variante | Précision | Écart vs FP32 | Latence moyenne (ms) | Latence p95 (ms) | Taille (Mo) | Version Registry | Run MLflow |
 |---|---|---:|---:|---:|---:|---:|---|---|
 | tujya-pill-detector (YOLOv8n 640) | FP32 | 0,8773 (mAP@[.5:.95]) | - | 24,5 | 26,7 | 12,8 | v2 (`champion`) | `1703391f` |
-| | **FP16 (servie)** | 0,8757 | -0,0016 | **22,7** | 24,7 | 6,4 | v6 (`served`) | `170853fc` |
+| | **FP16 (servie jusqu'au 07/11)** | 0,8757 | -0,0016 | **22,7** | 24,7 | 6,4 | v6 | `170853fc` |
 | | INT8 statique | 0,8472 | -0,0301 | 48,8 | 52,5 | 6,2 | v7 | `6a0a46df` |
 | | INT8 dynamique | 0,8353 | -0,0420 | 44,4 | 48,0 | 3,5 | v8 | `828809e6` |
 | tujya-pill-classifier (YOLO11s-cls 224) | **FP32 (servie)** | 0,9371 (top-1) | - | **4,1** | 4,9 | 22,6 | v1 (`champion`, `served`) | `dd39c8db` |
@@ -69,8 +107,9 @@ Règle (`choose_variant`, `params.yaml` `optimize`) : parmi les variantes qui pe
 0,01 de précision (un point de mAP ou de top-1) et sont au moins 5 % plus rapides que FP32,
 la plus rapide ; sinon FP32.
 
-- **Détecteur : FP16** : -0,0016 de mAP@[.5:.95], 7 % plus rapide, fichier deux fois plus
-  petit.
+- **Détecteur : FP32 pour YOLO11s depuis le 07/11** (FP16 seulement 3,9 % plus rapide, voir
+  plus haut) ; le 06/11, pour YOLOv8n : **FP16**, -0,0016 de mAP@[.5:.95], 7 % plus rapide,
+  fichier deux fois plus petit.
 - **Classifieur : FP32** : le FP16 perd 0,0017 de top-1 sans être plus rapide sur ce CPU ;
   aucune variante ne remplit les deux conditions.
 - **INT8 écarté pour les deux** : sur ce processeur, ONNX Runtime exécute les modèles QDQ
@@ -79,16 +118,16 @@ la plus rapide ; sinon FP32.
   activations ne sont pas calibrées). L'INT8 reste utile pour la taille (3,5 à 6 Mo) et sur
   un processeur doté d'instructions entières rapides (VNNI) ; il n'est pas retenu ici.
 
-Vérification dans l'API (`PillScanner` de [backend/app/inference.py](../../backend/app/inference.py),
+Vérification dans l'API du 06/11 (`PillScanner` de [backend/app/inference.py](../../backend/app/inference.py),
 modèles publiés, seuil de détection 0,25) sur 100 photos du split de comparaison : 114 boîtes
 sur 117 trouvées (IoU >= 0,5), 119 prédites : rappel 0,974, précision 0,958. `models/models.json`
 indique la version, la précision et la version champion d'origine (`variant_of`).
 
-## Registry après l'étape
+## Registry après l'étape (mis à jour le 07/11, fin de l'étape 2.2)
 
 | Modèle | Versions | Alias |
 |---|---|---|
-| tujya-pill-detector | v1 YOLO11n FP32 (baseline), v2 YOLOv8n FP32, v6-v8 variantes de v2 (v3-v5 : première mesure, `status=superseded`, D96) | `champion` v2, `challenger` v1, `served` v6 |
+| tujya-pill-detector | v1 YOLO11n FP32 (baseline), v2 YOLOv8n, v9 YOLO11s, v10 YOLOv10n, v11 YOLOv8s, v12 Faster R-CNN (FP32, étape 2.2) ; v13-v15 variantes de v9 ; v6-v8 variantes de v2 (v3-v5 : première mesure, `status=superseded`, D96) | `champion` v9, `challenger` v10, `served` v9 |
 | tujya-pill-classifier | v1 YOLO11s-cls FP32, v5-v7 variantes de v1 (v2-v4 `superseded`) | `champion` v1, `served` v1 |
 
 L'alias `champion` reste sur un modèle FP32 : les détecteurs Kaggle encore à importer sont
@@ -99,5 +138,5 @@ comparés FP32 contre FP32 par `promote_if_better` (D95).
 - Latences mesurées sur un seul PC portable (CPU bridé sous charge) : l'ordre des variantes est
   fiable grâce aux tours entrelacés, les valeurs absolues dépendent de la machine.
 - Pas de quantification avec entraînement (QAT) : hors du temps de GPU disponible.
-- L'étape 2.2 (comparaison des détecteurs) peut encore changer le champion ; la commande
-  `optimize` sera alors relancée sur le nouveau champion.
+- L'étape 2.2 a changé le champion du détecteur (YOLO11s, D98) : `optimize --task detect` a été
+  relancé le 07/11 (résultats ci-dessus).
