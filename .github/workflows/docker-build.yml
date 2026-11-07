@@ -83,6 +83,12 @@ jobs:
           curl -fsS -o /dev/null http://127.0.0.1:8000/docs
           curl -fsS http://127.0.0.1:8000/openapi.json | grep -q '"/api/scan"'
           curl -fsS http://127.0.0.1:8000/openapi.json | grep -q '"/api/chat"'
+          # Guide endpoints: the CI image has no models, so /health is degraded and /predict 503.
+          curl -fsS http://127.0.0.1:8000/health | grep -q '"status":"degraded"'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/model/metadata)" = 503
+          printf '\x89PNG' > /tmp/x.png
+          test "$(curl -s -o /dev/null -w '%{http_code}' -F 'image=@/tmp/x.png;type=image/png' \
+            http://127.0.0.1:8000/predict)" = 503
 
       - name: Smoke test of the frontend image
         if: matrix.image == 'frontend'

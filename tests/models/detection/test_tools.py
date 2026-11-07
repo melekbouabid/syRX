@@ -86,7 +86,8 @@ def test_comparison_table_and_markers() -> None:
     lines = table.strip().splitlines()
     assert len(lines) == 4
     assert (
-        "| yolov8s | 0.9000 | 0.8800 | 0.9700 | 0.950 | 0.940 | 80.0 | 11.1 | champion |" in table
+        "| yolov8s | 0.9000 | 0.8800 | 0.9700 | 0.950 | 0.940 |  | 80.0 |  |  | 11.1 |  "
+        "| champion |" in table
     )
     assert "`bbbbbbbb`" in lines[3]
     text = f"intro\n{compare.BEGIN}\nold\n{compare.END}\nend\n"
@@ -95,3 +96,39 @@ def test_comparison_table_and_markers() -> None:
     assert updated.startswith("intro\n") and updated.endswith("end\n")
     with pytest.raises(ValueError, match="markers"):
         compare.replace_between_markers("no markers", table)
+
+
+def test_comparison_table_has_size_p95_whole_test_and_version() -> None:
+    row = compare.Row(
+        "yolo11s",
+        "c" * 32,
+        0.87,
+        0.8885,
+        0.974,
+        0.952,
+        0.936,
+        68.2,
+        9.4e6,
+        "champion",
+        test_all_map=0.8722,
+        latency_p95_ms=75.0,
+        size_mb=37.9,
+        version="10",
+    )
+    table = compare.markdown_table([row])
+    assert "Taille ONNX (Mo)" in table and "p95 (ms)" in table
+    assert (
+        "| yolo11s | 0.8700 | 0.8885 | 0.9740 | 0.952 | 0.936 | 0.8722 | 68.2 | 75.0 | 37.9 "
+        "| 9.4 | v10 | champion | `cccccccc` |" in table
+    )
+
+
+def test_comparison_figure_has_two_panels(tmp_path: Path) -> None:
+    pytest.importorskip("matplotlib")
+    rows = [
+        compare.Row("a", "a" * 32, None, 0.88, None, None, None, 20.0, None, "champion", size_mb=9),
+        compare.Row("b", "b" * 32, None, 0.82, None, None, None, 900.0, None, "", size_mb=160),
+        compare.Row("c", "c" * 32, None, 0.80, None, None, None, None, None, "", size_mb=None),
+    ]
+    path = compare.plot(rows, tmp_path / "figure.png")
+    assert path.is_file() and path.stat().st_size > 0

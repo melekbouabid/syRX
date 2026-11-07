@@ -101,7 +101,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 |---|:---:|---|
 | Détection des comprimés avec YOLOv8/v11 | ✅ | [src/models/](src/models/) (YOLO11n) |
 | Identification de chaque comprimé par transfer learning | ✅ | [src/models/](src/models/) (YOLO11s-cls) |
-| Backend FastAPI asynchrone, schémas Pydantic, Swagger sur `/docs` | ✅ | [backend/](backend/), [backend/app/inference.py](backend/app/inference.py) |
+| Backend FastAPI asynchrone, schémas Pydantic, Swagger sur `/docs` | ✅ | [backend/](backend/), [backend/app/inference.py](backend/app/inference.py) ; endpoints du guide `GET /health`, `GET /model/metadata`, `POST /predict`, `POST /predict/visualize` (400 / 503) : [backend/app/routers/vision.py](backend/app/routers/vision.py), [docs/api.md](docs/api.md#endpoints-du-guide-du-module-1-sans-compte) |
 | Frontend React : upload, webcam, prédictions et boîtes | ✅ | [frontend/](frontend/) |
 | DVC (versionnement des données) | ✅ | [dvc.yaml](dvc.yaml) (données, puis `train_detector`, `train_classifier`, `export_onnx`, `evaluate`), [params.yaml](params.yaml), [docs/infra.md](docs/infra.md) |
 | Plus de données et Big Data avec PySpark (demande du professeur) | ✅ | [src/data/spark/](src/data/spark/), cluster Spark de [docker-compose.yml](docker-compose.yml), [docs/module1/big_data.md](docs/module1/big_data.md) (data card) |
@@ -109,6 +109,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | MLflow : tracking des expériences | ✅ | expérience `tujya-vision`, runs tracés (`git_commit`, `dvc_rev`, `dataset`, `seed`, requirements + `dvc.lock`) : [src/utils/mlflow_utils.py](src/utils/mlflow_utils.py), [docs/module1/mlflow.md](docs/module1/mlflow.md) |
 | MLflow : Model Registry | ✅ | `tujya-pill-detector`, `tujya-pill-classifier`, alias `champion` / `challenger`, `promote_if_better` ; baseline v1 champion |
 | Export ONNX et inférence ONNX Runtime | ✅ | [backend/app/inference.py](backend/app/inference.py) |
+| Optimisation : quantification FP16 / INT8, comparaison précision / latence / taille | ✅ | [src/models/quantize.py](src/models/quantize.py), [src/models/optimize.py](src/models/optimize.py), [docs/module1/optimisation_onnx.md](docs/module1/optimisation_onnx.md) (détecteur servi en FP16, classifieur en FP32) |
 | Docker Compose | ✅ | [docker-compose.yml](docker-compose.yml) |
 | Git avancé : branches, tags annotés, hooks (secrets, messages de commit) | ✅ | [docs/git_workflow.md](docs/git_workflow.md), [tools/hooks/](tools/hooks/) |
 | GitHub Actions CI/CD | ✅ | [ci-tests.yml](.github/workflows/ci-tests.yml) (flake8, black, ESLint, pytest, build), [docker-build.yml](.github/workflows/docker-build.yml) (images multi-stage + test de fumée), [docs/cd.md](docs/cd.md) |

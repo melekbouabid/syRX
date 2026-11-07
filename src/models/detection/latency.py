@@ -12,6 +12,13 @@ fresh Python process (`isolated_latency`): in the process that just ran PyTorch,
 worker threads slow ONNX Runtime down by an order of magnitude (552 ms instead of 26 ms for
 YOLO11n on the development PC).
 
+Load budget: on the development laptop the latency jumps by an order of magnitude after about
+two seconds of continuous inference (YOLO11s: 59 ms per image for 36 passes, then about
+1,000 ms; Faster R-CNN: 400 ms for 4 passes, then 2,700 ms). `budget_s` caps the load of one
+measurement (warm-up included): warm-up stops after a third of the budget, the timed passes when
+the budget is spent (at least one). The API serves one image per request, far below that load,
+so the figure before the drop is the one that describes it (docs/decisions.md D98).
+
 `onnx_predict` decodes the exported model exactly as the API does (letterbox, output
 1 x (4 + classes) x N in cx cy w h, non-maximum suppression): the runner scores it on a few
 test images next to the PyTorch predictions (`parity_*` metrics), so a gap between the
@@ -73,11 +80,14 @@ def onnx_cpu_latency(
     runs: int = 30,
     threads: int = 0,
     seed: int = 0,
+    budget_s: float = 0.0,
 ) -> dict[str, float]:
     """Mean, median and 95th percentile latency (ms) of one forward pass on the CPU.
 
     `images` (BGR) are cycled through; without them the input is random noise. `threads` = 0
-    lets ONNX Runtime choose (as the API does by default).
+    lets ONNX Runtime choose (as the API does by default). `budget_s` > 0 caps the seconds of
+    inference of the whole call (module docstring): `onnx_cpu_runs` is then the number of
+    passes actually timed, at most `runs`.
     """
     options = ort.SessionOptions()
     options.intra_op_num_threads = threads
@@ -89,10 +99,19 @@ def onnx_cpu_latency(
     else:
         rng = np.random.default_rng(seed)
         tensors = [rng.random((1, 3, size, size), dtype=np.float32)]
+    begin = time.perf_counter()
+
+    def spent() -> float:
+        return time.perf_counter() - begin
+
     for i in range(warmup):
+        if budget_s > 0 and i > 0 and spent() >= budget_s / 3:
+            break
         session.run(None, {name: tensors[i % len(tensors)]})
-    timings = []
+    timings: list[float] = []
     for i in range(runs):
+        if budget_s > 0 and timings and spent() >= budget_s:
+            break
         start = time.perf_counter()
         session.run(None, {name: tensors[i % len(tensors)]})
         timings.append((time.perf_counter() - start) * 1000)
@@ -101,7 +120,7 @@ def onnx_cpu_latency(
         "onnx_cpu_latency_ms": float(values.mean()),
         "onnx_cpu_latency_median_ms": float(np.median(values)),
         "onnx_cpu_latency_p95_ms": float(np.percentile(values, 95)),
-        "onnx_cpu_runs": float(runs),
+        "onnx_cpu_runs": float(len(timings)),
         "onnx_input_size": float(size),
     }
 
@@ -162,7 +181,12 @@ def cpu_name() -> str:
 
 
 def isolated_latency(
-    model: str | Path, image_files: Sequence[Path] = (), *, runs: int = 30, warmup: int = 5
+    model: str | Path,
+    image_files: Sequence[Path] = (),
+    *,
+    runs: int = 30,
+    warmup: int = 5,
+    budget_s: float = 0.0,
 ) -> dict[str, float]:
     """onnx_cpu_latency in a new Python process (no PyTorch threads competing for the CPU)."""
     command = [
@@ -174,6 +198,8 @@ def isolated_latency(
         str(runs),
         "--warmup",
         str(warmup),
+        "--budget",
+        str(budget_s),
         *[str(f) for f in image_files],
     ]
     root = Path(__file__).resolve().parents[3]
@@ -190,9 +216,12 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("images", nargs="*", type=Path, help="images (default: random noise)")
     parser.add_argument("--runs", type=int, default=30)
     parser.add_argument("--warmup", type=int, default=5)
+    parser.add_argument("--budget", type=float, default=0.0, help="seconds of load, 0 = none")
     args = parser.parse_args(argv)
     images = [cv2.imdecode(np.fromfile(str(f), np.uint8), cv2.IMREAD_COLOR) for f in args.images]
-    result = onnx_cpu_latency(args.model, images=images, runs=args.runs, warmup=args.warmup)
+    result = onnx_cpu_latency(
+        args.model, images=images, runs=args.runs, warmup=args.warmup, budget_s=args.budget
+    )
     print(json.dumps(result))
 
 

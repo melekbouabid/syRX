@@ -40,6 +40,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [ ] Comparer d'autres détecteurs et classifieurs, recherche d'hyperparamètres (étapes 2.2 et 2.3, GPU Kaggle)
   - Détecteurs (étape 2.2) : code, espaces Optuna, notebooks Kaggle et import MLflow prêts sur `feature/detector-kaggle-tooling` et les branches `experiment/detector-*` ; entraînements Kaggle à lancer ([kaggle_detecteurs.md](module1/kaggle_detecteurs.md), D93-D94)
 - [x] Export ONNX, inférence avec ONNX Runtime, sorties identiques à PyTorch
+- [x] Optimisation des champions (étape 2.4) : variantes FP16 / INT8 (statique calibrée sur le val, dynamique), précision, latence moyenne / p95 et taille dans MLflow ; détecteur YOLOv8n servi en FP16 (-0,0016 mAP, 7 % plus rapide), classifieur en FP32 ; INT8 plus lent sur ce CPU ([optimisation_onnx.md](module1/optimisation_onnx.md), D95-D96)
 - [x] Mesurer top-1 / top-5 (identification) et mAP (détection)
 - [ ] Comparer avec ePillID sur son propre split et ses métriques ([vision.md](module1/vision.md))
 - [ ] Vérifier à la main les boîtes de test ; second passage d'étiquetage avec le détecteur entraîné
@@ -48,6 +49,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Schéma SQL (pills, ingredients, pill_ingredients, interactions, sources) + chargeur
 - [x] `POST /api/scan` asynchrone (image -> boîtes, top-5, confiance ; confirmation sous 0,85, [docs/api.md](api.md))
 - [x] `python -m src.models.publish` : modèles enregistrés -> `models/` pour l'API
+- [x] Endpoints du guide (étape 2.5) : `GET /health`, `GET /model/metadata`, `POST /predict`, `POST /predict/visualize`, erreurs 400 / 413 / 503, schémas stricts, tests de chaque route et code d'erreur ([api.md](api.md#endpoints-du-guide-du-module-1-sans-compte), D97)
 - [x] `POST /api/interactions` asynchrone (sévérité DDInter, description, source ; jamais « sûr »)
 - [x] `GET /api/pills?q=` : recherche parmi les 150 classes (confirmation manuelle)
 - [x] Swagger sur `/docs` et schéma sur `/openapi.json` (`/api/docs` redirige, D44)

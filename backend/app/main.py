@@ -14,7 +14,7 @@ from app.config import Settings
 from app.db import Base, make_engine
 from app.inference import ScannerHolder
 from app.limits import BodySizeLimit
-from app.routers import admin, auth, chat, demo, medicines, scan, toxicity
+from app.routers import admin, auth, chat, demo, medicines, scan, toxicity, vision
 from src.agent.runtime import AgentHolder
 from src.models.toxicity.model import ToxHolder
 
@@ -47,7 +47,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # there and /api/openapi.json serves the same schema, so existing links keep working.
     app = FastAPI(
         title="Tujya API",
-        version="0.2.0",
+        version="0.3.0",
         description=DESCRIPTION,
         lifespan=lifespan,
         docs_url="/docs",
@@ -88,6 +88,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(demo.router)
     app.include_router(chat.router)
     app.include_router(toxicity.router)
+    # Endpoints of the course guide: /health, /model/metadata, /predict, /predict/visualize.
+    app.include_router(vision.router)
 
     @app.get("/api/health", tags=["health"])
     def health() -> dict[str, str]:

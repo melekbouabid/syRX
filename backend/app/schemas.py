@@ -341,3 +341,96 @@ class ToxicityResult(BaseModel):
     model: dict[str, Any]
     source: dict[str, str]
     disclaimer: str
+
+
+# --- Endpoints of the course guide (GET /health, GET /model/metadata, POST /predict) --------
+
+
+class Strict(BaseModel):
+    """Response bodies of the guide endpoints: no undeclared field, values checked."""
+
+    model_config = ConfigDict(extra="forbid", protected_namespaces=())
+
+
+Task = Literal["detect", "classify"]
+
+
+class LoadedModel(Strict):
+    """One ONNX model as published in models.json (src/models/publish.py)."""
+
+    task: Task
+    file: str
+    registered_model: str | None = Field(None, description="MLflow Model Registry name")
+    version: int | None = Field(None, description="Registry version served")
+    aliases: list[str] = Field(default_factory=list, description="e.g. champion, served")
+    precision: str = Field("fp32", description="fp32, fp16, int8-static or int8-dynamic")
+    variant_of: int | None = Field(None, description="Champion version this variant comes from")
+    run_id: str | None = None
+    sha256: str | None = None
+
+
+class GpuStatus(Strict):
+    available: bool = Field(description="ONNX Runtime can use a CUDA GPU")
+    available_providers: list[str]
+    active_providers: list[str] = Field(description="Providers of the loaded sessions")
+
+
+class HealthOut(Strict):
+    status: Literal["ok", "degraded"] = Field(description="degraded: models not loaded")
+    model_loaded: bool
+    detail: str | None = None
+    api_version: str
+    gpu: GpuStatus
+    models: list[LoadedModel]
+    published_at: str | None = None
+
+
+class ModelMetadata(Strict):
+    task: Task
+    name: str = Field(description="Registry name, or the file name without the Registry")
+    architecture: str = Field(description="e.g. yolov8n, yolo11s-cls")
+    version: int | None
+    aliases: list[str]
+    precision: str
+    variant_of: int | None
+    run_id: str | None
+    input_size: int = Field(description="Square input, pixels")
+    metrics: dict[str, float] = Field(description="Validation and test scores, latency")
+    classes: list[str] = Field(description="Output index -> class (C3PI folder / class_id)")
+    num_classes: int
+
+
+class MetadataOut(Strict):
+    detector: ModelMetadata
+    classifier: ModelMetadata
+    published_at: str | None = None
+    disclaimer: str
+
+
+class ClassScore(Strict):
+    class_id: int
+    probability: float = Field(ge=0, le=1)
+
+
+class PredictedPill(Strict):
+    box: PixelBox
+    box_normalized: NormalizedBox
+    confidence: float = Field(ge=0, le=1, description="Detection confidence")
+    top5: list[ClassScore] = Field(description="Most probable classes first")
+
+
+class PredictTimings(Strict):
+    detection_ms: float
+    classification_ms: float
+    inference_ms: float = Field(description="Detection plus identification, ONNX Runtime")
+    server_ms: float = Field(description="Whole request on the server, decoding included")
+
+
+class PredictOut(Strict):
+    image_width: int
+    image_height: int
+    count: int
+    pills: list[PredictedPill]
+    timings: PredictTimings
+    model_versions: dict[str, int | None] = Field(description="detect / classify versions")
+    disclaimer: str

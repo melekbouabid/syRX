@@ -1043,3 +1043,68 @@ changement. Vérification locale : runs « smoke » (tag `smoke=true`, nom `smok
 quelques dizaines d'images, 2 essais, 1 époque), jamais enregistrés dans le Model Registry.
 Aucune fusion dans `main`, aucun tag `model/` ni `v3.1.0-detecteurs` avant les vrais
 entraînements ; les étapes DVC d'entraînement restent gelées sur `main` (D91).
+
+## Optimisation ONNX des champions (2026-11-06)
+
+**D95. Variantes optimisées enregistrées à côté du champion, alias `served` ; l'outillage
+détecteurs est fusionné pour mesurer sur le même split.** L'étape 2.4 compare FP32, FP16 et
+INT8 des deux champions et sert la meilleure variante. Deux contraintes : (1) la promotion
+des détecteurs de l'étape 2.2 encore à importer (`import_kaggle` -> `promote_if_better` sur
+`test_v2_mAP50_95` contre l'alias `champion`) doit rester une comparaison FP32 contre FP32 ;
+(2) le détecteur champion (YOLOv8n, importé le 06/11) doit être mesuré sur le même split et
+par le même code que l'étape 2.2, sans fuite. Choix : chaque variante FP16 / INT8 est un run
+MLflow (`stage=optimize`) et une nouvelle version du même modèle enregistré, avec les tags
+`precision` et `variant_of` (numéro de la version champion) et `status=variant` ; l'alias
+`champion` ne quitte jamais le modèle FP32 ; la variante retenue reçoit l'alias `served` (la
+version champion elle-même si FP32 l'emporte) et la version champion le tag
+`served_precision`. `python -m src.models.publish` publie par défaut la version `served` si
+elle est le champion ou une variante du champion actuel, sinon le champion FP32 (cas d'un
+nouveau champion promu depuis la dernière optimisation, jusqu'à ce que
+`python -m src.models.optimize` soit relancé) ; `--exact` publie l'alias tel quel
+(`src/models/serving.py`). Pour mesurer, la branche `feature/detector-kaggle-tooling` (outillage
+commun de l'étape 2.2 : jeu de détection v2 et `test_holdout.txt`, métriques COCO, latence
+ONNX CPU en processus isolé, import Kaggle) est fusionnée dans `perf/onnx-quantization`, donc
+dans `main` ; aucune branche `experiment/*` n'est fusionnée et l'étape 2.2 reste en attente des
+runs Kaggle (D94). Rejeté : un modèle enregistré séparé par précision (la variante perd le
+lien avec son champion dans la vue du Registry) ; mettre l'alias `champion` sur la variante
+quantifiée (`promote_if_better` comparerait les candidats FP32 au score de la variante) ;
+dupliquer les métriques et la latence dans un autre module (deux codes de mesure divergeraient).
+
+**D96. INT8 du détecteur : tête YOLO gardée en float ; latence mesurée en tours entrelacés.**
+Quantification statique (QDQ, int8 par canal, calibration MinMax sur 200 photos du val v2,
+jamais le test) : les nœuds de la tête de détection (`/model.22/`, trouvés depuis la sortie du
+graphe par `output_module_prefix`) restent en float, car le décodage des boîtes manipule des
+coordonnées en pixels (0 à 640) qu'un seul facteur d'échelle int8 arrondit trop. Essai sur 200
+photos de test de comparaison : tête en float mAP@[.5:.95] 0,854 ; seul le décodage en float
+0,848 ; quantification dynamique 0,832 (FP32 0,876). Le classifieur est quantifié en entier
+(300 crops du val v1). Latence : le PC portable de développement se bride sous charge soutenue
+(YOLOv8n passe de 24 ms à 570 ms par image après une centaine de passes enchaînées) ; une
+mesure longue par variante avantageait la première mesurée. Chaque variante est donc chronométrée
+en 5 tours entrelacés (30 passes dans un processus neuf, 20 s de pause avant chaque mesure),
+médiane des tours (`params.yaml`, `optimize`). Les 8 runs et versions d'une première exécution
+mesurés avec l'ancienne méthode (200 passes d'affilée) restent dans MLflow avec le tag
+`status=superseded`. Rejeté : quantifier aussi la tête (perte de localisation), exclure en plus
+la première convolution (gain de 0,008 sur l'essai, non retenu pour garder une règle simple par
+architecture), mesurer sur GPU (l'API sert sur CPU).
+
+## Endpoints du guide (2026-11-06)
+
+**D97. `/health`, `/model/metadata`, `/predict`, `/predict/visualize` : le modèle seul, sans
+compte ; métadonnées lues dans `models.json` ; pas de Grad-CAM dans l'API.** Le guide du module 1
+impose ces quatre routes (Swagger sur :8000/docs, 400 image invalide, 503 modèle non chargé).
+Elles sont ajoutées à côté de `POST /api/scan` sans la modifier : elles renvoient seulement ce
+que produisent les modèles (boîtes, top-5, confiances, latence serveur), sans tables de
+médicaments ni compte, pour se tester directement depuis Swagger ou `curl`. Pas de compte : elles
+ne lisent ni n'écrivent aucune donnée personnelle, gardent les limites de taille de `/api/scan`
+(10 Mo, 50 mégapixels) et l'API n'écoute que sur 127.0.0.1 (règle du projet) ; `/api/scan` reste
+derrière la connexion (D46). Les erreurs suivent le guide : 400 pour un type ou un contenu qui
+n'est pas une image (`/api/scan` garde son 415), 413 trop grande, 503 sans modèles ; `/health`
+répond toujours 200 avec `status=degraded` pour qu'une sonde voie la raison. `/model/metadata` lit
+`models.json`, que `python -m src.models.publish` enrichit de l'architecture (tag `arch` du
+Registry) et des métriques de la version publiée (celles d'une variante FP16 / INT8 complétées
+par les scores de validation de son champion) : l'API ne contacte jamais MLflow à l'exécution.
+`/predict/visualize` renvoie un PNG annoté (couleur stable par classe). Grad-CAM n'est pas servi :
+il demande les gradients du modèle PyTorch et l'API n'exécute que l'ONNX, sans PyTorch ; il est
+reporté à l'étape 2.6. Rejeté : protéger ces routes par la session (le guide les teste sans
+compte), interroger le Registry à chaque requête (dépendance réseau et latence), une carte de
+saillance par occlusion présentée comme Grad-CAM (ce n'en est pas un).

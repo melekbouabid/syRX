@@ -313,3 +313,44 @@ def test_missing_metric_raises(tracking: SimpleNamespace) -> None:
     with pytest.raises(ValueError, match="no metric 'top5'"):
         mu.promote_if_better(tracking.model, v1, "top5")
     assert mu.alias_version(tracking.model, mu.CHAMPION) is None
+
+
+# Scores of step 2.2 on the comparison split (test_v2_mAP50_95, docs/decisions.md D98).
+STEP_2_2 = {"yolov8s": 0.8830, "yolov10n": 0.8860, "yolo11s": 0.8885, "fasterrcnn": 0.8218}
+
+
+def _step_2_2_registry(tracking: SimpleNamespace) -> dict[str, str]:
+    """Baseline (challenger) and YOLOv8n (champion in place) as before the four imports."""
+    baseline = new_version(tracking, {"map": 0.7888})
+    mu.promote_if_better(tracking.model, baseline, "map")
+    incumbent = new_version(tracking, {"map": 0.8774})
+    mu.promote_if_better(tracking.model, incumbent, "map", min_gain=0.005)
+    return {"yolo11n": baseline, "yolov8n": incumbent}
+
+
+def _import(tracking: SimpleNamespace, order: list[str]) -> tuple[str, str]:
+    versions = _step_2_2_registry(tracking)
+    for arch in order:
+        versions[arch] = new_version(tracking, {"map": STEP_2_2[arch]})
+        mu.promote_if_better(tracking.model, versions[arch], "map", min_gain=0.005)
+    by_version = {v: arch for arch, v in versions.items()}
+    return (
+        by_version[mu.alias_version(tracking.model, mu.CHAMPION) or ""],
+        by_version[mu.alias_version(tracking.model, mu.CHALLENGER) or ""],
+    )
+
+
+def test_best_first_imports_give_the_rule_of_d98(tracking: SimpleNamespace) -> None:
+    # Best first (import_kaggle.promotion_order): the champion is the best candidate that
+    # beats the champion in place by min_gain, the challenger the second best model.
+    best_first = sorted(STEP_2_2, key=lambda arch: -STEP_2_2[arch])
+    assert _import(tracking, best_first) == ("yolo11s", "yolov10n")
+
+
+def test_sequential_promotion_depends_on_the_import_order(tracking: SimpleNamespace) -> None:
+    # Why the imports are sorted: YOLOv10n imported before YOLO11s is promoted, and YOLO11s
+    # (+0.0025 over it) then misses min_gain.
+    assert _import(tracking, ["yolov10n", "yolo11s", "yolov8s", "fasterrcnn"]) == (
+        "yolov10n",
+        "yolo11s",
+    )

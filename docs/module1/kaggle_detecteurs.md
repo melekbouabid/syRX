@@ -62,9 +62,11 @@ Les augmentations ne s'appliquent qu'au train (Ultralytics et
   mAP@[.5:.95] et mAP50 au protocole COCO (101 points, au plus 100 détections par image),
   précision et rappel au seuil de meilleur F1 (IoU 0,5).
 - Latence : ONNX Runtime, CPU, une image par appel, après échauffement
-  ([latency.py](../../src/models/detection/latency.py)), mesurée **sur le PC** à l'import pour
-  chaque modèle (`onnx_cpu_latency_ms`, même machine pour tous) ; celle du CPU Kaggle est
-  gardée à part (`kaggle_onnx_cpu_latency_ms`).
+  ([latency.py](../../src/models/detection/latency.py)), mesurée **sur le PC** pour tous les
+  modèles ensemble, en tours entrelacés avec pauses
+  ([compare_latency.py](../../src/models/detection/compare_latency.py), `onnx_cpu_latency_ms`,
+  même machine et mêmes images pour tous) ; celle du CPU Kaggle est gardée à part
+  (`kaggle_onnx_cpu_latency_ms`).
 
 | Split | Photos « consumer » v2 | Gardées (boîtes sûres) | Boîtes |
 |---|---:|---:|---:|
@@ -103,6 +105,7 @@ de vue) est plus difficile.
 | [src/models/detection/evaluate_champion.py](../../src/models/detection/evaluate_champion.py) | réévaluation du champion sur le split de comparaison |
 | [src/models/detection/package_kaggle.py](../../src/models/detection/package_kaggle.py) | dossier et zip du dataset Kaggle privé (`runs/kaggle/`, ignoré par git) |
 | [src/models/detection/notebook.py](../../src/models/detection/notebook.py) | génère les notebooks Kaggle (un modèle de notebook pour tous) |
+| [src/models/detection/compare_latency.py](../../src/models/detection/compare_latency.py) | latence ONNX CPU, taille et paramètres de tous les détecteurs FP32, mesurés ensemble en tours entrelacés |
 | [src/models/detection/compare.py](../../src/models/detection/compare.py) | tableau et figure de comparaison depuis MLflow |
 | [tests/models/detection/](../../tests/models/detection/) | tests (store MLflow SQLite temporaire, famille de modèles factice, sans GPU) |
 
@@ -178,9 +181,25 @@ Ajoute `test_v2_*` et `onnx_cpu_latency_ms` au run de la version champion (et un
 ### 6. Importer chaque export dans MLflow (PC)
 
 ```bash
-.venv-train/Scripts/python -m src.models.detection.import_kaggle detector_yolov8n_export.zip
-# ... un appel par modèle (plusieurs fichiers acceptés)
+# tous les exports en un seul appel : importés du meilleur au moins bon (D98)
+.venv-train/Scripts/python -m src.models.detection.import_kaggle --no-latency runs/kaggle/detector_*_export.zip
+# puis la latence de tous les détecteurs FP32, mesurés ensemble (D96, D98)
+.venv-train/Scripts/python -m src.models.detection.compare_latency
 ```
+
+Ordre d'import : `promote_if_better` compare chaque candidat au champion **en place** avec un
+gain minimal, donc une suite d'imports dépend de son ordre (un candidat importé juste après un
+modèle à peine moins bon, déjà promu, ne le bat plus de 0,005). Plusieurs exports donnés en un
+appel sont donc importés par valeur décroissante de `test_v2_mAP50_95` (lue dans leur
+`run.json`) : le résultat ne dépend plus de l'ordre des arguments (`--keep-order` pour garder
+l'ordre donné).
+
+Latence : `--no-latency` saute la mesure isolée de l'import ; `compare_latency` chronomètre
+ensuite tous les détecteurs FP32 du Registry (baseline comprise) avec le protocole de l'étape 2.4
+(5 tours entrelacés de 30 passes, 20 s de pause avant chaque mesure, médianes ; le PC portable
+se bride sous charge soutenue, D96) et enregistre `onnx_cpu_latency_ms`, `onnx_cpu_latency_p95_ms`,
+la moyenne de chaque tour (`onnx_cpu_latency_round_ms`), `model_size_mb` et `onnx_parameters`
+dans le run de chaque version (et dans le run de réévaluation de la baseline).
 
 Chaque import crée, dans l'expérience `tujya-vision`, le run parent `detector-<archi>`
 (tags `git_commit`, `git_branch`, `dvc_rev`, `dataset_md5`, `seed`, GPU ; paramètres retenus ;
@@ -191,8 +210,9 @@ Le résumé est écrit dans `models/compare/detector_<archi>.json`.
 
 Vérifications dans l'interface MLflow (http://127.0.0.1:5000) : expérience `tujya-vision`,
 filtre `tags.stage = 'hpo'` puis **Compare** > **Parallel Coordinates** (hyperparamètres
-contre `val_mAP50_95`) ; filtre `tags.stage IN ('compare', 'compare-eval')` pour comparer
-les modèles ; onglet **Models** pour les alias.
+contre `val_mAP50_95`) ; filtre `tags.stage LIKE 'compare%' and tags.smoke = 'false'` pour
+comparer les modèles (la recherche MLflow n'accepte pas `IN` sur un tag) ; onglet **Models**
+pour les alias.
 
 ### 7. Poids dans DVC, tableau et figure (sur la branche de chaque modèle)
 
@@ -206,7 +226,8 @@ git commit -m "exp(detector): record the <archi> Kaggle run (test_v2_mAP50_95 0.
 
 Puis, une fois tous les modèles importés (branche du champion) :
 `python -m src.models.detection.compare` remplit le tableau ci-dessous et écrit la figure
-`docs/module1/assets/detecteurs_comparaison.png` (mAP@[.5:.95] contre latence CPU).
+`docs/module1/assets/detecteurs_comparaison.png` (mAP@[.5:.95] contre latence CPU et contre
+taille du fichier ONNX).
 
 ### 8. Fin de l'étape
 

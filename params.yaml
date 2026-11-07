@@ -89,6 +89,29 @@ compare:
   detector:
     dataset: c3pi-v2-detect
     metric: test_v2_mAP50_95
+# Step 2.4, ONNX optimisation of the champions (src/models/optimize.py,
+# docs/module1/optimisation_onnx.md): FP16 / INT8 variants, calibration on the validation split.
+# The served variant is the fastest one whose accuracy (test_v2_mAP50_95 / test_top1) is at
+# most max_drop below FP32 and whose mean CPU latency is at least min_speedup lower; else FP32.
+optimize:
+  seed: 0
+  max_drop: 0.01           # absolute: one point of mAP@[.5:.95] or of top-1
+  min_speedup: 0.05        # relative: below 5 % the gain is within the measurement noise
+  latency_images: 20       # test images cycled through by the latency measurement
+  latency_runs: 30         # timed forward passes per round (mean and p95), in a fresh process
+  latency_warmup: 10
+  latency_rounds: 5        # interleaved rounds over the variants, medians kept (D96)
+  latency_cooldown_s: 20   # rest before each timing: the laptop CPU throttles under load
+  latency_budget_s: 1.5    # seconds of load per timing at most: past ~2 s the laptop CPU
+                           # slows down ~15x (D98); one API request is far below that
+  detector:
+    calibration_images: 200   # spread over the 1,315 validation photos of C3PI v2
+    calibration_method: minmax
+    exclude_head: true        # keep the box decoding of the YOLO head in float (D96)
+  classifier:
+    calibration_images: 300   # spread over the 560 validation crops of C3PI v1
+    calibration_method: minmax
+    exclude_head: false
 # Stage evaluate (src/models/evaluate.py): detector confidence threshold, end to end.
 evaluate:
   conf: 0.25
