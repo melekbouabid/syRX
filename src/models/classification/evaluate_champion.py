@@ -17,8 +17,8 @@ serves, with the preprocessing of the API and the metrics of the candidates
 2. `test_v2_v1c_*`: the comparison crops of the 150 v1 classes, the prediction restricted to
    these classes: the same label space as the champion (the guard of the promotion);
 3. the metrics and the CPU latency are logged in a run `evaluate-classifier-v<n>-c3pi-v2`
-   (tag `stage=compare-eval`) and added to the version's own run, where promote_if_better
-   reads them.
+   (tag `stage=compare-eval`); the scores are also added to the version's own run, where
+   promote_if_better reads them.
 """
 
 from __future__ import annotations
@@ -136,9 +136,11 @@ def evaluate_version(
     ) as eval_run:
         mlflow.log_metrics(metrics)
         mlflow.set_tag("latency_cpu", cpu_name())
-    # The version's own run receives the metrics too: promote_if_better reads them there.
+    # The version's own run receives the scores too: promote_if_better reads them there. Its
+    # latency stays the one of the interleaved protocol (step 2.4, then compare_latency
+    # --task classify, D96): the isolated timing above goes to the evaluation run only.
     with mlflow.start_run(run_id=mv.run_id):
-        mlflow.log_metrics(metrics)
+        mlflow.log_metrics({k: v for k, v in metrics.items() if k.startswith("test_v2")})
         mlflow.set_tag("test_v2_eval_run_id", eval_run.info.run_id)
     for key in (rules["metric"], rules["guard_metric"]):
         if key in metrics:
