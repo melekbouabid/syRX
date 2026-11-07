@@ -1,0 +1,58 @@
+# Hyperparameter search of experiment/classifier-yolo11s-cls (step 2.3): Optuna, one child MLflow
+# run per trial (src/models/classification/hpo.py, runner.py;
+# docs/module1/kaggle_classifieurs.md).
+# Ultralytics YOLO11s-cls (5.9 M parameters), pretrained on ImageNet-1k (transfer learning), the
+# architecture served today (trained on v1).
+arch: yolo11s-cls
+model: yolo11s-cls
+family: torch
+pretrained: true
+branch: experiment/classifier-yolo11s-cls
+seed: 0
+search:
+  # Each trial: transfer learning (1 epoch, head only) then selective fine-tuning, 8 epochs
+  # in all on 0.5 of the train crops of every class, scored on the validation split.
+  n_trials: 16
+  epochs: 8
+  fraction: 0.5
+  metric: val_top1
+  sampler: tpe
+  startup_trials: 5         # random trials before TPE models the results
+  timeout_hours: 1.5        # no new trial after this time (Kaggle GPU budget, D103)
+  space:
+    lr: {type: float, low: 1.0e-4, high: 3.0e-3, log: true}  # AdamW, new classification layer
+    backbone_lr_mult: {type: float, low: 0.03, high: 0.5, log: true}  # x lr, unfrozen blocks
+    weight_decay: {type: float, low: 1.0e-4, high: 0.1, log: true}
+    unfreeze: {type: categorical, choices: [3, 5, 7, 10]}   # last backbone blocks fine-tuned
+    imgsz: {type: categorical, choices: [192, 224]}
+    # Augmentation of the train split only (validation and test: the API's resize).
+    randaugment: {type: int, low: 0, high: 12, step: 3}   # magnitude, 0 = off
+    mix_prob: {type: float, low: 0.0, high: 0.6}          # batches mixed by MixUp or CutMix
+    label_smoothing: {type: float, low: 0.0, high: 0.15}
+    # Class imbalance (10 to 80 train crops per class).
+    imbalance: {type: categorical, choices: [none, class_weights, focal]}
+fixed:
+  batch: 64
+  workers: 4                # Kaggle: 4 CPU cores
+  head_epochs: 1
+  randaugment_ops: 2
+  mixup_alpha: 0.2
+  cutmix_alpha: 1.0
+  focal_gamma: 2.0
+  class_weight_power: 0.5
+final:
+  # Retraining of the best trial on the whole train split, early stopping on validation.
+  epochs: 40
+  patience: 8
+  head_epochs: 2
+  max_hours: 0.9
+# Budget (D103, T4 estimates): about 1.1 min per epoch of the whole train split (data loading
+# bound); search 16 x 8 x 0.5 = 64 epochs, about 78 min; final at most 40 epochs, about 44 min;
+# with installation, test and export about 2.3 h (time limits: 1.5 h + 0.9 h).
+smoke:
+  # Local check of the code (not an experiment): tiny subset, 2 trials, 1 epoch.
+  n_trials: 2
+  epochs: 1
+  final_epochs: 1
+  images: {train: 96, val: 32, test: 32}
+  fixed: {imgsz: 128, unfreeze: 3, batch: 16, workers: 2}
