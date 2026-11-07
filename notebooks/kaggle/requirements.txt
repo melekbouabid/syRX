@@ -1,5 +1,6 @@
-# Packages installed by the Kaggle notebooks of step 2.2 (notebooks/kaggle/detector_*.ipynb)
-# on top of the Kaggle image, which already has PyTorch, torchvision, pandas and OpenCV.
+# Packages installed by the Kaggle notebooks of steps 2.2 and 2.3 (notebooks/kaggle/detector_*.ipynb,
+# classifier_*.ipynb) on top of the Kaggle image, which already has PyTorch, torchvision,
+# pandas, matplotlib and OpenCV.
 # Same pins as the training venv (src/models/requirements-train.txt).
 ultralytics==8.4.191
 optuna==5.0.0
