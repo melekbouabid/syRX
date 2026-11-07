@@ -1158,6 +1158,9 @@ image pour YOLO11s après environ deux secondes d'inférence continue (Faster R-
 leurs 30 passes, YOLO11s en a 16 et Faster R-CNN 2 par tour ; l'API traite une image par
 requête, bien en dessous de cette charge. Les valeurs enregistrées (`onnx_cpu_latency_ms`,
 moyenne de chaque tour dans `onnx_cpu_latency_round_ms`) ont au plus 15 % d'écart entre tours.
+Variante servie, relancée le 07/11 (`python -m src.models.optimize --task detect`) : le FP32 de
+la version 9 (alias `served`), car son FP16, de même précision, n'est que 3,9 % plus rapide
+(seuil 5 %) et l'INT8 est plus lent et moins précis (docs/module1/optimisation_onnx.md).
 Rejeté : corriger les alias à la main après des imports dans un ordre quelconque (le Registry
 garderait des décisions contradictoires) ; promouvoir YOLOv10n pour sa vitesse (contraire à la
 règle de promotion annoncée) ; garder la latence mesurée à l'import (une mesure isolée par

@@ -45,9 +45,12 @@ curl -F "image=@photo.jpg;type=image/jpeg" http://127.0.0.1:8000/predict
 curl -F "image=@photo.jpg;type=image/jpeg" -o annotee.png http://127.0.0.1:8000/predict/visualize
 ```
 
-Sur les modèles servis (06/11/2026 : détecteur YOLOv8n FP16 v6, classifieur YOLO11s-cls FP32
-v1) et une photo du split de comparaison : `/health` `ok`, fournisseur `CPUExecutionProvider` ;
-`/predict` 1 comprimé, confiance 0,94, `inference_ms` 49, `server_ms` 51.
+Sur les modèles servis (07/11/2026 : détecteur YOLO11s FP32 v9, champion de l'étape 2.2,
+classifieur YOLO11s-cls FP32 v1) et des photos du split de comparaison : `/health` `ok`,
+fournisseur `CPUExecutionProvider` ; `/model/metadata` détecteur `yolo11s` v9, alias `champion`
+et `served` ; `/predict` sur 30 photos : 34 comprimés sur 34 trouvés, détection médiane 59 ms,
+`server_ms` médian 66 ms (06/11, avec YOLOv8n FP16 v6 : `inference_ms` 49, `server_ms` 51 sur
+une photo).
 
 Tests : [`backend/tests/test_vision.py`](../backend/tests/test_vision.py), chaque route et
 chaque code d'erreur avec les modèles ONNX factices ; test de fumée de l'image Docker dans

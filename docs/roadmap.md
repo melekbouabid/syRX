@@ -41,7 +41,7 @@ modules » du [README](../README.md#exigences-des-modules).
   - [x] Détecteurs (étape 2.2) : YOLOv8n, YOLOv8s, YOLO11s, YOLOv10n, Faster R-CNN entraînés sur Kaggle, une branche `experiment/detector-*` et une recherche Optuna (8 à 12 essais, runs enfants MLflow) par modèle ; YOLO11s champion (mAP@[.5:.95] 0,8885), YOLOv10n challenger (0,8860, 2,9 fois plus rapide) ; latence des six détecteurs mesurée ensemble ([kaggle_detecteurs.md](module1/kaggle_detecteurs.md), D93-D94, D98)
   - [ ] Classifieurs (étape 2.3)
 - [x] Export ONNX, inférence avec ONNX Runtime, sorties identiques à PyTorch
-- [x] Optimisation des champions (étape 2.4) : variantes FP16 / INT8 (statique calibrée sur le val, dynamique), précision, latence moyenne / p95 et taille dans MLflow ; détecteur YOLOv8n servi en FP16 (-0,0016 mAP, 7 % plus rapide), classifieur en FP32 ; INT8 plus lent sur ce CPU ([optimisation_onnx.md](module1/optimisation_onnx.md), D95-D96)
+- [x] Optimisation des champions (étape 2.4) : variantes FP16 / INT8 (statique calibrée sur le val, dynamique), précision, latence moyenne / p95 et taille dans MLflow ; détecteur YOLOv8n servi en FP16 (-0,0016 mAP, 7 % plus rapide), classifieur en FP32 ; INT8 plus lent sur ce CPU ; relancé le 07/11 sur le champion YOLO11s : servi en FP32 (FP16 3,9 % plus rapide seulement) ([optimisation_onnx.md](module1/optimisation_onnx.md), D95-D96, D98)
 - [x] Mesurer top-1 / top-5 (identification) et mAP (détection)
 - [ ] Comparer avec ePillID sur son propre split et ses métriques ([vision.md](module1/vision.md))
 - [ ] Vérifier à la main les boîtes de test ; second passage d'étiquetage avec le détecteur entraîné
