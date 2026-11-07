@@ -28,7 +28,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Chaque classe reliée à ses principes actifs (RxNav, 149/150)
 - [x] DDInter activé ; interactions entre ces principes actifs dans une table propre ([interactions.md](module2/interactions.md))
 - [x] Plus de données et Big Data (étape 1.4, demande du professeur) : cluster Spark dans Docker Compose, jobs PySpark index / qualité / split sans fuite / augmentation des classes rares / ePillID / corpus RAG, étapes DVC, statistiques dans MLflow ([big_data.md](module1/big_data.md), D88-D90)
-- [ ] Entraîner les modèles sur le jeu C3PI v2 (étapes 2.2 et 2.3) : détecteurs faits (étape 2.2), classifieurs à faire (étape 2.3)
+- [ ] Entraîner les modèles sur le jeu C3PI v2 (étapes 2.2 et 2.3) : détecteurs faits (étape 2.2), classifieurs en attente Kaggle (étape 2.3 : jeu de crops v2, étape DVC `prepare_classify_v2`)
 
 ## 2. Modèles de vision
 - [x] Matériel vérifié, entraînement dans son propre venv (`.venv-train` depuis l'étape 1.2 ; RTX 2050, CUDA 13.0)
@@ -39,7 +39,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] MLflow conforme au lab (étape 2.1) : runs tracés (`git_commit`, `dvc_rev`, `dataset`, `seed`, requirements + `dvc.lock`), LoggedModel MLflow 3, alias `champion` / `challenger`, `promote_if_better` ; étapes DVC `train_detector`, `train_classifier`, `export_onnx`, `evaluate` ; baseline YOLO11n + YOLO11s-cls champion ([mlflow.md](module1/mlflow.md), D91-D92)
 - [ ] Comparer d'autres détecteurs et classifieurs, recherche d'hyperparamètres (étapes 2.2 et 2.3, GPU Kaggle)
   - [x] Détecteurs (étape 2.2) : YOLOv8n, YOLOv8s, YOLO11s, YOLOv10n, Faster R-CNN entraînés sur Kaggle, une branche `experiment/detector-*` et une recherche Optuna (8 à 12 essais, runs enfants MLflow) par modèle ; YOLO11s champion (mAP@[.5:.95] 0,8885), YOLOv10n challenger (0,8860, 2,9 fois plus rapide) ; latence des six détecteurs mesurée ensemble ([kaggle_detecteurs.md](module1/kaggle_detecteurs.md), D93-D94, D98)
-  - [ ] Classifieurs (étape 2.3)
+  - [ ] Classifieurs (étape 2.3) : **EN ATTENTE KAGGLE**. Fait : jeu de crops C3PI v2 et split de comparaison sans session vue par le champion v1 (D99), outillage commun sur `feature/classifier-kaggle-tooling`, six branches `experiment/classifier-*` (baseline CNN maison, ResNet-50, EfficientNetV2-S, ConvNeXt-Tiny, ViT-B/16, YOLO11s-cls) avec leur recherche Optuna et leur notebook, tests de fumée locaux des six notebooks (export ONNX lu par l'API, import MLflow sans Registry), champion v1 réévalué (`test_v2_top1` 0,1830, 0,7527 sur ses 150 classes, D100), zip du dataset Kaggle prêt. À faire : lancer les six notebooks (environ 15,5 h de GPU T4), importer, migrer la table de classes de l'API vers v2 (D101), fusionner la branche championne, tags ([kaggle_classifieurs.md](module1/kaggle_classifieurs.md), D99-D103)
 - [x] Export ONNX, inférence avec ONNX Runtime, sorties identiques à PyTorch
 - [x] Optimisation des champions (étape 2.4) : variantes FP16 / INT8 (statique calibrée sur le val, dynamique), précision, latence moyenne / p95 et taille dans MLflow ; détecteur YOLOv8n servi en FP16 (-0,0016 mAP, 7 % plus rapide), classifieur en FP32 ; INT8 plus lent sur ce CPU ; relancé le 07/11 sur le champion YOLO11s : servi en FP32 (FP16 3,9 % plus rapide seulement) ([optimisation_onnx.md](module1/optimisation_onnx.md), D95-D96, D98)
 - [x] Mesurer top-1 / top-5 (identification) et mAP (détection)
