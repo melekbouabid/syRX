@@ -1,0 +1,6 @@
+outs:
+- md5: ca91f7ee7c1c62acc43666bd5ded4ef8.dir
+  size: 58279046
+  nfiles: 25
+  hash: md5
+  path: detector-yolo11s

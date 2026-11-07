@@ -150,6 +150,10 @@ def test_collect_reads_candidates_and_baseline_without_smoke_runs(
     tracking.client.set_tag(champion_run, "arch", "yolo11s")
     tracking.client.log_metric(champion_run, "test_v2_mAP50_95", 0.8885)
     tracking.client.log_metric(champion_run, "model_size_mb", 37.9)
+    # Final validation score at step 0, then a per-epoch history under the same key.
+    tracking.client.log_metric(champion_run, "val_mAP50_95", 0.8063, step=0)
+    for epoch, value in ((1, 0.70), (2, 0.8042)):
+        tracking.client.log_metric(champion_run, "val_mAP50_95", value, step=epoch)
     mlflow.set_experiment(tracking.experiment)
     with mlflow.start_run(
         tags={
@@ -169,4 +173,5 @@ def test_collect_reads_candidates_and_baseline_without_smoke_runs(
 
     assert [r.arch for r in rows] == ["yolo11s", "yolo11n (baseline v1)"]
     assert (rows[0].status, rows[0].version, rows[0].size_mb) == ("champion", champion, 37.9)
+    assert rows[0].val_map == 0.8063  # the retained checkpoint, not the last epoch
     assert (rows[1].status, rows[1].version) == ("archived", baseline)
