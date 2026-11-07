@@ -7,8 +7,12 @@ Optuna et sa branche git, sur le GPU gratuit de Kaggle. Décisions : D93 (jeu de
 équité de la comparaison) et D94 (organisation, Kaggle, import MLflow) dans
 [docs/decisions.md](../decisions.md).
 
-**État : code, notebooks et import prêts et testés ; entraînements Kaggle à lancer**
-(mode d'emploi ci-dessous). Les résultats et le champion seront ajoutés ici à l'import.
+**État (07/11/2026) : terminé.** Les cinq détecteurs ont été entraînés sur Kaggle (Tesla T4,
+8 à 12 essais Optuna chacun), importés dans MLflow (un run parent et un run enfant par essai)
+et comparés à la baseline sur le même split : **YOLO11s est le champion** (version 9,
+mAP@[.5:.95] 0,8885), **YOLOv10n le challenger** (version 10, 0,8860), les autres sont
+archivés ; règle, ordre d'import et discussion dans la décision D98 et la section
+[Résultats](#résultats).
 
 ## Les modèles et leurs branches
 
@@ -45,7 +49,8 @@ sur la **validation** (`val_mAP50_95`) ; le meilleur essai est réentraîné sur
 | `fliplr`, `flipud` | 0 à 0,5 | 0 à 0,5 |
 
 Les augmentations ne s'appliquent qu'au train (Ultralytics et
-[fasterrcnn.py](../../src/models/detection/fasterrcnn.py)), jamais à la validation ni au test.
+`src/models/detection/fasterrcnn.py`, sur la branche `experiment/detector-fasterrcnn`), jamais
+à la validation ni au test.
 
 ## Données et équité de la comparaison (D93)
 
@@ -244,8 +249,98 @@ taille du fichier ONNX).
 ## Résultats
 
 <!-- comparison:begin -->
-En attente des entraînements Kaggle.
+| Modèle | mAP@[.5:.95] val | mAP@[.5:.95] test | mAP50 test | Précision | Rappel | mAP@[.5:.95] test v2 complet | Latence ONNX CPU moy. (ms) | p95 (ms) | Taille ONNX (Mo) | Paramètres (M) | Version | Statut | Run MLflow |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|
+| yolo11s | 0.8677 | 0.8885 | 0.9739 | 0.952 | 0.936 | 0.8722 | 63.0 | 67.1 | 37.9 | 9.5 | v9 | champion | `894871cd` |
+| yolov10n | 0.8569 | 0.8860 | 0.9760 | 0.949 | 0.946 | 0.8703 | 21.9 | 23.9 | 9.4 | 2.3 | v10 | challenger | `d28c1056` |
+| yolov8s | 0.8626 | 0.8830 | 0.9747 | 0.950 | 0.941 | 0.8644 | 69.7 | 73.7 | 44.7 | 11.2 | v11 | archived | `e4d25272` |
+| yolov8n | 0.8563 | 0.8774 | 0.9750 | 0.947 | 0.942 | 0.8543 | 24.2 | 25.5 | 12.8 | 3.2 | v2 | archived | `b0689536` |
+| fasterrcnn | 0.8063 | 0.8218 | 0.9723 | 0.951 | 0.944 | 0.8097 | 420.9 | 435.5 | 165.6 | 41.3 | v12 | archived | `96b290a7` |
+| yolo11n (baseline v1) |  | 0.7888 | 0.9513 | 0.931 | 0.940 | 0.8050 | 23.8 | 25.7 | 10.7 | 2.6 | v1 | archived | `6ae2678a` |
 <!-- comparison:end -->
+
+Valeurs du 07/11/2026 : mAP@[.5:.95] et mAP50 au protocole COCO sur le split de comparaison
+(`test_holdout.txt`, 995 photos, 1 133 boîtes), précision et rappel au seuil de meilleur F1 ;
+latence ONNX Runtime CPU sur le PC de développement, tous les modèles FP32 mesurés ensemble
+([compare_latency.py](../../src/models/detection/compare_latency.py) : 5 tours entrelacés,
+20 s de pause avant chaque mesure, au plus 1,5 s de charge par mesure, médianes ; YOLO :
+640 px, Faster R-CNN : 480 px, la taille choisie par sa recherche) ; paramètres = poids du
+graphe ONNX. Pour chaque modèle, le tour le plus lent est au plus 15 % au-dessus du plus
+rapide (YOLO11n : 23,0 à 26,5 ms ; `onnx_cpu_latency_round_ms` dans MLflow) : aucune mesure
+bridée (D98).
+
+![mAP@[.5:.95] contre latence CPU et contre taille du fichier ONNX](assets/detecteurs_comparaison.png)
+
+### Ce que montre la comparaison
+
+- **Les quatre YOLO entraînés sur C3PI v2 battent la baseline** (YOLO11n entraînée sur v1,
+  0,7888) de 0,089 à 0,100 de mAP@[.5:.95] : le jeu v2 et la recherche d'hyperparamètres
+  apportent plus que le choix entre ces architectures.
+- **Les trois meilleurs YOLO sont à 0,0055 les uns des autres** (YOLO11s 0,8885, YOLOv10n
+  0,8860, YOLOv8s 0,8830). Avec un seul split de 995 photos, une seule graine et des boîtes
+  produites automatiquement, l'écart entre YOLO11s et YOLOv10n (0,0025) n'est pas
+  significatif ; le même ordre se retrouve sur le test v2 complet (0,8722 / 0,8703 / 0,8644),
+  qui contient le split de comparaison et n'est donc pas une mesure indépendante, mais pas sur
+  la validation (YOLOv8s y passe devant YOLOv10n).
+- **Le mAP50 est presque le même pour tous** (0,972 à 0,976, baseline 0,951) : tous trouvent
+  presque tous les comprimés ; la différence est dans la précision des boîtes aux seuils d'IoU
+  élevés, que mesure mAP@[.5:.95].
+- **Latence et taille** : YOLOv10n est le plus rapide (21,9 ms, 9,4 Mo, 2,3 M paramètres),
+  YOLO11s coûte 2,9 fois plus de temps CPU (63,0 ms) et 4 fois plus de place (37,9 Mo) pour
+  +0,0025 de mAP@[.5:.95]. YOLOv8s est plus lent, plus gros et moins précis que YOLO11s.
+- **Faster R-CNN** (deux étapes, ResNet-50 FPN, l'autre famille demandée par le professeur) : un
+  mAP50 du niveau des YOLO (0,972) mais un mAP@[.5:.95] plus bas de 0,067 que le champion, et
+  19 fois plus lent que YOLOv10n (421 ms à 480 px). Ses boîtes sont moins serrées : la
+  recherche (3 époques sur 20 % du train) a retenu 480 px, et le réentraînement n'a eu que
+  12 époques dans le temps de GPU de Kaggle ; la régression des boîtes se fait sur des
+  caractéristiques ramenées à 7 x 7 par RoIAlign avec une perte smooth L1, alors que les YOLO
+  optimisent directement le recouvrement (CIoU et *distribution focal loss*). Sa lenteur est
+  celle des deux étapes : réseau de propositions, puis tête de classification et de régression
+  sur 1 000 propositions par image, sur une colonne vertébrale de 41 M paramètres.
+- La parité PyTorch / ONNX (100 images de test, ONNX décodé comme dans l'API) reste à
+  0,003 près pour les cinq modèles (`parity_*` dans MLflow), YOLOv10n compris (tête
+  « un-à-plusieurs » exportée, voir Limites).
+
+### Hyperparamètres retenus par la recherche Optuna
+
+| Modèle | Essais (meilleur) | `val_mAP50_95` de l'essai | Optimiseur | `lr0` | `imgsz` | `batch` | `mosaic` | `mixup` | Époques finales | GPU Kaggle (min) |
+|---|---|---:|---|---:|---:|---:|---:|---:|---:|---:|
+| YOLOv8n | 12 (n° 11) | 0,7900 | AdamW | 5,1e-4 | 640 | 16 | 0,84 | 0,29 | 60 | 162 |
+| YOLOv8s | 10 (n° 6) | 0,7937 | AdamW | 2,1e-4 | 640 | 32 | 0,02 | 0,25 | 50 | 145 |
+| YOLO11s | 10 (n° 6) | 0,8043 | AdamW | 2,1e-4 | 640 | 32 | 0,02 | 0,25 | 50 | 202 |
+| YOLOv10n | 12 (n° 11) | 0,7855 | AdamW | 1,2e-4 | 640 | 32 | 0,89 | 0,21 | 60 | 185 |
+| Faster R-CNN | 8 (n° 0) | 0,7454 | AdamW | 6,9e-5 | 480 | 4 | - | - | 12 | 172 |
+
+Toutes les valeurs (HSV, flips) et l'historique de chaque essai sont dans les runs enfants
+(`tags.stage = 'hpo'`). YOLOv8s et YOLO11s ont le même espace de recherche et la même graine :
+TPE leur a proposé les mêmes essais et le meilleur est le même (n° 6), donc ces deux
+architectures sont comparées à hyperparamètres égaux.
+
+### Promotion et ordre d'import (D98)
+
+Champion en place avant les quatre imports : YOLOv8n (version 2, 0,8774). Règle : un candidat
+doit le battre d'au moins 0,005 sur `test_v2_mAP50_95` ; parmi ceux qui le font (YOLO11s
++0,0111, YOLOv10n +0,0086, YOLOv8s +0,0056 ; Faster R-CNN -0,0556), le meilleur devient
+champion, et le deuxième modèle de la comparaison challenger. `promote_if_better` appliqué
+import par import dépend de l'ordre : sur les 24 ordres possibles des quatre imports (simulés
+avec la vraie fonction sur un store MLflow temporaire), 12 donnent YOLO11s / YOLOv10n, 4
+YOLO11s / YOLOv8s et 8 YOLOv10n / YOLO11s (YOLOv10n importé avant YOLO11s est promu, puis
+YOLO11s ne le bat que de 0,0025). Les exports ont donc été importés en un appel, du meilleur
+au moins bon (`import_kaggle` les trie, quel que soit l'ordre des arguments) : YOLO11s,
+YOLOv10n, YOLOv8s, Faster R-CNN. Résultat, sans correction manuelle des alias :
+
+| Version | Modèle | `test_v2_mAP50_95` | Alias / statut | Décision (`promotion`) | Run parent | Runs enfants |
+|---|---|---:|---|---|---|---:|
+| 9 | YOLO11s | 0,8885 | `champion` | promu : +0,0111 contre la version 2 | `894871cd18f840fdba734d7ce985cd40` | 10 |
+| 10 | YOLOv10n | 0,8860 | `challenger` | non promu : -0,0025 contre la version 9 | `d28c1056db9b455fb35d7ac83e65bc94` | 12 |
+| 11 | YOLOv8s | 0,8830 | archivé | non promu : -0,0055 | `e4d2527274b3477a89ffd4f93d3e145e` | 10 |
+| 12 | Faster R-CNN | 0,8218 | archivé | non promu : -0,0667 | `96b290a7da2742ee955f76ca2aff4010` | 8 |
+| 2 | YOLOv8n | 0,8774 | archivé (champion jusqu'au 07/11) | importé le 06/11 | `b06895360a7e441899172c1c04bd7721` | 12 |
+| 1 | YOLO11n (baseline) | 0,7888 | archivé | baseline de l'étape 2.1 | `6766123e6ecc43b2bda50f01d9419e32` | - |
+
+Poids et exports Kaggle : `data/models/detectors/detector-<archi>` (DVC), un pointeur `.dvc`
+par branche `experiment/detector-<archi>` ; seule `experiment/detector-yolo11s` est fusionnée
+dans `main`.
 
 ## Vérification locale (tests de fumée)
 
@@ -279,9 +374,16 @@ générateur) ; seules leurs configurations Optuna diffèrent (validées par `te
   comparaison mesure l'accord avec cet étiquetage, comme pour la baseline.
 - Le split de comparaison est plus petit que le test v2 complet (sessions vues par la
   baseline retirées) ; le test complet est rapporté à côté.
-- Faster R-CNN est très lent sur CPU en ONNX (2 s par image à 320 px au test de fumée : NMS
-  et RoIAlign de torchvision exportés pour 1 000 propositions et un seuil de score de 0,001) ;
-  la latence fait partie de la comparaison, c'est le prix du détecteur à deux étapes.
+- Faster R-CNN est lent sur CPU en ONNX (421 ms par image à 480 px sur le PC, 1 293 ms sur le
+  CPU de Kaggle : NMS et RoIAlign de torchvision exportés pour 1 000 propositions et un seuil
+  de score de 0,001) ; la latence fait partie de la comparaison, c'est le prix du détecteur à
+  deux étapes.
+- Un seul entraînement par modèle (une graine) : les écarts de moins de 0,005 entre YOLO
+  récents ne sont pas significatifs (D98).
+- Latence : le PC portable ralentit d'environ 15 fois après deux secondes d'inférence
+  continue ; chaque mesure est limitée à 1,5 s de charge (`latency_budget_s`), donc les gros
+  modèles sont chronométrés sur moins de passes (YOLO11s 16, YOLOv8s 14, Faster R-CNN 2 par
+  tour, contre 30 pour les petits YOLO), toujours sur 5 tours.
 - YOLOv10 : Ultralytics 8.4 exporte en ONNX la tête « un-à-plusieurs » (`end2end: False`,
   même format que YOLOv8, NMS dans l'API), alors que la prédiction PyTorch de l'évaluation
   utilise la tête « un-à-un » sans NMS ; l'écart est mesuré par les métriques `parity_torch_*` / `parity_onnx_*` (100 images de test,
