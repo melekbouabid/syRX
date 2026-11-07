@@ -1108,3 +1108,58 @@ il demande les gradients du modèle PyTorch et l'API n'exécute que l'ONNX, sans
 reporté à l'étape 2.6. Rejeté : protéger ces routes par la session (le guide les teste sans
 compte), interroger le Registry à chaque requête (dépendance réseau et latence), une carte de
 saillance par occlusion présentée comme Grad-CAM (ce n'en est pas un).
+
+## Choix du détecteur champion (2026-11-07)
+
+**D98. Champion des détecteurs : YOLO11s, par une règle qui ne dépend pas de l'ordre
+d'import ; YOLOv10n challenger ; latence mesurée avec une charge limitée.** Les quatre derniers
+exports Kaggle (YOLOv8s, YOLOv10n, YOLO11s, Faster R-CNN) arrivent après YOLOv8n, champion en
+place depuis le 06/11 (version 2, `test_v2_mAP50_95` 0,8774). Règle : un candidat est promu
+s'il bat ce champion en place d'au moins 0,005 (`registry.detector.min_gain`, D92-D93) ; parmi
+ceux qui le font, le meilleur devient champion ; le challenger est le deuxième modèle de la
+comparaison. Valeurs exactes des `run.json` : YOLO11s 0,88846 (+0,0111), YOLOv10n 0,88596
+(+0,0086), YOLOv8s 0,88296 (+0,0056), Faster R-CNN 0,82177 (-0,0556) : champion YOLO11s,
+challenger YOLOv10n. Problème : `promote_if_better` compare chaque import au champion du moment,
+donc une suite d'imports dépend de son ordre ; simulé avec la vraie fonction sur un store
+temporaire pour les 24 ordres possibles : 12 donnent YOLO11s / YOLOv10n, 4 YOLO11s / YOLOv8s
+et 8 YOLOv10n / YOLO11s (YOLOv10n importé avant YOLO11s est promu, puis YOLO11s ne le bat
+que de 0,0025). Choix : `import_kaggle` importe plusieurs exports du meilleur au moins bon
+(métrique de promotion lue dans chaque `run.json`, `--keep-order` pour l'ordre donné). Importé
+en premier, le meilleur est promu s'il bat le champion en place du gain minimal (sinon aucun
+ne le fait), les suivants ne peuvent plus le battre, et le challenger devient le meilleur des
+autres et de l'ancien champion : le résultat est celui de la règle pour tout ordre des
+arguments (test `test_best_first_imports_give_the_rule_of_d98` avec ces valeurs). Les alias
+n'ont pas été corrigés à la main : YOLO11s version 9 `champion`, YOLOv10n version 10
+`challenger`, YOLOv8s (11), Faster R-CNN (12), YOLOv8n (2) et la baseline YOLO11n (1)
+`archived`. L'écart est faible et doit être lu comme tel : les trois meilleurs YOLO tiennent
+en 0,0055, YOLO11s ne devance YOLOv10n que de 0,0025, sur un seul split (995 photos, 1 133
+boîtes produites automatiquement) et un seul entraînement par modèle (une graine) ; l'ordre
+est le même sur le test v2 complet (qui contient ce split), pas sur la validation. Le mAP50
+est presque égal pour tous (0,972 à 0,976) : la différence porte sur la précision des boîtes
+aux IoU élevés. En contrepartie, YOLO11s coûte 2,9 fois le temps CPU de YOLOv10n (63,0 ms
+contre 21,9 ms par image) et 4 fois sa taille (37,9 Mo contre 9,4 Mo, 9,5 M contre 2,3 M
+paramètres). Le champion reste celui de la règle (une règle fixée avant les résultats ne se
+change pas après coup) ; la variante servie (alias `served`, D95) est choisie par la règle de
+l'étape 2.4 parmi les variantes FP32 / FP16 / INT8 du champion, ce qui garde la garantie « l'API
+sert le champion » ; YOLOv10n, challenger, est l'option documentée si la latence devient la
+contrainte (webcam continue, étape 2.6). Faster R-CNN (deux étapes, ResNet-50 FPN, l'autre
+famille demandée par le professeur) détecte aussi bien (mAP50 0,972) mais localise moins bien
+(mAP@[.5:.95] -0,067 contre le champion) : 480 px retenus par la recherche, 12 époques
+seulement dans le temps de GPU de Kaggle, régression des boîtes sur des caractéristiques
+RoIAlign 7 x 7 avec une perte smooth L1 quand les YOLO optimisent directement le recouvrement
+(CIoU, distribution focal loss) ; il est 19 fois plus lent que YOLOv10n (421 ms à 480 px :
+réseau de propositions puis têtes sur 1 000 propositions, 41 M paramètres). Latence : mesurée
+pour les six détecteurs FP32 ensemble (`src/models/detection/compare_latency.py`, protocole
+de D96 : 5 tours entrelacés, 20 s de pause, médianes) ; une première mesure sans limite de
+charge (non enregistrée) a montré que le PC portable passe d'environ 60 ms à 1 000 ms par
+image pour YOLO11s après environ deux secondes d'inférence continue (Faster R-CNN : 400 ms puis
+2 700 ms), d'où des tours bridés pour les gros modèles. Chaque mesure est donc limitée à
+1,5 s de charge (`optimize.latency_budget_s`, échauffement compris) : les petits YOLO gardent
+leurs 30 passes, YOLO11s en a 16 et Faster R-CNN 2 par tour ; l'API traite une image par
+requête, bien en dessous de cette charge. Les valeurs enregistrées (`onnx_cpu_latency_ms`,
+moyenne de chaque tour dans `onnx_cpu_latency_round_ms`) ont au plus 15 % d'écart entre tours.
+Rejeté : corriger les alias à la main après des imports dans un ordre quelconque (le Registry
+garderait des décisions contradictoires) ; promouvoir YOLOv10n pour sa vitesse (contraire à la
+règle de promotion annoncée) ; garder la latence mesurée à l'import (une mesure isolée par
+modèle, sur un processeur plus ou moins chaud) ; changer le nombre de fils d'ONNX Runtime pour
+éviter le ralentissement (l'API garde le réglage par défaut).
