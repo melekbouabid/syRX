@@ -113,10 +113,10 @@ await page.getByText("Grad-CAM of the served classifier").waitFor();
 await page.waitForTimeout(500);
 await shot(page, "20-gradcam.jpg", page.locator('[data-testid="result-stage"]'));
 
-// 6. Champion models and latency side by side (the same page, scrolled to the top).
+// 6. Champion models served (GET /model/metadata), at the top of the page.
 await page.getByRole("tab", { name: "Photo and boxes" }).click();
 await page.evaluate(() => window.scrollTo(0, 0));
-await shot(page, "21-model-latency.jpg", page.locator('[data-testid="model-card"]'));
+await shot(page, "21-champion-models.jpg", page.locator('[data-testid="model-card"]'));
 
 // 7. Two more demo photos, each confirmed, then their interactions.
 for (const id of DEMOS) {
