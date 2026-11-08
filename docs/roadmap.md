@@ -75,6 +75,8 @@ modules » du [README](../README.md#exigences-des-modules).
 
 ## 6. Site web
 - [x] Page Scanner : upload + webcam (prédictions en direct) + boîtes + galerie de démonstration (D52)
+- [x] Frontend du guide (étape 2.6) : Tailwind CSS 4, glisser-déposer, galerie du split de test en 1 clic (photos jamais vues par le détecteur v9 ni le classifieur v1, D105), webcam en inférence continue (une requête à la fois), barres de probabilité animées, boîtes colorées par classe sur canvas, latence client et serveur en ms, modèle champion (`GET /model/metadata`), tests Vitest ; captures 01 à 07 et 18 à 21 ([app.md](app.md#page-scanner-guide-du-module-1-étape-26), D106-D107)
+- [x] Grad-CAM (reporté de l'étape 2.5) : cartes de la galerie précalculées avec les poids PyTorch du classifieur servi (étape DVC `gradcam_gallery`), servies par `GET /api/demo/images/{id}/gradcam` et affichées dans le Scanner ([api.md](api.md#galerie-de-démo-et-grad-cam), D104)
 - [x] Résultat (interaction, sévérité, source) sur la page Scanner ; captures dans [docs/screenshots/](screenshots/)
 - [x] Panneau de chat avec réponse diffusée, citations cliquables, appels d'outils (page Scanner)
 - [x] Avertissement sur la page Scanner, chaque rapport d'interactions, le panneau de chat et chaque réponse
@@ -85,7 +87,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Docker Compose : service ollama avec le GPU NVIDIA
 - [x] CI GitHub Actions (lint, tests, build du site)
 - [x] CD GitHub Actions : images construites et testées après une CI verte, non publiées (D70, [docs/cd.md](cd.md))
-- [x] Workflows du guide : `ci-tests.yml` (flake8, black --check, ruff, mypy, ESLint, pytest de `src/` et `backend/`, build du frontend) et `docker-build.yml` (images multi-stage backend et frontend + test de fumée, rien de publié) ; anciens `ci.yml` et `cd.yml` fusionnés (D87, `v2.1.0-ci`)
+- [x] Workflows du guide : `ci-tests.yml` (flake8, black --check, ruff, mypy, ESLint, pytest de `src/` et `backend/`, build du frontend ; Vitest depuis l'étape 2.6) et `docker-build.yml` (images multi-stage backend et frontend + test de fumée, rien de publié) ; anciens `ci.yml` et `cd.yml` fusionnés (D87, `v2.1.0-ci`)
 - [ ] Supprimer les deux anciens paquets sur ghcr.io (manuel : pas de droit `delete:packages`, [docs/cd.md](cd.md))
 - [x] Usage strictement local : chaque port sur 127.0.0.1, vérifié avec netstat (D69, [docs/infra.md](infra.md))
 - Pas de déploiement sur un serveur, par choix : le projet ne tourne que sur ce PC (D69)
