@@ -229,6 +229,25 @@ def brand_sources(brands: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return found
 
 
+def brand_summary(state: AgentState) -> tuple[str, list[int]]:
+    """One fixed sentence per recognised brand, citing its brand-table source: a 3B model
+    often names the ingredient without citing where the link comes from (step 2.7)."""
+    language = state.get("language", "fr")
+    sentences, cited = [], []
+    for source in state.get("sources", []):
+        if source.get("doc_type") != "brand" or "n" not in source:
+            continue
+        brand, _, ingredients = source["title"].partition(" -> ")
+        if language == "fr":
+            sentences.append(
+                f"{brand} contient : {ingredients} (table des marques) [{source['n']}]."
+            )
+        else:
+            sentences.append(f"{brand} contains: {ingredients} (brand table) [{source['n']}].")
+        cited.append(source["n"])
+    return " ".join(sentences), cited
+
+
 def interaction_sources(result: dict[str, Any]) -> list[dict[str, Any]]:
     """Each DDInter interaction found by check_interaction, as a citable source."""
     found = []
@@ -581,6 +600,14 @@ class TujyaAgent:
         )
         checked.violations += ["citation_added_by_meaning"] * semantic
         checked.violations += ["toxicity_sentence_replaced"] * replaced
+        brands, brand_cited = brand_summary(state)
+        if brands and not set(brand_cited) & set(checked.cited):
+            refused = checked.action == "refused"
+            body = "" if refused else checked.answer.rpartition(DISCLAIMER)[0].strip()
+            checked.action = "rewritten" if refused else checked.action
+            checked.violations.append("brand_source_added")
+            checked.answer = f"{brands} {body}".strip() + f"\n\n{DISCLAIMER}"
+            checked.cited = sorted(set(checked.cited) | set(brand_cited))
         summary, tox_cited = toxicity_summary(state)
         if summary:
             # Dose questions never get here; "refused" means no LLM sentence survived.

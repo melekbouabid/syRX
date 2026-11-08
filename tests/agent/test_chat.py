@@ -194,3 +194,23 @@ def test_a_brand_given_by_the_planner_is_checked_by_its_ingredients(
     assert call["chosen_by"] == "llm" and call["ok"]
     assert call["args"]["drugs"] == ["fluconazole", "warfarin"]
     assert any(c["doc_type"] == "interaction" and "Major" in c["title"] for c in body["citations"])
+
+
+def test_the_brand_source_is_always_cited(
+    client: TestClient, llm: FakeChatModel, chat_app: FastAPI, tmp_path: Path
+) -> None:
+    # The LLM cites only DDInter: a fixed sentence citing the brand table is added first.
+    table = tmp_path / "brands.csv"
+    table.write_text(
+        "brand,ingredients,printed_substances,country,source,reference,url\n"
+        'Diflucan,fluconazole,FLUCONAZOLE,FR,"BDPM (ANSM)","CIS 0 : DIFLUCAN",'
+        "https://base-donnees-publique.medicaments.gouv.fr/\n",
+        encoding="utf-8",
+    )
+    chat_app.state.settings.brand_table_file = table
+    llm.answer = "DDInter classe l'interaction comme majeure [2]."
+    body = ask(client, "Puis-je prendre du Diflucan avec ma warfarine ?")
+    assert body["answer"].startswith("Diflucan contient : fluconazole (table des marques) [1].")
+    assert "brand_source_added" in body["safety"]["violations"]
+    assert {c["n"] for c in body["citations"] if c["cited"]} >= {1, 2}
+    assert body["answer"].endswith(DISCLAIMER)
