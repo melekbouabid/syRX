@@ -1,0 +1,6 @@
+outs:
+- md5: 260458edb297870d59058238be52d066.dir
+  size: 4879276
+  nfiles: 20
+  hash: md5
+  path: off_topic

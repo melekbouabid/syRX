@@ -578,3 +578,37 @@ stages:
       md5: 2f377d2c1b4011e9ed16f27143106b22.dir
       size: 648536
       nfiles: 9
+  prepare_boxes:
+    cmd: python -m src.data.medicine_boxes prepare
+    deps:
+    - path: backend/app/boxes.py
+      hash: md5
+      md5: 92da3a1a31917c9e9a3e04976be99e4c
+      size: 22651
+    - path: config/brand_aliases.csv
+      hash: md5
+      md5: 75cbf74c2651943ace56395f7e308137
+      size: 8769
+    - path: config/inn_aliases.csv
+      hash: md5
+      md5: 9192d68b9edce015b39e231cd7a3b484
+      size: 1765
+    - path: data/processed/pharma/interactions_with_any_drug.csv
+      hash: md5
+      md5: 362a99f9a3de2894ec4aaca566c3887c
+      size: 9637335
+    - path: data/raw/medicine_boxes/italian_otc
+      hash: md5
+      md5: 301a3c0e388281c5f94881949bc0bd4a.dir
+      size: 49105187
+      nfiles: 720
+    - path: src/data/medicine_boxes.py
+      hash: md5
+      md5: c71ab78a8b4802ce4b73ecf45e73dccb
+      size: 10261
+    outs:
+    - path: data/processed/medicine_boxes
+      hash: md5
+      md5: ab582255c718d1656dc5235a0e9b4faa.dir
+      size: 220185
+      nfiles: 2
