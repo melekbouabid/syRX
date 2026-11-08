@@ -75,4 +75,26 @@ await page.locator(".report").waitFor({ timeout: 30_000 });
 await page.getByText("consultez un pharmacien ou un médecin").last().waitFor();
 await shot(page, "25-box-interactions.jpg", page.getByRole("region", { name: "My pills" }));
 
+// 26 (CHAT=1, needs Ollama and the RAG index): a brand in a chat question, its ingredient,
+// the DDInter check and the brand-table source cited.
+if (process.env.CHAT) {
+  const panel = page.locator(".chat-panel");
+  await panel.scrollIntoViewIfNeeded();
+  const before = await page.locator(".chat-turn .chat-meta").count();
+  await page.getByLabel("Question").fill("Puis-je prendre du Panadol avec de la warfarine ?");
+  await page.getByRole("button", { name: "Ask", exact: true }).click();
+  await page.waitForFunction(
+    (count) => document.querySelectorAll(".chat-turn .chat-meta").length > count,
+    before,
+    { timeout: 240_000 },
+  );
+  const turn = page.locator(".chat-turn").first();
+  const answer = await turn.locator(".chat-answer").innerText();
+  if (!/parac[ée]tamol|acetaminophen/i.test(answer)) throw new Error("the brand's ingredient is missing");
+  if (/\bsûr|sans danger/i.test(answer)) throw new Error("the answer calls something safe");
+  await turn.locator(".chat-tools summary").click();
+  await shot(page, "26-chat-brand.jpg", panel);
+  console.log(answer);
+}
+
 await browser.close();
