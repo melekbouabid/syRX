@@ -1,5 +1,9 @@
-// Typed client for the FastAPI backend. Every call goes to /api on the same origin; the
-// session lives in an HttpOnly cookie, so there is no token to store or attach here.
+// Typed client for the FastAPI backend: every call of the app goes through this file. Calls
+// go to /api on the same origin, except the model routes of the course guide (/health,
+// /model/metadata), which sit at the root; the session lives in an HttpOnly cookie, so there
+// is no token to store or attach here.
+
+import { timed } from "../lib/vision";
 
 export type Role = "admin" | "user";
 
@@ -84,7 +88,14 @@ export interface ScanResult {
   image_width: number;
   image_height: number;
   inference_ms: number;
-  timings: { detection_ms: number; classification_ms: number; total_ms: number };
+  timings: {
+    detection_ms: number;
+    classification_ms: number;
+    /** ONNX Runtime only: detection plus identification. */
+    total_ms: number;
+    /** The whole request on the server (upload, decoding, database included). */
+    server_ms?: number | null;
+  };
   confirm_threshold: number;
   pills: ScannedPill[];
   message: string | null;
@@ -153,11 +164,36 @@ export interface DemoImage {
   why: string;
   url: string;
   thumbnail_url: string;
+  /** Grad-CAM precomputed for this photo (D104), null when there is none. */
+  gradcam_url: string | null;
 }
 
 export interface DemoGallery {
   items: DemoImage[];
   note: string;
+}
+
+/** One served model, as GET /model/metadata describes it (MLflow Model Registry). */
+export interface ModelMetadata {
+  task: "detect" | "classify";
+  name: string;
+  architecture: string;
+  version: number | null;
+  aliases: string[];
+  precision: string;
+  variant_of: number | null;
+  run_id: string | null;
+  input_size: number;
+  metrics: Record<string, number>;
+  classes: string[];
+  num_classes: number;
+}
+
+export interface MetadataOut {
+  detector: ModelMetadata;
+  classifier: ModelMetadata;
+  published_at: string | null;
+  disclaimer: string;
 }
 
 export interface ChatCitation {
@@ -260,6 +296,8 @@ interface RequestOptions {
   signal?: AbortSignal;
   /** A 401 is an expected answer here (sign-in form, first load), not a lost session. */
   anonymous?: boolean;
+  /** The path is at the root of the API (course guide routes), not under /api. */
+  root?: boolean;
 }
 
 const FIELD_LABELS: Record<string, string> = {
@@ -288,7 +326,7 @@ function describeFailure(status: number, data: unknown): string {
 }
 
 async function request<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
-  const url = new URL(`/api${path}`, window.location.origin);
+  const url = new URL(options.root ? path : `/api${path}`, window.location.origin);
   for (const [key, value] of Object.entries(options.query ?? {})) {
     if (value !== undefined && value !== "") url.searchParams.set(key, String(value));
   }
@@ -385,6 +423,12 @@ export const api = {
     form.append("image", image, filename);
     return request<ScanResult>("POST", "/scan", { form, signal });
   },
+  /** The scan plus the client latency measured around it in the browser (ms). */
+  scanTimed: (image: Blob, filename: string, signal?: AbortSignal) =>
+    timed(() => api.scan(image, filename, signal)),
+  /** Champion models served by the API (course guide route, no sign-in). */
+  modelMetadata: (signal?: AbortSignal) =>
+    request<MetadataOut>("GET", "/model/metadata", { signal, root: true, anonymous: true }),
   pills: (q: string, signal?: AbortSignal) =>
     request<PillList>("GET", "/pills", { query: { q, limit: 12 }, signal }),
   interactions: (pills: number[], ingredients: string[] = []) =>

@@ -75,9 +75,15 @@ class Settings(BaseSettings):
     scan_max_bytes: int = 10 * 1024 * 1024
     scan_max_pixels: int = 50_000_000
     # C3PI test-split photos shown in the demo gallery (read-only); see app/routers/demo.py.
+    # A photo is served only if it is in the v2 test split (detector) and not in the v1
+    # train or val split (classifier): never seen in training by either served model (D105).
     demo_images_dir: Path = PROJECT_DIR / "data" / "raw" / "c3pi" / "images"
     demo_split_file: Path = PROJECT_DIR / "config" / "splits" / "selected_images.csv"
+    demo_holdout_file: Path = PROJECT_DIR / "config" / "splits" / "c3pi_v2" / "test.csv"
     demo_gallery_file: Path = PROJECT_DIR / "config" / "demo_gallery.csv"
+    # Grad-CAM pictures of the gallery photos, precomputed with the PyTorch weights of the
+    # served classifier (`python -m src.models.gradcam_gallery`, DVC stage, D104).
+    demo_gradcam_dir: Path = PROJECT_DIR / "data" / "processed" / "c3pi" / "gradcam"
 
     # Module 2: RAG and agent (docs/module2/rag.md, agent.md). The chunk index
     # lives in the pharma database (table rag_chunks, pgvector);

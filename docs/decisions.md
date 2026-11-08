@@ -1166,3 +1166,88 @@ garderait des décisions contradictoires) ; promouvoir YOLOv10n pour sa vitesse 
 règle de promotion annoncée) ; garder la latence mesurée à l'import (une mesure isolée par
 modèle, sur un processeur plus ou moins chaud) ; changer le nombre de fils d'ONNX Runtime pour
 éviter le ralentissement (l'API garde le réglage par défaut).
+
+## Frontend du guide et Grad-CAM (2026-11-08)
+
+Numérotation : D99 à D103 sont réservées aux décisions de l'étape 2.3 (comparaison des
+classifieurs), écrites sur sa branche d'outillage et pas encore fusionnées ; celles de
+l'étape 2.6 commencent donc à D104.
+
+**D104. Grad-CAM précalculé pour la galerie de démo, hors de l'API, avec les poids PyTorch
+du classifieur servi.** Grad-CAM pondère les cartes d'une couche de convolution par la
+moyenne de leur gradient : il faut le modèle PyTorch et une passe arrière, alors que l'API
+n'exécute que l'ONNX, sans PyTorch dans son image (D97). Choix : le script
+`src/models/gradcam_gallery.py` (venv d'entraînement, étape DVC `gradcam_gallery`) calcule
+les cartes des photos de la galerie avec `src/utils/gradcam.py` (repris de l'étape 2.3 par
+cherry-pick, sans le reste de cette branche) ; il reprend la chaîne ONNX de l'API
+(`backend/app/inference.py` : mêmes boîtes, mêmes recadrages carrés de 224 px), charge les
+poids de la version servie (`models/train/classifier`, run `6dd616a6...` vérifié contre
+`models/models.json`, sinon arrêt), prend la dernière convolution de la tête Classify
+(`model.10.conv`, 1 280 cartes de 7 x 7) et la classe top-1 donnée par l'API, et s'arrête si
+PyTorch et ONNX Runtime ne donnent pas la même probabilité (écart mesuré 1,2e-7). Chaque carte
+est fondue dans le carré recadré de son comprimé sur la photo (1 280 px au plus, mêmes
+proportions, le reste assombri), pour que les boîtes du scan tombent au même endroit. Sorties
+dans `data/processed/c3pi/gradcam` (DVC, jamais dans git), montées en lecture seule dans le
+conteneur `backend` et servies par `GET /api/demo/images/{id}/gradcam` (404 sans carte) ;
+la galerie donne `gradcam_url`. Le Scanner affiche un onglet « Grad-CAM » pour une photo de la
+galerie et dit, pour toute autre photo, que la carte n'existe que pour la galerie. Rejeté :
+PyTorch dans l'image de l'API (plusieurs centaines de Mo, et une seconde implémentation du modèle à
+garder identique à l'ONNX) ; une carte de saillance par occlusion calculée en ONNX et
+présentée comme Grad-CAM (D97) ; exporter un second ONNX qui sort aussi les activations et
+leurs gradients (graphe d'entraînement à maintenir pour une seule figure) ; calculer les
+cartes dans le navigateur (même problème, sans gradients).
+
+**D105. La galerie de démo ne montre que des photos qu'aucun modèle servi n'a vues à
+l'entraînement.** Contrôle de l'étape 2.6 : la galerie (D52) vérifiait le split de test v1,
+celui du classifieur. Depuis l'étape 2.2, le détecteur servi (YOLO11s v9) est entraîné sur
+C3PI v2, et deux des huit photos (halopéridol, hydroxychloroquine) étaient dans son jeu
+d'entraînement ; deux autres (trazodone, multivitamine) n'étaient dans aucun jeu de détection v2. Règle, vérifiée par
+l'API (`backend/app/gallery.py`) avec les fichiers suivis par git : une photo « consumer » du
+split de test v2 (`config/splits/c3pi_v2/test.csv`, sessions entières, D89) qui n'est pas dans
+le train ni la val v1 (`config/splits/selected_images.csv`). Nouvelle liste de huit photos,
+toutes aussi dans `test_holdout.txt` de D93 (aucune photo de la même session vue par un modèle
+v1, ce qui couvre le classifieur v1 entraîné sur le même split), avec un test qui le vérifie
+quand les données DVC sont là. Rôles gardés : interactions Major (halopéridol, citalopram,
+fluconazole, warfarine, nortriptyline ; fluconazole + citalopram + halopéridol donnent trois
+paires Major), deux gélules AMRIX sur une photo, une photo de trazodone sous le seuil de
+confirmation (81 %), le multivitamine sans principe actif connu. Les huit sont choisies parmi
+les 244 candidates possibles avec les résultats de la chaîne servie, comme en D52 : la galerie
+montre le modèle à son avantage, sauf la photo de trazodone ; les chiffres honnêtes restent
+ceux du split de test entier. Rejeté : se fier au seul split v1 (fuite pour le détecteur) ;
+exiger `test_holdout.txt` dans l'API (fichier DVC absent de l'image et de la CI).
+
+**D106. Tailwind CSS 4 en couches CSS à côté de styles.css, sans le reset de base ; Vitest pour
+les tests du site.** Le guide demande un framework CSS. Tailwind 4.3.3 (plugin Vite, version
+publiée en juillet 2026) plutôt que MUI : le site a déjà son identité (couleurs du logo,
+composants maison) et MUI imposerait ses propres composants et son thème. `src/index.css`
+déclare les couches `theme, base, legacy, components, utilities` : thème et utilitaires de
+Tailwind, `styles.css` entier dans la couche `legacy`, sans le « preflight » (reset de base)
+qui changerait toutes les pages. Les utilitaires passent donc au-dessus des anciennes règles
+là où un composant les emploie, et les autres pages (chat, toxicité, admin, profil,
+connexion) restent identiques, vérifié par captures. Les jetons Tujya (`--surface`,
+`--primary`...) deviennent des couleurs Tailwind (`bg-surface`, `text-primary`...), donc le
+mode sombre suit. Le Scanner du guide (onglets, glisser-déposer, galerie, webcam, résultat,
+barres) est réécrit en utilitaires et ses anciennes règles sont retirées (201 lignes). Seule
+collision de nom trouvée : la classe `table` des tableaux d'administration, à qui l'utilitaire
+`table` ne fait que redonner `display: table`. Tests : Vitest 5.0.5 en environnement Node (pas
+de navigateur ni de jsdom) pour la logique pure (`src/lib/vision.ts`) et le rendu des
+composants (`react-dom/server`) ; lancés par la CI (`npm test`).
+
+**D107. Webcam : une requête à la fois ; latence client mesurée dans le navigateur ; couleurs
+de classe de la palette d'Ultralytics.** Inférence continue : la boucle (`startLiveLoop`)
+prend une image, l'envoie à `POST /api/scan` et n'attend la suivante qu'après la réponse plus
+0,4 s ; elle ne crée jamais de file d'attente si le serveur ralentit (testé avec des minuteries
+factices), et l'arrêt annule la requête en cours. `/api/scan` plutôt que `/predict` : mêmes
+modèles, plus les noms des comprimés et la règle de confirmation. Latence : client =
+`performance.now()` autour de l'appel (envoi, serveur, réception, lecture du JSON) ;
+serveur = `timings.server_ms`, ajouté à `/api/scan` (toute la requête côté API) ; modèle =
+ONNX Runtime seul ; la différence client - serveur est affichée comme « réseau et navigateur ».
+Couleurs : la formule de teinte de D97 donnait presque le même vert au fluconazole (classe 9)
+et au citalopram (120), montrés ensemble dans la démo ; les boîtes prennent maintenant la
+couleur `class_id mod 20` de la palette à 20 couleurs des tracés d'Ultralytics, dans
+`/predict/visualize` comme sur le canvas du site (même liste dans les deux codes, mêmes
+valeurs testées des deux côtés), avec un texte noir ou blanc selon la luminance. Deux classes
+distantes de 20 partagent une couleur : la couleur aide à suivre une classe d'une image à
+l'autre, le nom et la probabilité restent écrits sur chaque boîte. Rejeté : une file
+d'images en parallèle (latence qui grandit sans fin sur CPU) ; une couleur par confiance
+seulement (le guide demande une couleur par classe).

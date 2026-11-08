@@ -5,6 +5,7 @@ Sign-in required, like the medicine routes: the demo uses the demo account (deci
 
 from __future__ import annotations
 
+import time
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
@@ -132,8 +133,10 @@ async def scan(
 
     Identification is a suggestion: `needs_confirmation` is true when the most probable
     class is below `confirm_threshold`, and the app then asks the user to pick from the
-    top-5 or search the list (GET /api/pills).
+    top-5 or search the list (GET /api/pills). `timings.server_ms` is the whole request on
+    the server; the app shows it next to the latency it measures in the browser.
     """
+    started = time.perf_counter()
     if image.content_type not in ALLOWED_TYPES:
         raise HTTPException(
             status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Send a JPEG, PNG or WebP image."
@@ -145,4 +148,6 @@ async def scan(
             f"The image is larger than {settings.scan_max_bytes // (1024 * 1024)} MB.",
         )
     scanner = await run_in_threadpool(get_scanner, request)
-    return await run_in_threadpool(_run, scanner, data, settings, db)
+    result = await run_in_threadpool(_run, scanner, data, settings, db)
+    result.timings.server_ms = round((time.perf_counter() - started) * 1000, 1)
+    return result

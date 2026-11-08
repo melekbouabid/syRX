@@ -175,7 +175,10 @@ class ScannedPill(BaseModel):
 class ScanTimings(BaseModel):
     detection_ms: float
     classification_ms: float
-    total_ms: float
+    total_ms: float = Field(description="Detection plus identification, ONNX Runtime")
+    server_ms: float | None = Field(
+        None, description="Whole request on the server (upload, decoding, database included)"
+    )
 
 
 class ScanResult(BaseModel):
@@ -250,6 +253,9 @@ class DemoImage(BaseModel):
     why: str = Field(description="Why it is in the gallery: major, confirm, no-ingredient...")
     url: str
     thumbnail_url: str
+    gradcam_url: str | None = Field(
+        None, description="Precomputed Grad-CAM of this photo (D104), null when not computed"
+    )
 
 
 class DemoGallery(BaseModel):
