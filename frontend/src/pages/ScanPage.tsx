@@ -666,7 +666,7 @@ function ResultStage({
   const shown = view === "gradcam" && photo.gradcamUrl ? photo.gradcamUrl : photo.url;
 
   return (
-    <div className="card sticky top-[84px] grid gap-3 p-3">
+    <div className="card sticky top-[84px] grid gap-3 p-3" data-testid="result-stage">
       {photo.gradcamUrl && (
         <div className="flex gap-1 rounded-xl bg-surface-2 p-1" role="tablist" aria-label="Picture shown">
           {(["photo", "gradcam"] as View[]).map((item) => (
