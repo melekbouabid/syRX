@@ -1,7 +1,7 @@
 # Continuous integration, as the module guide asks: Python lint (flake8, black --check, plus
 # ruff and mypy), frontend lint (ESLint), unit tests of src/ (tests/) and of the API
-# (backend/tests), the PySpark jobs (tests/data/spark, with Java), frontend build, and the
-# git hooks with the commit messages of the push.
+# (backend/tests), the PySpark jobs (tests/data/spark, with Java), frontend tests and build,
+# and the git hooks with the commit messages of the push.
 # One Python environment for src/ and backend/ (requirements-dev.txt at the root, as on the
 # dev machine). The Docker images are built and smoke-tested by docker-build.yml.
 # No job touches the network beyond installing dependencies: all HTTP in the tests is mocked
@@ -154,7 +154,7 @@ jobs:
           exit $status
 
   frontend:
-    name: frontend (eslint, type check and build)
+    name: frontend (eslint, unit tests, type check and build)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -174,5 +174,7 @@ jobs:
       # TypeScript 7, docs/decisions.md D84).
       - run: npm ci --prefix eslint
       - run: npm run lint
+      # Vitest: helpers and components of the Scanner page (src/**/*.test.ts(x), in Node).
+      - run: npm test
       # `tsc --noEmit` (type check), then `vite build`.
       - run: npm run build
