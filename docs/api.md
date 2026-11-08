@@ -119,6 +119,50 @@ chercher avec `GET /api/pills`. Choix de 0,85 :
 [docs/module1/vision.md](module1/vision.md#seuil-de-confirmation)
 (D47). Sans comprimé trouvé, `pills` est vide et `message` le dit.
 
+### Boîtes de médicaments et photos refusées (étape 2.7)
+
+La même route lit aussi le texte imprimé (OCR RapidOCR en ONNX,
+[`backend/app/boxes.py`](../backend/app/boxes.py), méthode et résultats :
+[docs/module1/boites.md](module1/boites.md), D108-D112). `kind` dit ce que montre la photo :
+
+- `pill` : des comprimés (réponse ci-dessus, `box` vaut `null`) ;
+- `box` : une boîte. `pills` est toujours vide (aucune classe de comprimé n'est donnée à une
+  boîte) et `box` contient les lignes lues, la marque de
+  [config/brand_aliases.csv](../config/brand_aliases.csv), et chaque principe actif avec la
+  voie (`brand`, `printed_name`, `rxnav`), le texte lu, la confiance (confiance OCR x
+  ressemblance des mots), la source et sa référence ; `recognised` est faux quand rien n'est
+  reconnu (« boîte non reconnue », rien n'est inventé) ;
+- `unknown` : ni l'un ni l'autre (meilleure détection de comprimé sous 0,5 et peu de texte) :
+  la photo est refusée, `message` le dit.
+
+```json
+{
+  "kind": "box",
+  "pills": [],
+  "box": {
+    "text": ["paracetamolo", "COMPRESSE", "EFFERALGAN500mg", "16 compresse"],
+    "brand": "Efferalgan", "brand_country": "FR", "brand_text": "EFFERALGAN500mg",
+    "ingredients": [{
+      "name": "acetaminophen", "method": "brand", "matched_text": "EFFERALGAN500mg",
+      "confidence": 0.9999, "source": "BDPM (ANSM), CIS_COMPO_bdpm.txt du 03/11/2026",
+      "reference": "CIS 60025403 : EFFERALGAN 1000 mg, comprimé pelliculé",
+      "url": "https://base-donnees-publique.medicaments.gouv.fr/download/file/CIS_COMPO_bdpm.txt",
+      "in_interaction_table": true
+    }],
+    "recognised": true, "confidence": 0.9999,
+    "rxnav": "disabled (no TUJYA_RXNAV_CONTACT_EMAIL)"
+  },
+  "timings": {"detection_ms": 60.1, "classification_ms": 5.0, "total_ms": 65.1, "ocr_ms": 410.0},
+  "message": "Boîte de médicament : principe actif lu sur l'emballage. Vérifiez-le sur la boîte et sa notice."
+}
+```
+
+Réglages (`TUJYA_*`) : `BOX_OCR_ENABLED` (vrai), `OCR_THREADS` (4), `SCAN_PILL_MIN_CONFIDENCE`
+(0,5), `BOX_TEXT_CHARS` (20), `BRAND_TABLE_FILE`, `INN_ALIASES_FILE`, `RXNAV_CONTACT_EMAIL`
+(vide : secours RxNav désactivé), `RXNAV_URL` (https seulement), `RXNAV_TIMEOUT_SECONDS`.
+`timings.ocr_ms` est le temps de lecture du texte. L'agent a le même service : outil
+`lookup_brand` (marque -> principes actifs avec la source) dans le chat et le serveur MCP.
+
 ### Modèles
 
 L'API charge `detector.onnx`, `classifier.onnx` et `models.json` depuis
