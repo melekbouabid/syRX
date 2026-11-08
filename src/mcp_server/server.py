@@ -1,4 +1,4 @@
-"""Tujya MCP server: the agent's five tools for any MCP client (official Python MCP SDK).
+"""Tujya MCP server: the agent's six tools for any MCP client (official Python MCP SDK).
 
     # project venv (.venv) active, from any folder
     python -m src.mcp_server            # stdio (Claude Desktop, IDEs)
@@ -6,7 +6,8 @@
                                                            # http://127.0.0.1:8765/mcp
 
 Same tools, same code as the LangGraph agent (agent/tools.py): identify_pills,
-check_interaction, get_drug_info, search_documents, predict_toxicity (bonus). Settings come
+check_interaction, get_drug_info, search_documents, lookup_brand (medicine brands, step 2.7),
+predict_toxicity (bonus). Settings come
 from the TUJYA_* environment (database, Ollama URL for the query embeddings, models
 directory); see docs/module2/mcp.md for client configuration.
 """
@@ -75,6 +76,10 @@ def build_server(toolbox: Toolbox) -> MCPServer:
             k=k,
             exclude_retracted=exclude_retracted,
         )
+
+    @server.tool(name="lookup_brand", description=TOOL_SPECS["lookup_brand"][2])
+    async def lookup_brand(name: str) -> dict[str, Any]:
+        return await toolbox.lookup_brand(name=name)
 
     @server.tool(name="predict_toxicity", description=TOOL_SPECS["predict_toxicity"][2])
     async def predict_toxicity(molecules: list[str]) -> dict[str, Any]:

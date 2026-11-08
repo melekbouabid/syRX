@@ -89,6 +89,7 @@ class AgentState(TypedDict, total=False):
     language: str
     ingredients: list[str]
     pill_labels: list[str]
+    brands: list[dict[str, Any]]
     dose_question: bool
     tool_calls: list[dict[str, Any]]
     tool_results: list[dict[str, Any]]
@@ -189,6 +190,32 @@ def toxicity_sources(result: dict[str, Any]) -> list[dict[str, Any]]:
                 "section": "toxicity_prediction",
                 "url": source.get("url", "https://tripod.nih.gov/tox21/challenge/"),
                 "source_name": f"Tujya model tujya-tox21 v{result.get('model', {}).get('version')}",
+                "date": "",
+                "license": "",
+                "text": text,
+                "snippet": text,
+            }
+        )
+    return found
+
+
+def brand_sources(brands: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Each brand recognised in the question (brand table, step 2.7), as a citable source."""
+    found = []
+    for brand in brands:
+        ingredients = ", ".join(brand["ingredients"])
+        text = (
+            f"{brand['brand']} ({brand['country']}): active ingredient(s) {ingredients} "
+            f"(printed: {brand['printed_substances']}). {brand['reference']}."
+        )
+        found.append(
+            {
+                "chunk_id": f"brand:{brand['brand'].lower()}",
+                "doc_type": "brand",
+                "title": f"{brand['brand']} -> {ingredients}",
+                "section": "brand",
+                "url": brand["url"],
+                "source_name": brand["source"],
                 "date": "",
                 "license": "",
                 "text": text,
@@ -328,6 +355,13 @@ class TujyaAgent:
         started = time.perf_counter()
         question = state["question"]
         found = self.toolbox.names().find(question)
+        # Brands ("Panadol", "Doliprane") -> their ingredients, from the brand table (2.7).
+        try:
+            brands = self.toolbox.find_brands(question)
+        except Exception:  # missing table or database: the question is still answered
+            brands = []
+        for brand in brands:
+            found += [i for i in brand["ingredients"] if i not in found]
         labels: list[str] = []
         pills = state.get("pills", [])
         if pills:
@@ -342,6 +376,7 @@ class TujyaAgent:
             "language": detect_language(question),
             "ingredients": found,
             "pill_labels": labels,
+            "brands": brands,
             "dose_question": is_dose_question(question),
             "timings": {"understand_ms": round((time.perf_counter() - started) * 1000, 1)},
         }
@@ -424,6 +459,7 @@ class TujyaAgent:
                     seen.add(item["chunk_id"])
                     sources.append(item)
 
+        add(brand_sources(state.get("brands", [])), 3)
         results = state.get("tool_results", [])
         for entry in results:
             if entry["name"] == "check_interaction" and entry["result"]:
@@ -452,10 +488,13 @@ class TujyaAgent:
                 f"{', ' + source['date'] if source.get('date') else ''})\n{text[:SOURCE_CHARS]}"
             )
         pills = state.get("pill_labels", [])
+        brands = [f"{b['brand']} = {', '.join(b['ingredients'])}" for b in state.get("brands", [])]
         context = "\n\n".join(blocks)
         user = (
-            f"Comprimés confirmés : {'; '.join(pills)}\n" if pills else ""
-        ) + f"Sources :\n{context}\n\nQuestion : {state['question']}"
+            (f"Comprimés confirmés : {'; '.join(pills)}\n" if pills else "")
+            + (f"Marques reconnues : {'; '.join(brands)}\n" if brands else "")
+            + f"Sources :\n{context}\n\nQuestion : {state['question']}"
+        )
         return [SystemMessage(ANSWER_PROMPT[language]), HumanMessage(user)]
 
     async def answer(self, state: AgentState) -> AgentState:

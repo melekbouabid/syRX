@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
@@ -135,3 +136,40 @@ def test_no_index_answers_503(app: FastAPI, pharma: str, browser: Callable[[], T
 def test_chat_route_in_openapi(chat_app: FastAPI, anonymous: TestClient) -> None:
     paths = anonymous.get("/openapi.json").json()["paths"]
     assert "/api/chat" in paths and "post" in paths["/api/chat"]
+
+
+def test_brand_in_the_question_gives_its_ingredient_and_source(
+    client: TestClient, llm: FakeChatModel, chat_app: FastAPI, tmp_path: Path
+) -> None:
+    # Step 2.7: a brand named in the question is linked to its ingredient by the brand
+    # table (here a one-row table: Diflucan is fluconazole), then checked like an INN.
+    table = tmp_path / "brands.csv"
+    table.write_text(
+        "brand,ingredients,printed_substances,country,source,reference,url\n"
+        'Diflucan,fluconazole,FLUCONAZOLE,FR,"BDPM (ANSM)","CIS 0 : DIFLUCAN",'
+        "https://base-donnees-publique.medicaments.gouv.fr/\n",
+        encoding="utf-8",
+    )
+    chat_app.state.settings.brand_table_file = table
+    llm.answer = (
+        "Le Diflucan contient du fluconazole [1]. DDInter classe l'interaction majeure [2]."
+    )
+    body = ask(client, "Puis-je prendre du Diflucan avec ma warfarine ?")
+    assert body["ingredients"] == ["warfarin", "fluconazole"]
+    assert ("check_interaction", "rule") in [
+        (c["name"], c["chosen_by"]) for c in body["tool_calls"]
+    ]
+    brand = body["citations"][0]
+    assert brand["doc_type"] == "brand" and brand["title"] == "Diflucan -> fluconazole"
+    assert brand["url"].startswith("https://base-donnees-publique")
+    assert any(c["doc_type"] == "interaction" and "Major" in c["title"] for c in body["citations"])
+    _, user = llm.prompts[-1]
+    assert "Marques reconnues : Diflucan = fluconazole" in str(user.content)
+    assert body["answer"].endswith(DISCLAIMER)
+
+
+def test_unknown_brand_adds_nothing(client: TestClient, llm: FakeChatModel) -> None:
+    llm.answer = "Je ne trouve pas cette marque dans les sources [1]."
+    body = ask(client, "Le Zorglubine interagit-il avec la warfarine ?")
+    assert body["ingredients"] == ["warfarin"]  # no invented ingredient
+    assert all(c["doc_type"] != "brand" for c in body["citations"])

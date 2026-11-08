@@ -25,6 +25,7 @@ const DOC_LABELS: Record<string, string> = {
   label: "openFDA label",
   abstract: "PubMed",
   interaction: "DDInter",
+  brand: "Table des marques",
 };
 
 function suggestions(pills: ChatPill[]): string[] {
@@ -87,7 +88,7 @@ function Citations({ citations, turn }: { citations: ChatCitation[]; turn: numbe
         </a>
         <span className="cell-sub">
           {DOC_LABELS[c.doc_type] ?? c.doc_type}
-          {c.section && c.section !== "interaction" ? ` · ${c.section.replaceAll("_", " ")}` : ""}
+          {c.section && c.section !== "interaction" && c.section !== "brand" ? ` · ${c.section.replaceAll("_", " ")}` : ""}
           {c.date ? ` · ${c.date}` : ""}
         </span>
         <p className="citation-snippet">{c.snippet}</p>
