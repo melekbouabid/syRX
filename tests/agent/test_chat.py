@@ -173,3 +173,24 @@ def test_unknown_brand_adds_nothing(client: TestClient, llm: FakeChatModel) -> N
     body = ask(client, "Le Zorglubine interagit-il avec la warfarine ?")
     assert body["ingredients"] == ["warfarin"]  # no invented ingredient
     assert all(c["doc_type"] != "brand" for c in body["citations"])
+
+
+def test_a_brand_given_by_the_planner_is_checked_by_its_ingredients(
+    client: TestClient, llm: FakeChatModel, chat_app: FastAPI, tmp_path: Path
+) -> None:
+    # The planner LLM may pass the brand itself ("Diflucan"): it is replaced by its ingredient.
+    table = tmp_path / "brands.csv"
+    table.write_text(
+        "brand,ingredients,printed_substances,country,source,reference,url\n"
+        'Diflucan,fluconazole,FLUCONAZOLE,FR,"BDPM (ANSM)","CIS 0 : DIFLUCAN",'
+        "https://base-donnees-publique.medicaments.gouv.fr/\n",
+        encoding="utf-8",
+    )
+    chat_app.state.settings.brand_table_file = table
+    llm.tool_calls = [{"name": "check_interaction", "args": {"drugs": ["Diflucan", "warfarin"]}}]
+    llm.answer = "Le Diflucan contient du fluconazole [1]."
+    body = ask(client, "Diflucan et warfarine ?")
+    (call,) = [c for c in body["tool_calls"] if c["name"] == "check_interaction"]
+    assert call["chosen_by"] == "llm" and call["ok"]
+    assert call["args"]["drugs"] == ["fluconazole", "warfarin"]
+    assert any(c["doc_type"] == "interaction" and "Major" in c["title"] for c in body["citations"])

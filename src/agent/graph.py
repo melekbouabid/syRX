@@ -125,6 +125,8 @@ Règles absolues :
 - N'écris JAMAIS qu'une association est « sûre » ou « sans danger ». S'il n'y a pas d'interaction
   dans les sources, écris : « aucune interaction connue dans cette base de données ».
 - Ne donne aucun conseil d'horaire ou d'espacement des prises sauf si une source le dit ; cite-la.
+- Si une marque est reconnue, commence par dire quel principe actif elle contient, en citant la
+  source de la table des marques.
 - 3 à 6 phrases courtes, sans titre ni liste : d'abord la réponse directe (par exemple
   la sévérité DDInter), puis ce que disent les notices ou les articles (mécanisme, effets,
   surveillance).""",
@@ -137,6 +139,8 @@ Absolute rules:
 - NEVER write that a combination is "safe". If the sources show no interaction, write:
   "no known interaction in this database".
 - Give no timing or spacing advice unless a source says it; cite it.
+- If a brand is recognised, first say which active ingredient it contains, citing the
+  brand-table source.
 - 3 to 6 short sentences, no heading, no list: first the direct answer (e.g. the DDInter
   severity), then what the labels or articles say (mechanism, effects, monitoring).""",
 }
@@ -381,6 +385,19 @@ class TujyaAgent:
             "timings": {"understand_ms": round((time.perf_counter() - started) * 1000, 1)},
         }
 
+    def _with_brand_ingredients(self, drugs: list[str], ingredients: list[str]) -> list[str]:
+        """The planner may pass a brand ("Augmentin"): it becomes its ingredients, and the
+        ingredients already understood are added, so the check covers the brand (step 2.7)."""
+        found: list[str] = []
+        for drug in drugs:
+            try:
+                brands = self.toolbox.find_brands(drug)
+            except Exception:  # no brand table: the name is kept as given
+                brands = []
+            names = [i for b in brands for i in b["ingredients"]] or [drug]
+            found += [n for n in names if n not in found]
+        return found + [i for i in ingredients if i not in found]
+
     async def _planned_calls(self, state: AgentState) -> list[dict[str, Any]]:
         ingredients = state.get("ingredients", [])
         context = (
@@ -398,6 +415,11 @@ class TujyaAgent:
             for c in calls
             if c.get("name") in self.tools
         ][:MAX_TOOL_CALLS]
+        for call in planned:
+            if call["name"] == "check_interaction":
+                call["args"]["drugs"] = self._with_brand_ingredients(
+                    list(call["args"].get("drugs") or []), ingredients
+                )
         names = {c["name"] for c in planned}
         if len(ingredients) >= 2 and "check_interaction" not in names:
             planned.append(

@@ -140,6 +140,9 @@ async def main_async(no_mlflow: bool) -> dict[str, Any]:
 
 
 def main(argv: list[str] | None = None) -> None:
+    from src.utils.console import console_utf8
+
+    console_utf8()  # MLflow prints its run link with an emoji (cp1252 console on Windows)
     parser = argparse.ArgumentParser(prog="python -m src.benchmark.bench_brands")
     parser.add_argument("--no-mlflow", action="store_true")
     args = parser.parse_args(argv)
