@@ -18,36 +18,20 @@ export interface Rect {
   height: number;
 }
 
-function hex(value: number): string {
-  return Math.round(value).toString(16).padStart(2, "0");
-}
+/** The 20 colours of Ultralytics' own plots, as in backend/app/routers/vision.py PALETTE. */
+export const PALETTE = [
+  "#ff3838", "#ff9d97", "#ff701f", "#ffb21d", "#cfd231", "#48f90a", "#92cc17",
+  "#3ddb86", "#1a9334", "#00d4bb", "#2c99a8", "#00c2ff", "#344593", "#6473ff",
+  "#0018ec", "#8438ff", "#520085", "#cb38ff", "#ff95c8", "#ff37c7",
+];
 
 /**
  * A stable colour per class, the same as the boxes of POST /predict/visualize
- * (backend/app/routers/vision.py `class_colour`): OpenCV hue (class * 47) mod 180, i.e.
- * twice that in degrees, saturation 220 and value 230 out of 255.
+ * (backend/app/routers/vision.py `class_colour`): colour class_id mod 20 of the palette.
  */
 export function classColour(classId: number): string {
-  const hue = ((((classId * 47) % 180) + 180) % 180) * 2; // degrees, 0-358
-  const value = 230 / 255;
-  const saturation = 220 / 255;
-  const chroma = value * saturation;
-  const sector = hue / 60;
-  const x = chroma * (1 - Math.abs((sector % 2) - 1));
-  const [r, g, b] =
-    sector < 1
-      ? [chroma, x, 0]
-      : sector < 2
-        ? [x, chroma, 0]
-        : sector < 3
-          ? [0, chroma, x]
-          : sector < 4
-            ? [0, x, chroma]
-            : sector < 5
-              ? [x, 0, chroma]
-              : [chroma, 0, x];
-  const m = value - chroma;
-  return `#${hex((r + m) * 255)}${hex((g + m) * 255)}${hex((b + m) * 255)}`;
+  const n = PALETTE.length;
+  return PALETTE[((Math.trunc(classId) % n) + n) % n];
 }
 
 /** Black or white, whichever reads better on `background` (#rrggbb). */

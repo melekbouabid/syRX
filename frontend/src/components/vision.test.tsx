@@ -19,7 +19,7 @@ describe("ProbabilityBars", () => {
     expect(html).toContain("Citalopram");
     expect(html).toContain("95%");
     expect(html).not.toContain("Formula B");
-    expect(html).toContain("width:95.19999999999999%;background:#20e620"); // class 120
+    expect(html).toContain("width:95.19999999999999%;background:#ff3838"); // class 120
     expect(html).toContain("animate-grow"); // the bar fills when it appears
   });
 });

@@ -13,33 +13,23 @@ import {
 } from "./vision";
 
 describe("classColour", () => {
-  it("gives the colours of POST /predict/visualize (OpenCV, backend class_colour)", () => {
-    // Values printed by backend/app/routers/vision.py class_colour, converted to #rrggbb.
-    const expected: Record<number, string> = {
-      0: "#e62020",
-      1: "#76e620",
-      9: "#20e633",
-      22: "#7c20e6",
-      98: "#207ce6",
-      104: "#e6d920",
-      120: "#20e620",
-      137: "#9d20e6",
-      149: "#e62090",
-    };
-    for (const [id, colour] of Object.entries(expected)) {
-      expect(classColour(Number(id))).toBe(colour);
-    }
+  it("gives the colours of POST /predict/visualize (backend class_colour)", () => {
+    // Same values as backend/tests/test_vision.py.
+    expect(classColour(0)).toBe("#ff3838");
+    expect(classColour(9)).toBe("#00d4bb");
+    expect(classColour(120)).toBe(classColour(0)); // 120 mod 20
+    expect(classColour(-1)).toBe(classColour(19));
   });
 
   it("is stable and differs between neighbouring classes", () => {
     expect(classColour(42)).toBe(classColour(42));
     expect(classColour(42)).not.toBe(classColour(43));
-    expect(classColour(-1)).toMatch(/^#[0-9a-f]{6}$/); // a box without a class still draws
+    expect(new Set(Array.from({ length: 20 }, (_, i) => classColour(i))).size).toBe(20);
   });
 
   it("picks a readable label colour", () => {
-    expect(textOn("#e6d920")).toBe("#000000"); // yellow
-    expect(textOn("#7c20e6")).toBe("#ffffff"); // violet
+    expect(textOn(classColour(4))).toBe("#000000"); // light yellow-green
+    expect(textOn(classColour(16))).toBe("#ffffff"); // dark violet
   });
 });
 
