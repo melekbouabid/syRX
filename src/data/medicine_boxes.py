@@ -170,12 +170,22 @@ def active_part(text: str) -> str:
     return folded.split("eccipient", 1)[0]
 
 
+IMAGE_SIGNATURES = (bytes([0xFF, 0xD8, 0xFF]), bytes([0x89]) + b"PNG", b"RIFF")  # JPEG PNG WebP
+
+
+def is_image(path: Path) -> bool:
+    """By content, not by name: 5 of the dataset's .jpg files are saved HTML pages."""
+    with path.open("rb") as handle:
+        return handle.read(4).startswith(IMAGE_SIGNATURES)
+
+
 def eval_rows(source: Path, matcher: TextMatcher) -> list[dict[str, str]]:
     records = json.loads((source / "medicines.json").read_text(encoding="utf-8"))
     rows, seen = [], set()
     for record in records:
         image = record.get("immagine", "")
-        if not image or image in seen or not (source / "out" / image).is_file():
+        path = source / "out" / image
+        if not image or image in seen or not path.is_file() or not is_image(path):
             continue
         seen.add(image)
         printed = (record.get("dettagli") or {}).get("Principi attivi", "")
@@ -206,6 +216,7 @@ def prepare(source: Path = ITALIAN_DIR, out: Path = OUT_DIR) -> dict[str, object
     summary = {
         "dataset": f"{REPO_ID}@{REVISION[:7]}",
         "photos": len(rows),
+        "not_an_image": sorted(p.name for p in (source / "out").iterdir() if not is_image(p)),
         "with_brand": sum(1 for r in rows if r["brand"]),
         "with_known_ingredient": len(with_ingredients),
         "without_known_ingredient": len(rows) - len(with_ingredients),

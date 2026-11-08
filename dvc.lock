@@ -604,11 +604,11 @@ stages:
       nfiles: 720
     - path: src/data/medicine_boxes.py
       hash: md5
-      md5: c71ab78a8b4802ce4b73ecf45e73dccb
-      size: 10261
+      md5: 4d8e3eef4321151ac0cedfb2c34b8907
+      size: 10713
     outs:
     - path: data/processed/medicine_boxes
       hash: md5
-      md5: ab582255c718d1656dc5235a0e9b4faa.dir
-      size: 220185
+      md5: c80bf79ea638afe681a283549b255d30.dir
+      size: 219165
       nfiles: 2
