@@ -248,6 +248,23 @@ def brand_summary(state: AgentState) -> tuple[str, list[int]]:
     return " ".join(sentences), cited
 
 
+def interaction_summary(state: AgentState) -> tuple[str, list[int]]:
+    """One fixed sentence per DDInter interaction found, for an answer that cites none of
+    them: the answer then always says the interaction the source lists (step 2.7)."""
+    language = state.get("language", "fr")
+    sentences, cited = [], []
+    for source in state.get("sources", []):
+        if not str(source.get("chunk_id", "")).startswith("ddinter:") or "n" not in source:
+            continue
+        pair = source["title"].removeprefix("DDInter 2.0: ")
+        if language == "fr":
+            sentences.append(f"Interaction listée par DDInter 2.0 : {pair} [{source['n']}].")
+        else:
+            sentences.append(f"Interaction listed by DDInter 2.0: {pair} [{source['n']}].")
+        cited.append(source["n"])
+    return " ".join(sentences), cited
+
+
 def interaction_sources(result: dict[str, Any]) -> list[dict[str, Any]]:
     """Each DDInter interaction found by check_interaction, as a citable source."""
     found = []
@@ -600,6 +617,14 @@ class TujyaAgent:
         )
         checked.violations += ["citation_added_by_meaning"] * semantic
         checked.violations += ["toxicity_sentence_replaced"] * replaced
+        listed, listed_cited = interaction_summary(state)
+        if found and listed and not set(listed_cited) & set(checked.cited):
+            refused = checked.action == "refused"
+            body = "" if refused else checked.answer.rpartition(DISCLAIMER)[0].strip()
+            checked.action = "rewritten"
+            checked.violations.append("interaction_sentence_added")
+            checked.answer = f"{listed} {body}".strip() + f"\n\n{DISCLAIMER}"
+            checked.cited = sorted(set(checked.cited) | set(listed_cited))
         brands, brand_cited = brand_summary(state)
         if brands and not set(brand_cited) & set(checked.cited):
             refused = checked.action == "refused"

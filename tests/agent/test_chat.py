@@ -214,3 +214,17 @@ def test_the_brand_source_is_always_cited(
     assert "brand_source_added" in body["safety"]["violations"]
     assert {c["n"] for c in body["citations"] if c["cited"]} >= {1, 2}
     assert body["answer"].endswith(DISCLAIMER)
+
+
+def test_an_answer_denying_the_ddinter_interaction_is_corrected(
+    client: TestClient, llm: FakeChatModel
+) -> None:
+    llm.answer = "Le fluconazole n'est pas connu pour interagir avec la warfarine [2]."
+    body = ask(client, "La warfarine et le fluconazole interagissent-ils ?")
+    answer = body["answer"]
+    assert "pas connu" not in answer
+    assert answer.startswith("Interaction listée par DDInter 2.0 : ")
+    assert "(Major) [1]." in answer and answer.endswith(DISCLAIMER)
+    assert {"denies_found_interaction", "interaction_sentence_added"} <= set(
+        body["safety"]["violations"]
+    )
