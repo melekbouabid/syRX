@@ -229,6 +229,13 @@ def brand_sources(brands: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return found
 
 
+def _without_source_list(answer: str) -> str:
+    """The answer before the disclaimer, without the "Sources consultées" line that the
+    safety check adds to an answer citing nothing: the fixed sentences put first cite."""
+    body = answer.rpartition(DISCLAIMER)[0].strip()
+    return body.split("\n\nSources consultées :")[0].strip()
+
+
 def brand_summary(state: AgentState) -> tuple[str, list[int]]:
     """One fixed sentence per recognised brand, citing its brand-table source: a 3B model
     often names the ingredient without citing where the link comes from (step 2.7)."""
@@ -620,7 +627,7 @@ class TujyaAgent:
         listed, listed_cited = interaction_summary(state)
         if found and listed and not set(listed_cited) & set(checked.cited):
             refused = checked.action == "refused"
-            body = "" if refused else checked.answer.rpartition(DISCLAIMER)[0].strip()
+            body = "" if refused else _without_source_list(checked.answer)
             checked.action = "rewritten"
             checked.violations.append("interaction_sentence_added")
             checked.answer = f"{listed} {body}".strip() + f"\n\n{DISCLAIMER}"
@@ -628,7 +635,7 @@ class TujyaAgent:
         brands, brand_cited = brand_summary(state)
         if brands and not set(brand_cited) & set(checked.cited):
             refused = checked.action == "refused"
-            body = "" if refused else checked.answer.rpartition(DISCLAIMER)[0].strip()
+            body = "" if refused else _without_source_list(checked.answer)
             checked.action = "rewritten" if refused else checked.action
             checked.violations.append("brand_source_added")
             checked.answer = f"{brands} {body}".strip() + f"\n\n{DISCLAIMER}"
