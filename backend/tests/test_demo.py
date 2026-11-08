@@ -17,7 +17,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.config import PROJECT_DIR
-from app.routers.demo import gradcam_name
+from app.gallery import gradcam_name
 
 SPLIT = """path,class_id,image_type,file_size,sha1,split
 Disc1/images/A.JPG,5,C3PI_Test,1,x,test
