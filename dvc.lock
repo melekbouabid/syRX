@@ -515,3 +515,66 @@ stages:
       md5: 54e01c08c54fac7c6ea92c0f95b21028.dir
       size: 756022335
       nfiles: 20756
+  gradcam_gallery:
+    cmd: python -m src.models.gradcam_gallery
+    deps:
+    - path: backend/app/gallery.py
+      hash: md5
+      md5: 75fdee8200cc39bd086a8267c6f23e11
+      size: 2803
+    - path: backend/app/inference.py
+      hash: md5
+      md5: 2bc8baeffe8df2f4a0fb000529d13483
+      size: 11923
+    - path: config/demo_gallery.csv
+      hash: md5
+      md5: d5985628173b4c456a908907164e6444
+      size: 592
+    - path: config/splits/c3pi_v2/test.csv
+      hash: md5
+      md5: 477239433fae5b5cac12e0d984ff0ac4
+      size: 235012
+    - path: config/splits/selected_images.csv
+      hash: md5
+      md5: de21c22fc4a8b12ef6e410cea10f1f8b
+      size: 543427
+    - path: data/raw/c3pi/images
+      hash: md5
+      md5: 62051ba2f27a8520e490f4de3467231b.dir
+      size: 39542126444
+      nfiles: 20330
+    - path: models/classifier.onnx
+      hash: md5
+      md5: 11376ff8d465b30725771dfcc9e3cb32
+      size: 22553749
+    - path: models/detector.onnx
+      hash: md5
+      md5: ac3042742eee78d6cac3a772dc0c0fee
+      size: 37928538
+    - path: models/models.json
+      hash: md5
+      md5: 811d68775fc9470eb06750c711df287d
+      size: 2348
+    - path: models/train/classifier
+      hash: md5
+      md5: ca66f617e25a7bf27b418b76244af876.dir
+      size: 11414089
+      nfiles: 3
+    - path: models/train/classifier.json
+      hash: md5
+      md5: 35f60b6183da31488a6ba16b6bbde997
+      size: 321
+    - path: src/models/gradcam_gallery.py
+      hash: md5
+      md5: b207bcd07d681b39b7c36f29f58d148c
+      size: 9729
+    - path: src/utils/gradcam.py
+      hash: md5
+      md5: 58b3fa6feaf5aaf20954d37c212d031c
+      size: 4985
+    outs:
+    - path: data/processed/c3pi/gradcam
+      hash: md5
+      md5: 2f377d2c1b4011e9ed16f27143106b22.dir
+      size: 648536
+      nfiles: 9

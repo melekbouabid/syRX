@@ -24,6 +24,10 @@
 # recorded output is the baseline of 2026-10-28 (src/models/register_baseline.py, D91), and
 # `dvc repro` never starts a long training by accident; to retrain (GPU, Kaggle, steps 2.2
 # and 2.3): `dvc unfreeze train_classifier`, then `dvc repro`.
+# `gradcam_gallery` (step 2.6, D104): Grad-CAM pictures of the demo gallery with the PyTorch
+# weights of the served classifier, for the app (the API serves ONNX only). Training venv
+# (.venv-train: torch, ultralytics) first on PATH; models/ filled by `python -m
+# src.models.publish`.
 stages:
   prepare:
     cmd: python -m src.data.prepare
@@ -210,3 +214,21 @@ stages:
     metrics:
       - models/evaluate.json:
           cache: false
+  gradcam_gallery:
+    cmd: python -m src.models.gradcam_gallery
+    deps:
+      - config/demo_gallery.csv
+      - config/splits/selected_images.csv
+      - config/splits/c3pi_v2/test.csv
+      - data/raw/c3pi/images
+      - models/train/classifier
+      - models/train/classifier.json
+      - models/models.json
+      - models/detector.onnx
+      - models/classifier.onnx
+      - backend/app/gallery.py
+      - backend/app/inference.py
+      - src/models/gradcam_gallery.py
+      - src/utils/gradcam.py
+    outs:
+      - data/processed/c3pi/gradcam
