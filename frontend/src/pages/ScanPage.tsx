@@ -807,7 +807,7 @@ function ResultStage({
           make it more certain.
         </p>
       )}
-      {!photo.gradcamUrl && result && (
+      {!photo.gradcamUrl && result && result.kind !== "box" && result.kind !== "unknown" && (
         <p className="m-0 text-sm text-muted" data-testid="gradcam-note">
           Grad-CAM is available only for the demo gallery photos: it needs the PyTorch model,
           so it is precomputed for them (the API runs ONNX models only).
@@ -1012,8 +1012,8 @@ export default function ScanPage() {
         <header className="pill-card-head">
           <h2>My pills</h2>
           <span className="muted">
-            {mine.length} confirmed, {classIds.length} different pill(s)
-            {boxIngredients.length ? `, ${boxIngredients.length} ingredient(s) from boxes` : ""}
+            {mine.length} added · {classIds.length} different pill(s)
+            {boxIngredients.length ? ` · ${boxIngredients.length} ingredient(s) from boxes` : ""}
           </span>
         </header>
         {mine.length === 0 ? (
