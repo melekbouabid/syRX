@@ -98,8 +98,10 @@ def build_item(spec: dict[str, Any], chunks: list[dict[str, Any]]) -> dict[str, 
         expected = label_chunks(chunks, names[0], SECTIONS[kind])
         if not reference and expected:
             reference = " ".join(sentences(expected[0]["text"])[:2])
-    elif kind == "interaction":
-        a, b = names
+    elif kind in ("interaction", "brand"):
+        # brand (step 2.7): a brand and a drug; `pair` is the ingredient pair DDInter lists.
+        a, b = spec.get("pair", names)
+        names = [a, b] if kind == "brand" else names
         for x, y in ((a, b), (b, a)):
             for chunk in label_chunks(chunks, x, INTERACTION_SECTIONS):
                 if y in chunk["mentioned_ingredients"]:
@@ -121,23 +123,31 @@ def build_item(spec: dict[str, Any], chunks: list[dict[str, Any]]) -> dict[str, 
     elif kind == "abstract":
         wanted = {f"pubmed:{p}" for p in spec["pmids"]}
         expected = [c for c in chunks if c["doc_id"] in wanted]
-    return {
+    item = {
         "id": spec["id"],
         "type": kind,
         "language": spec["language"],
         "question": spec["question"],
-        "ingredients": names,
+        "ingredients": spec["ingredients"],
         "expected_chunks": [c["chunk_id"] for c in expected],
         "expected_titles": sorted({c["title"] for c in expected}),
         "reference": reference,
     }
+    if kind == "brand":
+        item["brands"] = spec["brands"]
+    return item
 
 
 def main() -> None:
     chunks = pq.read_table(CHUNKS).to_pylist()
     specs = json.loads(SPEC.read_text(encoding="utf-8"))
     items = [build_item(spec, chunks) for spec in specs]
-    missing = [i["id"] for i in items if i["type"] != "safety" and not i["expected_chunks"]]
+    # Brand questions (step 2.7) may have no chunk: paracetamol or ibuprofen are not
+    # ingredients of the indexed pill classes; the interaction comes from check_interaction
+    # (DDInter) and the brand from the brand table, so they count in the generation benchmark.
+    missing = [
+        i["id"] for i in items if i["type"] not in ("safety", "brand") and not i["expected_chunks"]
+    ]
     if missing:
         raise SystemExit(f"no expected chunk for {missing}")
     with OUT.open("w", encoding="utf-8", newline="\n") as handle:
