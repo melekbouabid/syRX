@@ -250,6 +250,9 @@ class DemoImage(BaseModel):
     why: str = Field(description="Why it is in the gallery: major, confirm, no-ingredient...")
     url: str
     thumbnail_url: str
+    gradcam_url: str | None = Field(
+        None, description="Precomputed Grad-CAM of this photo (D104), null when not computed"
+    )
 
 
 class DemoGallery(BaseModel):
