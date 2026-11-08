@@ -14,6 +14,8 @@ import {
 import { Alert, Badge, Spinner, staggerIndex } from "../components";
 import { useDebounced, useQuery } from "../hooks";
 import { Icon, type IconName } from "../components/icons";
+import { LatencyReadout, ModelCard, ProbBar, ProbabilityBars, ScanCanvas } from "../components/vision";
+import { percent, startLiveLoop, type Latency } from "../lib/vision";
 import ChatPanel from "./ChatPanel";
 
 // Safety texts are shown exactly as the project rules write them (docs/project_rules.md, D53).
@@ -21,14 +23,22 @@ const DISCLAIMER = "Information uniquement, consultez un pharmacien ou un médec
 const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp";
 const MAX_BYTES = 10 * 1024 * 1024;
 const LIVE_PAUSE_MS = 400; // between two live frames, after the previous answer arrived
+const LIVE_WIDTH = 960; // live frames are scaled down to this width before upload
 
 type Mode = "upload" | "webcam" | "demo";
 
 const MODES: { mode: Mode; label: string; icon: IconName }[] = [
-  { mode: "upload", label: "Upload a photo", icon: "upload" },
-  { mode: "webcam", label: "Webcam", icon: "camera" },
-  { mode: "demo", label: "Demo photos", icon: "image" },
+  { mode: "upload", label: "Upload or drop a photo", icon: "upload" },
+  { mode: "demo", label: "Demo gallery", icon: "image" },
+  { mode: "webcam", label: "Webcam (live)", icon: "camera" },
 ];
+
+const WHY: Record<string, string> = {
+  major: "Major interactions",
+  confirm: "Needs confirmation",
+  "two-pills": "Two pills",
+  "no-ingredient": "No known ingredient",
+};
 
 /** A pill the user has confirmed (or picked by hand), ready for the interaction check. */
 interface Confirmed {
@@ -43,10 +53,17 @@ interface Confirmed {
 interface Photo {
   url: string; // object URL of exactly what was sent to the scan
   name: string;
+  gradcamUrl: string | null; // precomputed Grad-CAM, only for gallery photos (D104)
 }
 
-function percent(value: number): string {
-  return `${Math.round(value * 100)}%`;
+type OnImage = (file: Blob, name: string, gradcamUrl?: string | null) => void;
+
+function latencyOf(result: ScanResult, clientMs: number): Latency {
+  return {
+    clientMs,
+    serverMs: result.timings.server_ms ?? null,
+    inferenceMs: result.inference_ms,
+  };
 }
 
 function Disclaimer({ text = DISCLAIMER }: { text?: string }) {
@@ -78,43 +95,8 @@ function SourceList({ sources }: { sources: Source[] }) {
   );
 }
 
-/** The photo with one numbered box per detected pill, drawn in an SVG on top of it. */
-function Overlay({
-  alt,
-  pills,
-  live = false,
-}: {
-  alt: string;
-  pills: ScannedPill[];
-  live?: boolean;
-}) {
-  return (
-    <svg className={live ? "scan-overlay scan-overlay-live" : "scan-overlay"} aria-hidden={live}>
-      {!live && <title>{alt}</title>}
-      {pills.map((pill, index) => {
-        const box = pill.box_normalized;
-        const top = pill.candidates[0];
-        const tone = pill.needs_confirmation ? "warn" : "ok";
-        return (
-          <g key={index} className={`scan-box scan-box-${tone}`}>
-            <rect
-              x={`${box.x1 * 100}%`}
-              y={`${box.y1 * 100}%`}
-              width={`${(box.x2 - box.x1) * 100}%`}
-              height={`${(box.y2 - box.y1) * 100}%`}
-              rx="6"
-            />
-            <text x={`${box.x1 * 100}%`} y={`${box.y1 * 100}%`} dx="4" dy="-8">
-              {index + 1}. {top ? `${top.name} ${percent(top.probability)}` : ""}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-function UploadPanel({ onImage }: { onImage: (file: Blob, name: string) => void }) {
+/** Drag and drop (or click) a photo; checked here before the API checks it again. */
+function UploadPanel({ onImage }: { onImage: OnImage }) {
   const [dragging, setDragging] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -142,7 +124,13 @@ function UploadPanel({ onImage }: { onImage: (file: Blob, name: string) => void 
     <>
       {problem && <Alert>{problem}</Alert>}
       <label
-        className={dragging ? "dropzone dropzone-active" : "dropzone"}
+        data-testid="dropzone"
+        data-dragging={dragging}
+        className={`grid cursor-pointer justify-items-center gap-2 rounded-card border-2 border-dashed px-5 py-10 text-center transition duration-200 ease-brand ${
+          dragging
+            ? "scale-[1.01] border-primary bg-primary-soft shadow-lift"
+            : "border-line-strong hover:border-primary hover:bg-primary-soft"
+        }`}
         onDragOver={(event) => {
           event.preventDefault();
           setDragging(true);
@@ -150,9 +138,15 @@ function UploadPanel({ onImage }: { onImage: (file: Blob, name: string) => void 
         onDragLeave={() => setDragging(false)}
         onDrop={drop}
       >
-        <Icon name="upload" size={28} />
-        <strong>Drop a photo here, or click to choose one</strong>
-        <span className="muted">JPEG, PNG or WebP, up to 10 MB. One or several pills on a plain background.</span>
+        <span className={`text-primary transition-transform duration-200 ${dragging ? "-translate-y-1" : ""}`}>
+          <Icon name="upload" size={32} />
+        </span>
+        <strong className="text-heading">
+          {dragging ? "Drop it: the pills are identified at once" : "Drag and drop a photo here, or click to choose one"}
+        </strong>
+        <span className="text-sm text-muted">
+          JPEG, PNG or WebP, up to 10 MB. One or several pills on a plain background.
+        </span>
         <input
           type="file"
           accept={ACCEPTED_TYPES}
@@ -183,13 +177,59 @@ function grabFrame(video: HTMLVideoElement, maxWidth: number): Promise<Blob> {
   );
 }
 
-/** Live camera: preview with boxes refreshed about once a second, and a capture button. */
-function WebcamPanel({ onImage }: { onImage: (file: Blob, name: string) => void }) {
+interface LiveFrame {
+  result: ScanResult;
+  latency: Latency;
+  count: number;
+}
+
+/** The detected pills of the last live frame: top-5 bars, confidence, latency. */
+function LivePanel({ frame }: { frame: LiveFrame | null }) {
+  if (!frame) {
+    return <p className="m-0 text-sm text-muted">Waiting for the first answer of the API…</p>;
+  }
+  const { result } = frame;
+  return (
+    <div className="grid content-start gap-3" aria-live="polite">
+      <LatencyReadout latency={frame.latency} />
+      <p className="m-0 text-sm text-muted">
+        Frame {frame.count} · {result.pills.length} pill(s) · one request at a time, the next
+        frame after the answer
+      </p>
+      {result.pills.length === 0 && (
+        <p className="m-0 text-sm text-muted">{result.message ?? "No pill in view."}</p>
+      )}
+      {result.pills.slice(0, 3).map((pill, index) => (
+        <div key={index} className="grid gap-2 rounded-xl border border-line bg-surface p-3">
+          <div className="flex items-center gap-2">
+            <span className="pill-number">{index + 1}</span>
+            <span className="min-w-0 flex-1 truncate font-semibold text-heading">
+              {pill.candidates[0]?.name}
+            </span>
+            {pill.needs_confirmation ? (
+              <Badge tone="warn">Please confirm</Badge>
+            ) : (
+              <Badge tone="active">High confidence</Badge>
+            )}
+          </div>
+          <ProbabilityBars candidates={pill.candidates} />
+          <span className="text-xs text-muted">
+            Detection confidence {percent(pill.detection_confidence)} · a suggestion, never a
+            certainty
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Live camera: continuous inference with boxes and bars, and a capture button. */
+function WebcamPanel({ onImage }: { onImage: OnImage }) {
   const video = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [live, setLive] = useState(true);
-  const [preview, setPreview] = useState<ScanResult | null>(null);
+  const [frame, setFrame] = useState<LiveFrame | null>(null);
 
   const start = async () => {
     setProblem(null);
@@ -203,6 +243,7 @@ function WebcamPanel({ onImage }: { onImage: (file: Blob, name: string) => void 
         audio: false,
       });
       setStream(media);
+      setLive(true);
     } catch (failure) {
       setProblem(`The camera is not available: ${errorMessage(failure)}`);
     }
@@ -214,36 +255,29 @@ function WebcamPanel({ onImage }: { onImage: (file: Blob, name: string) => void 
     return () => stream?.getTracks().forEach((track) => track.stop());
   }, [stream]);
 
-  // Live predictions: one frame at a time, the next only after the previous answer.
+  // Continuous inference: one frame at a time, the next only after the previous answer.
   useEffect(() => {
     if (!stream || !live) {
-      setPreview(null);
+      setFrame(null);
       return;
     }
-    const controller = new AbortController();
-    let timer = 0;
-    const tick = async () => {
-      const element = video.current;
-      if (controller.signal.aborted) return;
-      if (element && element.videoWidth > 0) {
-        try {
-          const frame = await grabFrame(element, 960);
-          const result = await api.scan(frame, "live.jpg", controller.signal);
-          if (!controller.signal.aborted) setPreview(result);
-        } catch (failure) {
-          if (controller.signal.aborted) return;
-          setProblem(errorMessage(failure));
-          setLive(false);
-          return;
-        }
-      }
-      timer = window.setTimeout(tick, LIVE_PAUSE_MS);
-    };
-    void tick();
-    return () => {
-      controller.abort();
-      window.clearTimeout(timer);
-    };
+    let count = 0;
+    return startLiveLoop({
+      step: async (signal) => {
+        const element = video.current;
+        if (!element || element.videoWidth === 0) return null;
+        const image = await grabFrame(element, LIVE_WIDTH);
+        const { value, clientMs } = await api.scanTimed(image, "live.jpg", signal);
+        count += 1;
+        return { result: value, latency: latencyOf(value, clientMs), count };
+      },
+      onResult: setFrame,
+      onError: (failure) => {
+        setProblem(errorMessage(failure));
+        setLive(false);
+      },
+      pauseMs: LIVE_PAUSE_MS,
+    });
   }, [stream, live]);
 
   const capture = async () => {
@@ -255,46 +289,74 @@ function WebcamPanel({ onImage }: { onImage: (file: Blob, name: string) => void 
     }
   };
 
+  const stop = () => {
+    setStream(null);
+    setFrame(null);
+  };
+
   return (
     <>
       {problem && <Alert>{problem}</Alert>}
       {!stream ? (
-        <div className="dropzone">
-          <Icon name="camera" size={28} />
-          <strong>Use your camera</strong>
-          <span className="muted">The browser asks for permission. Nothing is recorded or stored.</span>
+        <div className="grid justify-items-center gap-2 rounded-card border-2 border-dashed border-line-strong px-5 py-10 text-center">
+          <span className="text-primary">
+            <Icon name="camera" size={32} />
+          </span>
+          <strong className="text-heading">Use your camera</strong>
+          <span className="text-sm text-muted">
+            Each frame is identified continuously (about twice a second, one request at a time).
+            The browser asks for permission; nothing is recorded or stored.
+          </span>
           <button type="button" className="btn btn-primary" onClick={start}>
             Start the camera
           </button>
         </div>
       ) : (
-        <div className="webcam">
-          <div className="scan-stage">
-            <video ref={video} autoPlay playsInline muted />
-            {preview && <Overlay alt="Live predictions" pills={preview.pills} live />}
+        <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+          <div className="grid gap-3">
+            <div className="relative overflow-hidden rounded-xl bg-surface-2 leading-none">
+              <video ref={video} autoPlay playsInline muted className="block h-auto w-full" />
+              {frame && live && (
+                <ScanCanvas
+                  pills={frame.result.pills}
+                  width={frame.result.image_width}
+                  height={frame.result.image_height}
+                  label="Live predictions"
+                />
+              )}
+              {live && (
+                <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-xs font-bold tracking-wide text-white">
+                  <span className="size-2 animate-pulse rounded-full bg-red-500" aria-hidden="true" />
+                  LIVE
+                </span>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="button" className="btn btn-primary" onClick={capture}>
+                <Icon name="camera" size={16} />
+                Capture and identify
+              </button>
+              <label className="check">
+                <input type="checkbox" checked={live} onChange={(event) => setLive(event.target.checked)} />
+                Live predictions
+              </label>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={stop}>
+                Stop the camera
+              </button>
+            </div>
           </div>
-          <div className="inline-actions">
-            <button type="button" className="btn btn-primary" onClick={capture}>
-              <Icon name="camera" size={16} />
-              Capture and identify
-            </button>
-            <label className="check">
-              <input type="checkbox" checked={live} onChange={(event) => setLive(event.target.checked)} />
-              Live predictions
-            </label>
-            {preview && (
-              <span className="muted" aria-live="polite">
-                {preview.pills.length} pill(s), {Math.round(preview.inference_ms)} ms
-              </span>
-            )}
-          </div>
+          {live ? (
+            <LivePanel frame={frame} />
+          ) : (
+            <p className="m-0 text-sm text-muted">Live predictions are paused.</p>
+          )}
         </div>
       )}
     </>
   );
 }
 
-function DemoPanel({ onImage }: { onImage: (file: Blob, name: string) => void }) {
+function DemoPanel({ onImage }: { onImage: OnImage }) {
   const gallery = useQuery((signal) => api.demoImages(signal), []);
   const [loading, setLoading] = useState<number | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -303,7 +365,7 @@ function DemoPanel({ onImage }: { onImage: (file: Blob, name: string) => void })
     setLoading(image.id);
     setProblem(null);
     try {
-      onImage(await api.demoImage(image), `demo-${image.id}.jpg`);
+      onImage(await api.demoImage(image), `demo-${image.id}.jpg`, image.gradcam_url);
     } catch (failure) {
       setProblem(errorMessage(failure));
     } finally {
@@ -319,21 +381,36 @@ function DemoPanel({ onImage }: { onImage: (file: Blob, name: string) => void })
   return (
     <>
       {problem && <Alert>{problem}</Alert>}
-      <p className="muted">{gallery.data.note} Click a photo to identify it.</p>
-      <div className="gallery">
+      <p className="mb-3 mt-0 text-sm text-muted">
+        {gallery.data.note} One click identifies a photo.
+      </p>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3">
         {gallery.data.items.map((image, index) => (
           <button
             type="button"
             key={image.id}
-            className="gallery-item"
-            style={staggerIndex(index)}
+            className="group grid animate-[pop-in_0.35s_var(--ease)_backwards] cursor-pointer gap-1.5 rounded-xl border border-line bg-surface p-1.5 text-left text-ink transition duration-200 ease-brand enabled:hover:-translate-y-0.5 enabled:hover:border-primary enabled:hover:shadow-card disabled:cursor-wait disabled:opacity-60"
+            style={{ animationDelay: `${index * 40}ms`, ...staggerIndex(index) }}
             onClick={() => pick(image)}
             disabled={loading !== null}
             data-testid={`demo-${image.id}`}
           >
-            <img src={image.thumbnail_url} alt={`C3PI test photo ${image.id + 1}`} loading="lazy" />
-            <span className="gallery-caption">
+            <span className="relative block">
+              <img
+                src={image.thumbnail_url}
+                alt={`C3PI test photo ${image.id + 1}`}
+                loading="lazy"
+                className="block aspect-[4/3] w-full rounded-lg object-cover"
+              />
+              {image.gradcam_url && (
+                <span className="absolute right-1.5 top-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[0.7rem] font-semibold text-white">
+                  Grad-CAM
+                </span>
+              )}
+            </span>
+            <span className="px-1 pb-0.5 text-[0.82rem] leading-snug">
               {loading === image.id ? "Loading…" : `Shows: ${image.expected_name || `class ${image.class_id}`}`}
+              {WHY[image.why] && <span className="block text-xs text-muted">{WHY[image.why]}</span>}
             </span>
           </button>
         ))}
@@ -456,10 +533,11 @@ function PillChoice({
               {searched ? (
                 <span className="muted">chosen by search</span>
               ) : (
-                <span className="prob" title="Model probability">
-                  <span className="prob-bar">
-                    <span style={{ width: `${candidate.probability * 100}%` }} />
-                  </span>
+                <span
+                  className="flex w-32 flex-none items-center gap-2 text-[0.88rem] font-semibold tabular-nums"
+                  title="Model probability"
+                >
+                  <ProbBar value={candidate.probability} />
                   {percent(candidate.probability)}
                 </span>
               )}
@@ -570,10 +648,102 @@ function InteractionReport({ report }: { report: InteractionsResult }) {
   );
 }
 
+type View = "photo" | "gradcam";
+
+/** The photo with its boxes, or the Grad-CAM of a gallery photo with the same boxes. */
+function ResultStage({
+  photo,
+  result,
+  scanning,
+  latency,
+}: {
+  photo: Photo;
+  result: ScanResult | null;
+  scanning: boolean;
+  latency: Latency | null;
+}) {
+  const [view, setView] = useState<View>("photo");
+  const shown = view === "gradcam" && photo.gradcamUrl ? photo.gradcamUrl : photo.url;
+
+  return (
+    <div className="card sticky top-[84px] grid gap-3 p-3">
+      {photo.gradcamUrl && (
+        <div className="flex gap-1 rounded-xl bg-surface-2 p-1" role="tablist" aria-label="Picture shown">
+          {(["photo", "gradcam"] as View[]).map((item) => (
+            <button
+              key={item}
+              type="button"
+              role="tab"
+              aria-selected={view === item}
+              onClick={() => setView(item)}
+              className={`flex-1 cursor-pointer rounded-lg border px-3 py-1.5 font-semibold transition ${
+                view === item
+                  ? "border-line bg-surface text-primary-text shadow-card"
+                  : "border-transparent bg-transparent text-muted hover:text-ink"
+              }`}
+            >
+              {item === "photo" ? "Photo and boxes" : "Grad-CAM"}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="relative overflow-hidden rounded-xl bg-surface-2 leading-none">
+        <img
+          src={shown}
+          alt={
+            view === "gradcam"
+              ? `Grad-CAM of the classifier on ${photo.name}`
+              : `Photo sent for identification: ${photo.name}`
+          }
+          className="block h-auto w-full"
+        />
+        {result && (
+          <ScanCanvas
+            pills={result.pills}
+            width={result.image_width}
+            height={result.image_height}
+            label="Detected pills"
+          />
+        )}
+        {scanning && (
+          <div className="absolute inset-0 grid place-items-center bg-surface/60" data-testid="scan-busy">
+            <Spinner label="Identifying the pills" />
+          </div>
+        )}
+      </div>
+      {view === "gradcam" && photo.gradcamUrl && (
+        <p className="m-0 text-sm text-muted">
+          Grad-CAM of the served classifier for its top-1 class: red marks the parts of the crop
+          that weigh most in that class, blue the least. Computed offline with the PyTorch weights
+          of the same version (the API runs ONNX only). It explains the suggestion; it does not
+          make it more certain.
+        </p>
+      )}
+      {!photo.gradcamUrl && result && (
+        <p className="m-0 text-sm text-muted" data-testid="gradcam-note">
+          Grad-CAM is available only for the demo gallery photos: it needs the PyTorch model,
+          so it is precomputed for them (the API runs ONNX models only).
+        </p>
+      )}
+      {result && (
+        <>
+          <p className="m-0 text-sm text-muted">
+            {result.pills.length} pill(s) found · {result.image_width} × {result.image_height} px ·
+            boxes coloured by class, dashed below {percent(result.confirm_threshold)} (please
+            confirm)
+          </p>
+          {latency && <LatencyReadout latency={latency} />}
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function ScanPage() {
   const [mode, setMode] = useState<Mode>("upload");
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
+  const [latency, setLatency] = useState<Latency | null>(null);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mine, setMine] = useState<Confirmed[]>([]);
@@ -586,13 +756,16 @@ export default function ScanPage() {
     if (photo) URL.revokeObjectURL(photo.url);
   }, [photo]);
 
-  const identify = async (image: Blob, name: string) => {
+  const identify: OnImage = async (image, name, gradcamUrl = null) => {
     setScanning(true);
     setError(null);
     setResult(null);
-    setPhoto({ url: URL.createObjectURL(image), name });
+    setLatency(null);
+    setPhoto({ url: URL.createObjectURL(image), name, gradcamUrl });
     try {
-      setResult(await api.scan(image, name));
+      const { value, clientMs } = await api.scanTimed(image, name);
+      setResult(value);
+      setLatency(latencyOf(value, clientMs));
       window.setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     } catch (failure) {
       setError(errorMessage(failure));
@@ -656,15 +829,21 @@ export default function ScanPage() {
 
       <Disclaimer />
 
-      <section className="card scan-input" aria-label="Photo">
-        <div className="segmented" role="tablist" aria-label="Photo source">
+      <ModelCard />
+
+      <section className="card mb-5" aria-label="Photo">
+        <div className="mb-4 flex flex-wrap gap-1 rounded-xl bg-surface-2 p-1" role="tablist" aria-label="Photo source">
           {MODES.map((item) => (
             <button
               type="button"
               role="tab"
               key={item.mode}
               aria-selected={mode === item.mode}
-              className={mode === item.mode ? "segment segment-on" : "segment"}
+              className={`inline-flex flex-[1_1_160px] cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2 font-semibold transition duration-200 ${
+                mode === item.mode
+                  ? "border-line bg-surface text-primary-text shadow-card"
+                  : "border-transparent bg-transparent text-muted hover:text-ink"
+              }`}
               onClick={() => setMode(item.mode)}
             >
               <Icon name={item.icon} size={16} />
@@ -680,25 +859,14 @@ export default function ScanPage() {
       {error && <Alert>{error}</Alert>}
 
       {photo && (
-        <section className="scan-result" ref={resultRef} aria-label="Result" aria-busy={scanning}>
-          <div className="card scan-photo">
-            <div className="scan-stage">
-              <img src={photo.url} alt={`Photo sent for identification: ${photo.name}`} />
-              {result && <Overlay alt="Detected pills" pills={result.pills} />}
-              {scanning && (
-                <div className="scan-busy">
-                  <Spinner label="Identifying the pills" />
-                </div>
-              )}
-            </div>
-            {result && (
-              <p className="muted scan-meta">
-                {result.pills.length} pill(s) found · {result.image_width} × {result.image_height}{" "}
-                px · {Math.round(result.inference_ms)} ms (ONNX Runtime) · confirmation below{" "}
-                {percent(result.confirm_threshold)}
-              </p>
-            )}
-          </div>
+        <section
+          className="mb-5 grid items-start gap-5 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]"
+          ref={resultRef}
+          aria-label="Result"
+          aria-busy={scanning}
+          data-testid="scan-result"
+        >
+          <ResultStage key={photo.url} photo={photo} result={result} scanning={scanning} latency={latency} />
           <div className="scan-pills">
             {result?.message && <Alert kind="info">{result.message}</Alert>}
             {result?.pills.map((pill, index) => (
