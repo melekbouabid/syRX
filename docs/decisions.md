@@ -1251,3 +1251,95 @@ distantes de 20 partagent une couleur : la couleur aide à suivre une classe d'u
 l'autre, le nom et la probabilité restent écrits sur chaque boîte. Rejeté : une file
 d'images en parallèle (latence qui grandit sans fin sur CPU) ; une couleur par confiance
 seulement (le guide demande une couleur par classe).
+
+## Étape 2.7 : boîtes de médicaments (remarque 18 du professeur)
+
+**D108. Données des boîtes : jeu public sans compte, vérité terrain tirée des métadonnées,
+photos de l'utilisateur et Roboflow en attente.** Le scanner ne connaît que des comprimés C3PI :
+une boîte recevait une fausse classe (7 boîtes sur 8 testées, docs/module1/boites.md). Jeu
+retenu : mennox/Italian-OTC-medicines (Hugging Face, Apache-2.0, téléchargement anonyme figé à
+la révision 29ebcd7), 718 fichiers dont 5 pages HTML écartées par leur signature, 713 photos.
+La vérité terrain vient des métadonnées, jamais de la photo : marque = premier mot du nom
+commercial (vide pour un générique nommé d'après son principe actif) ; principes actifs = texte
+« Principi attivi » entre « principio attivo » et « eccipienti » (un arôme comme « gusto Ginger »
+n'est pas un principe actif), rapproché des noms DDInter avec les mêmes règles que l'API, sans la
+table des marques (pour ne pas noter la voie « marque » contre elle-même) : 279 photos ont au
+moins un principe actif connu. Contrôle de 20 lignes au hasard : justes, parfois incomplètes.
+Images hors sujet : 16 exemples de scikit-image (CC0 ou domaine public) + 3 images générées.
+Roboflow Universe et Kaggle demandent un compte : non utilisés (rien n'est contourné) ; le petit
+détecteur YOLO « boîte » reste une option. Les photos de l'utilisateur (Panadol, Doliprane...)
+sont le jeu de test final : dossier `data/raw/medicine_boxes/user_photos` prévu, commande
+d'évaluation `--set user` prête. La validation « Panadol -> paracétamol » demande une vraie
+photo de Panadol, absente du jeu public : une image de texte synthétique ne sert qu'aux tests
+unitaires. L'étape reste donc EN ATTENTE PHOTOS : branche poussée, pas de merge ni de tag.
+
+**D109. OCR : RapidOCR servi, EasyOCR comparé ; promotion sur `ingredient_recall`.** Deux
+moteurs, une branche `experiment/ocr-<moteur>` chacun : RapidOCR 3.10 (PP-OCRv4 mobile en ONNX,
+ONNX Runtime CPU : la même pile que les modèles de comprimés, sans PyTorch dans l'image du
+backend) et EasyOCR 1.7 (CRAFT + CRNN, PyTorch, GPU, modèles italien, français et anglais ;
+venv d'entraînement seulement). Tesseract n'est pas comparé : son installateur Windows demande
+les droits d'administrateur ; TrOCR est exclu par le périmètre du projet (reconnaissance de
+lignes seulement, sans détection). Chaque moteur est un run MLflow (expérience `tujya-boxes`)
+et une version du Registry `tujya-box-ocr` (modèle pyfunc « défini par code » avec sa
+configuration : les moteurs sont préentraînés, rien n'est entraîné ici). Métrique de
+promotion : `ingredient_recall`, part des boîtes à principe actif connu dont au moins un vrai
+principe actif est trouvé par le code de l'API (gain minimal 0,005, `params.yaml`
+`compare.ocr`), avec `promote_if_better` ; la précision et le taux de principe actif faux sont
+rapportés à côté (un faux est plus grave qu'un oubli). RxNav est coupé pendant l'évaluation
+pour un score reproductible hors ligne. Latence : 30 boîtes, 3 tours séparés de 20 s ; le PC se
+bride sous charge continue (D96) : 0,4 à 0,6 s par boîte à froid pour RapidOCR, environ 3,4 s
+en régime bridé. Un moteur PyTorch champion ne serait pas servi tel quel : l'API reste en ONNX.
+
+**D110. Rapprochement du texte : table des marques sourcée, DCI imprimée, RxNav en secours,
+jamais de devinette.** `config/brand_aliases.csv` : 35 marques vendues en France ou au
+Royaume-Uni (Panadol, Doliprane, Efferalgan, Dafalgan, Augmentin...), principes actifs sous
+les noms de la table d'interactions ; chaque ligne cite le produit vérifié : la fiche emc
+(SmPC) de Panadol Advance, ou un code CIS du fichier des compositions de la BDPM (ANSM, Licence
+ouverte, fichier du 03/11/2026, substances actives vérifiées par script). Les marques
+italiennes du jeu d'évaluation n'y sont pas ajoutées (sauf celles vendues en France :
+Efferalgan, Nurofen, Gaviscon, Imodium) : l'évaluation mesure surtout la lecture de la DCI.
+`config/inn_aliases.csv` : orthographes imprimées dont le nom diffère de la table
+(paracetamolo -> acetaminophen, source RxNorm ; acido acetilsalicilico...). Comparaison
+approximative rapidfuzz (ratio >= 86 pour une marque, >= 88 pour un principe actif), seulement
+entre noms de même nombre de mots et de mêmes deux premières lettres (sinon « vitamina » donnait
+« vitamin a » et « aciclovir » le famciclovir), mots de moins de 6 lettres exacts, groupes de
+mots les plus longs d'abord, chaque mot utilisé une fois. RxNav (`approximateTerm` puis lien
+IN) n'est interrogé que si rien n'a été trouvé, pour les 3 mots imprimés les plus grands, et
+seulement avec `TUJYA_RXNAV_CONTACT_EMAIL` (même règle que le pipeline de données ; sans
+adresse, le secours est désactivé et la réponse le dit). Rien de trouvé : « boîte non
+reconnue ». Rejeté : envoyer tout le texte lu à un LLM (risque d'invention).
+
+**D111. Type de photo et refus hors distribution : texte d'abord, puis détection >= 0,5.**
+`decide_kind` : un texte qui nomme un médicament, ou au moins 20 lettres lues avec une
+confiance >= 0,5, fait une boîte ; sinon une détection de comprimé >= 0,5 fait un comprimé ;
+sinon la photo est refusée (`unknown`) et aucune classe n'est proposée ; une boîte ne reçoit
+jamais de classe de comprimé. Seuil de détection choisi sur les 995 photos du split de
+comparaison et les 19 images hors sujet : à 0,5, 98,1 % des comprimés restent des comprimés et
+15 images hors sujet sur 19 sont refusées ; à 0,6, 95,5 % et 17 sur 19. Le gain sur le jeu hors
+sujet (2 images) ne vaut pas 2,6 points de comprimés perdus. Les 4 images hors sujet acceptées
+(cellule au microscope, horloge, pièces, champ d'étoiles) sont des objets ronds sur un fond uni,
+comme un comprimé : limite connue. Rejeté : refuser les images en niveaux de gris (elles sont
+toutes en gris dans ce petit jeu, mais une vraie photo ne l'est jamais : le score serait
+artificiel) ; un classifieur « pas un comprimé » (bonne piste, demande des négatifs annotés et
+un entraînement) ; la probabilité du classifieur (médiane 0,47 sur de vrais comprimés de classes
+v2 : elle ne sépare pas).
+
+**D112. Chat : les marques de la question deviennent des principes actifs cités.** Le nœud
+`understand` cherche les marques de la table dans la question et ajoute leurs principes actifs ;
+chaque marque devient une source citable (`doc_type` `brand`, avec sa référence BDPM ou emc),
+placée en tête ; le prompt liste « Marques reconnues ». Nouvel outil `lookup_brand` (chat et
+serveur MCP) : marque -> principes actifs avec la source de chaque lien, RxNav en secours,
+« non reconnue » sinon. `identify_pills` (MCP) lit aussi les boîtes. Benchmark : 8 questions de
+type `brand` ajoutées au jeu du module 2 (96 questions, les 88 autres inchangées), dont 6 sans
+chunk attendu (paracétamol et ibuprofène ne sont pas des principes actifs des classes indexées :
+l'interaction vient de DDInter) ; `bench_brands.py` les passe dans l'agent réel avec et sans la
+table des marques.
+Corrections trouvées par ce benchmark : le LLM planificateur passait la marque brute à
+`check_interaction` (« Augmentin ») : elle est remplacée par ses principes actifs ; le modèle 3B
+citait rarement la source de la marque (1 réponse sur 8) : comme pour la toxicité, une phrase
+fixe « Panadol contient : acetaminophen (table des marques) [n]. » est placée en tête quand
+aucune source de marque n'est citée ; enfin il a écrit que le paracétamol « n'est pas connu pour
+interférer » avec la warfarine alors que sa source DDInter listait une interaction modérée :
+quand `check_interaction` trouve une interaction, une phrase qui la nie est retirée et, si aucune
+ligne DDInter n'est citée, une phrase fixe la donne avec sa source. Ces phrases fixes viennent
+des sources, jamais du LLM.
