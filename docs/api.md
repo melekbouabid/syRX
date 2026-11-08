@@ -13,7 +13,8 @@ démonstration (D46). Les quatre routes du guide du module 1 (`/health`, `/model
 | `POST /api/interactions` | vérifier les interactions entre comprimés et principes actifs | ci-dessous |
 | `POST /api/chat` | question à l'agent, réponse citée (module 2) | [docs/module2/agent.md](module2/agent.md#post-apichat) |
 | `POST /api/toxicity` | probabilités Tox21 d'une ou deux molécules (bonus) | [docs/bonus/toxicity.md](bonus/toxicity.md#où-il-est-utilisé) |
-| `GET /api/demo/images` | galerie de photos du split de test (lecture seule) | [docs/demo.md](demo.md) |
+| `GET /api/demo/images` | galerie de photos du split de test, jamais vues à l'entraînement par les modèles servis (lecture seule, D105) | [ci-dessous](#galerie-de-démo-et-grad-cam) |
+| `GET /api/demo/images/{id}/gradcam` | Grad-CAM précalculée d'une photo de la galerie (JPEG, 404 sinon, D104) | [ci-dessous](#galerie-de-démo-et-grad-cam) |
 | `/api/auth/*`, `/api/admin/*` | comptes, sessions, administration | [docs/app.md](app.md#comptes) |
 | `GET /health`, `GET /model/metadata`, `POST /predict`, `POST /predict/visualize` | endpoints du guide : état, métadonnées, prédiction JSON, image annotée (sans compte) | [ci-dessous](#endpoints-du-guide-du-module-1-sans-compte) |
 
@@ -57,8 +58,13 @@ chaque code d'erreur avec les modèles ONNX factices ; test de fumée de l'image
 [docker-build.yml](../.github/workflows/docker-build.yml) (`/health` dégradé et `/predict` 503
 sans modèles).
 
-Grad-CAM n'est pas servi par l'API : il demande les gradients du modèle PyTorch, alors que
-l'API n'exécute que l'ONNX (sans PyTorch, D97) ; il est prévu à l'étape 2.6.
+Grad-CAM n'est pas calculé par l'API : il demande les gradients du modèle PyTorch, alors que
+l'API n'exécute que l'ONNX (sans PyTorch, D97). Il est précalculé pour les photos de la
+galerie et servi comme fichier (étape 2.6, D104, [ci-dessous](#galerie-de-démo-et-grad-cam)).
+
+Couleurs des boîtes de `/predict/visualize` : couleur `class_id mod 20` de la palette à 20
+couleurs des tracés d'Ultralytics, texte noir ou blanc selon la luminance ; le site dessine
+ses boîtes avec les mêmes couleurs (`frontend/src/lib/vision.ts`, D107).
 
 ## POST /api/scan
 
@@ -71,7 +77,7 @@ Chaîne ([`backend/app/inference.py`](../backend/app/inference.py),
 ONNX Runtime, CPU par défaut, CUDA avec `TUJYA_ONNX_PROVIDERS=auto`) :
 
 1. décodage (OpenCV, orientation EXIF appliquée), letterbox à 640 px, détecteur
-   (`tujya-pill-detector`, YOLO11n), confiance >= 0,25, NMS à IoU 0,7, 20 comprimés au plus ;
+   (`tujya-pill-detector`, YOLO11s depuis l'étape 2.2), confiance >= 0,25, NMS à IoU 0,7, 20 comprimés au plus ;
 2. pour chaque boîte : recadrage carré avec 20 % de marge, 224 px (exactement les recadrages
    de l'entraînement), classifieur (`tujya-pill-classifier`, YOLO11s-cls), top-5 ;
 3. class_id -> nom du comprimé, nom générique et principes actifs depuis les tables des
@@ -83,7 +89,7 @@ Réponse (`ScanResult`), ici sur une photo du split de test :
 {
   "image_width": 2560, "image_height": 1920,
   "inference_ms": 50.4,
-  "timings": {"detection_ms": 41.2, "classification_ms": 9.2, "total_ms": 50.4},
+  "timings": {"detection_ms": 41.2, "classification_ms": 9.2, "total_ms": 50.4, "server_ms": 63.0},
   "confirm_threshold": 0.85,
   "pills": [{
     "box": {"x1": 1028, "y1": 908, "x2": 1522, "y2": 1140},
@@ -101,6 +107,11 @@ Réponse (`ScanResult`), ici sur une photo du split de test :
   "disclaimer": "Information uniquement, consultez un pharmacien ou un médecin."
 }
 ```
+
+`timings.total_ms` = ONNX Runtime seul (détection + identification) ; `timings.server_ms` =
+toute la requête côté serveur (lecture de l'envoi, décodage, base des médicaments). Le site
+affiche `server_ms` à côté de la latence **client** qu'il mesure lui-même dans le navigateur
+(`performance.now()` autour de l'appel, envoi et réception compris).
 
 `needs_confirmation` est vrai quand la probabilité top-1 est sous `confirm_threshold` (0,85,
 `TUJYA_SCAN_CONFIRM_THRESHOLD`) ; le site demande alors de choisir dans le top-5 ou de
@@ -170,3 +181,34 @@ trouvé 98,5 %, top-1 89,3 %, top-5 95,8 %, comme l'évaluation d'Ultralytics
 ([vision.md](module1/vision.md)) ; environ 50 à 220 ms par photo sur le
 CPU du portable, selon la charge. Vérifié à nouveau sur les conteneurs de la copie
 restructurée (2026-10-29) : la même photo de test donne la classe 0 à 0,982, en 59 ms.
+
+## Galerie de démo et Grad-CAM
+
+`GET /api/demo/images` liste les photos de [`config/demo_gallery.csv`](../config/demo_gallery.csv)
+(choisies à la main, D52 et D105) que l'API accepte de montrer
+([`backend/app/gallery.py`](../backend/app/gallery.py)) : une photo « consumer » du split de
+test v2 ([`config/splits/c3pi_v2/test.csv`](../config/splits/c3pi_v2/test.csv), celui du
+détecteur servi) qui n'est pas dans le train ni la val v1
+([`config/splits/selected_images.csv`](../config/splits/selected_images.csv), ceux du
+classifieur servi), et dont le fichier existe. Chaque élément : `id`, `class_id` (étiquette
+C3PI, pour comparer), `expected_name`, `why` (`major`, `two-pills`, `confirm`,
+`no-ingredient`), `url`, `thumbnail_url` (360 px) et `gradcam_url` (null sans Grad-CAM).
+Les huit photos sont aussi dans `test_holdout.txt` de D93 (aucune photo de la même session en
+train ou val v1), ce que vérifie un test quand les données DVC sont là.
+
+`GET /api/demo/images/{id}/gradcam` renvoie la photo (1 280 px au plus, mêmes proportions) où
+la carte Grad-CAM du classifieur est fondue dans le carré recadré de chaque comprimé détecté,
+pour la classe top-1 que donne le scan ; 404 si la photo n'existe pas ou si sa carte n'a pas
+été calculée. Les cartes sont précalculées hors de l'API
+([`src/models/gradcam_gallery.py`](../src/models/gradcam_gallery.py), étape DVC
+`gradcam_gallery`, venv d'entraînement) : mêmes boîtes et mêmes recadrages que l'API (la chaîne
+ONNX de `backend/app/inference.py`), poids PyTorch de la version servie du classifieur
+(`models/train/classifier`, run vérifié contre `models.json`), dernière convolution de la tête
+(`model.10.conv`, 7 x 7 à 224 px) ; le script s'arrête si PyTorch et ONNX Runtime ne donnent
+pas la même probabilité (écart 1e-3 au plus ; 2e-7 mesuré). Sorties dans
+`data/processed/c3pi/gradcam/` (DVC, jamais dans git) avec `gradcam.json` (modèle, couche,
+probabilités par comprimé), montées en lecture seule dans le conteneur `backend`.
+
+Tests : [`backend/tests/test_demo.py`](../backend/tests/test_demo.py) (règle des splits, 200 /
+404 de Grad-CAM, connexion requise) et
+[`tests/models/test_gradcam_gallery.py`](../tests/models/test_gradcam_gallery.py).
