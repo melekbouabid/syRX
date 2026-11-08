@@ -54,9 +54,11 @@ def test_eval_rows(tmp_path: Path, matcher: TextMatcher) -> None:
         },
         {"nome": "TACHIPIRINA*20CPR", "immagine": "t.jpg", "dettagli": {}},  # same photo again
         {"nome": "MISSING*1", "immagine": "absent.jpg", "dettagli": {}},  # no photo file
+        {"nome": "PAGE*1", "immagine": "page.jpg", "dettagli": {}},  # an HTML page named .jpg
     ]
     for name in ("t.jpg", "b.jpg"):
-        (tmp_path / "out" / name).write_bytes(b"jpg")
+        (tmp_path / "out" / name).write_bytes(bytes([0xFF, 0xD8, 0xFF, 0xE0]) + b" a JPEG")
+    (tmp_path / "out" / "page.jpg").write_bytes(b"<!DOCTYPE html>")
     (tmp_path / "medicines.json").write_text(json.dumps(records), encoding="utf-8")
     rows = mb.eval_rows(tmp_path, matcher)
     assert [(r["image"], r["brand"], r["ingredients"]) for r in rows] == [
