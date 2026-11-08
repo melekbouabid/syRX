@@ -1,0 +1,5 @@
+# OCR engine of experiment/ocr-easyocr (src/models/ocr/evaluate.py, D109): EasyOCR 1.7,
+# CRAFT detection + CRNN recognition in PyTorch (training venv only, GPU when available).
+engine: easyocr
+languages: [it, fr, en]
+gpu: true
