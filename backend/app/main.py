@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import sessionmaker
 
 from app.accounts import seed_accounts, warn_about_default_password
+from app.boxes import BoxReader, OcrHolder, RxNavClient
 from app.config import Settings
 from app.db import Base, make_engine
 from app.inference import ScannerHolder
@@ -71,6 +72,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         providers=settings.onnx_providers,
         threads=settings.onnx_threads,
         conf=settings.scan_detection_confidence,
+    )
+    # Medicine boxes (step 2.7): OCR loaded on the first scan, brand and INN tables in config/.
+    app.state.boxes = BoxReader(
+        OcrHolder(settings.ocr_threads, enabled=settings.box_ocr_enabled),
+        settings.brand_table_file,
+        settings.inn_aliases_file,
+        RxNavClient(
+            settings.rxnav_contact_email,
+            base_url=settings.rxnav_url,
+            timeout=settings.rxnav_timeout_seconds,
+        ),
     )
     # Bonus: Tox21 toxicity model, loaded on first use (models/tox21, docs/bonus/toxicity.md).
     app.state.toxicity = ToxHolder(settings.tox_model_dir, settings.ingredient_smiles_file)

@@ -74,6 +74,19 @@ class Settings(BaseSettings):
     scan_detection_confidence: float = 0.25
     scan_max_bytes: int = 10 * 1024 * 1024
     scan_max_pixels: int = 50_000_000
+    # Step 2.7, medicine boxes (app/boxes.py, docs/module1/boites.md, D108-D111): OCR of the
+    # printed text, brand table and printed INN, RxNav fallback. Below scan_pill_min_confidence
+    # (best pill detection) with little text the photo is refused as neither a pill nor a box.
+    box_ocr_enabled: bool = True
+    ocr_threads: int = 4
+    brand_table_file: Path = PROJECT_DIR / "config" / "brand_aliases.csv"
+    inn_aliases_file: Path = PROJECT_DIR / "config" / "inn_aliases.csv"
+    scan_pill_min_confidence: float = 0.5
+    box_text_chars: int = 20
+    # RxNav (public NLM API) is asked only with a contact address, like the data pipeline.
+    rxnav_contact_email: str | None = None
+    rxnav_url: str = "https://rxnav.nlm.nih.gov/REST"
+    rxnav_timeout_seconds: float = 5.0
     # C3PI test-split photos shown in the demo gallery (read-only); see app/routers/demo.py.
     # A photo is served only if it is in the v2 test split (detector) and not in the v1
     # train or val split (classifier): never seen in training by either served model (D105).
