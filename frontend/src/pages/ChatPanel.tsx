@@ -7,7 +7,7 @@ import { Icon } from "../components/icons";
 const DISCLAIMER = "Information uniquement, consultez un pharmacien ou un médecin.";
 
 export interface ChatPill {
-  class_id: number;
+  class_id: number | null; // null for a medicine box (its ingredients are used instead)
   name: string;
   active_ingredients: string[];
 }
@@ -173,7 +173,9 @@ export default function ChatPanel({ pills }: { pills: ChatPill[] }) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [busy, setBusy] = useState(false);
   const counter = useRef(0);
-  const classIds = [...new Set(pills.map((pill) => pill.class_id))];
+  const classIds = [
+    ...new Set(pills.flatMap((pill) => (pill.class_id === null ? [] : [pill.class_id]))),
+  ];
 
   const update = (id: number, change: (turn: Turn) => Turn) =>
     setTurns((current) => current.map((turn) => (turn.id === id ? change(turn) : turn)));
