@@ -26,7 +26,7 @@ from src.agent.tools import TOOL_SPECS, Toolbox
 from src.models.toxicity.model import ToxHolder
 from src.rag.embeddings import Embedder, OllamaEmbedder
 from src.rag.retrieval import RetrieverHolder
-from src.rag.store import ChunkStore
+from src.rag.stores import open_store
 
 INSTRUCTIONS = (
     "Medicine information for the 150 Tujya pill classes and their 82 active ingredients: "
@@ -97,7 +97,7 @@ def default_toolbox(settings: Settings, embedder: Embedder | None = None) -> Too
         threads=settings.onnx_threads,
         conf=settings.scan_detection_confidence,
     )
-    retrievers = RetrieverHolder(ChunkStore(engine, embedder.dim), embedder)
+    retrievers = RetrieverHolder(open_store(settings, embedder.dim, engine), embedder)
     toxicity = ToxHolder(settings.tox_model_dir, settings.ingredient_smiles_file)
     return Toolbox(settings, engine, retrievers, scanner, toxicity=toxicity)
 
