@@ -20,8 +20,8 @@
   "recall_at_5_interaction": 0.9583,
   "recall_at_5_mechanism": 0.9,
   "recall_at_5_warnings": 0.5,
-  "ms_per_query": 5.1,
-  "run_id": "2cf2927bfee94f9b8e3b1e219a49969e"
+  "ms_per_query": 14.7,
+  "run_id": "d0a4563be28f46dbb27c14d011c927d3"
  },
  "retrieval-dense-none": {
   "recall_at_1": 0.7831,
@@ -44,8 +44,8 @@
   "recall_at_5_interaction": 0.9167,
   "recall_at_5_mechanism": 1.0,
   "recall_at_5_warnings": 0.75,
-  "ms_per_query": 294.7,
-  "run_id": "e96c59aa1d364d54ada6b1f0b4ba4dea"
+  "ms_per_query": 107.7,
+  "run_id": "e68be0b63df449ee821d50b13fedc3f1"
  },
  "retrieval-hybrid-none": {
   "recall_at_1": 0.6988,
@@ -68,8 +68,8 @@
   "recall_at_5_interaction": 0.9583,
   "recall_at_5_mechanism": 1.0,
   "recall_at_5_warnings": 0.75,
-  "ms_per_query": 211.3,
-  "run_id": "e2f90d8b80ad4d8dba54c3ece08ca633"
+  "ms_per_query": 141.2,
+  "run_id": "e8542cf701d448b8897876b47dd4d9d0"
  },
  "retrieval-bm25-names": {
   "recall_at_1": 0.5663,
@@ -92,8 +92,8 @@
   "recall_at_5_interaction": 0.9583,
   "recall_at_5_mechanism": 1.0,
   "recall_at_5_warnings": 0.5,
-  "ms_per_query": 25.5,
-  "run_id": "7fe60756b12f41ca823513eab05c8951"
+  "ms_per_query": 30.8,
+  "run_id": "b39ed05003204f0e8bd162fe592bd5d7"
  },
  "retrieval-dense-names": {
   "recall_at_1": 0.7952,
@@ -116,8 +116,8 @@
   "recall_at_5_interaction": 0.9167,
   "recall_at_5_mechanism": 1.0,
   "recall_at_5_warnings": 0.75,
-  "ms_per_query": 180.2,
-  "run_id": "215454ba88274235b812994e5a07da5b"
+  "ms_per_query": 119.2,
+  "run_id": "e1a6136bb1934ae19d14745d620407ca"
  },
  "retrieval-hybrid-names": {
   "recall_at_1": 0.7108,
@@ -140,7 +140,7 @@
   "recall_at_5_interaction": 0.9583,
   "recall_at_5_mechanism": 1.0,
   "recall_at_5_warnings": 0.75,
-  "ms_per_query": 193.4,
-  "run_id": "8e1816a583fa4187b978e2456be59d4b"
+  "ms_per_query": 155.5,
+  "run_id": "17c80980db404758b7634fb24d01b30b"
  }
 }
