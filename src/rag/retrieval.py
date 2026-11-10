@@ -16,10 +16,12 @@ import re
 import threading
 from collections import Counter
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Literal
 
 import numpy as np
 
+from src.rag.documents import Catalog
 from src.rag.embeddings import Embedder, fold
 from src.rag.store import Chunk, Filters, VectorStore
 
@@ -267,6 +269,11 @@ class Retriever:
             order = [self.position[i] for i in ids]
             self.matrix = np.zeros((len(self.chunks), store.dim), dtype=np.float32)
             self.matrix[order] = matrix
+
+    @cached_property
+    def catalog(self) -> Catalog:
+        """The indexed documents (Documents page), built on first use, once per index."""
+        return Catalog(self.chunks, self.store.hashes())
 
     def _mask(self, filters: Filters) -> np.ndarray:
         return np.array([filters.accepts(chunk) for chunk in self.chunks], dtype=bool)

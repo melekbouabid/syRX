@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 from sqlalchemy import Engine
+from sqlalchemy.exc import OperationalError
 
 from app.config import Settings
 from src.rag.store import ChunkStore, VectorStore
+
+# A store that cannot be reached (Qdrant or PostgreSQL down): the API answers 503.
+STORE_ERRORS = (ResponseHandlingException, UnexpectedResponse, OperationalError, OSError)
 
 
 def open_store(settings: Settings, dim: int, pharma_engine: Engine | None = None) -> VectorStore:

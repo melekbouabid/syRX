@@ -29,6 +29,7 @@ from sqlalchemy import (
     Table,
     Text,
     delete,
+    func,
     insert,
     inspect,
     not_,
@@ -148,6 +149,10 @@ class VectorStore(Protocol):
     def load_embeddings(self) -> tuple[list[str], np.ndarray]: ...
 
     def dense_search(self, vector: list[float], filters: Filters, k: int) -> list[str]: ...
+
+    def info(self) -> dict[str, Any]:
+        """Collection (or table) name, number of points, status, indexed payload fields."""
+        ...
 
 
 def chunk_table(metadata: MetaData, dim: int) -> Table:
@@ -289,6 +294,12 @@ class ChunkStore:
 
     def dense_search(self, vector: list[float], filters: Filters, k: int) -> list[str]:
         return self.dense_search_sql(vector, filters, k)
+
+    def info(self) -> dict[str, Any]:
+        with self.engine.connect() as conn:
+            points = conn.execute(select(func.count()).select_from(self.table)).scalar_one()
+        indexed = [c.name for c in self.table.c if c.index]
+        return {"collection": TABLE, "points": points, "status": "ok", "payload_indexes": indexed}
 
     def dense_search_sql(self, vector: list[float], filters: Filters, k: int) -> list[str]:
         """Nearest chunks by cosine distance in PostgreSQL, filters in the WHERE clause."""
