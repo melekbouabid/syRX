@@ -3,7 +3,8 @@
 - BM25 (Okapi, k1 = 1.2, b = 0.75) over title + text, in memory: the corpus is ~10^4
   chunks, so scoring every chunk takes a few milliseconds. Tokens are lower-cased, accents
   removed, English and French stop words dropped, plural "s" stripped.
-- Dense: cosine similarity of bge-m3 vectors, in PostgreSQL (pgvector) or numpy (tests).
+- Dense: cosine similarity of bge-m3 vectors, in Qdrant (D113), PostgreSQL (pgvector) or
+  numpy (SQLite, tests).
 - Hybrid: RRF, score = sum over the two lists of 1 / (60 + rank) (Cormack et al., 2009).
 Metadata filters (ingredient, document type, section, retracted) apply to all three.
 """
@@ -20,7 +21,7 @@ from typing import Literal
 import numpy as np
 
 from src.rag.embeddings import Embedder, fold
-from src.rag.store import Chunk, ChunkStore, Filters
+from src.rag.store import Chunk, Filters, VectorStore
 
 Mode = Literal["bm25", "dense", "hybrid"]
 RRF_K = 60
@@ -254,14 +255,14 @@ def rrf(rankings: list[list[str]], k: int = RRF_K) -> list[tuple[str, float]]:
 
 
 class Retriever:
-    def __init__(self, store: ChunkStore, embedder: Embedder) -> None:
+    def __init__(self, store: VectorStore, embedder: Embedder) -> None:
         self.store, self.embedder = store, embedder
         self.chunks = store.load_chunks()
         self.by_id = {chunk.chunk_id: chunk for chunk in self.chunks}
         self.position = {chunk.chunk_id: i for i, chunk in enumerate(self.chunks)}
         self.bm25 = BM25([chunk.search_text for chunk in self.chunks])
         self.matrix: np.ndarray | None = None
-        if not store.is_postgres:
+        if not store.native_dense:
             ids, matrix = store.load_embeddings()
             order = [self.position[i] for i in ids]
             self.matrix = np.zeros((len(self.chunks), store.dim), dtype=np.float32)
@@ -279,7 +280,7 @@ class Retriever:
     async def dense_ranking(self, query: str, filters: Filters, n: int) -> list[str]:
         (vector,) = await self.embedder.embed([query])
         if self.matrix is None:
-            return self.store.dense_search_sql(vector, filters, n)
+            return self.store.dense_search(vector, filters, n)
         query_vector = np.asarray(vector, dtype=np.float32)
         norms = np.linalg.norm(self.matrix, axis=1) * (np.linalg.norm(query_vector) or 1.0)
         similarity = self.matrix @ query_vector / np.where(norms == 0, 1.0, norms)
@@ -316,7 +317,7 @@ class Retriever:
 class RetrieverHolder:
     """Builds the retriever on first use and again whenever the index is rebuilt."""
 
-    def __init__(self, store: ChunkStore, embedder: Embedder) -> None:
+    def __init__(self, store: VectorStore, embedder: Embedder) -> None:
         self.store, self.embedder = store, embedder
         self._retriever: Retriever | None = None
         self._version: str | None = None
