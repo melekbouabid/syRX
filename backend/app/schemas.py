@@ -440,3 +440,61 @@ class PredictOut(Strict):
     timings: PredictTimings
     model_versions: dict[str, int | None] = Field(description="detect / classify versions")
     disclaimer: str
+
+
+# ------------------------------------------------------------------ indexed documents (D114)
+
+
+class IndexInfoOut(BaseModel):
+    store: str = Field(description="qdrant (default), pgvector or sqlite")
+    collection: str = Field(description="Qdrant collection (or SQL table) of the chunks")
+    points: int = Field(description="Chunks in the store")
+    embedding_model: str
+    dim: int
+    indexed_at: str
+    documents: int
+    chunks: int
+    payload_indexes: list[str] = Field(description="Indexed metadata fields (filters)")
+    dashboard_url: str | None = Field(description="Qdrant web dashboard, opened on the host")
+
+
+class DocumentOut(BaseModel):
+    doc_id: str = Field(description="openfda:<set id>, pubmed:<PMID> or ddinter:<id>:<id>")
+    doc_type: str = Field(description="label, abstract or interaction")
+    title: str
+    source_name: str
+    url: str
+    date: str
+    version: str
+    license: str
+    language: str
+    article_type: str | None
+    is_retracted: bool
+    ingredients: list[str] = Field(description="Active ingredients the document is about")
+    mentioned_ingredients: list[str] = Field(description="Other ingredients it mentions")
+    sections: list[str]
+    chunk_count: int
+
+
+class DocumentsPage(BaseModel):
+    total: int = Field(description="Documents matching the filters")
+    offset: int
+    limit: int
+    items: list[DocumentOut]
+    facets: dict[str, dict[str, int]] = Field(
+        description="Matching documents per doc_type, language and source"
+    )
+    index: IndexInfoOut
+
+
+class DocumentChunkOut(BaseModel):
+    chunk_id: str
+    chunk_index: int
+    section: str
+    title: str
+    text: str = Field(description="Chunk text; sentences with a dose are shown as [...]")
+    content_hash: str = Field(description="SHA-256 of text + metadata + embedding model")
+
+
+class DocumentDetail(DocumentOut):
+    chunks: list[DocumentChunkOut]
