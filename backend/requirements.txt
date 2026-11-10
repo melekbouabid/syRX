@@ -10,12 +10,14 @@ numpy>=2.0
 opencv-python-headless>=4.10
 onnxruntime>=1.20
 python-multipart>=0.0.18
-# Module 2: agent (LangGraph, LangChain + Ollama), MCP server, pgvector
+# Module 2: agent (LangGraph, LangChain + Ollama), MCP server, Qdrant (D113) and pgvector
 langgraph>=1.2.18
 langchain-core>=1.7.1
 langchain-ollama>=1.1.0
 mcp>=2.3.0
 pgvector>=0.5.1
+# Same minor version as the qdrant service of docker-compose.yml.
+qdrant-client>=1.20.0,<1.21
 # Bonus: toxicity tool (Tox21 model, docs/bonus/toxicity.md)
 rdkit>=2025.3
 lightgbm>=4.5
