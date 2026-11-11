@@ -1,0 +1,6 @@
+outs:
+- md5: b8bcdde63320bc5c2615d88a509323cc.dir
+  size: 49795906
+  nfiles: 37
+  hash: md5
+  path: classifier-yolo11s-cls
