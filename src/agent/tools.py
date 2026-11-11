@@ -31,6 +31,7 @@ from app.pharma import Ingredient
 from src.models.toxicity.model import ToxHolder, ToxicityUnavailable, predict_molecules
 from src.rag.names import NameIndex
 from src.rag.retrieval import Hit, Mode, RetrieverHolder
+from src.rag.rewrite import QueryRewriter
 from src.rag.store import Filters
 
 DOC_TYPES = ("label", "abstract", "interaction")
@@ -54,19 +55,25 @@ def hit_source(hit: Hit) -> dict[str, Any]:
     chunk = hit.chunk
     return {
         "chunk_id": chunk.chunk_id,
+        "doc_id": chunk.doc_id,
         "doc_type": chunk.doc_type,
         "title": chunk.title,
         "section": chunk.section,
         "url": chunk.url,
         "source_name": chunk.source_name,
         "date": chunk.date,
+        "version": chunk.version,
         "license": chunk.license,
+        "language": chunk.language,
         "ingredients": chunk.ingredients,
         "is_retracted": chunk.is_retracted,
         "article_type": chunk.article_type,
         "text": chunk.text,
         "snippet": chunk.text[:SNIPPET_CHARS],
         "score": round(hit.score, 5),
+        # Cross-encoder score and the rank before reranking (None when not reranked).
+        "rerank_score": None if hit.rerank_score is None else round(hit.rerank_score, 4),
+        "retrieval_rank": hit.retrieval_rank,
     }
 
 
@@ -78,6 +85,7 @@ class Toolbox:
     scanner: ScannerHolder | None = None
     toxicity: ToxHolder | None = None
     boxes: BoxReader | None = None
+    rewriter: QueryRewriter | None = None  # TUJYA_RAG_QUERY_REWRITE (D118)
     _names: NameIndex | None = None
 
     # ----------------------------------------------------------- helpers
@@ -236,7 +244,9 @@ class Toolbox:
         mode: str | None = None,
     ) -> dict[str, Any]:
         """Search labels, PubMed abstracts and DDInter (mode from settings: dense by default,
-        bm25 or hybrid on request)."""
+        bm25 or hybrid on request), with the metadata filters; then, when the settings ask for
+        it, rerank by the cross-encoder (D117). With query rewriting (D118) the search runs on
+        the LLM's English query; `search_query` shows it."""
         filters = Filters(
             ingredients=tuple(self.normalise(ingredients or [])),
             doc_types=tuple(t for t in (doc_types or []) if t in DOC_TYPES),
@@ -246,9 +256,21 @@ class Toolbox:
         retriever = self.retriever()
         k = max(1, min(int(k), 20))
         mode = mode or self.settings.rag_search_mode
-        hits = await retriever.search(query, k=k, mode=cast(Mode, mode), filters=filters)
+        search_query = await self.rewriter.rewrite(query) if self.rewriter else query
+        rerank = self.settings.rag_rerank and retriever.reranker is not None
+        hits = await retriever.search(
+            search_query,
+            k=k,
+            mode=cast(Mode, mode),
+            filters=filters,
+            rerank=rerank,
+            fetch_k=self.settings.rag_fetch_k,
+        )
         return {
             "query": query,
+            "search_query": search_query,
+            "mode": mode,
+            "reranked": rerank,
             "filters": {
                 "ingredients": list(filters.ingredients),
                 "doc_types": list(filters.doc_types),
