@@ -83,6 +83,8 @@ services:
       # Module 2: the agent's LLM and embeddings (docs/module2/agent.md, docs/module2/rag.md)
       TUJYA_OLLAMA_URL: http://ollama:11434
       TUJYA_QDRANT_URL: http://qdrant:6333
+      # fastembed models of step 3.2 (Qdrant/bm25, bge-reranker-base), downloaded once.
+      TUJYA_RAG_MODEL_CACHE_DIR: /tujya/cache/fastembed
       TUJYA_LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
     volumes: &backend-mounts
       # The image keeps the repository layout under /tujya: these are the default paths.
@@ -93,6 +95,7 @@ services:
       - ./data/processed/c3pi/gradcam:/tujya/data/processed/c3pi/gradcam:ro
       - ./data/processed/rag/corpus:/tujya/data/processed/rag/corpus:ro
       - ./models:/tujya/models:ro
+      - fastembed:/tujya/cache/fastembed
     depends_on:
       postgres:
         condition: service_healthy
@@ -233,3 +236,4 @@ volumes:
   mlartifacts:
   ollama:
   qdrant:
+  fastembed:
