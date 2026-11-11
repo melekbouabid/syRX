@@ -69,6 +69,19 @@ def test_samples_of_the_user_set_are_empty_until_the_photos_exist(tmp_path: Path
     assert (sample.set, sample.brand, sample.truth) == ("user", "Panadol", ["acetaminophen"])
 
 
+def test_samples_of_the_web_set_carry_their_set_name(tmp_path: Path) -> None:
+    assert ev.web_samples(tmp_path) == []
+    (tmp_path / "labels.csv").write_text(
+        "image,brand,ingredients,source,author,licence\n"
+        "a.jpg,Augmentin,amoxicillin;clavulanic acid,https://commons.wikimedia.org/x,Bree,CC0\n",
+        encoding="utf-8",
+    )
+    (sample,) = ev.web_samples(tmp_path)
+    assert (sample.set, sample.brand) == ("web", "Augmentin")
+    assert sample.truth == ["amoxicillin", "clavulanic acid"]
+    assert sample.image == tmp_path / "a.jpg"
+
+
 def test_engine_configs_name_a_known_engine() -> None:
     from src.models.ocr.engines import ENGINES
 

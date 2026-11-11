@@ -4,6 +4,7 @@
     # experiment/ocr-<engine> that holds config/ocr/<engine>.yaml
     python -m src.models.ocr.evaluate --engine rapidocr
     python -m src.models.ocr.evaluate --engine easyocr --smoke      # 20 photos, no Registry
+    python -m src.models.ocr.evaluate --engine rapidocr --set web   # free photos (Commons)
     python -m src.models.ocr.evaluate --engine rapidocr --set user  # owner's photos (later)
 
 Three sets (docs/module1/boites.md, decisions D108-D111):
@@ -14,6 +15,10 @@ Three sets (docs/module1/boites.md, decisions D108-D111):
 - `pill`: 200 C3PI photos of the detector's comparison split (test_holdout.txt, D93),
   never seen by the served models;
 - `off_topic`: 19 photos that are neither (data/raw/off_topic, CC0 / public domain).
+
+`--set web` replaces the Italian boxes by real box photos under a free licence from
+Wikimedia Commons (data/raw/medicine_boxes/web_commons, Panadol among them, D113) and
+`--set user` by the owner's photos; both read a labels.csv (image, brand, ingredients).
 
 Every photo goes through the API's own code (app.boxes: OCR, TextMatcher with the brand
 table and the INN aliases, decide_kind with the pill detector of models/); RxNav is off so
@@ -70,6 +75,13 @@ CONFIG_DIR = ROOT / "config" / "ocr"
 EVAL_CSV = ROOT / "data" / "processed" / "medicine_boxes" / "eval.csv"
 BOX_IMAGES = ROOT / "data" / "raw" / "medicine_boxes" / "italian_otc" / "out"
 USER_DIR = ROOT / "data" / "raw" / "medicine_boxes" / "user_photos"
+WEB_DIR = ROOT / "data" / "raw" / "medicine_boxes" / "web_commons"
+LABELLED_SETS = {"user": USER_DIR, "web": WEB_DIR}
+DATASETS = {
+    "box": ("italian-otc-medicines@29ebcd7", "data/processed/medicine_boxes"),
+    "web": ("wikimedia-commons-boxes", "data/raw/medicine_boxes/web_commons"),
+    "user": ("owner-photos", "data/raw/medicine_boxes/user_photos"),
+}
 OFF_TOPIC_DIR = ROOT / "data" / "raw" / "off_topic"
 PILL_DIR = ROOT / "data" / "processed" / "c3pi" / "datasets_v2" / "detect"
 INTERACTIONS = ROOT / "data" / "processed" / "pharma" / "interactions_with_any_drug.csv"
@@ -86,7 +98,7 @@ SMOKE_IMAGES = 20
 
 @dataclass
 class Sample:
-    set: str  # box, pill, off_topic, user
+    set: str  # box, pill, off_topic, user, web
     image: Path
     brand: str = ""
     truth: list[str] = field(default_factory=list)
@@ -119,16 +131,27 @@ def box_samples(path: Path = EVAL_CSV, images: Path = BOX_IMAGES) -> list[Sample
         ]
 
 
-def user_samples(folder: Path = USER_DIR) -> list[Sample]:
-    """The owner's photos (labels.csv: image, brand, ingredients), empty until they exist."""
+def labelled_samples(folder: Path, set_name: str) -> list[Sample]:
+    """Photos described by folder/labels.csv (image, brand, ingredients), empty without it."""
     labels = folder / "labels.csv"
     if not labels.is_file():
         return []
     with labels.open(encoding="utf-8", newline="") as handle:
-        return [
-            Sample("user", folder / row["image"], row.get("brand", ""), _split(row["ingredients"]))
-            for row in csv.DictReader(handle)
-        ]
+        rows = list(csv.DictReader(handle))
+    return [
+        Sample(set_name, folder / row["image"], row.get("brand", ""), _split(row["ingredients"]))
+        for row in rows
+    ]
+
+
+def user_samples(folder: Path = USER_DIR) -> list[Sample]:
+    """The owner's photos, empty until they exist."""
+    return labelled_samples(folder, "user")
+
+
+def web_samples(folder: Path = WEB_DIR) -> list[Sample]:
+    """Real box photos under a free licence from Wikimedia Commons (D113)."""
+    return labelled_samples(folder, "web")
 
 
 def pill_samples(folder: Path = PILL_DIR, n: int = PILL_SAMPLE, seed: int = 0) -> list[Sample]:
@@ -308,8 +331,8 @@ def log_run(
         EXPERIMENT,
         name,
         seed=0,
-        dataset="italian-otc-medicines@29ebcd7",
-        dataset_path="data/processed/medicine_boxes",
+        dataset=DATASETS[sample_set][0],
+        dataset_path=DATASETS[sample_set][1],
         params=flat,
         tags=tags,
     ) as run:
@@ -372,7 +395,7 @@ def main(argv: list[str] | None = None) -> None:
     console_utf8()
     parser = argparse.ArgumentParser(prog="python -m src.models.ocr.evaluate")
     parser.add_argument("--engine", required=True, help="config/ocr/<engine>.yaml")
-    parser.add_argument("--set", default="box", choices=("box", "user"))
+    parser.add_argument("--set", default="box", choices=("box", "user", "web"))
     parser.add_argument("--smoke", action="store_true", help="20 photos per set, no Registry")
     parser.add_argument("--no-mlflow", action="store_true", help="print the metrics only")
     parser.add_argument("--pause", type=float, default=20.0, help="seconds between latency rounds")
@@ -384,9 +407,13 @@ def main(argv: list[str] | None = None) -> None:
         pill_confidence=float(params["boxes"]["pill_confidence"]),
         box_text_chars=int(params["boxes"]["box_text_chars"]),
     )
-    boxes = box_samples() if args.set == "box" else user_samples()
+    if args.set == "box":
+        boxes = box_samples()
+    else:
+        boxes = labelled_samples(LABELLED_SETS[args.set], args.set)
     if not boxes:
-        raise SystemExit(f"no photo in the set {args.set!r} (see {USER_DIR / 'README.md'})")
+        folder = LABELLED_SETS.get(args.set, USER_DIR)
+        raise SystemExit(f"no photo in the set {args.set!r} (see {folder / 'README.md'})")
     samples = boxes + pill_samples() + off_topic_samples()
     if args.smoke:
         by_set: dict[str, list[Sample]] = {}
