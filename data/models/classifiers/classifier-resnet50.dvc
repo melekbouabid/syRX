@@ -1,0 +1,6 @@
+outs:
+- md5: 2be47f70e6038f72f658edcce56dc425.dir
+  size: 196702472
+  nfiles: 37
+  hash: md5
+  path: classifier-resnet50
