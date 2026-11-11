@@ -217,6 +217,28 @@ Tests : [`backend/tests/test_scan.py`](../backend/tests/test_scan.py)
 [`fake_models.py`](../backend/tests/fake_models.py)) et
 [`backend/tests/test_medicines.py`](../backend/tests/test_medicines.py) (SQLite).
 
+## GET /api/documents
+
+Les documents indexés pour le RAG, avec leurs métadonnées (compte connecté ; page
+« Documents », [docs/module2/rag.md](module2/rag.md#consulter-les-documents-indexés), D114).
+Paramètres facultatifs : `doc_type` (`label`, `abstract`, `interaction`), `ingredient` (le
+document en parle ou le cite), `section`, `language`, `source` (« openFDA drug label »,
+« PubMed », « DDInter 2.0 »), `q` (mots du titre ou de l'identifiant, 200 caractères au plus),
+`limit` (1 à 200, 50 par défaut), `offset`. Renvoie `total`, `offset`, `limit`, `items`
+(doc_id, doc_type, title, source_name, url, date, version, license, language, article_type,
+is_retracted, ingredients, mentioned_ingredients, sections, chunk_count), `facets` (nombre de
+documents par `doc_type`, `language` et `source` parmi ceux qui correspondent) et `index`
+(store, collection, points, embedding_model, dim, indexed_at, documents, chunks,
+payload_indexes, dashboard_url).
+
+`GET /api/documents/{doc_id}` : le même résumé plus `chunks` (chunk_id, chunk_index,
+section, title, text, content_hash = SHA-256), dans l'ordre du document ; les phrases avec
+une dose chiffrée sont remplacées par « […] ». 404 si le document n'existe pas ; 503 (les
+deux routes) si l'index est vide ou si Qdrant ne répond pas.
+Code : [`backend/app/routers/documents.py`](../backend/app/routers/documents.py),
+[`src/rag/documents.py`](../src/rag/documents.py) ; tests :
+[`tests/rag/test_documents.py`](../tests/rag/test_documents.py).
+
 ## Mesuré sur les vrais modèles
 
 `python -m src.models.evaluate_scan --split test` (venv du projet `.venv`) fait

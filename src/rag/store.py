@@ -1,4 +1,8 @@
-"""The chunk table: text, metadata and embedding of every corpus chunk.
+"""The chunk store interface, and its SQL implementation (the store before Qdrant, D113).
+
+`VectorStore` is what indexing and retrieval need from a store: the app uses Qdrant
+(src/rag/qdrant_store.py); `ChunkStore` keeps the chunks in a SQL table, used by the
+tests on SQLite and kept as the pgvector baseline of the benchmark.
 
 PostgreSQL (docker compose): `embedding` is a pgvector `vector(dim)` and the ingredient
 lists are `text[]`; dense search runs in SQL (`<=>`, cosine distance) with the metadata
@@ -11,7 +15,7 @@ in numpy.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Protocol
 
 import numpy as np
 from pgvector.sqlalchemy import Vector
@@ -25,6 +29,7 @@ from sqlalchemy import (
     Table,
     Text,
     delete,
+    func,
     insert,
     inspect,
     not_,
@@ -108,6 +113,48 @@ class Filters:
         return True
 
 
+class VectorStore(Protocol):
+    """Chunks, their embeddings and the index metadata (model, dim, chunks, indexed_at)."""
+
+    dim: int
+
+    @property
+    def kind(self) -> str: ...
+
+    @property
+    def native_dense(self) -> bool:
+        """True when `dense_search` runs in the store; False: the retriever ranks in numpy."""
+        ...
+
+    def exists(self) -> bool: ...
+
+    def create(self) -> None: ...
+
+    def drop(self) -> None: ...
+
+    def hashes(self) -> dict[str, str]: ...
+
+    def get_meta(self) -> dict[str, str]: ...
+
+    def write(self, records: list[dict[str, Any]]) -> None:
+        """Insert or replace chunks: metadata columns, `content_hash` and `embedding`."""
+        ...
+
+    def finish(self, stale: list[str], meta: dict[str, str]) -> None:
+        """Delete the chunks gone from the corpus and record the index metadata."""
+        ...
+
+    def load_chunks(self) -> list[Chunk]: ...
+
+    def load_embeddings(self) -> tuple[list[str], np.ndarray]: ...
+
+    def dense_search(self, vector: list[float], filters: Filters, k: int) -> list[str]: ...
+
+    def info(self) -> dict[str, Any]:
+        """Collection (or table) name, number of points, status, indexed payload fields."""
+        ...
+
+
 def chunk_table(metadata: MetaData, dim: int) -> Table:
     names = JSON().with_variant(ARRAY(String), "postgresql")
     return Table(
@@ -158,6 +205,14 @@ class ChunkStore:
     def is_postgres(self) -> bool:
         return self.engine.dialect.name == "postgresql"
 
+    @property
+    def kind(self) -> str:
+        return "pgvector" if self.is_postgres else "sqlite"
+
+    @property
+    def native_dense(self) -> bool:
+        return self.is_postgres
+
     def create(self) -> None:
         if self.is_postgres:
             with self.engine.begin() as conn:
@@ -201,6 +256,17 @@ class ChunkStore:
             batch = ids[start : start + 1000]
             conn.execute(delete(self.table).where(self.table.c.chunk_id.in_(batch)))
 
+    def write(self, records: list[dict[str, Any]]) -> None:
+        columns = set(self.table.c.keys())
+        with self.engine.begin() as conn:
+            self.upsert(conn, [{k: v for k, v in r.items() if k in columns} for r in records])
+
+    def finish(self, stale: list[str], meta: dict[str, str]) -> None:
+        with self.engine.begin() as conn:
+            if stale:
+                self.delete_ids(conn, stale)
+            self.set_meta(conn, meta)
+
     # ------------------------------------------------------------- reading
 
     def load_chunks(self) -> list[Chunk]:
@@ -225,6 +291,15 @@ class ChunkStore:
         ids = [row.chunk_id for row in rows]
         matrix = np.array([list(row.embedding) for row in rows], dtype=np.float32)
         return ids, matrix.reshape(len(ids), self.dim)
+
+    def dense_search(self, vector: list[float], filters: Filters, k: int) -> list[str]:
+        return self.dense_search_sql(vector, filters, k)
+
+    def info(self) -> dict[str, Any]:
+        with self.engine.connect() as conn:
+            points = conn.execute(select(func.count()).select_from(self.table)).scalar_one()
+        indexed = [c.name for c in self.table.c if c.index]
+        return {"collection": TABLE, "points": points, "status": "ok", "payload_indexes": indexed}
 
     def dense_search_sql(self, vector: list[float], filters: Filters, k: int) -> list[str]:
         """Nearest chunks by cosine distance in PostgreSQL, filters in the WHERE clause."""

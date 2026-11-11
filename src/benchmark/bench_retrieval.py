@@ -4,8 +4,9 @@ Each configuration is one MLflow run in the experiment `tujya-rag` (params, metr
 per-question results as an artifact). Results: docs/module2/benchmark.md.
 
     # from the repository root, project venv (.venv) active
-    python -m src.benchmark.bench_retrieval
-    # needs TUJYA_PHARMA_DATABASE_URL and MLFLOW_TRACKING_URI
+    python -m src.benchmark.bench_retrieval                 # Qdrant (TUJYA_QDRANT_URL)
+    python -m src.benchmark.bench_retrieval --store sql     # pgvector, the store before D113
+    # needs TUJYA_PHARMA_DATABASE_URL (ingredient names) and MLFLOW_TRACKING_URI
 
 Metrics, over the questions that have expected chunks (benchmark/rag_questions.jsonl):
 - Recall@k: share of questions with at least one expected chunk in the top k (hit rate);
@@ -17,6 +18,7 @@ finds in the question, as metadata filter, which is what the agent does).
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import json
 import os
@@ -34,7 +36,8 @@ from app.pharma import Ingredient
 from src.rag.embeddings import OllamaEmbedder
 from src.rag.names import NameIndex
 from src.rag.retrieval import Mode, Retriever
-from src.rag.store import ChunkStore, Filters
+from src.rag.store import Filters
+from src.rag.stores import open_store
 
 ROOT = Path(__file__).resolve().parents[2]
 QUESTIONS = ROOT / "src" / "benchmark" / "rag_questions.jsonl"
@@ -115,8 +118,16 @@ def log_mlflow(name: str, params: dict[str, Any], metrics: dict[str, float], row
         return str(run.info.run_id)
 
 
-async def main() -> None:
+async def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(prog="python -m src.benchmark.bench_retrieval")
+    parser.add_argument("--store", choices=["qdrant", "sql"], default=None)
+    parser.add_argument(
+        "--out", type=Path, default=ROOT / "src" / "benchmark" / "results_retrieval.json"
+    )
+    args = parser.parse_args(argv)
     settings = Settings()
+    if args.store:
+        settings = settings.model_copy(update={"vector_store": args.store})
     engine = make_engine(settings.pharma_database_url)
     embedder = OllamaEmbedder(
         settings.ollama_url,
@@ -124,7 +135,8 @@ async def main() -> None:
         settings.embedding_dim,
         num_ctx=settings.embedding_num_ctx,
     )
-    retriever = Retriever(ChunkStore(engine, embedder.dim), embedder)
+    store = open_store(settings, embedder.dim, engine)
+    retriever = Retriever(store, embedder)
     with Session(engine) as session:
         names = NameIndex(session.scalars(select(Ingredient.name)).all())
     questions = load_questions()
@@ -138,6 +150,7 @@ async def main() -> None:
                 "mode": mode,
                 "filter": filt,
                 "embedding_model": embedder.model,
+                "store": store.kind,
                 "chunks": len(retriever.chunks),
                 "questions": len(questions),
                 "rrf_k": 60,
@@ -152,7 +165,7 @@ async def main() -> None:
                 f"R@5 {summary['recall_at_5']:.3f} R@10 {summary['recall_at_10']:.3f} "
                 f"MRR {summary['mrr']:.3f} ({summary['ms_per_query']} ms/q, {seconds:.0f} s)"
             )
-    out = ROOT / "src" / "benchmark" / "results_retrieval.json"
+    out = args.out
     out.write_text(json.dumps(results, indent=1) + "\n", encoding="utf-8", newline="\n")
     print(f"-> {out}")
 

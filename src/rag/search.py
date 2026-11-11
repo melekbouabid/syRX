@@ -11,10 +11,10 @@ import asyncio
 import time
 
 from app.config import Settings
-from app.db import make_engine
 from src.rag.embeddings import OllamaEmbedder
 from src.rag.retrieval import Retriever
-from src.rag.store import ChunkStore, Filters
+from src.rag.store import Filters
+from src.rag.stores import open_store
 
 
 async def run(args: argparse.Namespace) -> None:
@@ -26,9 +26,12 @@ async def run(args: argparse.Namespace) -> None:
         num_ctx=settings.embedding_num_ctx,
     )
     started = time.perf_counter()
-    store = ChunkStore(make_engine(settings.pharma_database_url), embedder.dim)
+    store = open_store(settings, embedder.dim)
     retriever = Retriever(store, embedder)
-    print(f"loaded {len(retriever.chunks)} chunks in {time.perf_counter() - started:.2f} s")
+    print(
+        f"loaded {len(retriever.chunks)} chunks from {store.kind} "
+        f"in {time.perf_counter() - started:.2f} s"
+    )
     filters = Filters(
         ingredients=tuple(args.ingredient),
         doc_types=tuple(args.doc_type),

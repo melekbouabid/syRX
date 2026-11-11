@@ -3,8 +3,8 @@
 Un agent **LangGraph** répond aux questions sur les comprimés identifiés, avec un **RAG**
 sur trois sources documentées (notices officielles openFDA, résumés PubMed, interactions
 DDInter) et des **citations numérotées** vérifiées. Le corpus (8 661 chunks pour 4 002
-documents, avec leurs métadonnées) est indexé dans **PostgreSQL + pgvector** avec des
-embeddings **bge-m3** ; le LLM local **qwen2.5:3b** tourne dans **Ollama**. L'agent appelle
+documents, avec leurs métadonnées) est indexé dans **Qdrant** avec des embeddings **bge-m3**
+(tableau de bord sur <http://localhost:6333/dashboard>, page « Documents » de l'application) ; le LLM local **qwen2.5:3b** tourne dans **Ollama**. L'agent appelle
 des **outils** (identifier, vérifier une interaction, notice d'un médicament, recherche
 documentaire), exposés aussi par un **serveur MCP**. Un **benchmark** de 88 questions
 mesure la récupération et la génération. Le tout est servi dans l'interface web, en flux
@@ -19,7 +19,8 @@ Rapport technique : [docs/module2/rapport_module2_ai_engineering.pdf](rapport_mo
 | Exigence | Où la trouver |
 |---|---|
 | RAG : gestion des documents | collecte (notices openFDA, résumés PubMed, paires DDInter) et découpage en chunks : [src/data/corpus/](../../src/data/corpus/) ([corpus.py](../../src/data/corpus/corpus.py), [\_\_main\_\_.py](../../src/data/corpus/__main__.py)) sur les connecteurs du [pipeline](../data_pipeline/README.md) ; corpus versionné par DVC (étape `rag_corpus` de [dvc.yaml](../../dvc.yaml)) ; indexation idempotente : [src/rag/index.py](../../src/rag/index.py) |
-| RAG : métadonnées | colonnes de chaque chunk (source, médicament, section, URL, date, licence, rétractation) : [src/data/corpus/corpus.py](../../src/data/corpus/corpus.py) ; table pgvector et filtres : [src/rag/store.py](../../src/rag/store.py) ; [docs/module2/rag.md](rag.md) |
+| RAG : métadonnées | colonnes de chaque chunk (source, médicament, section, URL, date, licence, rétractation) : [src/data/corpus/corpus.py](../../src/data/corpus/corpus.py) ; payload Qdrant (toutes les métadonnées, `content_hash` SHA-256) et filtres : [src/rag/store.py](../../src/rag/store.py) ; [docs/module2/rag.md](rag.md) |
+| RAG : base vectorielle consultable | Qdrant (`docker compose` service `qdrant`, collection `tujya_chunks`, un point par chunk, index de payload sur les champs filtrés) : [src/rag/qdrant_store.py](../../src/rag/qdrant_store.py) ; catalogue des documents reconstruit depuis les chunks : [src/rag/documents.py](../../src/rag/documents.py) ; `GET /api/documents` (liste, filtres, facettes) et `GET /api/documents/{doc_id}` (métadonnées et chunks) : [backend/app/routers/documents.py](../../backend/app/routers/documents.py) ; page « Documents » : [frontend/src/pages/DocumentsPage.tsx](../../frontend/src/pages/DocumentsPage.tsx) ; [rag.md](rag.md#consulter-les-documents-indexés), captures [27](../screenshots/27-documents.jpg) à [29](../screenshots/29-qdrant-dashboard.jpg) (D113, D114) |
 | RAG : recherche | BM25, dense (bge-m3) et hybride RRF, filtres par principe actif : [src/rag/retrieval.py](../../src/rag/retrieval.py), [src/rag/embeddings.py](../../src/rag/embeddings.py), [src/rag/names.py](../../src/rag/names.py) |
 | RAG : citations | citations numérotées, attribution et vérification : [src/agent/graph.py](../../src/agent/graph.py), [src/agent/safety.py](../../src/agent/safety.py) ; affichage cliquable : [frontend/src/pages/ChatPanel.tsx](../../frontend/src/pages/ChatPanel.tsx) ; capture [10](../screenshots/10-chat-citation.jpg) |
 | RAG : documentation | [docs/module2/rag.md](rag.md), [docs/module2/interactions.md](interactions.md), [docs/module2/agent.md](agent.md) |
@@ -33,7 +34,7 @@ Rapport technique : [docs/module2/rapport_module2_ai_engineering.pdf](rapport_mo
 | Dépôt GitHub documenté, commits réguliers | ce README, [README.md](../../README.md), `git log`, tags git, [docs/git_workflow.md](../git_workflow.md) (branches, Conventional Commits, hooks) |
 | Rapport technique | [docs/module2/rapport_module2_ai_engineering.pdf](rapport_module2_ai_engineering.pdf) |
 | Démonstration | [docs/demo.md](../demo.md) (étapes chat, dose refusée, MCP, benchmark) |
-| Tests | [tests/data/](../../tests/data/), [tests/rag/](../../tests/rag/), [tests/agent/](../../tests/agent/), [tests/mcp_server/](../../tests/mcp_server/) : corpus et connecteurs (HTTP simulé), recherche (SQLite et pgvector), API de chat et agent avec un LLM factice, sécurité, MCP |
+| Tests | [tests/data/](../../tests/data/), [tests/rag/](../../tests/rag/), [tests/agent/](../../tests/agent/), [tests/mcp_server/](../../tests/mcp_server/) : corpus et connecteurs (HTTP simulé), recherche (SQLite, pgvector et Qdrant en mémoire), catalogue des documents et `/api/documents`, API de chat et agent avec un LLM factice, sécurité, MCP |
 
 ## Résultats du benchmark
 
@@ -62,7 +63,7 @@ Le module suit l'arborescence du guide, partagée avec le module 1 : tout le cod
 
 ```
 src/data/corpus/  principes actifs (RxNav), interactions DDInter, notices openFDA, résumés PubMed -> chunks
-src/rag/          embeddings bge-m3, stockage pgvector, recherche BM25 / dense / hybride, indexation
+src/rag/          embeddings bge-m3, stockage Qdrant (ou SQL), recherche BM25 / dense / hybride, indexation, catalogue
 src/agent/        graphe LangGraph (graph.py), outils (tools.py), règles de sécurité (safety.py), câblage (runtime.py)
 src/mcp_server/   serveur MCP sur les mêmes outils
 src/benchmark/    questions, scripts bench_*.py, résultats
@@ -78,13 +79,15 @@ dépend du pipeline, jamais l'inverse.
 
 ```bash
 # Tout est lancé par docker compose (racine) : rag-init télécharge les modèles Ollama et
-# indexe data/processed/rag/corpus dans pgvector au premier démarrage.
+# indexe data/processed/rag/corpus dans Qdrant au premier démarrage
+# (tableau de bord : http://localhost:6333/dashboard).
 docker compose up -d --build
 
 # Venv du projet (.venv) actif, depuis la racine du dépôt :
 python -m src.agent.ask "La warfarine interagit-elle avec le fluconazole ?"
 python -m src.rag.search "fluconazole warfarin" --ingredient warfarin --k 5
-python -m src.rag.index                 # réindexation (idempotente)
+python -m src.rag.index                 # réindexation dans Qdrant (idempotente)
+python -m src.rag.index --copy-from-sql # copie l'ancien index pgvector dans Qdrant, sans réencoder
 python -m src.mcp_server                # serveur MCP (stdio)
 python -m src.benchmark.bench_retrieval # benchmark de la récupération
 

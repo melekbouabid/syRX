@@ -306,6 +306,70 @@ export interface ToxicityResult {
   disclaimer: string;
 }
 
+// Indexed documents of the RAG (GET /api/documents, docs/api.md, D114).
+export interface IndexInfo {
+  store: string;
+  collection: string;
+  points: number;
+  embedding_model: string;
+  dim: number;
+  indexed_at: string;
+  documents: number;
+  chunks: number;
+  payload_indexes: string[];
+  dashboard_url: string | null;
+}
+
+export interface IndexedDocument {
+  doc_id: string;
+  doc_type: string;
+  title: string;
+  source_name: string;
+  url: string;
+  date: string;
+  version: string;
+  license: string;
+  language: string;
+  article_type: string | null;
+  is_retracted: boolean;
+  ingredients: string[];
+  mentioned_ingredients: string[];
+  sections: string[];
+  chunk_count: number;
+}
+
+export interface DocumentsPage {
+  total: number;
+  offset: number;
+  limit: number;
+  items: IndexedDocument[];
+  facets: Record<"doc_type" | "language" | "source", Record<string, number>>;
+  index: IndexInfo;
+}
+
+export interface DocumentChunk {
+  chunk_id: string;
+  chunk_index: number;
+  section: string;
+  title: string;
+  text: string;
+  content_hash: string;
+}
+
+export interface DocumentDetail extends IndexedDocument {
+  chunks: DocumentChunk[];
+}
+
+export interface DocumentFilters {
+  q?: string;
+  doc_type?: string;
+  ingredient?: string;
+  source?: string;
+  language?: string;
+  limit: number;
+  offset: number;
+}
+
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Something went wrong.";
 }
@@ -470,6 +534,10 @@ export const api = {
   chat: (question: string, pills: number[]) =>
     request<ChatResult>("POST", "/chat", { body: { question, pills, stream: false } }),
   chatStream,
+  documents: (filters: DocumentFilters, signal?: AbortSignal) =>
+    request<DocumentsPage>("GET", "/documents", { query: { ...filters }, signal }),
+  document: (docId: string, signal?: AbortSignal) =>
+    request<DocumentDetail>("GET", `/documents/${encodeURIComponent(docId)}`, { signal }),
   /** A demo photo as a file, to send it to the scan like an upload. */
   demoImage: async (image: DemoImage): Promise<Blob> => {
     const response = await fetch(image.url, { credentials: "same-origin" });

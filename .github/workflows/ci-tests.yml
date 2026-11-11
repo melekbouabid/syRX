@@ -46,11 +46,12 @@ jobs:
       - run: python -m mypy
 
   src:
-    name: pytest src (tests/, with PostgreSQL + pgvector)
+    name: pytest src (tests/, with PostgreSQL + pgvector and Qdrant)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # PostgreSQL + pgvector for the RAG store tests (tests/rag/test_rag_pgvector.py). The tests
-    # use fake embeddings and a fake LLM: CI never needs Ollama or a real model.
+    # PostgreSQL + pgvector and Qdrant (same version as docker-compose.yml) for the RAG store
+    # tests (tests/rag/test_rag_pgvector.py, test_rag_qdrant.py). The tests use fake
+    # embeddings and a fake LLM: CI never needs Ollama or a real model.
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -63,8 +64,15 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U tujya" --health-interval 5s --health-timeout 5s
           --health-retries 20
+      qdrant:
+        image: qdrant/qdrant:v1.20.0
+        env:
+          QDRANT__TELEMETRY_DISABLED: "true"
+        ports:
+          - 6333:6333
     env:
       TUJYA_TEST_PG_URL: postgresql+psycopg://tujya:tujya@localhost:5432/tujya
+      TUJYA_TEST_QDRANT_URL: http://localhost:6333
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

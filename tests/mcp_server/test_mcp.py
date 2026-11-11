@@ -21,7 +21,12 @@ def _server(tmp_path: Path) -> Any:
     url = f"sqlite:///{(tmp_path / 'pharma.db').as_posix()}"
     load_pharma(url, tmp_path / "inputs")
     asyncio.run(build_index(url))
-    settings = Settings(_env_file=None, pharma_database_url=url, models_dir=tmp_path / "none")
+    settings = Settings(
+        _env_file=None,
+        pharma_database_url=url,
+        models_dir=tmp_path / "none",
+        vector_store="sql",  # build_index wrote the fake corpus into this database
+    )
     return build_server(default_toolbox(settings, FakeEmbedder(DIM)))
 
 

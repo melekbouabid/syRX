@@ -8,6 +8,7 @@ still read after it, so that existing `.env` files and shells keep working (deci
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic_settings import (
     BaseSettings,
@@ -99,10 +100,17 @@ class Settings(BaseSettings):
     demo_gradcam_dir: Path = PROJECT_DIR / "data" / "processed" / "c3pi" / "gradcam"
 
     # Module 2: RAG and agent (docs/module2/rag.md, agent.md). The chunk index
-    # lives in the pharma database (table rag_chunks, pgvector);
-    # `python -m src.rag.index` fills it from this file. Ollama serves both
-    # the LLM and the embeddings (docker compose `ollama`).
+    # lives in Qdrant (collection tujya_chunks, D113); `python -m src.rag.index` fills it
+    # from this file. "sql" keeps it in the pharma database instead (table rag_chunks,
+    # pgvector or SQLite), the store before Qdrant. Ollama serves both the LLM and the
+    # embeddings (docker compose `ollama`).
     rag_chunks_file: Path = PROJECT_DIR / "data" / "processed" / "rag" / "corpus" / "chunks.parquet"
+    vector_store: Literal["qdrant", "sql"] = "qdrant"
+    # docker compose `qdrant`; ":memory:" = the client's local in-memory mode (tests).
+    qdrant_url: str = "http://127.0.0.1:6333"
+    qdrant_collection: str = "tujya_chunks"
+    # Shown on the Documents page; the browser opens it on the host.
+    qdrant_dashboard_url: str = "http://127.0.0.1:6333/dashboard"
     ollama_url: str = "http://127.0.0.1:11434"
     llm_model: str = "qwen2.5:3b"
     llm_temperature: float = 0.1

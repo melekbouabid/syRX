@@ -63,6 +63,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Découpage avec métadonnées (source, médicament, section, URL, date, licence, rétractation ; [rag.md](module2/rag.md))
 - [x] Embeddings bge-m3 dans PostgreSQL + pgvector, recherche hybride BM25 (RRF), filtres (D59)
 - [x] Corpus versionné par DVC (`data/rag/*.dvc`, étape `rag_corpus`)
+- [x] Base vectorielle consultable (étape 3.1, remarque 7) : index dans Qdrant (tableau de bord sur :6333/dashboard, payload = toutes les métadonnées + SHA-256, index de payload), copie des vecteurs pgvector sans réencodage, même Recall@5 / MRR (écart 0), page « Documents » et `GET /api/documents` ; captures 27 à 29 ([rag.md](module2/rag.md#consulter-les-documents-indexés), D113-D114)
 
 ## 5. Agent
 - [x] Graphe LangGraph : comprendre -> outils -> récupérer -> répondre avec citations -> contrôle de sécurité ([agent.md](module2/agent.md))

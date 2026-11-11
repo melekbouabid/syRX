@@ -15,7 +15,17 @@ from app.config import Settings
 from app.db import Base, make_engine
 from app.inference import ScannerHolder
 from app.limits import BodySizeLimit
-from app.routers import admin, auth, chat, demo, medicines, scan, toxicity, vision
+from app.routers import (
+    admin,
+    auth,
+    chat,
+    demo,
+    documents,
+    medicines,
+    scan,
+    toxicity,
+    vision,
+)
 from src.agent.runtime import AgentHolder
 from src.models.toxicity.model import ToxHolder
 
@@ -86,7 +96,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     # Bonus: Tox21 toxicity model, loaded on first use (models/tox21, docs/bonus/toxicity.md).
     app.state.toxicity = ToxHolder(settings.tox_model_dir, settings.ingredient_smiles_file)
-    # Module 2 agent: built on the first /api/chat call (Ollama, chunk index in pgvector).
+    # Module 2 agent: built on the first /api/chat call (Ollama, chunk index in Qdrant).
     app.state.agents = AgentHolder(
         settings, pharma_engine, app.state.scanner, toxicity=app.state.toxicity
     )
@@ -99,6 +109,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(medicines.router)
     app.include_router(demo.router)
     app.include_router(chat.router)
+    app.include_router(documents.router)
     app.include_router(toxicity.router)
     # Endpoints of the course guide: /health, /model/metadata, /predict, /predict/visualize.
     app.include_router(vision.router)

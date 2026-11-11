@@ -23,6 +23,7 @@ from src.agent.graph import AgentState, TujyaAgent
 from src.agent.runtime import AgentHolder
 from src.agent.safety import redact_doses
 from src.rag.embeddings import EmbeddingError
+from src.rag.stores import STORE_ERRORS
 
 router = APIRouter(prefix="/api", tags=["chat"], dependencies=[Depends(get_current_user)])
 
@@ -97,13 +98,13 @@ async def chat(payload: ChatIn, request: Request) -> Any:
     started = time.perf_counter()
     try:
         holder, agent = get_agent(request)
-    except (PharmaUnavailable, EmbeddingError, OSError) as exc:
+    except (PharmaUnavailable, EmbeddingError, *STORE_ERRORS) as exc:
         raise unavailable(exc) from exc
 
     if not payload.stream:
         try:
             state = await agent.run(payload.question, payload.pills)
-        except (EmbeddingError, PharmaUnavailable, ConnectionError, OSError) as exc:
+        except (EmbeddingError, PharmaUnavailable, ConnectionError, *STORE_ERRORS) as exc:
             raise unavailable(exc) from exc
         return to_result(state, holder.model_name, started)
 

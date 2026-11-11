@@ -1344,6 +1344,40 @@ quand `check_interaction` trouve une interaction, une phrase qui la nie est reti
 ligne DDInter n'est citée, une phrase fixe la donne avec sa source. Ces phrases fixes viennent
 des sources, jamais du LLM.
 
+**D113. Index du RAG dans Qdrant au lieu de pgvector (étape 3.1, décision du propriétaire).**
+Remarque du professeur : la base vectorielle n'était pas accessible, on ne voyait pas les
+documents utilisés ; le cours du module 2 utilise Qdrant et son tableau de bord. Service
+`qdrant` (image `qdrant/qdrant:v1.20.0` épinglée, 127.0.0.1:6333 seulement, volume `qdrant`,
+télémétrie coupée), collection `tujya_chunks` : un point par chunk, vecteur nommé `dense`
+(cosinus, dimension du modèle), identifiant = UUID v5 du `chunk_id` (Qdrant refuse les
+identifiants texte), payload = toutes les métadonnées du chunk + `content_hash` SHA-256 +
+`embedding_model`, index de payload sur chaque champ filtré (le filtrage reste exact), modèle,
+dimension et date d'indexation dans les métadonnées de la collection. Une seule interface de
+stockage (`src/rag/store.py`) avec deux implémentations : Qdrant par défaut, la table SQL
+(pgvector, SQLite dans les tests) gardée derrière `TUJYA_VECTOR_STORE=sql`, pour comparer et
+revenir en arrière. Migration sans réencodage (`--copy-from-sql` copie les vecteurs) : le
+benchmark de récupération donne exactement les mêmes Recall@k et MRR sur les deux stores
+(écart 0 sur les 6 configurations, sur 83 puis 85 questions) ; seule la latence change.
+BM25 reste en mémoire sur les textes lus dans le store (le mode sparse de Qdrant est l'objet
+de l'étape 3.2). Recherche dense exacte, pas de réglage HNSW : 8 661 points. Rejeté : garder
+pgvector avec un outil d'administration SQL (le professeur demande de voir documents et
+métadonnées, pas des lignes de table) ; Chroma (pas de tableau de bord équivalent, absent du
+cours).
+
+**D114. Les documents indexés sont consultables dans l'application : page « Documents » et
+`GET /api/documents`, reconstruits depuis les chunks de l'index.** Le catalogue
+(`src/rag/documents.py`) regroupe les chunks par `doc_id` dans l'ordre : il montre donc ce que
+l'agent peut retrouver, sans copie séparée qui pourrait diverger. Liste paginée avec filtres
+(type, principe actif dont parle ou que cite le document, section, langue, source, mots du
+titre) et facettes ; détail d'un document avec toutes ses métadonnées, le lien vers la source
+et chaque chunk avec sa section et son SHA-256 ; carte de l'index (collection, points, modèle,
+date, champs indexés, lien vers le tableau de bord de Qdrant). Réservé à un compte connecté,
+comme le chat. Les phrases de posologie chiffrée sont masquées (« […] ») comme dans les
+réponses : la règle « jamais de dose » vaut pour tout ce que l'application affiche. 503 quand
+l'index est vide ou Qdrant injoignable, pour que la page dise pourquoi elle est vide.
+Vérifié dans un vrai navigateur par `frontend/scripts/documents-screenshots.mjs` (captures 27
+à 29).
+
 **D115. Validation des boîtes (étape 2.7) sur des photos réelles sous licence libre de
 Wikimedia Commons, en attendant les photos du propriétaire.** Le jeu italien n'a pas de
 Panadol. Les photos viennent de l'API publique de Commons (`commons.wikimedia.org/w/api.php`,
