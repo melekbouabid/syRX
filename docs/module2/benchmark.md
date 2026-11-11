@@ -94,6 +94,27 @@ l'anglais) ou une requête BM25 traduite serait l'étape suivante ; ce n'est pas
 pour ne pas ajuster le système à son propre jeu de test. Le filtre par principe actif aide un
 peu chaque mode (+0,01 à +0,05 de Recall@5).
 
+### Qdrant contre pgvector (étape 3.1, D113)
+
+Le passage à Qdrant ne change pas la récupération : `python -m src.rag.index
+--copy-from-sql` a copié les mêmes vecteurs bge-m3, et `bench_retrieval.py --store qdrant`
+puis `--store sql` donnent, configuration par configuration, **exactement** les mêmes
+Recall@k, Coverage@k et MRR (écart 0). Seules les latences changent (dense + filtre :
+112 ms par requête sur Qdrant, 107 ms sur pgvector, surtout l'encodage de la question).
+
+| Jeu de questions | Store | dense + filtre : Recall@5 / MRR | hybride + filtre | BM25 + filtre |
+|---|---|---:|---:|---:|
+| 83 questions (tableau ci-dessus) | pgvector puis Qdrant | 0,928 / 0,852 | 0,904 / 0,796 | 0,783 / 0,660 |
+| 85 questions (+ 2 questions de marque de l'étape 2.7) | Qdrant et pgvector, identiques | 0,906 / 0,832 | 0,882 / 0,778 | 0,765 / 0,644 |
+
+La baisse de 0,928 à 0,906 vient du jeu de questions, pas du store : l'étape 2.7 a ajouté
+huit questions de marque (« Panadol... »), dont deux ont des chunks attendus ; aucune des deux
+n'est trouvée dans le top 5 (77 succès sur 83 puis 77 sur 85), car un nom de marque n'est pas
+dans les notices américaines : l'agent le traduit en principe actif par la table des marques
+avant de chercher (D112), ce que le benchmark de récupération seul ne fait pas. Runs MLflow
+(`tujya-rag`, 11/11/2026) : paramètre `store` de chaque run (`qdrant` ou `pgvector`) ;
+[`results_retrieval.json`](../../src/benchmark/results_retrieval.json) = le run Qdrant.
+
 ## Génération
 
 [`bench_answers.py`](../../src/benchmark/bench_answers.py) fait tourner le vrai agent (qwen2.5:3b,
