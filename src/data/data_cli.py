@@ -2,7 +2,7 @@
 
 Run from the repository root with the training venv (.venv-train). Paths default to the
 repository layout: metadata in data/raw/c3pi/metadata, images in data/raw/c3pi/images,
-class list in config/pill_classes.csv, split lists in config/splits/.
+class list of v1 in config/pill_classes_v1.csv, split lists in config/splits/.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from src.data import c3pi
 ROOT = Path(__file__).resolve().parents[2]  # repository root
 META = ROOT / "data" / "raw" / "c3pi" / "metadata"
 IMAGES = ROOT / "data" / "raw" / "c3pi" / "images"
-CLASSES = ROOT / "config" / "pill_classes.csv"
+CLASSES = ROOT / "config" / "pill_classes_v1.csv"
 SPLITS = ROOT / "config" / "splits"
 
 
@@ -107,7 +107,7 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--out", type=Path, default=META / "images.csv")
     p.set_defaults(func=cmd_index)
 
-    p = sub.add_parser("select", help="rank classes, write pill_classes.csv and the splits")
+    p = sub.add_parser("select", help="rank classes, write pill_classes_v1.csv and the splits")
     p.add_argument("--max-classes", type=int, default=200)
     p.add_argument("--min-images", type=int, default=20)
     p.add_argument("--max-per-class", type=int, default=40)
