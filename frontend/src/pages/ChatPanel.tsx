@@ -91,6 +91,11 @@ function Citations({ citations, turn }: { citations: ChatCitation[]; turn: numbe
           {c.section && c.section !== "interaction" && c.section !== "brand" ? ` · ${c.section.replaceAll("_", " ")}` : ""}
           {c.date ? ` · ${c.date}` : ""}
         </span>
+        <span className="cell-sub">
+          {c.source_name}
+          {c.license ? ` · ${c.license}` : ""}
+          {c.rerank_score != null ? ` · reranker ${c.rerank_score.toFixed(2)}` : ""}
+        </span>
         <p className="citation-snippet">{c.snippet}</p>
       </div>
     </li>

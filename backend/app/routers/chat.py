@@ -61,6 +61,9 @@ def to_result(state: AgentState, model: str, started: float) -> ChatResult:
                 doc_type=s.get("doc_type", ""),
                 date=s.get("date", ""),
                 cited=s["n"] in cited,
+                doc_id=s.get("doc_id", ""),
+                license=s.get("license", ""),
+                rerank_score=s.get("rerank_score"),
             )
             for s in state.get("sources", [])
         ],
