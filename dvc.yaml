@@ -39,8 +39,12 @@ stages:
     outs:
       - data/processed/c3pi/labels
       - data/processed/c3pi/datasets
+  # Frozen (D119): the served RAG corpus stays the one of the 150 v1 classes while
+  # data/processed/pharma describes the 380 classes of the served classifier; its sources for
+  # the new ingredients are the RAG v2 collection (D90). Unfreeze to rebuild it on 380 classes.
   rag_corpus:
     cmd: python -m src.data.corpus corpus
+    frozen: true
     deps:
       - data/rag/interim
       - data/rag/raw/pubmed
@@ -74,7 +78,7 @@ stages:
     deps:
       - data/processed/c3pi/bigdata/index
       - data/processed/c3pi/bigdata/quality
-      - config/pill_classes.csv
+      - config/pill_classes_v1.csv
       - src/data/spark/split_job.py
     params:
       - bigdata.seed
@@ -102,7 +106,7 @@ stages:
       - data/raw/epillid
       - data/processed/c3pi/bigdata/index
       - config/splits/c3pi_v2/classes.csv
-      - config/pill_classes.csv
+      - config/pill_classes_v1.csv
       - src/data/spark/epillid_job.py
     outs:
       - data/processed/c3pi/bigdata/epillid
@@ -160,7 +164,7 @@ stages:
       - data/processed/c3pi/bigdata/augmented
       - config/splits/selected_images.csv
       - config/splits/c3pi_v2/classes.csv
-      - config/pill_classes.csv
+      - config/pill_classes_v1.csv
       - src/data/autolabel.py
       - src/data/prepare_detect_v2.py
       - src/data/prepare_classify_v2.py
