@@ -1,0 +1,6 @@
+outs:
+- md5: 323c52c17938111ae3891680e2764f1a.dir
+  size: 227224489
+  nfiles: 35
+  hash: md5
+  path: classifier-convnext-tiny
