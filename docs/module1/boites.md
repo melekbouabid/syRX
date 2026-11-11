@@ -2,8 +2,8 @@
 
 Remarque du professeur : l'application ne reconnaît pas les boîtes de médicaments, par exemple
 une boîte de Panadol. Ce document décrit le problème, la méthode retenue, les données, la
-comparaison des moteurs OCR et ce qui reste à faire. Décisions : D108 à D112
-([decisions.md](../decisions.md)).
+comparaison des moteurs OCR et la validation sur de vraies boîtes. Décisions : D108 à D112 et
+D115 ([decisions.md](../decisions.md)).
 
 ## 1. Le problème, reproduit
 
@@ -71,7 +71,8 @@ affichée.
 | [mennox/Italian-OTC-medicines](https://huggingface.co/datasets/mennox/Italian-OTC-medicines), révision `29ebcd7` | 718 fichiers de boîtes de médicaments sans ordonnance italiens + `medicines.json` (nom commercial, EAN, sections de la notice en italien) ; 5 fichiers sont des pages HTML, écartés | Apache-2.0 | `data/raw/medicine_boxes/italian_otc` | comparaison des moteurs OCR, réglage |
 | Photos hors sujet | 16 images d'exemple de scikit-image (chat, café, fusée, pièces...) + 3 images générées | CC0 ou domaine public (une ligne par image dans `licences.csv`) | `data/raw/off_topic` | refus hors distribution |
 | C3PI, split de comparaison | 200 photos de `test_holdout.txt` (D93), jamais vues par les modèles servis | ODbL | `data/processed/c3pi/datasets_v2/detect` | les comprimés restent des comprimés |
-| Photos de l'utilisateur | boîtes vendues en Tunisie (Panadol, Doliprane...) | photos personnelles | `data/raw/medicine_boxes/user_photos` | **jeu de test final : EN ATTENTE** |
+| Photos libres de Wikimedia Commons (D115) | 11 vraies boîtes, marque lisible : Panadol x3, Doliprane, Augmentin x3, Glucophage, Levothyrox, Spasfon, Xanax SR | CC0, domaine public, CC BY-SA 3.0 / 4.0 (auteur et licence par photo dans `labels.csv`, crédits dans [LICENSES.md](../data_pipeline/LICENSES.md)) | `data/raw/medicine_boxes/web_commons` | **jeu de test de l'étape** (`--set web`) |
+| Photos de l'utilisateur | boîtes vendues en Tunisie (Panadol, Doliprane...) | photos personnelles | `data/raw/medicine_boxes/user_photos` | second jeu de test, plus tard (`--set user`) |
 | Roboflow Universe (boîtes annotées YOLO) | détecteur « boîte » optionnel | selon le jeu | - | **EN ATTENTE** (compte nécessaire) |
 
 Vérité terrain ([src/data/medicine_boxes.py](../../src/data/medicine_boxes.py), étape DVC
@@ -193,19 +194,43 @@ une interaction trouvée est maintenant retirée, et la ligne DDInter est toujou
 source). Capture [26](../screenshots/26-chat-brand.jpg) : « Puis-je prendre du Panadol avec de
 la warfarine ? ».
 
-## 7. Ce qui reste à faire (EN ATTENTE PHOTOS)
+## 7. Validation sur de vraies boîtes (photos libres de Commons, D115)
 
-La validation « Panadol -> paracétamol » demande une **vraie photo** de boîte de Panadol : le
-jeu public n'en contient pas, et une image de texte synthétique ne sert qu'aux tests
-unitaires. L'étape reste donc « EN ATTENTE PHOTOS ».
+Le jeu italien n'a pas de Panadol. Le jeu de test de l'étape est donc fait de 11 vraies photos
+de boîtes sous licence libre trouvées sur Wikimedia Commons (section 3), chacune regardée : une
+boîte réelle, marque lisible en alphabet latin. Même code que l'API, RxNav désactivé :
+
+```bash
+PYTHONPATH="backend;." .venv-train/Scripts/python -m src.models.ocr.evaluate --engine rapidocr --set web
+```
+
+Résultat (11/11/2026, RapidOCR champion v1, run MLflow `ocr-rapidocr-web`
+`72050b0d3a694506aee76e9d6a1b8436`, expérience `tujya-boxes`, sans Registry) :
+
+| Critère de l'étape | Résultat |
+|---|---|
+| Chaque Panadol donne `acetaminophen` avec sa source | **3 / 3** : marque lue, principe actif par la table des marques, source « electronic medicines compendium (emc), SmPC section 2 » et son lien |
+| Aucun principe actif faux | **0 / 11** boîtes avec un principe actif faux (précision 1,000) |
+| Image hors sujet refusée | **15 / 19** refusées (0,789, comme sur le jeu italien ; les 4 acceptées sont les objets ronds de la section 5) |
+| Principe actif trouvé / tous trouvés | 11 / 11 et 11 / 11 |
+| Marque lue | 11 / 11 |
+| Boîte classée « boîte » ; comprimés C3PI classés « comprimé » | 11 / 11 ; 196 / 200 (0,980) |
+
+Comment chaque boîte est reconnue : par la table des marques (Panadol x3, Augmentin x3,
+Glucophage, Spasfon, Xanax), par le nom imprimé (Doliprane : « DolipraneTabs » collé, trouvé
+par la DCI « Paracétamol » ; Levothyrox : « Lévothyroxine sodique »). La latence de ce run
+(médiane 13,6 s) n'est pas une mesure : photos de 1 920 px et PC bridé sous charge continue
+(D96) ; un premier run (`8d0d3c28`) donnait 2,6 s, mais son taux de marque lue était faux (la
+marque de `labels.csv` n'était pas mise en minuscules, corrigé et testé) : il est marqué
+`superseded_by` dans MLflow. Limite : 11 photos de contributeurs Commons, plutôt bien éclairées ;
+c'est la vérification des critères sur de vraies boîtes, pas une mesure de précision.
+
+Les photos du propriétaire (boîtes vendues en Tunisie) viendront plus tard comme second jeu de
+test, sans changer le code :
 
 1. Déposer les photos dans `data/raw/medicine_boxes/user_photos/` (une boîte par JPEG, face
-   avec le nom ; Panadol, Doliprane, Efferalgan, Augmentin...) avec `labels.csv` :
-   `image,brand,ingredients` (principes actifs avec les noms de la table, séparés par `;`).
+   avec le nom) avec `labels.csv` : `image,brand,ingredients` (principes actifs avec les noms de
+   la table, séparés par `;`).
 2. `.venv-train/Scripts/python -m dvc add data/raw/medicine_boxes/user_photos`
-3. `.venv-train/Scripts/python -m src.models.ocr.evaluate --engine rapidocr --set user`
+3. `PYTHONPATH="backend;." .venv-train/Scripts/python -m src.models.ocr.evaluate --engine rapidocr --set user`
    (run MLflow `ocr-rapidocr-user`, sans Registry).
-4. Critères : chaque Panadol donne `acetaminophen` avec sa source ; aucune boîte ne reçoit un
-   principe actif faux ; une image hors sujet est refusée.
-5. Si c'est validé : merge de `feature/medicine-boxes` dans main, tag `v3.6.0-boites` et tag
-   `model/ocr-<moteur>-v1.0.0` du champion.
