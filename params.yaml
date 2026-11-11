@@ -102,6 +102,12 @@ compare:
     metric: test_v2_top1
     guard_metric: test_v2_v1c_top1
     guard_max_drop: 0.01     # one point of top-1 (about 3 of the 275 crops), as optimize.max_drop
+  # Step 2.7, OCR engines of the medicine boxes (src/models/ocr/evaluate.py, D110): box photos
+  # with a known ingredient where a true one is found; Registry tujya-box-ocr.
+  ocr:
+    dataset: italian-otc-medicines
+    metric: ingredient_recall
+    min_gain: 0.005
 # Step 2.4, ONNX optimisation of the champions (src/models/optimize.py,
 # docs/module1/optimisation_onnx.md): FP16 / INT8 variants, calibration on the validation split.
 # The served variant is the fastest one whose accuracy (test_v2_mAP50_95 / test_top1) is at
@@ -128,3 +134,8 @@ optimize:
 # Stage evaluate (src/models/evaluate.py): detector confidence threshold, end to end.
 evaluate:
   conf: 0.25
+# Step 2.7, kind of a scanned photo (app/boxes.py decide_kind, D111): same values as the API's
+# defaults (TUJYA_SCAN_PILL_MIN_CONFIDENCE, TUJYA_BOX_TEXT_CHARS).
+boxes:
+  pill_confidence: 0.5     # best pill detection needed to call the photo a pill
+  box_text_chars: 20       # letters read with confidence >= 0.5 that make it a box

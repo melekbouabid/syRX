@@ -108,3 +108,21 @@ def test_a_pair_is_stored_in_one_order_only(engine: Engine, inputs: Inputs) -> N
         )
         with pytest.raises(IntegrityError):
             db.commit()
+
+
+def test_load_reads_the_v2_class_table(engine: Engine, tmp_path: Path, inputs: Inputs) -> None:
+    """The 380-class table (D119) has the counts of C3PI v2 instead of the v1 selection."""
+    v2 = tmp_path / "classes_v2.csv"
+    v2.write_text(
+        "class_id,class_key,ndc9,part,ndc11_list,name,generic_name,labeled_by,imprint,color,"
+        "shape,in_v1,n_consumer,n_train,n_val,n_test,n_reference,n_seg,n_challenge,rxcui,"
+        "active_ingredients,ingredient_rxcuis,ingredient_method\n"
+        "0,111111111_1,111111111,1,11111111101,HYZAAR 50MG,LOSARTAN,MERCK,MRK;717,YELLOW,OVAL,"
+        "True,40,28,6,6,2,8,2,979464,losartan,52175,ndc\n",
+        encoding="utf-8",
+    )
+    report = load(engine, Inputs(v2, inputs.ingredients, inputs.interactions))
+    assert report.pills == 1
+    with Session(engine) as db:
+        pill = db.scalars(select(Pill)).one()
+        assert pill.n_images == 42 and pill.class_key == "111111111_1"

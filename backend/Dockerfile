@@ -42,7 +42,9 @@ ENV PYTHONPATH=/tujya:/tujya/backend
 COPY src /tujya/src
 COPY backend/app ./app
 
-RUN useradd --create-home --uid 1000 tujya
+# /tujya/cache/fastembed: fastembed models (BM25, reranker), a compose volume owned by the user.
+RUN useradd --create-home --uid 1000 tujya \
+    && mkdir -p /tujya/cache/fastembed && chown tujya /tujya/cache/fastembed
 USER tujya
 
 EXPOSE 8000

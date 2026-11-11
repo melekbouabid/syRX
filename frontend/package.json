@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "lint": "node eslint/node_modules/eslint/bin/eslint.js -c eslint/eslint.config.js --max-warnings 0 ."
   },
   "dependencies": {
@@ -16,11 +17,14 @@
     "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "playwright": "1.64.1",
+    "tailwindcss": "4.3.3",
     "typescript": "^7.0.2",
-    "vite": "^8.3.4"
+    "vite": "^8.3.4",
+    "vitest": "5.0.5"
   }
 }

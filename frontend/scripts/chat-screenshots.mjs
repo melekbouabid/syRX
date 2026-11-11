@@ -24,8 +24,10 @@ async function shot(page, name, target) {
   await (target ?? page).screenshot({ path: join(OUT, name), type: "jpeg", quality: 82 });
 }
 
-async function waitForResult(page) {
-  await page.locator(".scan-busy").waitFor({ state: "detached", timeout: 60_000 });
+/** Wait for the scan of the photo sent as `name` (the previous result may still be shown). */
+async function waitForResult(page, name) {
+  await page.locator(`img[alt="Photo sent for identification: ${name}"]`).waitFor({ timeout: 60_000 });
+  await page.locator('[data-testid="scan-busy"]').waitFor({ state: "detached", timeout: 60_000 });
   await page.locator(".pill-card").first().waitFor({ timeout: 60_000 });
 }
 
@@ -58,10 +60,10 @@ await page.addStyleTag({ content: ".topbar { position: static !important; }" });
 
 await page.getByRole("link", { name: "Scanner" }).click();
 await page.getByRole("heading", { name: "Scanner" }).waitFor();
-await page.getByRole("tab", { name: /demo photos/i }).click();
+await page.getByRole("tab", { name: /demo gallery/i }).click();
 for (const id of DEMOS) {
   await page.locator(`[data-testid="demo-${id}"]`).click();
-  await waitForResult(page);
+  await waitForResult(page, `demo-${id}.jpg`);
   await page.getByRole("button", { name: "Confirm this pill" }).first().click();
 }
 

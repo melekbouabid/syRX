@@ -175,10 +175,48 @@ class ScannedPill(BaseModel):
 class ScanTimings(BaseModel):
     detection_ms: float
     classification_ms: float
-    total_ms: float
+    total_ms: float = Field(description="Detection plus identification, ONNX Runtime")
+    server_ms: float | None = Field(
+        None, description="Whole request on the server (upload, decoding, database included)"
+    )
+    ocr_ms: float | None = Field(None, description="Reading of the printed text (boxes)")
+
+
+class BoxIngredient(BaseModel):
+    name: str = Field(description="Ingredient name of the interaction table (English)")
+    method: Literal["brand", "printed_name", "rxnav"] = Field(
+        description="brand table, ingredient name printed on the box, or RxNorm (RxNav)"
+    )
+    matched_text: str = Field(description="The text read on the box that gave this match")
+    confidence: float = Field(ge=0, le=1, description="OCR confidence x word similarity")
+    source: str
+    reference: str
+    url: str
+    in_interaction_table: bool = Field(
+        description="False: known ingredient, but absent from the interaction table"
+    )
+
+
+class BoxReading(BaseModel):
+    """A medicine box: the text read and what it was linked to (never a guess)."""
+
+    text: list[str] = Field(description="Lines read on the photo (at most 40)")
+    brand: str | None = Field(None, description="Brand of config/brand_aliases.csv")
+    brand_country: str | None = None
+    brand_text: str | None = Field(None, description="The text read that matched the brand")
+    ingredients: list[BoxIngredient]
+    recognised: bool = Field(description="At least one active ingredient was found")
+    confidence: float = Field(ge=0, le=1)
+    rxnav: str = Field(description="Fallback status: enabled, or why it is disabled")
 
 
 class ScanResult(BaseModel):
+    kind: Literal["pill", "box", "unknown"] = Field(
+        "pill",
+        description="pill: pills detected; box: printed text of a medicine box; unknown: "
+        "neither (refused, no identification)",
+    )
+    box: BoxReading | None = None
     image_width: int
     image_height: int
     inference_ms: float = Field(description="Detection plus identification, ONNX Runtime")
@@ -250,6 +288,9 @@ class DemoImage(BaseModel):
     why: str = Field(description="Why it is in the gallery: major, confirm, no-ingredient...")
     url: str
     thumbnail_url: str
+    gradcam_url: str | None = Field(
+        None, description="Precomputed Grad-CAM of this photo (D104), null when not computed"
+    )
 
 
 class DemoGallery(BaseModel):
@@ -272,9 +313,14 @@ class CitationOut(BaseModel):
     section: str
     snippet: str
     source_name: str
-    doc_type: str = Field(description="label, abstract or interaction")
+    doc_type: str = Field(description="label, abstract, interaction or brand")
     date: str
     cited: bool = Field(description="True if the answer cites [n]")
+    doc_id: str = Field("", description="Document in the index (Documents page)")
+    license: str = ""
+    rerank_score: float | None = Field(
+        None, description="Cross-encoder score when the search was reranked (D117)"
+    )
 
 
 class ToolCallOut(BaseModel):
@@ -434,3 +480,61 @@ class PredictOut(Strict):
     timings: PredictTimings
     model_versions: dict[str, int | None] = Field(description="detect / classify versions")
     disclaimer: str
+
+
+# ------------------------------------------------------------------ indexed documents (D114)
+
+
+class IndexInfoOut(BaseModel):
+    store: str = Field(description="qdrant (default), pgvector or sqlite")
+    collection: str = Field(description="Qdrant collection (or SQL table) of the chunks")
+    points: int = Field(description="Chunks in the store")
+    embedding_model: str
+    dim: int
+    indexed_at: str
+    documents: int
+    chunks: int
+    payload_indexes: list[str] = Field(description="Indexed metadata fields (filters)")
+    dashboard_url: str | None = Field(description="Qdrant web dashboard, opened on the host")
+
+
+class DocumentOut(BaseModel):
+    doc_id: str = Field(description="openfda:<set id>, pubmed:<PMID> or ddinter:<id>:<id>")
+    doc_type: str = Field(description="label, abstract or interaction")
+    title: str
+    source_name: str
+    url: str
+    date: str
+    version: str
+    license: str
+    language: str
+    article_type: str | None
+    is_retracted: bool
+    ingredients: list[str] = Field(description="Active ingredients the document is about")
+    mentioned_ingredients: list[str] = Field(description="Other ingredients it mentions")
+    sections: list[str]
+    chunk_count: int
+
+
+class DocumentsPage(BaseModel):
+    total: int = Field(description="Documents matching the filters")
+    offset: int
+    limit: int
+    items: list[DocumentOut]
+    facets: dict[str, dict[str, int]] = Field(
+        description="Matching documents per doc_type, language and source"
+    )
+    index: IndexInfoOut
+
+
+class DocumentChunkOut(BaseModel):
+    chunk_id: str
+    chunk_index: int
+    section: str
+    title: str
+    text: str = Field(description="Chunk text; sentences with a dose are shown as [...]")
+    content_hash: str = Field(description="SHA-256 of text + metadata + embedding model")
+
+
+class DocumentDetail(DocumentOut):
+    chunks: list[DocumentChunkOut]
