@@ -1,7 +1,9 @@
-"""Builds the agent's pieces once per app: chunk store, retriever, LLM, toolbox, agent.
+"""Builds the agent's pieces once per app: chunk store (Qdrant), retriever, LLM, toolbox,
+agent.
 
 Production: Ollama (`TUJYA_OLLAMA_URL`) serves the LLM (`TUJYA_LLM_MODEL`) and the
-embeddings (`TUJYA_EMBEDDING_MODEL`). Tests replace `llm` and `embedder` with fakes.
+embeddings (`TUJYA_EMBEDDING_MODEL`); the chunks are in Qdrant (`TUJYA_QDRANT_URL`).
+Tests replace `llm`, `embedder` and `store` with fakes.
 """
 
 from __future__ import annotations
@@ -17,8 +19,9 @@ from src.agent.graph import TujyaAgent
 from src.agent.tools import Toolbox
 from src.models.toxicity.model import ToxHolder
 from src.rag.embeddings import Embedder, OllamaEmbedder
-from src.rag.retrieval import RetrieverHolder
-from src.rag.store import ChunkStore
+from src.rag.rewrite import QueryRewriter
+from src.rag.store import VectorStore
+from src.rag.stores import open_store, retriever_holder
 
 
 def ollama_llm(settings: Settings) -> BaseChatModel:
@@ -49,12 +52,14 @@ class AgentHolder:
         *,
         llm: BaseChatModel | None = None,
         embedder: Embedder | None = None,
+        store: VectorStore | None = None,
         toxicity: ToxHolder | None = None,
     ) -> None:
         self.settings, self.pharma_engine, self.scanner = settings, pharma_engine, scanner
         self.toxicity = toxicity
         self.llm = llm
         self.embedder = embedder
+        self.store = store
         self._toolbox: Toolbox | None = None
         self._agent: TujyaAgent | None = None
 
@@ -70,14 +75,19 @@ class AgentHolder:
                 self.settings.embedding_dim,
                 num_ctx=self.settings.embedding_num_ctx,
             )
-            store = ChunkStore(self.pharma_engine, embedder.dim)
+            store = self.store or open_store(self.settings, embedder.dim, self.pharma_engine)
+            rewriter = None
+            if self.settings.rag_query_rewrite:  # D118: one more LLM call per search
+                self.llm = self.llm or ollama_llm(self.settings)
+                rewriter = QueryRewriter(self.llm)
             self._toolbox = Toolbox(
                 self.settings,
                 self.pharma_engine,
-                RetrieverHolder(store, embedder),
+                retriever_holder(self.settings, store, embedder),
                 self.scanner,
                 toxicity=self.toxicity
                 or ToxHolder(self.settings.tox_model_dir, self.settings.ingredient_smiles_file),
+                rewriter=rewriter,
             )
         return self._toolbox
 

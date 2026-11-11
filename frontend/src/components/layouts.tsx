@@ -87,6 +87,7 @@ export function UserLayout() {
     { to: "/home", label: "Home", icon: "home" },
     { to: "/scan", label: "Scanner", icon: "scan" },
     { to: "/toxicity", label: "Toxicity", icon: "flask" },
+    { to: "/documents", label: "Documents", icon: "book" },
     { to: "/profile", label: "Profile", icon: "user" },
   ];
   if (user?.role === "admin") items.push({ to: "/admin", label: "Admin", icon: "shield" });

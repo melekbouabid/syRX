@@ -15,7 +15,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from app.routers.vision import class_colour
+from app.routers.vision import class_colour, text_colour
 from tests.fake_models import write_models
 from tests.test_scan import BOXES, GREEN, NAMES, RED, photo
 
@@ -231,6 +231,16 @@ def test_visualize_downscales_to_max_side(anonymous: TestClient, models: Path) -
 def test_class_colours_are_stable_and_distinct() -> None:
     assert class_colour(5) == class_colour(5)
     assert len({class_colour(c) for c in range(20)}) == 20
+
+
+def test_class_colours_follow_the_palette_and_labels_stay_readable() -> None:
+    # Same values as frontend/src/lib/vision.test.ts: boxes of the app and of the PNG agree.
+    assert class_colour(0) == (0x38, 0x38, 0xFF)  # BGR of #FF3838
+    assert class_colour(9) == (0xBB, 0xD4, 0x00)  # #00D4BB
+    assert class_colour(120) == class_colour(0)  # 120 mod 20
+    assert class_colour(-1) == class_colour(19)
+    assert text_colour(class_colour(4)) == (0, 0, 0)  # light yellow-green: black text
+    assert text_colour(class_colour(16)) == (255, 255, 255)  # dark violet: white text
 
 
 def test_swagger_documents_the_guide_endpoints(anonymous: TestClient) -> None:
