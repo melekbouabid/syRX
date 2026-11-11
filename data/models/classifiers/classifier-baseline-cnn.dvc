@@ -1,0 +1,6 @@
+outs:
+- md5: f175945e1b469a24cf6b92ff54bcd461.dir
+  size: 24534768
+  nfiles: 35
+  hash: md5
+  path: classifier-baseline-cnn
