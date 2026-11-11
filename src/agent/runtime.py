@@ -19,9 +19,9 @@ from src.agent.graph import TujyaAgent
 from src.agent.tools import Toolbox
 from src.models.toxicity.model import ToxHolder
 from src.rag.embeddings import Embedder, OllamaEmbedder
-from src.rag.retrieval import RetrieverHolder
+from src.rag.rewrite import QueryRewriter
 from src.rag.store import VectorStore
-from src.rag.stores import open_store
+from src.rag.stores import open_store, retriever_holder
 
 
 def ollama_llm(settings: Settings) -> BaseChatModel:
@@ -76,13 +76,18 @@ class AgentHolder:
                 num_ctx=self.settings.embedding_num_ctx,
             )
             store = self.store or open_store(self.settings, embedder.dim, self.pharma_engine)
+            rewriter = None
+            if self.settings.rag_query_rewrite:  # D118: one more LLM call per search
+                self.llm = self.llm or ollama_llm(self.settings)
+                rewriter = QueryRewriter(self.llm)
             self._toolbox = Toolbox(
                 self.settings,
                 self.pharma_engine,
-                RetrieverHolder(store, embedder),
+                retriever_holder(self.settings, store, embedder),
                 self.scanner,
                 toxicity=self.toxicity
                 or ToxHolder(self.settings.tox_model_dir, self.settings.ingredient_smiles_file),
+                rewriter=rewriter,
             )
         return self._toolbox
 

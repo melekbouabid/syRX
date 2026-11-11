@@ -123,6 +123,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | Exigence | État | Où |
 |---|:---:|---|
 | RAG avec gestion des documents, métadonnées, citations, documentation | ✅ | [src/data/corpus/](src/data/corpus/), [src/rag/](src/rag/), [docs/module2/rag.md](docs/module2/rag.md) |
+| Recherche avancée : BM25 sparse et hybride dans Qdrant, reranker cross-encoder (bge-reranker-base), réécriture de requête, filtres de métadonnées, comparés dans le benchmark | ✅ | [src/rag/](src/rag/) (sparse.py, rerank.py, rewrite.py), [docs/module2/benchmark.md](docs/module2/benchmark.md#recherche-avancée-étape-32) (hybride + réécriture + reranker : Recall@5 0,965, MRR 0,889 ; D116-D118) |
 | Base vectorielle consultable : Qdrant (tableau de bord), page « Documents » et `GET /api/documents` (documents indexés, métadonnées, chunks) | ✅ | [src/rag/qdrant_store.py](src/rag/qdrant_store.py), [src/rag/documents.py](src/rag/documents.py), [backend/app/routers/documents.py](backend/app/routers/documents.py), [DocumentsPage.tsx](frontend/src/pages/DocumentsPage.tsx), [docs/module2/rag.md](docs/module2/rag.md#consulter-les-documents-indexés) (captures 27 à 29, D113-D114) |
 | Tool calling / MCP | ✅ | [src/agent/tools.py](src/agent/tools.py), [src/mcp_server/](src/mcp_server/) |
 | LangChain et/ou LangGraph | ✅ | [src/agent/graph.py](src/agent/graph.py) |

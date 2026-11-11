@@ -14,7 +14,7 @@ docker compose down                 # arrête ; les volumes sont gardés (down -
 | Service | Image | Port hôte (127.0.0.1 seulement) | Rôle |
 |---|---|---|---|
 | `postgres` | `pgvector/pgvector:pg16` | 5432 | volume `pgdata` ; base `tujya` (comptes, tables des médicaments, ancien index pgvector `rag_chunks`) et base `mlflow` |
-| `qdrant` | `qdrant/qdrant:v1.20.0` | 6333 | base vectorielle du RAG (D113) : collection `tujya_chunks`, un point par chunk avec ses métadonnées en payload ; tableau de bord sur <http://localhost:6333/dashboard> ; volume `qdrant` ; télémétrie coupée |
+| `qdrant` | `qdrant/qdrant:v1.20.0` | 6333 | base vectorielle du RAG (D113) : collection `tujya_chunks`, un point par chunk avec ses métadonnées en payload, vecteurs dense et sparse BM25 (D116) ; tableau de bord sur <http://localhost:6333/dashboard> ; volume `qdrant` ; télémétrie coupée |
 | `mlflow` | construite depuis [`infra/docker/mlflow/Dockerfile`](../infra/docker/mlflow/Dockerfile) (MLflow 3.17.2 + psycopg2) | 5000 | stockage du tracking dans PostgreSQL, artefacts dans le volume `mlartifacts`, Model Registry |
 | `pharma-init` | image du backend | aucun | ponctuel : `python -m app.pharma_loader` reconstruit les tables des médicaments depuis `config/` et `data/processed/pharma/`, puis s'arrête ; le backend l'attend |
 | `rag-init` | image du backend | aucun | ponctuel : `python -m src.rag.index --pull` télécharge les modèles Ollama s'ils manquent, puis indexe `data/processed/rag/corpus` dans la collection Qdrant `tujya_chunks` (idempotent ; [rag.md](module2/rag.md)) ; le backend ne l'attend pas |
@@ -26,6 +26,9 @@ L'image de l'API se construit depuis la racine du dépôt (elle importe le paque
 seuls le code de l'API (dont la chaîne de scan `backend/app/inference.py`), `src/{rag,agent,mcp_server}`
 et `src/models/toxicity/model.py` y entrent (contexte d'environ 200 Ko), dans la même disposition
 que le dépôt sous `/tujya` (D79).
+
+Volume `fastembed` (monté dans `backend`, `rag-init` et `pharma-init` sur `/tujya/cache/fastembed`) :
+modèles fastembed de l'étape 3.2 (`Qdrant/bm25`, `BAAI/bge-reranker-base`), téléchargés une fois.
 
 **Avant le premier démarrage** (les images ne contiennent ni données ni modèles, D55) :
 

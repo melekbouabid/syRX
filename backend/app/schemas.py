@@ -316,6 +316,11 @@ class CitationOut(BaseModel):
     doc_type: str = Field(description="label, abstract, interaction or brand")
     date: str
     cited: bool = Field(description="True if the answer cites [n]")
+    doc_id: str = Field("", description="Document in the index (Documents page)")
+    license: str = ""
+    rerank_score: float | None = Field(
+        None, description="Cross-encoder score when the search was reranked (D117)"
+    )
 
 
 class ToolCallOut(BaseModel):

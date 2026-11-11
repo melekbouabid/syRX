@@ -15,7 +15,7 @@ in numpy.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 import numpy as np
 from pgvector.sqlalchemy import Vector
@@ -40,6 +40,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.engine import Connection, Engine
+
+if TYPE_CHECKING:
+    from src.rag.sparse import SparseVector
 
 TABLE = "rag_chunks"
 META_TABLE = "rag_index_meta"
@@ -150,6 +153,23 @@ class VectorStore(Protocol):
 
     def dense_search(self, vector: list[float], filters: Filters, k: int) -> list[str]: ...
 
+    def has_sparse(self) -> bool:
+        """True when the store keeps BM25 sparse vectors (Qdrant, step 3.2); False: the
+        retriever runs BM25 in memory and fuses the lists itself."""
+        ...
+
+    def add_sparse(self) -> int:
+        """Give an existing index the sparse vector; returns the number of points migrated."""
+        ...
+
+    def set_sparse(self, vectors: dict[str, SparseVector]) -> None: ...
+
+    def sparse_search(self, vector: SparseVector, filters: Filters, k: int) -> list[str]: ...
+
+    def hybrid_search(
+        self, dense: list[float], sparse: SparseVector, filters: Filters, k: int, candidates: int
+    ) -> list[tuple[str, float]]: ...
+
     def info(self) -> dict[str, Any]:
         """Collection (or table) name, number of points, status, indexed payload fields."""
         ...
@@ -212,6 +232,23 @@ class ChunkStore:
     @property
     def native_dense(self) -> bool:
         return self.is_postgres
+
+    def has_sparse(self) -> bool:
+        return False
+
+    def add_sparse(self) -> int:
+        return 0
+
+    def set_sparse(self, vectors: dict[str, SparseVector]) -> None:
+        raise NotImplementedError("the SQL store has no sparse vectors")
+
+    def sparse_search(self, vector: SparseVector, filters: Filters, k: int) -> list[str]:
+        raise NotImplementedError("the SQL store has no sparse vectors: BM25 runs in memory")
+
+    def hybrid_search(
+        self, dense: list[float], sparse: SparseVector, filters: Filters, k: int, candidates: int
+    ) -> list[tuple[str, float]]:
+        raise NotImplementedError("the SQL store has no sparse vectors: RRF runs in memory")
 
     def create(self) -> None:
         if self.is_postgres:

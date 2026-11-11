@@ -3,7 +3,8 @@
 Les documents à partir desquels l'agent de Tujya répond : ce qu'ils sont, comment ils ont été
 collectés, comment ils sont découpés en chunks, quelles métadonnées porte chaque chunk,
 comment on y cherche et comment les consulter. Construit le 2026-10-28, index dans Qdrant
-depuis le 2026-11-11. Décisions : D59 à D62, D113 (Qdrant) et D114 (page Documents) dans
+depuis le 2026-11-11. Décisions : D59 à D62, D113 (Qdrant), D114 (page Documents), D116 à
+D118 (BM25 dans Qdrant, reranker, réécriture de requête) dans
 [docs/decisions.md](../decisions.md).
 
 ```
@@ -220,6 +221,45 @@ fluconazole --doc-type label` (affiche les trois modes avec leurs rangs et leurs
 Le meilleur mode est mesuré dans [docs/module2/benchmark.md](benchmark.md) : dense avec le filtre par
 principe actif est le réglage par défaut de l'agent depuis D65 (`TUJYA_RAG_SEARCH_MODE`).
 
+## Recherche avancée (étape 3.2)
+
+Ce que le cours du module 2 montre (BM25, hybride dense + sparse, reranking, réécriture de
+requête, filtres de métadonnées), mesuré dans [benchmark.md](benchmark.md#recherche-avancée-étape-32).
+
+- **BM25 dans Qdrant (D116)** : chaque point a aussi un vecteur sparse `bm25`
+  ([`src/rag/sparse.py`](../../src/rag/sparse.py)), produit par le modèle `Qdrant/bm25` de
+  fastembed (celui qu'enveloppe `FastEmbedSparse` de LangChain dans le TP : mots vides anglais,
+  racinisation Snowball, termes hachés) ; la collection lui applique le modificateur IDF, donc
+  Qdrant calcule lui-même le BM25 complet. Le mode `bm25` et le mode `hybrid` tournent alors dans
+  Qdrant ; le stockage SQL garde le BM25 en mémoire.
+- **Hybride dans Qdrant** : une requête `query_points` avec deux `prefetch` (50 candidats
+  denses, 50 candidats BM25, chacun avec les filtres de métadonnées) fusionnés par Qdrant en RRF.
+  Qdrant compte les positions à partir de 0 : `k = 61` chez lui donne exactement 1 / (60 + rang),
+  la fusion du stockage SQL (vérifié par un test, en mémoire et sur le serveur).
+- **Reranker cross-encoder (D117)** : `BAAI/bge-reranker-base` (le modèle du TP, multilingue) en
+  ONNX par fastembed ([`src/rag/rerank.py`](../../src/rag/rerank.py)), donc sans PyTorch dans
+  l'API. La recherche renvoie `fetch_k` candidats (20 par défaut, `TUJYA_RAG_FETCH_K`), le
+  cross-encoder lit la question avec chacun (titre + texte) et garde les `k` meilleurs ; chaque
+  source garde son score et son rang avant reranking. Désactivé par défaut (`TUJYA_RAG_RERANK`) :
+  1 à 2 s par paire question-chunk sur le processeur de ce PC.
+- **Réécriture de requête (D118)** : le LLM réécrit la question en une requête de recherche
+  anglaise courte qui garde les noms de médicaments ([`src/rag/rewrite.py`](../../src/rag/rewrite.py)) ;
+  la recherche (et le reranking) portent sur cette requête, la réponse sur la question. Une
+  réécriture vide, trop longue ou en erreur garde la question ; les mots collés par un petit
+  LLM (`what_are_the_...`) sont séparés. Désactivée par défaut (`TUJYA_RAG_QUERY_REWRITE`).
+- **Filtres de métadonnées** (tous les modes, dans Qdrant par index de payload) : principe actif
+  (dont parle ou que cite le chunk), type de document, section, publications rétractées ;
+  l'outil `search_documents` les expose à l'agent et au serveur MCP.
+- **Sources dans le chat** : chaque citation montre son type, sa section, sa date, sa source, sa
+  licence et, si la recherche a été reranquée, le score du reranker ; l'identifiant du document
+  renvoie à la page Documents.
+
+Modèles fastembed téléchargés une fois depuis Hugging Face (sans compte) dans
+`TUJYA_RAG_MODEL_CACHE_DIR` (`models/fastembed`, git-ignoré ; volume `fastembed` dans Docker) :
+`Qdrant/bm25` (quelques ko), `BAAI/bge-reranker-base` (1,1 Go). `python -m src.rag.index` ajoute
+les vecteurs sparse à une collection plus ancienne sans rien réencoder (copie des points, 9 s pour
+8 661 chunks le 2026-11-11), puis ne recalcule les vecteurs sparse que si le modèle change.
+
 ## Consulter les documents indexés
 
 Remarque du professeur : « la base vectorielle n'est pas accessible, on ne voit pas les
@@ -261,6 +301,13 @@ le 2026-11-11 : 28 notices sur 4 002 documents pour « notice + warfarine »).
   mémoire) : collection, payload complet et index de payload, indexation idempotente qui suit
   le corpus, changement de modèle, recherche dense et filtres, mêmes classements que le
   stockage SQL, copie depuis SQL sans encodage, rechargement après réindexation.
+- [`tests/rag/test_hybrid_rerank.py`](../../tests/rag/test_hybrid_rerank.py) (encodeur sparse
+  local et reranker factice, Qdrant en mémoire et serveur si `TUJYA_TEST_QDRANT_URL`) : poids
+  BM25, vecteurs sparse écrits une fois et recalculés seulement pour un autre encodeur, migration
+  d'une ancienne collection sans encodage, BM25 de Qdrant = BM25 en mémoire, fusion RRF de Qdrant =
+  la nôtre, filtres sur sparse et hybride, reranking (fetch_k lus, k gardés, égalités), nettoyage
+  et repli de la réécriture ; [`tests/agent/test_search_tool.py`](../../tests/agent/test_search_tool.py) :
+  l'outil avec reranking, requête réécrite et métadonnées des sources.
 - [`tests/rag/test_documents.py`](../../tests/rag/test_documents.py) : regroupement des chunks
   en documents, filtres et facettes, `/api/documents` (connexion exigée, filtres, détail avec
   chunks, posologie masquée, 503 si l'index est vide ou Qdrant injoignable), chat sur Qdrant.

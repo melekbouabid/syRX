@@ -228,3 +228,10 @@ def test_an_answer_denying_the_ddinter_interaction_is_corrected(
     assert {"denies_found_interaction", "interaction_sentence_added"} <= set(
         body["safety"]["violations"]
     )
+
+
+def test_citations_carry_document_metadata(client: TestClient) -> None:
+    body = ask(client, "La warfarine interagit-elle avec le fluconazole ?")
+    documents = [c for c in body["citations"] if c["doc_type"] in ("label", "abstract")]
+    assert documents and all(c["doc_id"] and c["license"] for c in documents)
+    assert all(c["rerank_score"] is None for c in body["citations"])  # reranking off by default

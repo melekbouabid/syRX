@@ -22,6 +22,9 @@ mcp>=2.3.0
 pgvector>=0.5.1
 # Same minor version as the qdrant service of docker-compose.yml.
 qdrant-client>=1.20.0,<1.21
+# Step 3.2: BM25 sparse vectors (Qdrant/bm25) and the bge-reranker-base cross-encoder, both
+# in ONNX Runtime (no PyTorch in the image); models cached in TUJYA_RAG_MODEL_CACHE_DIR.
+fastembed==0.9.1
 # Bonus: toxicity tool (Tox21 model, docs/bonus/toxicity.md)
 rdkit>=2025.3
 lightgbm>=4.5

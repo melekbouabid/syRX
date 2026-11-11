@@ -237,6 +237,10 @@ export interface ChatCitation {
   doc_type: "label" | "abstract" | "interaction" | string;
   date: string;
   cited: boolean;
+  doc_id?: string;
+  license?: string;
+  /** Cross-encoder score when the search was reranked (D117). */
+  rerank_score?: number | null;
 }
 
 export interface ChatToolCall {

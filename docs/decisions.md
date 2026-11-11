@@ -1398,3 +1398,50 @@ Ce jeu sert de jeu de test de l'étape ; les photos du propriétaire viendront p
 second jeu de test (`--set user`), sans changer le code. Limite : 11 photos, prises par des
 contributeurs de Commons, souvent bien éclairées ; ce n'est pas une mesure de précision, c'est
 la vérification des critères de l'étape sur de vraies boîtes.
+
+**D116. BM25 dans Qdrant par vecteurs sparse `Qdrant/bm25` (fastembed), fusion hybride faite
+par Qdrant (étape 3.2).** Comme dans le cours (FastEmbedSparse), chaque point porte un vecteur
+sparse `bm25` produit par le modèle `Qdrant/bm25` de fastembed (fréquences de termes saturées,
+k1 = 1,2, b = 0,75) et la collection applique le modificateur IDF : Qdrant calcule le BM25 et
+le tient à jour seul. Le mode hybride est une requête Qdrant (deux `prefetch` filtrés de 50
+candidats, fusion RRF) ; `k = 61` chez Qdrant (positions comptées depuis 0) reproduit exactement
+1 / (60 + rang), vérifié par un test sur le client en mémoire et sur le serveur. fastembed tourne
+en ONNX Runtime, déjà dans l'image : pas de PyTorch. Qdrant ne sait pas ajouter un vecteur à une
+collection existante : l'indexation recrée la collection en recopiant les points (payload et
+vecteurs denses, aucun encodage, 9 s) et garde ses métadonnées ; les vecteurs sparse ne sont
+recalculés que si le nom du modèle sparse change (`sparse_model` dans les métadonnées). Le
+retriever n'utilise le BM25 de Qdrant que si l'index a été fait avec le même encodeur, sinon il
+garde le BM25 en mémoire (stockage SQL compris). Mesuré : un peu moins bon que notre BM25 en
+mémoire (Recall@5 0,753 contre 0,765), car `Qdrant/bm25` ne retire que les mots vides anglais ;
+gardé quand même, parce qu'il fait le calcul dans la base (comme demandé par le cours) et que la
+réécriture de requête (D118) supprime l'écart (0,882). Rejeté : vecteurs sparse calculés par
+notre propre tokeniseur en production (gardé pour les tests seulement : `TokenBM25`, même formule,
+sans téléchargement) ; SPLADE / miniCOIL (modèles appris, anglais seulement, non demandés).
+
+**D117. Reranker cross-encoder BAAI/bge-reranker-base, en ONNX par fastembed, désactivé par
+défaut sur ce PC (étape 3.2, remarque 13).** La recherche renvoie `fetch_k` candidats (20 par
+défaut), le cross-encoder lit question + titre + texte de chaque candidat, les `k` meilleurs
+sont gardés ; les égalités gardent l'ordre de la recherche ; chaque source garde son score de
+reranker et son rang d'avant. Le modèle (1,1 Go) est téléchargé une fois depuis Hugging Face sans
+compte dans `TUJYA_RAG_MODEL_CACHE_DIR` (volume `fastembed` dans Docker, l'image lit `models/` en
+lecture seule). Benchmark (85 questions, fetch_k = 10) : dense 0,906 -> 0,941 de Recall@5 et
+0,832 -> 0,861 de MRR ; hybride + réécriture 0,929 -> 0,965 et 0,860 -> 0,889. Mais 13 à 18 s par
+question sur le processeur de ce portable (1 à 2 s par paire, le PC se bride sous charge, D96) et
+le GPU de 4 Go est pris par Ollama (qwen2.5:3b + bge-m3) : `TUJYA_RAG_RERANK` reste à faux pour
+l'agent et la démonstration ; à activer sur une machine avec un GPU libre ou un processeur plus
+rapide. Rejeté : bge-reranker-v2-m3 (568 M paramètres, plus lent encore) ; un petit reranker
+anglais (ms-marco-MiniLM, rapide mais les questions sont à moitié en français) ; le reranker en
+PyTorch (pas de PyTorch dans l'image de l'API, D97).
+
+**D118. Réécriture de requête par le LLM, en option (étape 3.2).** Le corpus est en anglais, la
+moitié des questions en français. Le LLM (celui de l'agent) réécrit la question en une requête
+anglaise de 20 mots au plus qui garde les noms de médicaments ; la recherche et le reranking
+portent sur elle, la réponse sur la question ; le filtre de principes actifs vient toujours de la
+question. Garde-fous : réécriture vide, de plus de 200 caractères ou en erreur -> question
+d'origine ; mots collés par le petit LLM séparés (défaut trouvé par le benchmark : BM25 tombait à
+0,612). Mesuré : BM25 0,753 -> 0,882, dense 0,906 -> 0,941 (Recall@10 1,000), hybride 0,871 ->
+0,929 de Recall@5. Désactivée par défaut (`TUJYA_RAG_QUERY_REWRITE`) : un appel LLM de plus par
+question, et le planificateur de l'agent écrit déjà une requête anglaise quand il choisit
+`search_documents` ; l'étape 3.3 décidera du réglage de l'agent sur la génération, pas seulement
+sur la récupération (même prudence que D65 : ne pas régler le système sur son propre jeu de test
+sans mesurer les réponses).

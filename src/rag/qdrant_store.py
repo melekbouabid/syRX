@@ -4,7 +4,8 @@ docker compose runs the server (`qdrant`, http://127.0.0.1:6333, dashboard on /d
 the tests use the client's local in-memory mode (`QdrantClient(":memory:")`), same API.
 
 - Collection `tujya_chunks` (TUJYA_QDRANT_COLLECTION); named vector `dense` (cosine, the
-  embedding model's dimension).
+  embedding model's dimension) and sparse vector `bm25` with the IDF modifier (step 3.2,
+  D116, src/rag/sparse.py). Hybrid search = both lists fused by Qdrant (RRF, k = 60).
 - Point id: UUID v5 of the chunk id (Qdrant ids are integers or UUIDs); the chunk id stays
   in the payload.
 - Payload: every metadata column of the chunk (source, document type, section, language,
@@ -24,10 +25,13 @@ import numpy as np
 from qdrant_client import QdrantClient
 from qdrant_client import models as qm
 
+from src.rag.sparse import SparseVector
 from src.rag.store import METADATA_COLUMNS, Chunk, Filters
 
 COLLECTION = "tujya_chunks"
 DENSE = "dense"
+SPARSE = "bm25"
+RRF_K = 60
 POINT_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "https://github.com/melekbouabid/syRX/rag")
 KEYWORD_FIELDS = (
     "chunk_id",
@@ -112,6 +116,7 @@ class QdrantStore:
         self.client.create_collection(
             self.collection,
             vectors_config={DENSE: qm.VectorParams(size=self.dim, distance=qm.Distance.COSINE)},
+            sparse_vectors_config={SPARSE: qm.SparseVectorParams(modifier=qm.Modifier.IDF)},
         )
         if self.url == ":memory:":
             return  # the local mode has no payload indexes (it filters by scanning)
@@ -159,13 +164,52 @@ class QdrantStore:
         metadata = self.client.get_collection(self.collection).config.metadata or {}
         return {str(k): str(v) for k, v in metadata.items()}
 
+    def has_sparse(self) -> bool:
+        """False for a collection made before step 3.2: `add_sparse` migrates it."""
+        if not self.exists():
+            return False
+        params = self.client.get_collection(self.collection).config.params
+        return SPARSE in (params.sparse_vectors or {})
+
+    def add_sparse(self) -> int:
+        """Recreate a collection without the sparse vector, keeping every point (payload and
+        dense vector, nothing is embedded again) and the index metadata. Qdrant cannot add a
+        vector to an existing collection. Returns the number of points copied."""
+        if not self.exists() or self.has_sparse():
+            return 0
+        meta = self.get_meta()
+        records = self._scroll(True, vectors=True)
+        self.drop()
+        self.create()
+        for start in range(0, len(records), PAGE):
+            batch = records[start : start + PAGE]
+            points = [
+                qm.PointStruct(id=r.id, vector={DENSE: _dense(r)}, payload=r.payload) for r in batch
+            ]
+            self.client.upsert(self.collection, points=points, wait=True)
+        self.client.update_collection(self.collection, metadata=meta)
+        return len(records)
+
+    def set_sparse(self, vectors: dict[str, SparseVector]) -> None:
+        """Replace the sparse vectors of existing points (chunk id -> vector)."""
+        items = list(vectors.items())
+        for start in range(0, len(items), PAGE):
+            points = [
+                qm.PointVectors(id=point_id(cid), vector={SPARSE: _sparse(v)})
+                for cid, v in items[start : start + PAGE]
+            ]
+            self.client.update_vectors(self.collection, points=points, wait=True)
+
     def write(self, records: list[dict[str, Any]]) -> None:
         if not records:
             return
         points = [
             qm.PointStruct(
                 id=point_id(r["chunk_id"]),
-                vector={DENSE: list(map(float, r["embedding"]))},
+                vector={
+                    DENSE: list(map(float, r["embedding"])),
+                    **({SPARSE: _sparse(r["sparse"])} if r.get("sparse") else {}),
+                },
                 payload={
                     **{k: r.get(k) for k in METADATA_COLUMNS},
                     "content_hash": r["content_hash"],
@@ -211,6 +255,45 @@ class QdrantStore:
         )
         return [str((p.payload or {})["chunk_id"]) for p in response.points]
 
+    def sparse_search(self, vector: SparseVector, filters: Filters, k: int) -> list[str]:
+        if not vector.indices:
+            return []
+        response = self.client.query_points(
+            self.collection,
+            query=_sparse(vector),
+            using=SPARSE,
+            query_filter=to_filter(filters),
+            limit=k,
+            with_payload=["chunk_id"],
+        )
+        return [str((p.payload or {})["chunk_id"]) for p in response.points]
+
+    def hybrid_search(
+        self,
+        dense: list[float],
+        sparse: SparseVector,
+        filters: Filters,
+        k: int,
+        candidates: int,
+    ) -> list[tuple[str, float]]:
+        """Dense and BM25 candidates, each filtered, fused by Qdrant with RRF (k = 60)."""
+        condition = to_filter(filters)
+        prefetch = [qm.Prefetch(query=dense, using=DENSE, filter=condition, limit=candidates)]
+        if sparse.indices:
+            prefetch.append(
+                qm.Prefetch(query=_sparse(sparse), using=SPARSE, filter=condition, limit=candidates)
+            )
+        response = self.client.query_points(
+            self.collection,
+            prefetch=prefetch,
+            # Qdrant scores 1 / (k + position), positions from 0: k = 61 there is exactly
+            # 1 / (60 + rank) with ranks from 1, the fusion of the SQL store (retrieval.rrf).
+            query=qm.RrfQuery(rrf=qm.Rrf(k=RRF_K + 1)),
+            limit=k,
+            with_payload=["chunk_id"],
+        )
+        return [(str((p.payload or {})["chunk_id"]), float(p.score)) for p in response.points]
+
     def info(self) -> dict[str, Any]:
         """What the Documents page shows about the collection."""
         details = self.client.get_collection(self.collection)
@@ -220,3 +303,13 @@ class QdrantStore:
             "status": str(details.status.value if details.status else ""),
             "payload_indexes": sorted((details.payload_schema or {}).keys()),
         }
+
+
+def _sparse(vector: SparseVector) -> qm.SparseVector:
+    return qm.SparseVector(indices=vector.indices, values=vector.values)
+
+
+def _dense(record: qm.Record) -> list[float]:
+    vector = record.vector
+    assert isinstance(vector, dict), "named vectors expected"
+    return list(map(float, vector[DENSE]))  # type: ignore[arg-type]
