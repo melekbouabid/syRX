@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type DragEvent } from "react";
 import {
   api,
   errorMessage,
+  type BoxReading,
   type DemoImage,
   type InteractionPair,
   type InteractionsResult,
@@ -40,10 +41,97 @@ const WHY: Record<string, string> = {
   "no-ingredient": "No known ingredient",
 };
 
+const METHOD: Record<string, string> = {
+  brand: "brand table",
+  printed_name: "name printed on the box",
+  rxnav: "RxNorm (RxNav)",
+};
+
+/** A medicine box read by OCR (step 2.7): text read, brand, active ingredients, sources. */
+function BoxCard({
+  box,
+  added,
+  onAdd,
+}: {
+  box: BoxReading;
+  added: boolean;
+  onAdd: () => void;
+}) {
+  return (
+    <article className={`card pill-card${box.recognised ? "" : " pill-card-warn"}`} data-testid="box-card">
+      <header className="pill-card-head">
+        <span className="pill-number">
+          <Icon name="pill" size={16} />
+        </span>
+        <div>
+          <h3>{box.brand ?? (box.recognised ? "Medicine box" : "Box not recognised")}</h3>
+          <p className="muted">
+            Medicine box{box.brand_country ? ` · brand listed in ${box.brand_country}` : ""} ·
+            confidence {percent(box.confidence)}
+          </p>
+        </div>
+        <Badge tone="warn">{box.recognised ? "Check the box" : "Not recognised"}</Badge>
+      </header>
+      <p className="pill-note">
+        <Icon name="alert" size={16} /> Read from the printed text, a suggestion only: compare it
+        with the box and its leaflet.
+      </p>
+      {box.ingredients.length > 0 ? (
+        <ul className="m-0 grid list-none gap-2 p-0" aria-label="Active ingredients found">
+          {box.ingredients.map((item) => (
+            <li key={item.name} className="rounded-xl border border-line bg-surface-2 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="cell-title">{item.name}</span>
+                <span
+                  className="flex w-32 flex-none items-center gap-2 text-[0.88rem] font-semibold tabular-nums"
+                  title="OCR confidence x similarity of the words"
+                >
+                  <ProbBar value={item.confidence} />
+                  {percent(item.confidence)}
+                </span>
+              </div>
+              <p className="cell-sub m-0">
+                Read: “{item.matched_text}” · from the {METHOD[item.method] ?? item.method}
+                {item.in_interaction_table ? "" : " · not in the interaction table"}
+              </p>
+              <p className="cell-sub m-0">
+                Source:{" "}
+                <a href={item.url} target="_blank" rel="noreferrer">
+                  {item.source}
+                </a>{" "}
+                · {item.reference}
+              </p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted m-0">
+          No brand and no active ingredient of this database was read: nothing is suggested.
+        </p>
+      )}
+      <details className="text-sm">
+        <summary className="cursor-pointer font-semibold">Text read ({box.text.length} lines)</summary>
+        <p className="muted m-0 mt-2 whitespace-pre-line" data-testid="box-text">
+          {box.text.join("\n") || "no text"}
+        </p>
+      </details>
+      <p className="muted m-0 text-xs">RxNav fallback: {box.rxnav}</p>
+      {box.recognised && (
+        <div className="form-actions">
+          <button type="button" className="btn btn-primary" disabled={added} onClick={onAdd}>
+            {added ? "Added to my pills" : "Add to my pills"}
+          </button>
+        </div>
+      )}
+    </article>
+  );
+}
+
 /** A pill the user has confirmed (or picked by hand), ready for the interaction check. */
 interface Confirmed {
   key: string;
-  class_id: number;
+  kind: "pill" | "box";
+  class_id: number | null; // null for a medicine box: checked by its active ingredients
   name: string;
   generic_name: string;
   active_ingredients: string[];
@@ -719,7 +807,7 @@ function ResultStage({
           make it more certain.
         </p>
       )}
-      {!photo.gradcamUrl && result && (
+      {!photo.gradcamUrl && result && result.kind !== "box" && result.kind !== "unknown" && (
         <p className="m-0 text-sm text-muted" data-testid="gradcam-note">
           Grad-CAM is available only for the demo gallery photos: it needs the PyTorch model,
           so it is precomputed for them (the API runs ONNX models only).
@@ -727,10 +815,14 @@ function ResultStage({
       )}
       {result && (
         <>
-          <p className="m-0 text-sm text-muted">
-            {result.pills.length} pill(s) found · {result.image_width} × {result.image_height} px ·
-            boxes coloured by class, dashed below {percent(result.confirm_threshold)} (please
-            confirm)
+          <p className="m-0 text-sm text-muted" data-testid="scan-kind">
+            {result.kind === "box"
+              ? `Medicine box: printed text read${
+                  result.timings.ocr_ms != null ? ` in ${Math.round(result.timings.ocr_ms)} ms` : ""
+                }, no pill class is given to a box`
+              : result.kind === "unknown"
+                ? "Neither a pill nor a medicine box: nothing is identified"
+                : `${result.pills.length} pill(s) found · ${result.image_width} × ${result.image_height} px · boxes coloured by class, dashed below ${percent(result.confirm_threshold)} (please confirm)`}
           </p>
           {latency && <LatencyReadout latency={latency} />}
         </>
@@ -780,11 +872,30 @@ export default function ScanPage() {
       ...current.filter((item) => item.key !== key),
       {
         key,
+        kind: "pill",
         class_id: choice.class_id,
         name: choice.name,
         generic_name: choice.generic_name,
         active_ingredients: choice.active_ingredients,
         probability: Number.isNaN(choice.probability) ? null : choice.probability,
+      },
+    ]);
+    setReport(null);
+  };
+
+  const addBox = (box: BoxReading) => {
+    const key = `${photo?.url}#box`;
+    const names = box.ingredients.map((item) => item.name);
+    setMine((current) => [
+      ...current.filter((item) => item.key !== key),
+      {
+        key,
+        kind: "box",
+        class_id: null,
+        name: box.brand ?? names.join(" + "),
+        generic_name: "",
+        active_ingredients: names,
+        probability: box.confidence,
       },
     ]);
     setReport(null);
@@ -796,13 +907,20 @@ export default function ScanPage() {
   };
 
   // The same product confirmed twice (front and back of one pill) is checked once.
-  const classIds = [...new Set(mine.map((item) => item.class_id))];
+  const classIds = [
+    ...new Set(mine.flatMap((item) => (item.class_id === null ? [] : [item.class_id]))),
+  ];
+  // Medicine boxes are checked by the active ingredients read on them.
+  const boxIngredients = [
+    ...new Set(mine.filter((item) => item.kind === "box").flatMap((item) => item.active_ingredients)),
+  ];
+  const checkable = classIds.length + boxIngredients.length;
 
   const check = async () => {
     setChecking(true);
     setError(null);
     try {
-      setReport(await api.interactions(classIds));
+      setReport(await api.interactions(classIds, boxIngredients));
     } catch (failure) {
       setError(errorMessage(failure));
     } finally {
@@ -869,6 +987,13 @@ export default function ScanPage() {
           <ResultStage key={photo.url} photo={photo} result={result} scanning={scanning} latency={latency} />
           <div className="scan-pills">
             {result?.message && <Alert kind="info">{result.message}</Alert>}
+            {result?.kind === "box" && result.box && (
+              <BoxCard
+                box={result.box}
+                added={mine.some((item) => item.key === `${photo.url}#box`)}
+                onAdd={() => result.box && addBox(result.box)}
+              />
+            )}
             {result?.pills.map((pill, index) => (
               <PillChoice
                 key={`${photo.url}-${index}`}
@@ -887,7 +1012,8 @@ export default function ScanPage() {
         <header className="pill-card-head">
           <h2>My pills</h2>
           <span className="muted">
-            {mine.length} confirmed, {classIds.length} different
+            {mine.length} added · {classIds.length} different pill(s)
+            {boxIngredients.length ? ` · ${boxIngredients.length} ingredient(s) from boxes` : ""}
           </span>
         </header>
         {mine.length === 0 ? (
@@ -922,7 +1048,7 @@ export default function ScanPage() {
           <button
             type="button"
             className="btn btn-primary"
-            disabled={classIds.length < 2 || checking}
+            disabled={checkable < 2 || checking}
             onClick={check}
           >
             {checking && <span className="btn-spinner" aria-hidden="true" />}

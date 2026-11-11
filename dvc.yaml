@@ -147,6 +147,20 @@ stages:
       - src/data/prepare_detect_v2.py
     outs:
       - data/processed/c3pi/datasets_v2/detect
+  # Step 2.7 (docs/module1/boites.md, D108): ground truth of the medicine box photos
+  # (Italian-OTC-medicines, Hugging Face, Apache-2.0), brand and active ingredients taken from
+  # the metadata, scored against the OCR engines by `python -m src.models.ocr.evaluate`.
+  prepare_boxes:
+    cmd: python -m src.data.medicine_boxes prepare
+    deps:
+      - data/raw/medicine_boxes/italian_otc
+      - data/processed/pharma/interactions_with_any_drug.csv
+      - config/inn_aliases.csv
+      - config/brand_aliases.csv
+      - backend/app/boxes.py
+      - src/data/medicine_boxes.py
+    outs:
+      - data/processed/medicine_boxes
   train_detector:
     cmd: python -m src.models.train detect
     frozen: true

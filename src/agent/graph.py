@@ -89,6 +89,7 @@ class AgentState(TypedDict, total=False):
     language: str
     ingredients: list[str]
     pill_labels: list[str]
+    brands: list[dict[str, Any]]
     dose_question: bool
     tool_calls: list[dict[str, Any]]
     tool_results: list[dict[str, Any]]
@@ -124,6 +125,8 @@ Règles absolues :
 - N'écris JAMAIS qu'une association est « sûre » ou « sans danger ». S'il n'y a pas d'interaction
   dans les sources, écris : « aucune interaction connue dans cette base de données ».
 - Ne donne aucun conseil d'horaire ou d'espacement des prises sauf si une source le dit ; cite-la.
+- Si une marque est reconnue, commence par dire quel principe actif elle contient, en citant la
+  source de la table des marques.
 - 3 à 6 phrases courtes, sans titre ni liste : d'abord la réponse directe (par exemple
   la sévérité DDInter), puis ce que disent les notices ou les articles (mécanisme, effets,
   surveillance).""",
@@ -136,6 +139,8 @@ Absolute rules:
 - NEVER write that a combination is "safe". If the sources show no interaction, write:
   "no known interaction in this database".
 - Give no timing or spacing advice unless a source says it; cite it.
+- If a brand is recognised, first say which active ingredient it contains, citing the
+  brand-table source.
 - 3 to 6 short sentences, no heading, no list: first the direct answer (e.g. the DDInter
   severity), then what the labels or articles say (mechanism, effects, monitoring).""",
 }
@@ -196,6 +201,75 @@ def toxicity_sources(result: dict[str, Any]) -> list[dict[str, Any]]:
             }
         )
     return found
+
+
+def brand_sources(brands: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Each brand recognised in the question (brand table, step 2.7), as a citable source."""
+    found = []
+    for brand in brands:
+        ingredients = ", ".join(brand["ingredients"])
+        text = (
+            f"{brand['brand']} ({brand['country']}): active ingredient(s) {ingredients} "
+            f"(printed: {brand['printed_substances']}). {brand['reference']}."
+        )
+        found.append(
+            {
+                "chunk_id": f"brand:{brand['brand'].lower()}",
+                "doc_type": "brand",
+                "title": f"{brand['brand']} -> {ingredients}",
+                "section": "brand",
+                "url": brand["url"],
+                "source_name": brand["source"],
+                "date": "",
+                "license": "",
+                "text": text,
+                "snippet": text,
+            }
+        )
+    return found
+
+
+def _without_source_list(answer: str) -> str:
+    """The answer before the disclaimer, without the "Sources consultées" line that the
+    safety check adds to an answer citing nothing: the fixed sentences put first cite."""
+    body = answer.rpartition(DISCLAIMER)[0].strip()
+    return body.split("\n\nSources consultées :")[0].strip()
+
+
+def brand_summary(state: AgentState) -> tuple[str, list[int]]:
+    """One fixed sentence per recognised brand, citing its brand-table source: a 3B model
+    often names the ingredient without citing where the link comes from (step 2.7)."""
+    language = state.get("language", "fr")
+    sentences, cited = [], []
+    for source in state.get("sources", []):
+        if source.get("doc_type") != "brand" or "n" not in source:
+            continue
+        brand, _, ingredients = source["title"].partition(" -> ")
+        if language == "fr":
+            sentences.append(
+                f"{brand} contient : {ingredients} (table des marques) [{source['n']}]."
+            )
+        else:
+            sentences.append(f"{brand} contains: {ingredients} (brand table) [{source['n']}].")
+        cited.append(source["n"])
+    return " ".join(sentences), cited
+
+
+def interaction_summary(state: AgentState) -> tuple[str, list[int]]:
+    """One fixed sentence per DDInter interaction found, for an answer that cites none of
+    them: the answer then always says the interaction the source lists (step 2.7)."""
+    language = state.get("language", "fr")
+    sentences, cited = [], []
+    for source in state.get("sources", []):
+        if not str(source.get("chunk_id", "")).startswith("ddinter:") or "n" not in source:
+            continue
+        pair = source["title"].removeprefix("DDInter 2.0: ")
+        if language == "fr":
+            sentences.append(f"Interaction listée par DDInter 2.0 : {pair} [{source['n']}].")
+        else:
+            sentences.append(f"Interaction listed by DDInter 2.0: {pair} [{source['n']}].")
+        cited.append(source["n"])
+    return " ".join(sentences), cited
 
 
 def interaction_sources(result: dict[str, Any]) -> list[dict[str, Any]]:
@@ -328,6 +402,13 @@ class TujyaAgent:
         started = time.perf_counter()
         question = state["question"]
         found = self.toolbox.names().find(question)
+        # Brands ("Panadol", "Doliprane") -> their ingredients, from the brand table (2.7).
+        try:
+            brands = self.toolbox.find_brands(question)
+        except Exception:  # missing table or database: the question is still answered
+            brands = []
+        for brand in brands:
+            found += [i for i in brand["ingredients"] if i not in found]
         labels: list[str] = []
         pills = state.get("pills", [])
         if pills:
@@ -342,9 +423,23 @@ class TujyaAgent:
             "language": detect_language(question),
             "ingredients": found,
             "pill_labels": labels,
+            "brands": brands,
             "dose_question": is_dose_question(question),
             "timings": {"understand_ms": round((time.perf_counter() - started) * 1000, 1)},
         }
+
+    def _with_brand_ingredients(self, drugs: list[str], ingredients: list[str]) -> list[str]:
+        """The planner may pass a brand ("Augmentin"): it becomes its ingredients, and the
+        ingredients already understood are added, so the check covers the brand (step 2.7)."""
+        found: list[str] = []
+        for drug in drugs:
+            try:
+                brands = self.toolbox.find_brands(drug)
+            except Exception:  # no brand table: the name is kept as given
+                brands = []
+            names = [i for b in brands for i in b["ingredients"]] or [drug]
+            found += [n for n in names if n not in found]
+        return found + [i for i in ingredients if i not in found]
 
     async def _planned_calls(self, state: AgentState) -> list[dict[str, Any]]:
         ingredients = state.get("ingredients", [])
@@ -363,6 +458,11 @@ class TujyaAgent:
             for c in calls
             if c.get("name") in self.tools
         ][:MAX_TOOL_CALLS]
+        for call in planned:
+            if call["name"] == "check_interaction":
+                call["args"]["drugs"] = self._with_brand_ingredients(
+                    list(call["args"].get("drugs") or []), ingredients
+                )
         names = {c["name"] for c in planned}
         if len(ingredients) >= 2 and "check_interaction" not in names:
             planned.append(
@@ -424,6 +524,7 @@ class TujyaAgent:
                     seen.add(item["chunk_id"])
                     sources.append(item)
 
+        add(brand_sources(state.get("brands", [])), 3)
         results = state.get("tool_results", [])
         for entry in results:
             if entry["name"] == "check_interaction" and entry["result"]:
@@ -452,10 +553,13 @@ class TujyaAgent:
                 f"{', ' + source['date'] if source.get('date') else ''})\n{text[:SOURCE_CHARS]}"
             )
         pills = state.get("pill_labels", [])
+        brands = [f"{b['brand']} = {', '.join(b['ingredients'])}" for b in state.get("brands", [])]
         context = "\n\n".join(blocks)
         user = (
-            f"Comprimés confirmés : {'; '.join(pills)}\n" if pills else ""
-        ) + f"Sources :\n{context}\n\nQuestion : {state['question']}"
+            (f"Comprimés confirmés : {'; '.join(pills)}\n" if pills else "")
+            + (f"Marques reconnues : {'; '.join(brands)}\n" if brands else "")
+            + f"Sources :\n{context}\n\nQuestion : {state['question']}"
+        )
         return [SystemMessage(ANSWER_PROMPT[language]), HumanMessage(user)]
 
     async def answer(self, state: AgentState) -> AgentState:
@@ -520,6 +624,22 @@ class TujyaAgent:
         )
         checked.violations += ["citation_added_by_meaning"] * semantic
         checked.violations += ["toxicity_sentence_replaced"] * replaced
+        listed, listed_cited = interaction_summary(state)
+        if found and listed and not set(listed_cited) & set(checked.cited):
+            refused = checked.action == "refused"
+            body = "" if refused else _without_source_list(checked.answer)
+            checked.action = "rewritten"
+            checked.violations.append("interaction_sentence_added")
+            checked.answer = f"{listed} {body}".strip() + f"\n\n{DISCLAIMER}"
+            checked.cited = sorted(set(checked.cited) | set(listed_cited))
+        brands, brand_cited = brand_summary(state)
+        if brands and not set(brand_cited) & set(checked.cited):
+            refused = checked.action == "refused"
+            body = "" if refused else _without_source_list(checked.answer)
+            checked.action = "rewritten" if refused else checked.action
+            checked.violations.append("brand_source_added")
+            checked.answer = f"{brands} {body}".strip() + f"\n\n{DISCLAIMER}"
+            checked.cited = sorted(set(checked.cited) | set(brand_cited))
         summary, tox_cited = toxicity_summary(state)
         if summary:
             # Dose questions never get here; "refused" means no LLM sentence survived.

@@ -81,6 +81,8 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Panneau de chat avec réponse diffusée, citations cliquables, appels d'outils (page Scanner)
 - [x] Avertissement sur la page Scanner, chaque rapport d'interactions, le panneau de chat et chaque réponse
 
+- [x] Boîtes de médicaments (étape 2.7, remarque 18). Fait : OCR RapidOCR (champion, `ingredient_recall` 0,767) contre EasyOCR (0,480) sur 713 boîtes Italian-OTC-medicines, table des marques sourcée (BDPM, emc), DCI imprimée, RxNav en secours, refus hors distribution (98 % des comprimés gardés, 79 % des images hors sujet refusées), `/api/scan` avec `kind` et `box`, carte « boîte » dans le Scanner, marques dans le chat (`lookup_brand`), 8 questions de marques dans le benchmark ([boites.md](module1/boites.md), D108-D112). Validé sur 11 vraies boîtes sous licence libre de Wikimedia Commons (`--set web`, D115) : 3 Panadol sur 3 -> paracétamol avec sa source emc, 11 principes actifs justes sur 11, aucun faux. Plus tard : photos de l'utilisateur comme second jeu de test (`--set user`) ; Roboflow (compte)
+
 ## 7. Livraison
 - [x] Docker Compose : postgres + pgvector, mlflow ([docs/infra.md](infra.md))
 - [x] Docker Compose : backend, frontend (nginx), chargeur ponctuel ; une seule commande
