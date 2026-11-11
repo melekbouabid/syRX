@@ -58,6 +58,7 @@ def test_brand_read() -> None:
     assert ev.brand_read(lines, "efferalgan")
     assert ev.brand_read([OcrLine("BRUFENANALGESICO", 0.9, (0, 0, 1, 1))], "brufen")  # glued
     assert not ev.brand_read(lines, "tachipirina")
+    assert ev.brand_read(lines, "Efferalgan")  # as written in a labels.csv
 
 
 def test_samples_of_the_user_set_are_empty_until_the_photos_exist(tmp_path: Path) -> None:

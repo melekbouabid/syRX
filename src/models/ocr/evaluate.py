@@ -17,7 +17,7 @@ Three sets (docs/module1/boites.md, decisions D108-D111):
 - `off_topic`: 19 photos that are neither (data/raw/off_topic, CC0 / public domain).
 
 `--set web` replaces the Italian boxes by real box photos under a free licence from
-Wikimedia Commons (data/raw/medicine_boxes/web_commons, Panadol among them, D113) and
+Wikimedia Commons (data/raw/medicine_boxes/web_commons, Panadol among them, D115) and
 `--set user` by the owner's photos; both read a labels.csv (image, brand, ingredients).
 
 Every photo goes through the API's own code (app.boxes: OCR, TextMatcher with the brand
@@ -150,7 +150,7 @@ def user_samples(folder: Path = USER_DIR) -> list[Sample]:
 
 
 def web_samples(folder: Path = WEB_DIR) -> list[Sample]:
-    """Real box photos under a free licence from Wikimedia Commons (D113)."""
+    """Real box photos under a free licence from Wikimedia Commons (D115)."""
     return labelled_samples(folder, "web")
 
 
@@ -186,6 +186,7 @@ def matcher() -> TextMatcher:
 
 def brand_read(lines: Sequence[OcrLine], brand: str) -> bool:
     """The brand is among the words read (same similarity rule as the brand table)."""
+    brand = " ".join(words(brand))  # labels.csv writes "Panadol", the words read are lower case
     choices = Choices([brand])
     for line in lines:
         found = words(line.text)
