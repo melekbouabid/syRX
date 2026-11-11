@@ -98,6 +98,17 @@ principe actif et interaction DDInter cités) : `cd frontend && CHAT=1 node
 scripts/box-screenshots.mjs` (photos DVC de `data/raw/medicine_boxes` ; `CHAT=1` demande Ollama). Méthode et résultats :
 [module1/boites.md](module1/boites.md).
 
+## Page Documents (module 2, étape 3.1)
+
+Les documents que l'assistant cherche et cite, tels qu'ils sont dans la base vectorielle
+Qdrant ([`DocumentsPage.tsx`](../frontend/src/pages/DocumentsPage.tsx), `GET /api/documents`) :
+carte de l'index (collection, documents, points, modèle d'embeddings, date d'indexation,
+champs indexés, lien vers le tableau de bord de Qdrant), liste paginée avec filtres (mots du
+titre, principe actif, type, source) et, au clic, les métadonnées et les chunks d'un document
+avec leur SHA-256. Captures 27 à 29 : `cd frontend && node scripts/documents-screenshots.mjs`
+(`QDRANT=http://localhost:6333` pour le tableau de bord). Détails :
+[module2/rag.md](module2/rag.md#consulter-les-documents-indexés).
+
 ## Comptes
 
 Le premier démarrage crée deux comptes :

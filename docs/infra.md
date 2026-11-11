@@ -13,10 +13,11 @@ docker compose down                 # arrête ; les volumes sont gardés (down -
 
 | Service | Image | Port hôte (127.0.0.1 seulement) | Rôle |
 |---|---|---|---|
-| `postgres` | `pgvector/pgvector:pg16` | 5432 | volume `pgdata` ; base `tujya` (comptes, tables des médicaments, pgvector) et base `mlflow` |
+| `postgres` | `pgvector/pgvector:pg16` | 5432 | volume `pgdata` ; base `tujya` (comptes, tables des médicaments, ancien index pgvector `rag_chunks`) et base `mlflow` |
+| `qdrant` | `qdrant/qdrant:v1.20.0` | 6333 | base vectorielle du RAG (D113) : collection `tujya_chunks`, un point par chunk avec ses métadonnées en payload ; tableau de bord sur <http://localhost:6333/dashboard> ; volume `qdrant` ; télémétrie coupée |
 | `mlflow` | construite depuis [`infra/docker/mlflow/Dockerfile`](../infra/docker/mlflow/Dockerfile) (MLflow 3.17.2 + psycopg2) | 5000 | stockage du tracking dans PostgreSQL, artefacts dans le volume `mlartifacts`, Model Registry |
 | `pharma-init` | image du backend | aucun | ponctuel : `python -m app.pharma_loader` reconstruit les tables des médicaments depuis `config/` et `data/processed/pharma/`, puis s'arrête ; le backend l'attend |
-| `rag-init` | image du backend | aucun | ponctuel : `python -m src.rag.index --pull` télécharge les modèles Ollama s'ils manquent, puis indexe `data/processed/rag/corpus` dans la table `rag_chunks` (idempotent ; [rag.md](module2/rag.md)) ; le backend ne l'attend pas |
+| `rag-init` | image du backend | aucun | ponctuel : `python -m src.rag.index --pull` télécharge les modèles Ollama s'ils manquent, puis indexe `data/processed/rag/corpus` dans la collection Qdrant `tujya_chunks` (idempotent ; [rag.md](module2/rag.md)) ; le backend ne l'attend pas |
 | `backend` | construite depuis [`backend/Dockerfile`](../backend/Dockerfile) (Python 3.12, FastAPI, ONNX Runtime CPU, LangGraph) | 8000 | l'API et l'agent (`/api/chat`, parle à `ollama`) ; Swagger sur `/docs` |
 | `frontend` | construite depuis [`frontend/Dockerfile`](../frontend/Dockerfile) (build Node 22, nginx 1.27) | 8080 | le site React ; nginx transmet `/api`, `/docs`, `/openapi.json` à `backend` ([`nginx.conf`](../frontend/nginx.conf)) |
 | `ollama` | `ollama/ollama:0.40.12` | 11434 | LLM local (`qwen2.5:3b`) et embeddings (`bge-m3`) ; modèles dans le volume `ollama` ; GPU NVIDIA réservé (D57) |
