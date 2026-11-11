@@ -207,6 +207,12 @@ def test_clean_rewritten_query() -> None:
     assert clean('Query: "warfarin fluconazole bleeding"\nextra') == "warfarin fluconazole bleeding"
     assert clean("  \n search query: ibuprofen pregnancy ") == "ibuprofen pregnancy"
     assert clean("") == ""
+    glued = "what_are_the_contraindications_of_metformin?"
+    assert clean(glued) == "what are the contraindications of metformin"
+    assert clean("what-are-the-contraindications-of-amoxicillin") == (
+        "what are the contraindications of amoxicillin"
+    )
+    assert clean("co-trimoxazole warfarin bleeding") == "co-trimoxazole warfarin bleeding"
 
 
 def test_query_rewriter() -> None:

@@ -42,9 +42,15 @@ class QueryRewriter:
 
 
 def clean(text: str) -> str:
-    """First non-empty line, without a "Query:" prefix or surrounding quotes."""
+    """First non-empty line, without a "Query:" prefix or surrounding quotes. A small LLM
+    sometimes glues the words ("what_are_the_contraindications_of_metformin"): BM25 would
+    then see one unknown term, so underscores, and hyphens in a query without spaces,
+    become spaces."""
     lines = [line.strip() for line in text.strip().splitlines() if line.strip()]
     if not lines:
         return ""
     query = re.sub(r"^(search )?query\s*:\s*", "", lines[0], flags=re.IGNORECASE)
-    return query.strip().strip("\"'`").strip()
+    query = query.replace("_", " ")
+    if " " not in query.strip():
+        query = query.replace("-", " ")
+    return re.sub(r"\s+", " ", query).strip().strip("\"'`?").strip()
