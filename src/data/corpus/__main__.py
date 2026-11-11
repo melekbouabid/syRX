@@ -2,6 +2,9 @@
 
     ddinter        DDInter 2.0, all 14 ATC files, terms acknowledged for this academic
                    project (CC BY-NC-SA 4.0); the shared pipeline config keeps it opt-in
+    classes        config/splits/c3pi_v2/classes.csv -> config/pill_classes.csv, the classes the
+                   API serves (the 380 classes of C3PI v2 with their v2 ids, D119); the
+                   ingredient columns are left empty for `ingredients`
     ingredients    config/pill_classes.csv -> RxNav -> data/processed/pharma/pill_ingredients.csv,
                    and the ingredient columns of config/pill_classes.csv
     interactions   DDInter (run `tujya-data fetch --source ddinter` first) ->
@@ -70,6 +73,7 @@ def _paths(settings: Settings) -> dict[str, Path]:
     out = root / "data" / "processed" / "pharma"
     return {
         "classes": root / "config" / "pill_classes.csv",
+        "classes_v2": root / "config" / "splits" / "c3pi_v2" / "classes.csv",
         "aliases": root / "config" / "ingredient_aliases.csv",
         "ingredients": out / "pill_ingredients.csv",
         "ddinter": root / "data" / "interim" / "ddinter" / "interactions.parquet",
@@ -96,6 +100,25 @@ def update_class_file(path: Path, summary: dict[int, dict[str, str]]) -> None:
         writer.writeheader()
         for row in rows:
             writer.writerow({**row, **summary.get(int(row["class_id"]), empty)})
+
+
+def served_classes(source: Path, path: Path) -> int:
+    """Write the class table of the API from the v2 class list: same ids, same columns, plus
+    empty ingredient columns (filled by `ingredients`). Returns the number of classes."""
+    rows = _read_csv(source)
+    names = [c for c in rows[0] if c not in CLASS_COLUMNS] + CLASS_COLUMNS
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=names)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({**dict.fromkeys(CLASS_COLUMNS, ""), **row})
+    return len(rows)
+
+
+def run_classes(settings: Settings) -> None:
+    paths = _paths(settings)
+    count = served_classes(paths["classes_v2"], paths["classes"])
+    print(f"{count} classes written to {paths['classes']}; run `ingredients` next")
 
 
 async def run_ingredients(settings: Settings) -> None:
@@ -170,7 +193,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--set", action="append", default=[], metavar="KEY=VALUE")
     parser.add_argument(
         "command",
-        choices=["ddinter", "ingredients", "interactions", "labels", "pubmed", "corpus"],
+        choices=["ddinter", "classes", "ingredients", "interactions", "labels", "pubmed", "corpus"],
     )
     args = parser.parse_args(argv)
     overrides = {
@@ -181,6 +204,8 @@ def main(argv: list[str] | None = None) -> None:
     settings = load_settings(find_config(None) or PIPELINE_CONFIG, [*overrides, *args.set])
     if args.command == "ddinter":
         run_ddinter(settings)
+    elif args.command == "classes":
+        run_classes(settings)
     elif args.command == "ingredients":
         asyncio.run(run_ingredients(settings))
     elif args.command == "labels":

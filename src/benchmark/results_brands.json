@@ -1,0 +1,344 @@
+{
+ "questions": 8,
+ "model": "qwen2.5:3b",
+ "without": {
+  "metrics": {
+   "brand_found": 0.0,
+   "ingredients_found": 0.0,
+   "interaction_tool": 0.125,
+   "interaction_found": 0.0,
+   "brand_cited": 0.0,
+   "cited": 0.875,
+   "disclaimer": 1.0
+  },
+  "per_question": [
+   {
+    "id": "brand-panadol-warfarin-fr",
+    "brand_found": false,
+    "ingredients_found": false,
+    "interaction_tool": false,
+    "interaction_found": false,
+    "brand_cited": false,
+    "cited": true,
+    "disclaimer": true,
+    "safety_action": "rewritten",
+    "ingredients": [
+     "warfarin"
+    ],
+    "tools": [
+     "check_interaction",
+     "search_documents"
+    ],
+    "seconds": 8.3
+   },
+   {
+    "id": "brand-doliprane-warfarin-en",
+    "brand_found": false,
+    "ingredients_found": false,
+    "interaction_tool": false,
+    "interaction_found": false,
+    "brand_cited": false,
+    "cited": true,
+    "disclaimer": true,
+    "safety_action": "ok",
+    "ingredients": [
+     "warfarin"
+    ],
+    "tools": [
+     "check_interaction",
+     "search_documents"
+    ],
+    "seconds": 2.2
+   },
+   {
+    "id": "brand-nurofen-warfarin-fr",
+    "brand_found": false,
+    "ingredients_found": false,
+    "interaction_tool": false,
+    "interaction_found": false,
+    "brand_cited": false,
+    "cited": true,
+    "disclaimer": true,
+    "safety_action": "ok",
+    "ingredients": [
+     "warfarin"
+    ],
+    "tools": [
+     "check_interaction",
+     "search_documents"
+    ],
+    "seconds": 3.2
+   },
+   {
+    "id": "brand-advil-lisinopril-en",
+    "brand_found": false,
+    "ingredients_found": false,
+    "interaction_tool": false,
+    "interaction_found": false,
+    "brand_cited": false,
+    "cited": true,
+    "disclaimer": true,
+    "safety_action": "ok",
+    "ingredients": [
+     "lisinopril"
+    ],
+    "tools": [
+     "check_interaction",
+     "search_documents"
+    ],
+    "seconds": 2.9
+   },
+   {
+    "id": "brand-voltarene-warfarin-fr",
+    "brand_found": false,
+    "ingredients_found": false,
+    "interaction_tool": true,
+    "interaction_found": false,
+    "brand_cited": false,
+    "cited": true,
+    "disclaimer": true,
+    "safety_action": "ok",
+    "ingredients": [
+     "warfarin"
+    ],
+    "tools": [
+     "check_interaction",
+     "search_documents"
+    ],
+    "seconds": 2.2
+   },
+   {
+    "id": "brand-augmentin-warfarin-en",
+    "brand_found": false,
+    "ingredients_found": false,
+    "interaction_tool": false,
+    "interaction_found": false,
+    "brand_cited": false,
+    "cited": true,
+    "disclaimer": true,
+    "safety_action": "rewritten",
+    "ingredients": [
+     "warfarin"
+    ],
+    "tools": [
+     "check_interaction",
+     "search_documents"
+    ],
+    "seconds": 1.3
+   },
+   {
+    "id": "brand-ixprim-sertraline-fr",
+    "brand_found": false,
+    "ingredients_found": false,
+    "interaction_tool": false,
+    "interaction_found": false,
+    "brand_cited": false,
+    "cited": false,
+    "disclaimer": true,
+    "safety_action": "refused",
+    "ingredients": [
+     "sertraline"
+    ],
+    "tools": [
+     "check_interaction",
+     "search_documents"
+    ],
+    "seconds": 0.8
+   },
+   {
+    "id": "brand-efferalgan-warfarin-fr",
+    "brand_found": false,
+    "ingredients_found": false,
+    "interaction_tool": false,
+    "interaction_found": false,
+    "brand_cited": false,
+    "cited": true,
+    "disclaimer": true,
+    "safety_action": "ok",
+    "ingredients": [
+     "warfarin"
+    ],
+    "tools": [
+     "check_interaction",
+     "search_documents"
+    ],
+    "seconds": 3.6
+   }
+  ]
+ },
+ "with": {
+  "metrics": {
+   "brand_found": 1.0,
+   "ingredients_found": 1.0,
+   "interaction_tool": 1.0,
+   "interaction_found": 1.0,
+   "brand_cited": 1.0,
+   "cited": 1.0,
+   "disclaimer": 1.0
+  },
+  "per_question": [
+   {
+    "id": "brand-panadol-warfarin-fr",
+    "brand_found": true,
+    "ingredients_found": true,
+    "interaction_tool": true,
+    "interaction_found": true,
+    "brand_cited": true,
+    "cited": true,
+    "disclaimer": true,
+    "safety_action": "rewritten",
+    "ingredients": [
+     "warfarin",
+     "acetaminophen"
+    ],
+    "tools": [
+     "check_interaction",
+     "search_documents"
+    ],
+    "seconds": 8.5
+   },
+   {
+    "id": "brand-doliprane-warfarin-en",
+    "brand_found": true,
+    "ingredients_found": true,
+    "interaction_tool": true,
+    "interaction_found": true,
+    "brand_cited": true,
+    "cited": true,
+    "disclaimer": true,
+    "safety_action": "rewritten",
+    "ingredients": [
+     "warfarin",
+     "acetaminophen"
+    ],
+    "tools": [
+     "check_interaction",
+     "search_documents"
+    ],
+    "seconds": 1.7
+   },
+   {
+    "id": "brand-nurofen-warfarin-fr",
+    "brand_found": true,
+    "ingredients_found": true,
+    "interaction_tool": true,
+    "interaction_found": true,
+    "brand_cited": true,
+    "cited": true,
+    "disclaimer": true,
+    "safety_action": "ok",
+    "ingredients": [
+     "warfarin",
+     "ibuprofen"
+    ],
+    "tools": [
+     "check_interaction",
+     "search_documents"
+    ],
+    "seconds": 2.5
+   },
+   {
+    "id": "brand-advil-lisinopril-en",
+    "brand_found": true,
+    "ingredients_found": true,
+    "interaction_tool": true,
+    "interaction_found": true,
+    "brand_cited": true,
+    "cited": true,
+    "disclaimer": true,
+    "safety_action": "ok",
+    "ingredients": [
+     "lisinopril",
+     "ibuprofen"
+    ],
+    "tools": [
+     "check_interaction",
+     "search_documents"
+    ],
+    "seconds": 7.0
+   },
+   {
+    "id": "brand-voltarene-warfarin-fr",
+    "brand_found": true,
+    "ingredients_found": true,
+    "interaction_tool": true,
+    "interaction_found": true,
+    "brand_cited": true,
+    "cited": true,
+    "disclaimer": true,
+    "safety_action": "ok",
+    "ingredients": [
+     "warfarin",
+     "diclofenac"
+    ],
+    "tools": [
+     "check_interaction",
+     "search_documents"
+    ],
+    "seconds": 2.0
+   },
+   {
+    "id": "brand-augmentin-warfarin-en",
+    "brand_found": true,
+    "ingredients_found": true,
+    "interaction_tool": true,
+    "interaction_found": true,
+    "brand_cited": true,
+    "cited": true,
+    "disclaimer": true,
+    "safety_action": "rewritten",
+    "ingredients": [
+     "warfarin",
+     "amoxicillin",
+     "clavulanic acid"
+    ],
+    "tools": [
+     "check_interaction",
+     "search_documents"
+    ],
+    "seconds": 2.5
+   },
+   {
+    "id": "brand-ixprim-sertraline-fr",
+    "brand_found": true,
+    "ingredients_found": true,
+    "interaction_tool": true,
+    "interaction_found": true,
+    "brand_cited": true,
+    "cited": true,
+    "disclaimer": true,
+    "safety_action": "ok",
+    "ingredients": [
+     "sertraline",
+     "tramadol",
+     "acetaminophen"
+    ],
+    "tools": [
+     "check_interaction",
+     "search_documents"
+    ],
+    "seconds": 1.9
+   },
+   {
+    "id": "brand-efferalgan-warfarin-fr",
+    "brand_found": true,
+    "ingredients_found": true,
+    "interaction_tool": true,
+    "interaction_found": true,
+    "brand_cited": true,
+    "cited": true,
+    "disclaimer": true,
+    "safety_action": "ok",
+    "ingredients": [
+     "warfarin",
+     "acetaminophen"
+    ],
+    "tools": [
+     "check_interaction",
+     "search_documents"
+    ],
+    "seconds": 4.1
+   }
+  ]
+ }
+}

@@ -1,15 +1,17 @@
-"""Demo gallery: a few C3PI test-split photos, so the scan can be shown without real pills.
+"""Demo gallery: a few C3PI test photos, so the scan can be shown without real pills.
 
-The list is `config/demo_gallery.csv` (chosen by hand, decision D52). A photo is served only
-if `config/splits/selected_images.csv` puts it in the **test** split (never seen in
-training) and the file exists under the C3PI image folder; nothing else on disk can be read
-through these routes. Read only; sign-in required like the scan.
+Which photos may be shown is decided by app/gallery.py: only photos that no served model saw
+in training (v2 test split for the detector, not in the v1 train or val split for the
+classifier; decisions D52 and D105). Nothing else on disk can be read through these routes.
+Read only; sign-in required like the scan.
+
+Grad-CAM: `GET /api/demo/images/{id}/gradcam` serves the picture precomputed for that photo
+with the PyTorch weights of the served classifier (`python -m src.models.gradcam_gallery`,
+decision D104); the API itself runs ONNX models only, without PyTorch.
 """
 
 from __future__ import annotations
 
-import csv
-from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
@@ -19,6 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import FileResponse
 
 from app.deps import PharmaSession, SettingsDep, get_current_user
+from app.gallery import DemoPhoto, load_gallery
 from app.medicines import PharmaUnavailable, pill_infos
 from app.schemas import DemoGallery, DemoImage
 
@@ -28,36 +31,14 @@ THUMB_WIDTH = 360
 CACHE = "private, max-age=3600"
 
 
-@dataclass(frozen=True)
-class DemoPhoto:
-    file: Path
-    class_id: int
-    why: str
-
-
-def _gallery(gallery_file: Path, split_file: Path, images_dir: Path) -> list[DemoPhoto]:
-    if not gallery_file.is_file() or not split_file.is_file():
-        return []
-    with split_file.open(newline="", encoding="utf-8") as handle:
-        test = {
-            row["path"]
-            for row in csv.DictReader(handle)
-            if row["split"] == "test" and row["image_type"] == "C3PI_Test"
-        }
-    photos = []
-    with gallery_file.open(newline="", encoding="utf-8") as handle:
-        for row in csv.DictReader(handle):
-            if row["path"] not in test:
-                continue
-            disc, _, name = row["path"].split("/")
-            file = images_dir / disc / name
-            if file.is_file():
-                photos.append(DemoPhoto(file, int(row["class_id"]), row.get("why", "")))
-    return photos
-
-
 def gallery(settings: SettingsDep) -> list[DemoPhoto]:
-    return _gallery(settings.demo_gallery_file, settings.demo_split_file, settings.demo_images_dir)
+    return load_gallery(
+        settings.demo_gallery_file,
+        settings.demo_split_file,
+        settings.demo_holdout_file,
+        settings.demo_images_dir,
+        settings.demo_gradcam_dir,
+    )
 
 
 @lru_cache(maxsize=32)
@@ -89,14 +70,24 @@ def list_images(settings: SettingsDep, db: PharmaSession) -> DemoGallery:
                 why=photo.why,
                 url=f"/api/demo/images/{index}",
                 thumbnail_url=f"/api/demo/images/{index}?thumbnail=true",
+                gradcam_url=(
+                    f"/api/demo/images/{index}/gradcam" if photo.gradcam.is_file() else None
+                ),
             )
             for index, photo in enumerate(photos)
         ],
         note=(
-            "Photos du split de test C3PI (NLM, ODbL, usage recherche) : le modèle ne les a "
-            "jamais vues pendant l'entraînement."
+            "Photos du split de test C3PI (NLM, ODbL, usage recherche) : ni le détecteur ni "
+            "le classifieur servis ne les ont vues pendant l'entraînement."
         ),
     )
+
+
+def _photo(image_id: int, settings: SettingsDep) -> DemoPhoto:
+    photos = gallery(settings)
+    if not 0 <= image_id < len(photos):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No such demo photo")
+    return photos[image_id]
 
 
 @router.get(
@@ -105,11 +96,29 @@ def list_images(settings: SettingsDep, db: PharmaSession) -> DemoGallery:
     responses={200: {"content": {"image/jpeg": {}}}, 404: {"description": "No such photo"}},
 )
 def read_image(image_id: int, settings: SettingsDep, thumbnail: bool = False) -> Response:
-    photos = gallery(settings)
-    if not 0 <= image_id < len(photos):
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "No such demo photo")
-    file = photos[image_id].file
+    file = _photo(image_id, settings).file
     if thumbnail:
         data = _thumbnail(file, file.stat().st_mtime)
         return Response(data, media_type="image/jpeg", headers={"Cache-Control": CACHE})
+    return FileResponse(file, media_type="image/jpeg", headers={"Cache-Control": CACHE})
+
+
+@router.get(
+    "/images/{image_id}/gradcam",
+    response_class=Response,
+    responses={
+        200: {"content": {"image/jpeg": {}}, "description": "Grad-CAM of each detected pill"},
+        404: {"description": "No such photo, or no Grad-CAM computed for it"},
+    },
+)
+def read_gradcam(image_id: int, settings: SettingsDep) -> Response:
+    """The photo with the Grad-CAM heat map of the classifier over each detected pill.
+
+    Precomputed offline with the PyTorch weights of the served classifier, for the top-1
+    class the API gives (decision D104). Same proportions as the photo, so the boxes of the scan
+    fit on it.
+    """
+    file = _photo(image_id, settings).gradcam
+    if not file.is_file():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No Grad-CAM for this photo")
     return FileResponse(file, media_type="image/jpeg", headers={"Cache-Control": CACHE})

@@ -8,7 +8,7 @@ import pandas as pd
 import respx
 
 from src.data.corpus import ingredients as ing
-from src.data.corpus.__main__ import update_class_file
+from src.data.corpus.__main__ import served_classes, update_class_file
 from src.data.corpus.interactions import (
     ddinter_names,
     filter_interactions,
@@ -118,6 +118,30 @@ def test_rows_round_trip_and_class_file_update(tmp_path: Path) -> None:
         "ingredient_method",
     ]
     assert table["active_ingredients"].tolist() == ["warfarin", ""]
+
+
+def test_served_classes_keep_the_v2_ids_and_columns(tmp_path: Path) -> None:
+    v2 = tmp_path / "classes.csv"
+    v2.write_text(
+        "class_id,class_key,name,in_v1,n_consumer\n0,k0,A,True,10\n1,k1,B,False,3\n",
+        encoding="utf-8",
+    )
+    served = tmp_path / "pill_classes.csv"
+    assert served_classes(v2, served) == 2
+    table = pd.read_csv(served, dtype="string", keep_default_na=False)
+    assert list(table.columns) == [
+        "class_id",
+        "class_key",
+        "name",
+        "in_v1",
+        "n_consumer",
+        "rxcui",
+        "active_ingredients",
+        "ingredient_rxcuis",
+        "ingredient_method",
+    ]
+    assert table["class_key"].tolist() == ["k0", "k1"]
+    assert table["active_ingredients"].tolist() == ["", ""]  # never guessed, filled by RxNav
 
 
 def _ddinter() -> pd.DataFrame:
