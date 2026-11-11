@@ -67,6 +67,14 @@ TIMING = re.compile(
     r"|\b(?:before|after|with) (?:a )?meals?\b|\bat bedtime\b|\bon an empty stomach\b",
     re.IGNORECASE,
 )
+# Checked on folded text, only when check_interaction found an interaction: a sentence that
+# denies it contradicts the DDInter row ("n'est pas connue pour interferer", "no known
+# interaction", "does not interact").
+DENIES_INTERACTION = re.compile(
+    r"\b(?:aucune?|pas|no|not|never|jamais|ni)\b[^.;]{0,30}?\b(?:interact|interag|interfer)"
+    r"|\binterag\w*\s+pas\b|\bsans interaction\b|\bwithout (?:any )?interaction\b",
+    re.IGNORECASE,
+)
 DOSE_QUESTION = re.compile(
     r"\bdoses?\b|\bposologie\b|\bdosage\b|\bcombien de (?:mg|milligrammes?|comprimes?|gelules?)\b"
     r"|\bquelle quantite\b|\bhow much\b|\bhow many (?:mg|milligrams?|tablets?|pills?)\b",
@@ -156,6 +164,8 @@ def check_answer(
     for sentence in split_sentences(text.replace(DISCLAIMER, "")):
         sentence = CROSS_REFERENCE.sub("", sentence).strip()
         problems = sentence_problems(sentence)
+        if interaction_found and DENIES_INTERACTION.search(fold(sentence)):
+            problems.append("denies_found_interaction")
         if problems:
             violations += problems
             removed += 1

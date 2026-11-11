@@ -15,3 +15,9 @@ optuna==5.0.0
 nbformat>=5.10
 nbclient>=0.10
 ipykernel>=6.29
+# Medicine boxes (step 2.7, src/models/ocr): the two OCR engines compared, fuzzy matching,
+# scikit-image for the out-of-distribution samples (data/raw/off_topic).
+rapidocr==3.10.0
+easyocr==1.7.2
+rapidfuzz==3.14.6
+scikit-image>=0.24

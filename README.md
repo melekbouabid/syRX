@@ -25,7 +25,7 @@ Projet étudiant solo, évalué dans deux modules : **Industrialisation Vision &
 | Documentation | [docs/module1/](docs/module1/README.md) | [docs/module2/](docs/module2/README.md) |
 | Exigences → fichiers | [README du module 1](docs/module1/README.md#exigences-du-module-et-fichiers-correspondants) | [README du module 2](docs/module2/README.md#exigences-du-module-et-fichiers-correspondants) |
 | Rapport technique | [PDF](docs/module1/rapport_module1_vision_mlops.pdf) · [Markdown](docs/module1/rapport_module1_vision_mlops.md) | [PDF](docs/module2/rapport_module2_ai_engineering.pdf) · [Markdown](docs/module2/rapport_module2_ai_engineering.md) |
-| Contenu | entraînement YOLO (détection + identification), MLflow, ONNX, chaîne de scan servie | corpus, RAG pgvector, agent LangGraph, outils et MCP, benchmark |
+| Contenu | entraînement YOLO (détection + identification), MLflow, ONNX, chaîne de scan servie | corpus, RAG Qdrant (page Documents), agent LangGraph, outils et MCP, benchmark |
 | Évaluation | démonstration technique en direct | dépôt et commits, rapport, démonstration |
 
 L'application web commune ([backend/](backend/), [frontend/](frontend/)) est décrite dans
@@ -41,8 +41,9 @@ flowchart LR
   BE --> M2["Module 2<br/>agent LangGraph + RAG"]
   MCP["Module 2<br/>serveur MCP"] --> M2
   M2 --> OL["Ollama<br/>qwen2.5:3b, bge-m3"]
-  M2 --> PG[("PostgreSQL<br/>+ pgvector")]
-  BE --> PG
+  M2 --> QD[("Qdrant<br/>chunks + métadonnées")]
+  BE --> QD
+  BE --> PG[("PostgreSQL<br/>comptes, médicaments")]
   TR["Module 1<br/>src/data, src/models : YOLO11"] --> MLF["MLflow<br/>Model Registry"]
   MLF -- "ONNX" --> M1
   D["data/raw, data/processed (DVC)"] --> TR
@@ -85,7 +86,7 @@ docker compose up -d --build   # toute l'application, depuis la racine du dépô
 | `admin@gmail.com` | `admin` | administration (à changer avant tout autre usage) |
 
 Au premier démarrage, `rag-init` télécharge les modèles Ollama puis indexe le corpus dans
-pgvector (quelques minutes) ; scan et interactions marchent sans attendre. Sans GPU :
+Qdrant (quelques minutes ; tableau de bord <http://localhost:6333/dashboard>) ; scan et interactions marchent sans attendre. Sans GPU :
 `docker compose -f docker-compose.yml -f infra/docker/ollama/cpu.yml up -d`. Arrêt :
 `docker compose down` (garde les volumes). Développement sans Docker : [docs/app.md](docs/app.md) ;
 script de la soutenance : [docs/demo.md](docs/demo.md).
@@ -102,7 +103,9 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | Détection des comprimés avec YOLOv8/v11 | ✅ | [src/models/](src/models/) (YOLO11s, champion de l'étape 2.2 ; baseline YOLO11n) |
 | Identification de chaque comprimé par transfer learning | ✅ | [src/models/](src/models/) (YOLO11s-cls) |
 | Backend FastAPI asynchrone, schémas Pydantic, Swagger sur `/docs` | ✅ | [backend/](backend/), [backend/app/inference.py](backend/app/inference.py) ; endpoints du guide `GET /health`, `GET /model/metadata`, `POST /predict`, `POST /predict/visualize` (400 / 503) : [backend/app/routers/vision.py](backend/app/routers/vision.py), [docs/api.md](docs/api.md#endpoints-du-guide-du-module-1-sans-compte) |
-| Frontend React : upload, webcam, prédictions et boîtes | ✅ | [frontend/](frontend/) |
+| Frontend React du guide : framework CSS (Tailwind), glisser-déposer, galerie d'exemples du split de test, webcam en inférence continue, barres de probabilité animées, boîtes colorées par classe, latence client et serveur (ms), modèle champion affiché | ✅ | [frontend/src/pages/ScanPage.tsx](frontend/src/pages/ScanPage.tsx), [services/api.ts](frontend/src/services/api.ts), [docs/app.md](docs/app.md#page-scanner-guide-du-module-1-étape-26) (captures 01 à 07, 18 à 21) |
+| Grad-CAM (explicabilité du classifieur) | ✅ | précalculé avec les poids PyTorch du classifieur servi pour la galerie de démo, affiché dans le Scanner : [src/utils/gradcam.py](src/utils/gradcam.py), [src/models/gradcam_gallery.py](src/models/gradcam_gallery.py) (étape DVC `gradcam_gallery`), [docs/api.md](docs/api.md#galerie-de-démo-et-grad-cam) (D104) |
+| Boîtes de médicaments (remarque 18 : Panadol...) : OCR, table des marques sourcée, refus hors distribution, comparaison de moteurs OCR dans MLflow | ✅ | [backend/app/boxes.py](backend/app/boxes.py), [src/models/ocr/](src/models/ocr/), [config/brand_aliases.csv](config/brand_aliases.csv), [docs/module1/boites.md](docs/module1/boites.md) (captures 22 à 26, D108-D112, D115) ; validé sur 11 vraies boîtes sous licence libre (Wikimedia Commons) : 3 Panadol sur 3 -> paracétamol avec sa source, aucun principe actif faux |
 | DVC (versionnement des données) | ✅ | [dvc.yaml](dvc.yaml) (données, puis `train_detector`, `train_classifier`, `export_onnx`, `evaluate`), [params.yaml](params.yaml), [docs/infra.md](docs/infra.md) |
 | Plus de données et Big Data avec PySpark (demande du professeur) | ✅ | [src/data/spark/](src/data/spark/), cluster Spark de [docker-compose.yml](docker-compose.yml), [docs/module1/big_data.md](docs/module1/big_data.md) (data card) |
 | Comparaison de détecteurs (YOLOv8n/s, YOLO11s, YOLOv10n, Faster R-CNN) et recherche d'hyperparamètres Optuna, une branche par modèle | ✅ | branches `experiment/detector-*`, 8 à 12 essais Optuna par modèle (runs enfants MLflow), tableau et figure précision / latence / taille : [docs/module1/kaggle_detecteurs.md](docs/module1/kaggle_detecteurs.md) (YOLO11s champion, YOLOv10n challenger, D98) |
@@ -113,7 +116,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | Optimisation : quantification FP16 / INT8, comparaison précision / latence / taille | ✅ | [src/models/quantize.py](src/models/quantize.py), [src/models/optimize.py](src/models/optimize.py), [docs/module1/optimisation_onnx.md](docs/module1/optimisation_onnx.md) (détecteur YOLO11s et classifieur servis en FP32 : le FP16 n'est pas assez plus rapide sur ce CPU) |
 | Docker Compose | ✅ | [docker-compose.yml](docker-compose.yml) |
 | Git avancé : branches, tags annotés, hooks (secrets, messages de commit) | ✅ | [docs/git_workflow.md](docs/git_workflow.md), [tools/hooks/](tools/hooks/) |
-| GitHub Actions CI/CD | ✅ | [ci-tests.yml](.github/workflows/ci-tests.yml) (flake8, black, ESLint, pytest, build), [docker-build.yml](.github/workflows/docker-build.yml) (images multi-stage + test de fumée), [docs/cd.md](docs/cd.md) |
+| GitHub Actions CI/CD | ✅ | [ci-tests.yml](.github/workflows/ci-tests.yml) (flake8, black, ESLint, pytest, Vitest, build), [docker-build.yml](.github/workflows/docker-build.yml) (images multi-stage + test de fumée), [docs/cd.md](docs/cd.md) |
 | Soutenance pratique (démonstration technique en direct) | ⬜ | [docs/demo.md](docs/demo.md) |
 
 ### Module 2 : AI Engineering
@@ -121,6 +124,8 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | Exigence | État | Où |
 |---|:---:|---|
 | RAG avec gestion des documents, métadonnées, citations, documentation | ✅ | [src/data/corpus/](src/data/corpus/), [src/rag/](src/rag/), [docs/module2/rag.md](docs/module2/rag.md) |
+| Recherche avancée : BM25 sparse et hybride dans Qdrant, reranker cross-encoder (bge-reranker-base), réécriture de requête, filtres de métadonnées, comparés dans le benchmark | ✅ | [src/rag/](src/rag/) (sparse.py, rerank.py, rewrite.py), [docs/module2/benchmark.md](docs/module2/benchmark.md#recherche-avancée-étape-32) (hybride + réécriture + reranker : Recall@5 0,965, MRR 0,889 ; D116-D118) |
+| Base vectorielle consultable : Qdrant (tableau de bord), page « Documents » et `GET /api/documents` (documents indexés, métadonnées, chunks) | ✅ | [src/rag/qdrant_store.py](src/rag/qdrant_store.py), [src/rag/documents.py](src/rag/documents.py), [backend/app/routers/documents.py](backend/app/routers/documents.py), [DocumentsPage.tsx](frontend/src/pages/DocumentsPage.tsx), [docs/module2/rag.md](docs/module2/rag.md#consulter-les-documents-indexés) (captures 27 à 29, D113-D114) |
 | Tool calling / MCP | ✅ | [src/agent/tools.py](src/agent/tools.py), [src/mcp_server/](src/mcp_server/) |
 | LangChain et/ou LangGraph | ✅ | [src/agent/graph.py](src/agent/graph.py) |
 | Benchmark de la récupération et de la génération | ✅ | [src/benchmark/](src/benchmark/) |
@@ -140,7 +145,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 
 | RAG (88 questions FR/EN, MLflow `tujya-rag`) | Résultat |
 |---|---:|
-| Récupération dense bge-m3 + filtre : Recall@5 / MRR | 0,928 / 0,852 |
+| Récupération dense bge-m3 + filtre : Recall@5 / MRR (83 questions ; identique sur Qdrant et pgvector) | 0,928 / 0,852 |
 | Phrases citées soutenues par leur source (juge local) | 94,0 % |
 | Doses chiffrées / « sûr » dans les réponses ; questions de dose refusées | 0 / 0 ; 2/2 |
 | RAGAS : fidélité / précision du contexte | 0,979 / 0,809 |
@@ -159,7 +164,7 @@ src/                      code des deux modules (paquet Python `src`)
   data/                   C3PI (index, téléchargement, boîtes automatiques, jeux YOLO), corpus RAG,
                           pipeline de collecte polie (tujya_data : DDInter, PubMed, openFDA)
   models/                 entraînement, évaluation, export ONNX, publication ; toxicity/ (bonus Tox21)
-  rag/  agent/            récupération (pgvector, dense + BM25) ; agent LangGraph, outils, sécurité
+  rag/  agent/            récupération (Qdrant, dense + BM25), catalogue des documents ; agent LangGraph, outils, sécurité
   mcp_server/  benchmark/ serveur MCP ; benchmark de la récupération et de la génération
   utils/                  utilitaires partagés
 backend/                  API FastAPI : Dockerfile, requirements.txt, app/ (main, schemas, inference, routers), tests/
@@ -185,7 +190,7 @@ ruff.toml                 règles de lint communes à tout le code Python
 |---|---|
 | Vision | Ultralytics YOLO11 (détection, classification), PyTorch (CUDA), OpenCV, ONNX, ONNX Runtime |
 | MLOps | MLflow 3.17 (tracking, Model Registry), DVC 3.67 (remote local), Docker Compose, GitHub Actions |
-| LLM et RAG | LangGraph, LangChain, Ollama (qwen2.5:3b, bge-m3), PostgreSQL 16 + pgvector, BM25, MCP (SDK officiel), RAGAS |
+| LLM et RAG | LangGraph, LangChain, Ollama (qwen2.5:3b, bge-m3), Qdrant 1.20, PostgreSQL 16 (+ pgvector, ancien index), BM25, MCP (SDK officiel), RAGAS |
 | Application | FastAPI, Pydantic, SQLAlchemy, React 19, Vite, TypeScript, nginx, Playwright (captures) |
 | Données | NLM C3PI, RxNav, DDInter 2, openFDA, PubMed, Tox21 |
 | Qualité | pytest (plus de 300 tests), ruff, mypy, ESLint, pre-commit (hooks de secrets et de messages de commit) |

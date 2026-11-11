@@ -1,30 +1,42 @@
-"""Hybrid retrieval: BM25 (lexical) + embeddings (dense), fused by reciprocal rank fusion.
+"""Hybrid retrieval: BM25 (lexical) + embeddings (dense), fused by reciprocal rank fusion,
+then optionally reranked by a cross-encoder.
 
-- BM25 (Okapi, k1 = 1.2, b = 0.75) over title + text, in memory: the corpus is ~10^4
-  chunks, so scoring every chunk takes a few milliseconds. Tokens are lower-cased, accents
-  removed, English and French stop words dropped, plural "s" stripped.
-- Dense: cosine similarity of bge-m3 vectors, in PostgreSQL (pgvector) or numpy (tests).
-- Hybrid: RRF, score = sum over the two lists of 1 / (60 + rank) (Cormack et al., 2009).
-Metadata filters (ingredient, document type, section, retracted) apply to all three.
+- BM25 (k1 = 1.2, b = 0.75) over title + text. In Qdrant (step 3.2, D116): sparse vectors
+  `Qdrant/bm25` with the IDF modifier (src/rag/sparse.py). Otherwise (SQL store) in memory:
+  the corpus is ~10^4 chunks, so scoring every chunk takes a few milliseconds; tokens are
+  lower-cased, accents removed, English and French stop words dropped, plural "s" stripped.
+- Dense: cosine similarity of bge-m3 vectors, in Qdrant (D113), PostgreSQL (pgvector) or
+  numpy (SQLite, tests).
+- Hybrid: RRF, score = sum over the two lists of 1 / (60 + rank) (Cormack et al., 2009),
+  computed by Qdrant (prefetch of both lists, then fusion) or here for the SQL store.
+- Reranking (D117, src/rag/rerank.py): the first `fetch_k` results are scored by a
+  cross-encoder (BAAI/bge-reranker-base) and the best `k` are kept.
+Metadata filters (ingredient, document type, section, retracted) apply to all of them.
 """
 
 from __future__ import annotations
 
+import asyncio
 import math
 import re
 import threading
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from functools import cached_property
 from typing import Literal
 
 import numpy as np
 
+from src.rag.documents import Catalog
 from src.rag.embeddings import Embedder, fold
-from src.rag.store import Chunk, ChunkStore, Filters
+from src.rag.rerank import Reranker
+from src.rag.sparse import SparseEncoder
+from src.rag.store import Chunk, Filters, VectorStore
 
 Mode = Literal["bm25", "dense", "hybrid"]
 RRF_K = 60
 CANDIDATES = 50
+FETCH_K = 20  # candidates read by the reranker
 
 STOP_WORDS = frozenset(
     [
@@ -243,6 +255,9 @@ class Hit:
     score: float
     bm25_rank: int | None = None
     dense_rank: int | None = None
+    # Set by the reranker: its score, and the rank the chunk had before reranking.
+    rerank_score: float | None = None
+    retrieval_rank: int | None = None
 
 
 def rrf(rankings: list[list[str]], k: int = RRF_K) -> list[tuple[str, float]]:
@@ -254,23 +269,51 @@ def rrf(rankings: list[list[str]], k: int = RRF_K) -> list[tuple[str, float]]:
 
 
 class Retriever:
-    def __init__(self, store: ChunkStore, embedder: Embedder) -> None:
+    def __init__(
+        self,
+        store: VectorStore,
+        embedder: Embedder,
+        *,
+        sparse: SparseEncoder | None = None,
+        reranker: Reranker | None = None,
+    ) -> None:
         self.store, self.embedder = store, embedder
+        # BM25 in the store when it keeps sparse vectors made by this encoder (Qdrant), in
+        # memory otherwise.
+        indexed = store.get_meta().get("sparse_model") if sparse is not None else None
+        self.sparse = sparse if sparse is not None and indexed == sparse.name else None
+        self.reranker = reranker
         self.chunks = store.load_chunks()
         self.by_id = {chunk.chunk_id: chunk for chunk in self.chunks}
         self.position = {chunk.chunk_id: i for i, chunk in enumerate(self.chunks)}
-        self.bm25 = BM25([chunk.search_text for chunk in self.chunks])
         self.matrix: np.ndarray | None = None
-        if not store.is_postgres:
+        if not store.native_dense:
             ids, matrix = store.load_embeddings()
             order = [self.position[i] for i in ids]
             self.matrix = np.zeros((len(self.chunks), store.dim), dtype=np.float32)
             self.matrix[order] = matrix
 
+    @cached_property
+    def bm25(self) -> BM25:
+        """In-memory BM25, built on first use (stores without sparse vectors)."""
+        return BM25([chunk.search_text for chunk in self.chunks])
+
+    @property
+    def lexical_kind(self) -> str:
+        """Where BM25 runs: in Qdrant (sparse vectors of this encoder) or in memory."""
+        return f"qdrant-sparse:{self.sparse.name}" if self.sparse else "memory"
+
+    @cached_property
+    def catalog(self) -> Catalog:
+        """The indexed documents (Documents page), built on first use, once per index."""
+        return Catalog(self.chunks, self.store.hashes())
+
     def _mask(self, filters: Filters) -> np.ndarray:
         return np.array([filters.accepts(chunk) for chunk in self.chunks], dtype=bool)
 
     def bm25_ranking(self, query: str, filters: Filters, n: int) -> list[str]:
+        if self.sparse is not None:
+            return self.store.sparse_search(self.sparse.query(query), filters, n)
         scores = self.bm25.scores(query)
         mask = self._mask(filters) & (scores > 0)
         order = np.argsort(-scores, kind="stable")
@@ -279,7 +322,7 @@ class Retriever:
     async def dense_ranking(self, query: str, filters: Filters, n: int) -> list[str]:
         (vector,) = await self.embedder.embed([query])
         if self.matrix is None:
-            return self.store.dense_search_sql(vector, filters, n)
+            return self.store.dense_search(vector, filters, n)
         query_vector = np.asarray(vector, dtype=np.float32)
         norms = np.linalg.norm(self.matrix, axis=1) * (np.linalg.norm(query_vector) or 1.0)
         similarity = self.matrix @ query_vector / np.where(norms == 0, 1.0, norms)
@@ -295,8 +338,27 @@ class Retriever:
         mode: Mode = "hybrid",
         filters: Filters | None = None,
         candidates: int = CANDIDATES,
+        rerank: bool = False,
+        fetch_k: int = FETCH_K,
     ) -> list[Hit]:
+        """The `k` best chunks. With `rerank` (and a reranker), the first `fetch_k` (at
+        least `k`) are read by the cross-encoder, which keeps the `k` it ranks best."""
         filters = filters or Filters()
+        rerank = rerank and self.reranker is not None
+        n = max(k, fetch_k) if rerank else k
+        if mode == "hybrid" and self.sparse is not None:
+            (vector,) = await self.embedder.embed([query])
+            native = self.store.hybrid_search(
+                vector, self.sparse.query(query), filters, n, candidates
+            )
+            hits = [Hit(self.by_id[cid], score) for cid, score in native]
+        else:
+            hits = await self._fused(query, mode, filters, candidates, n)
+        return (await self._rerank(query, hits))[:k] if rerank else hits[:k]
+
+    async def _fused(
+        self, query: str, mode: Mode, filters: Filters, candidates: int, n: int
+    ) -> list[Hit]:
         lexical = self.bm25_ranking(query, filters, candidates) if mode != "dense" else []
         dense = await self.dense_ranking(query, filters, candidates) if mode != "bm25" else []
         lexical_rank = {cid: r for r, cid in enumerate(lexical, start=1)}
@@ -309,15 +371,33 @@ class Retriever:
             fused = rrf([lexical, dense])
         return [
             Hit(self.by_id[cid], score, lexical_rank.get(cid), dense_rank.get(cid))
-            for cid, score in fused[:k]
+            for cid, score in fused[:n]
+        ]
+
+    async def _rerank(self, query: str, hits: list[Hit]) -> list[Hit]:
+        assert self.reranker is not None
+        texts = [hit.chunk.search_text for hit in hits]
+        scores = await asyncio.to_thread(self.reranker.score, query, texts)
+        order = sorted(range(len(hits)), key=lambda i: (-scores[i], i))  # ties: first rank
+        return [
+            replace(hits[i], score=scores[i], rerank_score=scores[i], retrieval_rank=i + 1)
+            for i in order
         ]
 
 
 class RetrieverHolder:
     """Builds the retriever on first use and again whenever the index is rebuilt."""
 
-    def __init__(self, store: ChunkStore, embedder: Embedder) -> None:
+    def __init__(
+        self,
+        store: VectorStore,
+        embedder: Embedder,
+        *,
+        sparse: SparseEncoder | None = None,
+        reranker: Reranker | None = None,
+    ) -> None:
         self.store, self.embedder = store, embedder
+        self.sparse, self.reranker = sparse, reranker
         self._retriever: Retriever | None = None
         self._version: str | None = None
         self._lock = threading.Lock()
@@ -329,6 +409,8 @@ class RetrieverHolder:
                 return None
             version = self.store.get_meta().get("indexed_at")
             if self._retriever is None or version != self._version:
-                self._retriever = Retriever(self.store, self.embedder)
+                self._retriever = Retriever(
+                    self.store, self.embedder, sparse=self.sparse, reranker=self.reranker
+                )
                 self._version = version
             return self._retriever

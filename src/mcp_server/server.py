@@ -1,4 +1,4 @@
-"""Tujya MCP server: the agent's five tools for any MCP client (official Python MCP SDK).
+"""Tujya MCP server: the agent's six tools for any MCP client (official Python MCP SDK).
 
     # project venv (.venv) active, from any folder
     python -m src.mcp_server            # stdio (Claude Desktop, IDEs)
@@ -6,7 +6,8 @@
                                                            # http://127.0.0.1:8765/mcp
 
 Same tools, same code as the LangGraph agent (agent/tools.py): identify_pills,
-check_interaction, get_drug_info, search_documents, predict_toxicity (bonus). Settings come
+check_interaction, get_drug_info, search_documents, lookup_brand (medicine brands, step 2.7),
+predict_toxicity (bonus). Settings come
 from the TUJYA_* environment (database, Ollama URL for the query embeddings, models
 directory); see docs/module2/mcp.md for client configuration.
 """
@@ -25,8 +26,7 @@ from app.medicines import DISCLAIMER
 from src.agent.tools import TOOL_SPECS, Toolbox
 from src.models.toxicity.model import ToxHolder
 from src.rag.embeddings import Embedder, OllamaEmbedder
-from src.rag.retrieval import RetrieverHolder
-from src.rag.store import ChunkStore
+from src.rag.stores import open_store, retriever_holder
 
 INSTRUCTIONS = (
     "Medicine information for the 150 Tujya pill classes and their 82 active ingredients: "
@@ -76,6 +76,10 @@ def build_server(toolbox: Toolbox) -> MCPServer:
             exclude_retracted=exclude_retracted,
         )
 
+    @server.tool(name="lookup_brand", description=TOOL_SPECS["lookup_brand"][2])
+    async def lookup_brand(name: str) -> dict[str, Any]:
+        return await toolbox.lookup_brand(name=name)
+
     @server.tool(name="predict_toxicity", description=TOOL_SPECS["predict_toxicity"][2])
     async def predict_toxicity(molecules: list[str]) -> dict[str, Any]:
         return await toolbox.predict_toxicity(molecules=molecules)
@@ -97,7 +101,7 @@ def default_toolbox(settings: Settings, embedder: Embedder | None = None) -> Too
         threads=settings.onnx_threads,
         conf=settings.scan_detection_confidence,
     )
-    retrievers = RetrieverHolder(ChunkStore(engine, embedder.dim), embedder)
+    retrievers = retriever_holder(settings, open_store(settings, embedder.dim, engine), embedder)
     toxicity = ToxHolder(settings.tox_model_dir, settings.ingredient_smiles_file)
     return Toolbox(settings, engine, retrievers, scanner, toxicity=toxicity)
 

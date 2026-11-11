@@ -13,10 +13,12 @@ ReLU(sum_k alpha_k A_k), upsampled to the input size and scaled to [0, 1].
 Transformers (ViT) output tokens, not maps: `tokens=True` drops the class token and folds the
 patch tokens back into their grid (14 x 14 for ViT-B/16 at 224 px) before the same formula.
 
-It needs the PyTorch model and its gradients, so it runs in the training code (Kaggle
+It needs the PyTorch model and its gradients, so it runs in the training venv (Kaggle
 notebooks, the runner of src/models/classification, which saves a few pictures in every
 export), never in the API, which serves ONNX models without PyTorch (D97). The layer of each
-architecture is given by src/models/architecture.py (`ClassifierNet.parts().cam_layer`).
+architecture is given by src/models/architecture.py (`ClassifierNet.parts().cam_layer`). The
+pictures of the app's demo gallery are precomputed by `src/models/gradcam_gallery.py` with the
+weights of the served classifier and served as files next to the gallery (D104).
 """
 
 from __future__ import annotations

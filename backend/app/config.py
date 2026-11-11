@@ -8,6 +8,7 @@ still read after it, so that existing `.env` files and shells keep working (deci
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic_settings import (
     BaseSettings,
@@ -74,16 +75,42 @@ class Settings(BaseSettings):
     scan_detection_confidence: float = 0.25
     scan_max_bytes: int = 10 * 1024 * 1024
     scan_max_pixels: int = 50_000_000
+    # Step 2.7, medicine boxes (app/boxes.py, docs/module1/boites.md, D108-D111): OCR of the
+    # printed text, brand table and printed INN, RxNav fallback. Below scan_pill_min_confidence
+    # (best pill detection) with little text the photo is refused as neither a pill nor a box.
+    box_ocr_enabled: bool = True
+    ocr_threads: int = 4
+    brand_table_file: Path = PROJECT_DIR / "config" / "brand_aliases.csv"
+    inn_aliases_file: Path = PROJECT_DIR / "config" / "inn_aliases.csv"
+    scan_pill_min_confidence: float = 0.5
+    box_text_chars: int = 20
+    # RxNav (public NLM API) is asked only with a contact address, like the data pipeline.
+    rxnav_contact_email: str | None = None
+    rxnav_url: str = "https://rxnav.nlm.nih.gov/REST"
+    rxnav_timeout_seconds: float = 5.0
     # C3PI test-split photos shown in the demo gallery (read-only); see app/routers/demo.py.
+    # A photo is served only if it is in the v2 test split (detector) and not in the v1
+    # train or val split (classifier): never seen in training by either served model (D105).
     demo_images_dir: Path = PROJECT_DIR / "data" / "raw" / "c3pi" / "images"
     demo_split_file: Path = PROJECT_DIR / "config" / "splits" / "selected_images.csv"
+    demo_holdout_file: Path = PROJECT_DIR / "config" / "splits" / "c3pi_v2" / "test.csv"
     demo_gallery_file: Path = PROJECT_DIR / "config" / "demo_gallery.csv"
+    # Grad-CAM pictures of the gallery photos, precomputed with the PyTorch weights of the
+    # served classifier (`python -m src.models.gradcam_gallery`, DVC stage, D104).
+    demo_gradcam_dir: Path = PROJECT_DIR / "data" / "processed" / "c3pi" / "gradcam"
 
     # Module 2: RAG and agent (docs/module2/rag.md, agent.md). The chunk index
-    # lives in the pharma database (table rag_chunks, pgvector);
-    # `python -m src.rag.index` fills it from this file. Ollama serves both
-    # the LLM and the embeddings (docker compose `ollama`).
+    # lives in Qdrant (collection tujya_chunks, D113); `python -m src.rag.index` fills it
+    # from this file. "sql" keeps it in the pharma database instead (table rag_chunks,
+    # pgvector or SQLite), the store before Qdrant. Ollama serves both the LLM and the
+    # embeddings (docker compose `ollama`).
     rag_chunks_file: Path = PROJECT_DIR / "data" / "processed" / "rag" / "corpus" / "chunks.parquet"
+    vector_store: Literal["qdrant", "sql"] = "qdrant"
+    # docker compose `qdrant`; ":memory:" = the client's local in-memory mode (tests).
+    qdrant_url: str = "http://127.0.0.1:6333"
+    qdrant_collection: str = "tujya_chunks"
+    # Shown on the Documents page; the browser opens it on the host.
+    qdrant_dashboard_url: str = "http://127.0.0.1:6333/dashboard"
     ollama_url: str = "http://127.0.0.1:11434"
     llm_model: str = "qwen2.5:3b"
     llm_temperature: float = 0.1
@@ -100,6 +127,15 @@ class Settings(BaseSettings):
     # Chosen on the benchmark (docs/module2/benchmark.md, D65): dense +
     # ingredient filter is best; hybrid loses on French questions (BM25 only matches English).
     rag_search_mode: str = "dense"
+    # Step 3.2 (docs/module2/rag.md, D116-D118). BM25 sparse vectors in Qdrant (fastembed
+    # `Qdrant/bm25`), cross-encoder reranking of `rag_fetch_k` candidates, query rewriting by
+    # the LLM. fastembed models are downloaded once (Hugging Face, no account) into the cache.
+    rag_sparse_model: str = "Qdrant/bm25"
+    rag_rerank: bool = False
+    rag_rerank_model: str = "BAAI/bge-reranker-base"
+    rag_fetch_k: int = 20
+    rag_query_rewrite: bool = False
+    rag_model_cache_dir: Path = PROJECT_DIR / "models" / "fastembed"
     # An uncited answer sentence gets the source closest in meaning (bge-m3 cosine) above
     # this; calibrated on the first benchmark run (docs/module2/benchmark.md).
     # 0 disables it.

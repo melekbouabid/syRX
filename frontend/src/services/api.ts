@@ -1,5 +1,9 @@
-// Typed client for the FastAPI backend. Every call goes to /api on the same origin; the
-// session lives in an HttpOnly cookie, so there is no token to store or attach here.
+// Typed client for the FastAPI backend: every call of the app goes through this file. Calls
+// go to /api on the same origin, except the model routes of the course guide (/health,
+// /model/metadata), which sit at the root; the session lives in an HttpOnly cookie, so there
+// is no token to store or attach here.
+
+import { timed } from "../lib/vision";
 
 export type Role = "admin" | "user";
 
@@ -80,11 +84,49 @@ export interface ScannedPill {
   needs_confirmation: boolean;
 }
 
+/** An active ingredient read on a medicine box (step 2.7), with where the link comes from. */
+export interface BoxIngredient {
+  name: string;
+  /** brand table, ingredient name printed on the box, or RxNorm (RxNav). */
+  method: "brand" | "printed_name" | "rxnav";
+  matched_text: string;
+  confidence: number;
+  source: string;
+  reference: string;
+  url: string;
+  /** False: a known ingredient that the interaction table does not list. */
+  in_interaction_table: boolean;
+}
+
+export interface BoxReading {
+  /** Lines read on the photo. */
+  text: string[];
+  brand: string | null;
+  brand_country: string | null;
+  brand_text: string | null;
+  ingredients: BoxIngredient[];
+  recognised: boolean;
+  confidence: number;
+  rxnav: string;
+}
+
 export interface ScanResult {
+  /** pill: pills below; box: a medicine box read by OCR; unknown: neither (refused). */
+  kind?: "pill" | "box" | "unknown";
+  box?: BoxReading | null;
   image_width: number;
   image_height: number;
   inference_ms: number;
-  timings: { detection_ms: number; classification_ms: number; total_ms: number };
+  timings: {
+    detection_ms: number;
+    classification_ms: number;
+    /** ONNX Runtime only: detection plus identification. */
+    total_ms: number;
+    /** The whole request on the server (upload, decoding, database included). */
+    server_ms?: number | null;
+    /** Reading of the printed text (boxes). */
+    ocr_ms?: number | null;
+  };
   confirm_threshold: number;
   pills: ScannedPill[];
   message: string | null;
@@ -153,11 +195,36 @@ export interface DemoImage {
   why: string;
   url: string;
   thumbnail_url: string;
+  /** Grad-CAM precomputed for this photo (D104), null when there is none. */
+  gradcam_url: string | null;
 }
 
 export interface DemoGallery {
   items: DemoImage[];
   note: string;
+}
+
+/** One served model, as GET /model/metadata describes it (MLflow Model Registry). */
+export interface ModelMetadata {
+  task: "detect" | "classify";
+  name: string;
+  architecture: string;
+  version: number | null;
+  aliases: string[];
+  precision: string;
+  variant_of: number | null;
+  run_id: string | null;
+  input_size: number;
+  metrics: Record<string, number>;
+  classes: string[];
+  num_classes: number;
+}
+
+export interface MetadataOut {
+  detector: ModelMetadata;
+  classifier: ModelMetadata;
+  published_at: string | null;
+  disclaimer: string;
 }
 
 export interface ChatCitation {
@@ -170,6 +237,10 @@ export interface ChatCitation {
   doc_type: "label" | "abstract" | "interaction" | string;
   date: string;
   cited: boolean;
+  doc_id?: string;
+  license?: string;
+  /** Cross-encoder score when the search was reranked (D117). */
+  rerank_score?: number | null;
 }
 
 export interface ChatToolCall {
@@ -239,6 +310,70 @@ export interface ToxicityResult {
   disclaimer: string;
 }
 
+// Indexed documents of the RAG (GET /api/documents, docs/api.md, D114).
+export interface IndexInfo {
+  store: string;
+  collection: string;
+  points: number;
+  embedding_model: string;
+  dim: number;
+  indexed_at: string;
+  documents: number;
+  chunks: number;
+  payload_indexes: string[];
+  dashboard_url: string | null;
+}
+
+export interface IndexedDocument {
+  doc_id: string;
+  doc_type: string;
+  title: string;
+  source_name: string;
+  url: string;
+  date: string;
+  version: string;
+  license: string;
+  language: string;
+  article_type: string | null;
+  is_retracted: boolean;
+  ingredients: string[];
+  mentioned_ingredients: string[];
+  sections: string[];
+  chunk_count: number;
+}
+
+export interface DocumentsPage {
+  total: number;
+  offset: number;
+  limit: number;
+  items: IndexedDocument[];
+  facets: Record<"doc_type" | "language" | "source", Record<string, number>>;
+  index: IndexInfo;
+}
+
+export interface DocumentChunk {
+  chunk_id: string;
+  chunk_index: number;
+  section: string;
+  title: string;
+  text: string;
+  content_hash: string;
+}
+
+export interface DocumentDetail extends IndexedDocument {
+  chunks: DocumentChunk[];
+}
+
+export interface DocumentFilters {
+  q?: string;
+  doc_type?: string;
+  ingredient?: string;
+  source?: string;
+  language?: string;
+  limit: number;
+  offset: number;
+}
+
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Something went wrong.";
 }
@@ -260,6 +395,8 @@ interface RequestOptions {
   signal?: AbortSignal;
   /** A 401 is an expected answer here (sign-in form, first load), not a lost session. */
   anonymous?: boolean;
+  /** The path is at the root of the API (course guide routes), not under /api. */
+  root?: boolean;
 }
 
 const FIELD_LABELS: Record<string, string> = {
@@ -288,7 +425,7 @@ function describeFailure(status: number, data: unknown): string {
 }
 
 async function request<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
-  const url = new URL(`/api${path}`, window.location.origin);
+  const url = new URL(options.root ? path : `/api${path}`, window.location.origin);
   for (const [key, value] of Object.entries(options.query ?? {})) {
     if (value !== undefined && value !== "") url.searchParams.set(key, String(value));
   }
@@ -385,6 +522,12 @@ export const api = {
     form.append("image", image, filename);
     return request<ScanResult>("POST", "/scan", { form, signal });
   },
+  /** The scan plus the client latency measured around it in the browser (ms). */
+  scanTimed: (image: Blob, filename: string, signal?: AbortSignal) =>
+    timed(() => api.scan(image, filename, signal)),
+  /** Champion models served by the API (course guide route, no sign-in). */
+  modelMetadata: (signal?: AbortSignal) =>
+    request<MetadataOut>("GET", "/model/metadata", { signal, root: true, anonymous: true }),
   pills: (q: string, signal?: AbortSignal) =>
     request<PillList>("GET", "/pills", { query: { q, limit: 12 }, signal }),
   interactions: (pills: number[], ingredients: string[] = []) =>
@@ -395,6 +538,10 @@ export const api = {
   chat: (question: string, pills: number[]) =>
     request<ChatResult>("POST", "/chat", { body: { question, pills, stream: false } }),
   chatStream,
+  documents: (filters: DocumentFilters, signal?: AbortSignal) =>
+    request<DocumentsPage>("GET", "/documents", { query: { ...filters }, signal }),
+  document: (docId: string, signal?: AbortSignal) =>
+    request<DocumentDetail>("GET", `/documents/${encodeURIComponent(docId)}`, { signal }),
   /** A demo photo as a file, to send it to the scan like an upload. */
   demoImage: async (image: DemoImage): Promise<Blob> => {
     const response = await fetch(image.url, { credentials: "same-origin" });
