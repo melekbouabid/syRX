@@ -48,6 +48,8 @@ def app(tmp_path: Path, pharma_url: str) -> Iterator[FastAPI]:
         # The fake RAG corpus is indexed in the pharma database (rag_fakes.build_index);
         # the Qdrant tests pass their own in-memory store to AgentHolder.
         vector_store="sql",
+        # No real OCR in the API tests: box tests set a fake engine (tests/test_boxes.py).
+        box_ocr_enabled=False,
     )
     application = create_app(settings)
     with TestClient(application):  # runs start-up: creates the tables and the first accounts

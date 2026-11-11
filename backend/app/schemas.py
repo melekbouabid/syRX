@@ -179,9 +179,44 @@ class ScanTimings(BaseModel):
     server_ms: float | None = Field(
         None, description="Whole request on the server (upload, decoding, database included)"
     )
+    ocr_ms: float | None = Field(None, description="Reading of the printed text (boxes)")
+
+
+class BoxIngredient(BaseModel):
+    name: str = Field(description="Ingredient name of the interaction table (English)")
+    method: Literal["brand", "printed_name", "rxnav"] = Field(
+        description="brand table, ingredient name printed on the box, or RxNorm (RxNav)"
+    )
+    matched_text: str = Field(description="The text read on the box that gave this match")
+    confidence: float = Field(ge=0, le=1, description="OCR confidence x word similarity")
+    source: str
+    reference: str
+    url: str
+    in_interaction_table: bool = Field(
+        description="False: known ingredient, but absent from the interaction table"
+    )
+
+
+class BoxReading(BaseModel):
+    """A medicine box: the text read and what it was linked to (never a guess)."""
+
+    text: list[str] = Field(description="Lines read on the photo (at most 40)")
+    brand: str | None = Field(None, description="Brand of config/brand_aliases.csv")
+    brand_country: str | None = None
+    brand_text: str | None = Field(None, description="The text read that matched the brand")
+    ingredients: list[BoxIngredient]
+    recognised: bool = Field(description="At least one active ingredient was found")
+    confidence: float = Field(ge=0, le=1)
+    rxnav: str = Field(description="Fallback status: enabled, or why it is disabled")
 
 
 class ScanResult(BaseModel):
+    kind: Literal["pill", "box", "unknown"] = Field(
+        "pill",
+        description="pill: pills detected; box: printed text of a medicine box; unknown: "
+        "neither (refused, no identification)",
+    )
+    box: BoxReading | None = None
     image_width: int
     image_height: int
     inference_ms: float = Field(description="Detection plus identification, ONNX Runtime")
@@ -278,7 +313,7 @@ class CitationOut(BaseModel):
     section: str
     snippet: str
     source_name: str
-    doc_type: str = Field(description="label, abstract or interaction")
+    doc_type: str = Field(description="label, abstract, interaction or brand")
     date: str
     cited: bool = Field(description="True if the answer cites [n]")
 

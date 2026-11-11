@@ -84,7 +84,36 @@ export interface ScannedPill {
   needs_confirmation: boolean;
 }
 
+/** An active ingredient read on a medicine box (step 2.7), with where the link comes from. */
+export interface BoxIngredient {
+  name: string;
+  /** brand table, ingredient name printed on the box, or RxNorm (RxNav). */
+  method: "brand" | "printed_name" | "rxnav";
+  matched_text: string;
+  confidence: number;
+  source: string;
+  reference: string;
+  url: string;
+  /** False: a known ingredient that the interaction table does not list. */
+  in_interaction_table: boolean;
+}
+
+export interface BoxReading {
+  /** Lines read on the photo. */
+  text: string[];
+  brand: string | null;
+  brand_country: string | null;
+  brand_text: string | null;
+  ingredients: BoxIngredient[];
+  recognised: boolean;
+  confidence: number;
+  rxnav: string;
+}
+
 export interface ScanResult {
+  /** pill: pills below; box: a medicine box read by OCR; unknown: neither (refused). */
+  kind?: "pill" | "box" | "unknown";
+  box?: BoxReading | null;
   image_width: number;
   image_height: number;
   inference_ms: number;
@@ -95,6 +124,8 @@ export interface ScanResult {
     total_ms: number;
     /** The whole request on the server (upload, decoding, database included). */
     server_ms?: number | null;
+    /** Reading of the printed text (boxes). */
+    ocr_ms?: number | null;
   };
   confirm_threshold: number;
   pills: ScannedPill[];

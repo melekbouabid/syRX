@@ -1,4 +1,4 @@
-"""The MCP server lists the four tools and runs them (in-process MCP client, fake index)."""
+"""The MCP server lists the six tools and runs them (in-process MCP client, fake index)."""
 
 from __future__ import annotations
 
@@ -52,6 +52,7 @@ def test_tools_are_listed_with_their_schemas(tmp_path: Path) -> None:
         "check_interaction",
         "get_drug_info",
         "search_documents",
+        "lookup_brand",
         "predict_toxicity",
     }
     search = tools["search_documents"]
@@ -85,6 +86,24 @@ def test_call_check_interaction_and_search(tmp_path: Path) -> None:
         found and found[0]["chunk_id"] == "war-ci" and all(r["doc_type"] == "label" for r in found)
     )
     assert missing.is_error if hasattr(missing, "is_error") else missing.isError
+
+
+def test_call_lookup_brand(tmp_path: Path) -> None:
+    server = _server(tmp_path)
+
+    async def run() -> tuple[Any, Any]:
+        async with Client(server) as client:
+            known = await client.call_tool("lookup_brand", {"name": "Doliprane"})
+            unknown = await client.call_tool("lookup_brand", {"name": "Zorglubine"})
+            return known, unknown
+
+    known, unknown = (_payload(r) for r in asyncio.run(run()))
+    assert known["found"] and known["brand"] == "Doliprane" and known["country"] == "FR"
+    (item,) = known["ingredients"]
+    assert item["name"] == "acetaminophen" and item["method"] == "brand"
+    assert item["url"].startswith("https://base-donnees-publique.medicaments.gouv.fr/")
+    assert not unknown["found"] and unknown["ingredients"] == [] and unknown["message"]
+    assert known["disclaimer"].startswith("Information uniquement")
 
 
 def test_http_transport_refuses_a_non_loopback_host() -> None:

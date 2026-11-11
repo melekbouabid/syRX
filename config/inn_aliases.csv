@@ -1,0 +1,15 @@
+alias,ingredient,language,source,url
+paracetamol,acetaminophen,en,"RxNorm: paracetamol -> rxcui 161, RxNorm name acetaminophen",https://rxnav.nlm.nih.gov/REST/approximateTerm.json?term=paracetamol
+paracetamolo,acetaminophen,it,"RxNorm rxcui 161 (acetaminophen), Italian INN spelling",https://rxnav.nlm.nih.gov/REST/rxcui/161/property.json?propName=RxNorm%20Name
+paracétamol,acetaminophen,fr,"RxNorm rxcui 161 (acetaminophen), French INN spelling",https://rxnav.nlm.nih.gov/REST/rxcui/161/property.json?propName=RxNorm%20Name
+aspirin,acetylsalicylic acid,en,"DDInter 2.0 name of aspirin",https://ddinter2.scbdd.com/
+aspirina,acetylsalicylic acid,it,"DDInter 2.0 name of aspirin, Italian spelling",https://ddinter2.scbdd.com/
+aspirine,acetylsalicylic acid,fr,"DDInter 2.0 name of aspirin, French spelling",https://ddinter2.scbdd.com/
+acido acetilsalicilico,acetylsalicylic acid,it,"DDInter 2.0 name, Italian INN",https://ddinter2.scbdd.com/
+acide acétylsalicylique,acetylsalicylic acid,fr,"DDInter 2.0 name, French INN",https://ddinter2.scbdd.com/
+acétylsalicylate de lysine,acetylsalicylic acid,fr,"BDPM: DL-LYSINE (ACÉTYLSALICYLATE DE) of Aspegic and Kardegic",https://base-donnees-publique.medicaments.gouv.fr/download/file/CIS_COMPO_bdpm.txt
+acido ascorbico,ascorbic acid,it,"DDInter 2.0 name of vitamin C, Italian INN",https://ddinter2.scbdd.com/
+acide ascorbique,ascorbic acid,fr,"DDInter 2.0 name of vitamin C, French INN",https://ddinter2.scbdd.com/
+acido clavulanico,clavulanic acid,it,"DDInter 2.0 name, Italian INN",https://ddinter2.scbdd.com/
+vitamina c,ascorbic acid,it,"DDInter 2.0 name of vitamin C (ascorbic acid)",https://ddinter2.scbdd.com/
+vitamine c,ascorbic acid,fr,"DDInter 2.0 name of vitamin C (ascorbic acid)",https://ddinter2.scbdd.com/

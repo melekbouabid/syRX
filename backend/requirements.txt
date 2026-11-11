@@ -10,6 +10,10 @@ numpy>=2.0
 opencv-python-headless>=4.10
 onnxruntime>=1.20
 python-multipart>=0.0.18
+# Medicine boxes (step 2.7, app/boxes.py): OCR in ONNX (PP-OCRv4 models included, headless
+# OpenCV like the rest of the API) and fuzzy matching of the words read.
+rapidocr==3.10.0
+rapidfuzz==3.14.6
 # Module 2: agent (LangGraph, LangChain + Ollama), MCP server, Qdrant (D113) and pgvector
 langgraph>=1.2.18
 langchain-core>=1.7.1

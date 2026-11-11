@@ -85,6 +85,19 @@ Captures : `cd frontend && FAKE_VIDEO=<vidéo .y4m> node scripts/screenshots.mjs
 `npm run dev` lancés (adresses 127.0.0.1) ; la webcam est la caméra factice de Chromium,
 alimentée par une vidéo faite à partir de deux photos de test (hors de git).
 
+### Boîtes de médicaments (étape 2.7)
+
+La même page lit les boîtes : une photo de boîte affiche une carte « boîte » au lieu des
+comprimés (marque, chaque principe actif avec le texte lu, la voie, la confiance et la source,
+les lignes lues, l'état du secours RxNav) et un bouton pour l'ajouter à « My pills », où elle
+est vérifiée par ses principes actifs ; une photo qui n'est ni un comprimé ni une boîte est
+refusée sans proposition. Captures 22 (marque de la table : Efferalgan), 23 (DCI imprimée :
+Brufen, « Ibuprofene »), 24 (photo hors sujet refusée), 25 (deux boîtes vérifiées : « aucune
+interaction connue dans cette base de données »), 26 (marque dans le chat : Panadol et warfarine,
+principe actif et interaction DDInter cités) : `cd frontend && CHAT=1 node
+scripts/box-screenshots.mjs` (photos DVC de `data/raw/medicine_boxes` ; `CHAT=1` demande Ollama). Méthode et résultats :
+[module1/boites.md](module1/boites.md).
+
 ## Comptes
 
 Le premier démarrage crée deux comptes :

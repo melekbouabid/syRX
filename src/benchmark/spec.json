@@ -867,5 +867,143 @@
   ],
   "language": "fr",
   "question": "Combien d'heures dois-je attendre entre la lévothyroxine et le calcitriol ?"
+ },
+ {
+  "id": "brand-panadol-warfarin-fr",
+  "type": "brand",
+  "brands": [
+   "Panadol"
+  ],
+  "ingredients": [
+   "acetaminophen",
+   "warfarin"
+  ],
+  "language": "fr",
+  "question": "Puis-je prendre du Panadol avec de la warfarine ?",
+  "pair": [
+   "acetaminophen",
+   "warfarin"
+  ]
+ },
+ {
+  "id": "brand-doliprane-warfarin-en",
+  "type": "brand",
+  "brands": [
+   "Doliprane"
+  ],
+  "ingredients": [
+   "acetaminophen",
+   "warfarin"
+  ],
+  "language": "en",
+  "question": "Can I take Doliprane together with warfarin?",
+  "pair": [
+   "acetaminophen",
+   "warfarin"
+  ]
+ },
+ {
+  "id": "brand-nurofen-warfarin-fr",
+  "type": "brand",
+  "brands": [
+   "Nurofen"
+  ],
+  "ingredients": [
+   "ibuprofen",
+   "warfarin"
+  ],
+  "language": "fr",
+  "question": "Le Nurofen interagit-il avec la warfarine ?",
+  "pair": [
+   "ibuprofen",
+   "warfarin"
+  ]
+ },
+ {
+  "id": "brand-advil-lisinopril-en",
+  "type": "brand",
+  "brands": [
+   "Advil"
+  ],
+  "ingredients": [
+   "ibuprofen",
+   "lisinopril"
+  ],
+  "language": "en",
+  "question": "Does Advil interact with lisinopril?",
+  "pair": [
+   "ibuprofen",
+   "lisinopril"
+  ]
+ },
+ {
+  "id": "brand-voltarene-warfarin-fr",
+  "type": "brand",
+  "brands": [
+   "Voltarene"
+  ],
+  "ingredients": [
+   "diclofenac",
+   "warfarin"
+  ],
+  "language": "fr",
+  "question": "Quelle est l'interaction entre le Voltarène et la warfarine ?",
+  "pair": [
+   "diclofenac",
+   "warfarin"
+  ]
+ },
+ {
+  "id": "brand-augmentin-warfarin-en",
+  "type": "brand",
+  "brands": [
+   "Augmentin"
+  ],
+  "ingredients": [
+   "amoxicillin",
+   "clavulanic acid",
+   "warfarin"
+  ],
+  "language": "en",
+  "question": "What happens if Augmentin is taken with warfarin?",
+  "pair": [
+   "amoxicillin",
+   "warfarin"
+  ]
+ },
+ {
+  "id": "brand-ixprim-sertraline-fr",
+  "type": "brand",
+  "brands": [
+   "Ixprim"
+  ],
+  "ingredients": [
+   "tramadol",
+   "acetaminophen",
+   "sertraline"
+  ],
+  "language": "fr",
+  "question": "Ixprim et sertraline : y a-t-il une interaction ?",
+  "pair": [
+   "tramadol",
+   "sertraline"
+  ]
+ },
+ {
+  "id": "brand-efferalgan-warfarin-fr",
+  "type": "brand",
+  "brands": [
+   "Efferalgan"
+  ],
+  "ingredients": [
+   "acetaminophen",
+   "warfarin"
+  ],
+  "language": "fr",
+  "question": "J'ai une boîte d'Efferalgan, est-ce compatible avec ma warfarine ?",
+  "pair": [
+   "acetaminophen",
+   "warfarin"
+  ]
  }
 ]
