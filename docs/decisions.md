@@ -1343,3 +1343,24 @@ interférer » avec la warfarine alors que sa source DDInter listait une interac
 quand `check_interaction` trouve une interaction, une phrase qui la nie est retirée et, si aucune
 ligne DDInter n'est citée, une phrase fixe la donne avec sa source. Ces phrases fixes viennent
 des sources, jamais du LLM.
+
+**D115. Validation des boîtes (étape 2.7) sur des photos réelles sous licence libre de
+Wikimedia Commons, en attendant les photos du propriétaire.** Le jeu italien n'a pas de
+Panadol. Les photos viennent de l'API publique de Commons (`commons.wikimedia.org/w/api.php`,
+sans compte ni clé, User-Agent générique, une requête toutes les 3 s) ; seules les licences
+CC0, domaine public, CC BY et CC BY-SA sont acceptées, avec l'auteur et la licence exacts de la
+page Commons dans `labels.csv` et les crédits dans `docs/data_pipeline/LICENSES.md`. Chaque
+photo a été regardée : on garde une boîte réelle dont la marque est lisible en alphabet latin
+(11 photos : Panadol x3, Doliprane, Augmentin x3, Glucophage, Levothyrox, Spasfon, Xanax SR).
+Écartées : plaquettes seules (Panadol d'Indonésie, Efferalgan codéine), comprimés seuls
+(Augmentin 1 g, Augmentin XR), flacons (Voltaren, Advil), rayon de pharmacie avec plusieurs
+produits (Nurofen), marque imprimée seulement en chinois (Glucophage de Chine) ou en cyrillique
+(Imodium de Russie), et toute image de site marchand ou de fabricant. Les fichiers sont les
+miniatures de 1 920 px servies par Commons, renommées, non modifiées ; suivis par DVC
+(`data/raw/medicine_boxes/web_commons`), jamais dans git. `--set web` de
+`src.models.ocr.evaluate` lit ce dossier comme `--set user` (même format de `labels.csv`) ;
+run MLflow `ocr-rapidocr-web`, sans Registry (le champion reste choisi sur le jeu italien).
+Ce jeu sert de jeu de test de l'étape ; les photos du propriétaire viendront plus tard comme
+second jeu de test (`--set user`), sans changer le code. Limite : 11 photos, prises par des
+contributeurs de Commons, souvent bien éclairées ; ce n'est pas une mesure de précision, c'est
+la vérification des critères de l'étape sur de vraies boîtes.
