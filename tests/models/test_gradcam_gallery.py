@@ -18,6 +18,7 @@ from src.models.gradcam_gallery import (
     Square,
     compose,
     crop_square,
+    export_weights,
     paste_heatmap,
     run,
     served_classifier,
@@ -69,6 +70,21 @@ def test_the_weights_must_be_the_served_version(tmp_path: Path) -> None:
     other, other_weights = _registry(tmp_path / "other", "abc", "def")
     with pytest.raises(SystemExit, match="serves run abc"):
         served_classifier(other, other_weights)
+
+
+def test_a_step_2_3_classifier_uses_the_weights_of_its_export(tmp_path: Path) -> None:
+    compare, exports = tmp_path / "compare", tmp_path / "classifiers"
+    compare.mkdir()
+    summary = {"run_id": "r8", "version": 8, "arch": "efficientnetv2s"}
+    (compare / "classifier_efficientnetv2s.json").write_text(json.dumps(summary), "utf-8")
+    served = {"arch": "efficientnetv2s", "run_id": "r8", "version": 8}
+    expected = exports / "classifier-efficientnetv2s" / "weights" / "best.pt"
+    assert export_weights(served, exports, compare) == expected
+    variant = {"arch": "efficientnetv2s", "run_id": "r20", "version": 20, "variant_of": 8}
+    assert export_weights(variant, exports, compare) == expected  # FP16 / INT8 of version 8
+    other = {"arch": "efficientnetv2s", "run_id": "r9", "version": 9}
+    assert export_weights(other, exports, compare) is None  # another run: not these weights
+    assert export_weights({"arch": "yolo11s-cls", "run_id": "v1"}, exports, compare) is None
 
 
 def test_no_gallery_photo_is_an_error(tmp_path: Path) -> None:
