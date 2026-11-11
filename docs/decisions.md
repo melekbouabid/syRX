@@ -1590,3 +1590,33 @@ question, et le planificateur de l'agent écrit déjà une requête anglaise qua
 `search_documents` ; l'étape 3.3 décidera du réglage de l'agent sur la génération, pas seulement
 sur la récupération (même prudence que D65 : ne pas régler le système sur son propre jeu de test
 sans mesurer les réponses).
+
+## Fin de l'étape 2.3 : classifieurs (2026-11-11)
+
+**D119. La table de classes de l'API passe aux 380 classes de C3PI v2 ; celle de v1 garde son
+rôle sous un autre nom ; le corpus RAG servi reste celui de v1.** Le champion de l'étape 2.3 a
+380 sorties aux identifiants v2 (D101) : `config/pill_classes.csv` décrit désormais ces 380
+classes (`python -m src.data.corpus classes`, copie de `config/splits/c3pi_v2/classes.csv` avec
+les mêmes identifiants et les colonnes de principes actifs), puis `ingredients` et
+`interactions` refont les tables de `data/processed/pharma` avec la méthode et les sources de
+v1 (RxNav : NDC -> RxCUI -> principes actifs de base ; DDInter 2.0, 14 fichiers, reconstruit
+depuis les fichiers bruts du disque). Résultat : 379 classes sur 380 associées par leurs NDC
+(les 149 de v1 retrouvent exactement leurs principes actifs), 176 principes actifs, 8 611 paires
+entre classes et 75 653 avec tout médicament. La classe sans principe actif est la même qu'en v1
+(vitamines et minéraux, NDC « ALIEN » chez RxNav) : l'API dit déjà qu'aucune vérification n'est
+possible, rien n'est deviné. Huit alias USAN -> DCI ajoutés à `config/ingredient_aliases.csv`
+(alendronate, clavulanate, clomiphene, ethinyl estradiol, levomefolate, medroxyprogesterone,
+norethindrone, oméga-3) ; le fer (deux formes, une seule entrée « Iron » dans DDInter) n'est pas
+rapproché, un nom DDInter ne pouvant désigner qu'un principe actif. La table de v1 devient
+`config/pill_classes_v1.csv`, lue par les étapes qui décrivent le jeu v1 (`data_cli select`,
+entraînement v1, jobs Spark `split` et `epillid`, statistiques, `prepare_classify_v2`) ; leurs
+étapes DVC ne changent que de chemin (`dvc commit -f`). La galerie de démo passe aux identifiants
+v2 (même produit, vérifié par `class_key`). Le corpus RAG servi (`rag_corpus`) dépend des tables
+de `data/processed/pharma` : il est gelé dans `dvc.yaml` et reste celui des 150 classes de v1
+(82 principes actifs), pour que l'index Qdrant et les benchmarks de l'étape 3.3 restent mesurés
+sur le corpus décrit ; `check_interaction` et l'écran Vérifier, qui lisent les tables, couvrent
+les 380 classes. Les notices et résumés des nouveaux principes actifs viendront de la collecte
+RAG v2 (D90). Rejeté : deux tables de classes côte à côte dans l'API (deux sources de vérité,
+D101) ; réécrire les sorties du modèle vers les identifiants v1 (230 classes n'en ont pas) ;
+reconstruire le corpus RAG maintenant (il ajouterait environ 6 000 paires DDInter sans notice,
+plus que tout le corpus actuel, juste avant le benchmark de la récupération).
