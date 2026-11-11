@@ -277,12 +277,28 @@ async def predict(image: UploadImage, request: Request, settings: SettingsDep) -
     return to_predict_out(output, started, scanner.manifest)
 
 
+# The 20 colours of Ultralytics' own plots (ultralytics.utils.plotting.Colors), as #RRGGBB.
+PALETTE = (
+    "FF3838", "FF9D97", "FF701F", "FFB21D", "CFD231", "48F90A", "92CC17", "3DDB86", "1A9334",
+    "00D4BB", "2C99A8", "00C2FF", "344593", "6473FF", "0018EC", "8438FF", "520085", "CB38FF",
+    "FF95C8", "FF37C7",
+)  # fmt: skip
+
+
 def class_colour(class_id: int) -> tuple[int, int, int]:
-    """A stable, saturated BGR colour per class (the same class keeps its colour)."""
-    hue = (class_id * 47) % 180
-    pixel = np.array([[[hue, 220, 230]]], dtype=np.uint8)
-    b, g, r = cv2.cvtColor(pixel, cv2.COLOR_HSV2BGR)[0, 0]
-    return int(b), int(g), int(r)
+    """A stable BGR colour per class (the same class keeps its colour): colour class_id mod 20
+    of the Ultralytics palette, well apart from its neighbours. The app draws its boxes with
+    the same colours (frontend/src/lib/vision.ts `classColour`)."""
+    code = PALETTE[class_id % len(PALETTE)]
+    red, green, blue = (int(code[i : i + 2], 16) for i in (0, 2, 4))
+    return blue, green, red
+
+
+def text_colour(colour: tuple[int, int, int]) -> tuple[int, int, int]:
+    """Black or white label text, whichever reads better on the BGR `colour`."""
+    blue, green, red = colour
+    luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255
+    return (0, 0, 0) if luminance > 0.5 else (255, 255, 255)
 
 
 def annotate(picture: np.ndarray, output: ScanOutput) -> np.ndarray:
@@ -308,7 +324,7 @@ def annotate(picture: np.ndarray, output: ScanOutput) -> np.ndarray:
             (x1 + 2, y_text),
             cv2.FONT_HERSHEY_SIMPLEX,
             scale,
-            (0, 0, 0),
+            text_colour(colour),
             1,
             cv2.LINE_AA,
         )

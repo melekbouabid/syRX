@@ -3,7 +3,7 @@
     python -m src.data.spark.log_stats            # training venv (.venv-train: mlflow, pandas)
 
 Reads the outputs of the Spark jobs (summaries, config/splits/c3pi_v2/classes.csv, the
-split table) and the v1 lists (config/pill_classes.csv, config/splits/selected_images.csv),
+split table) and the v1 lists (config/pill_classes_v1.csv, config/splits/selected_images.csv),
 then:
 
 - writes data/processed/c3pi/bigdata/stats.json, the DVC metrics of the pipeline
@@ -34,7 +34,7 @@ ROOT = Path(__file__).resolve().parents[3]
 BIGDATA = ROOT / "data" / "processed" / "c3pi" / "bigdata"
 SPLITS_V2 = ROOT / "config" / "splits" / "c3pi_v2"
 SPLITS_V1 = ROOT / "config" / "splits" / "selected_images.csv"
-CLASSES_V1 = ROOT / "config" / "pill_classes.csv"
+CLASSES_V1 = ROOT / "config" / "pill_classes_v1.csv"
 IMAGES_DVC = ROOT / "data" / "raw" / "c3pi" / "images.dvc"
 RAG_V2 = ROOT / "data" / "processed" / "rag" / "corpus_v2" / "summary.json"
 STATS = BIGDATA / "stats.json"

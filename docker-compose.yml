@@ -5,6 +5,7 @@
 #   http://localhost:8080        web app (nginx: React build; /api, /docs, /openapi.json -> backend)
 #   http://localhost:8000/docs   API directly (Swagger)
 #   http://localhost:5000        MLflow UI          localhost:5432  PostgreSQL + pgvector
+#   http://localhost:6333/dashboard  Qdrant (RAG chunks, payload and vectors, D113)
 #   http://localhost:11434       Ollama (local LLM and embeddings, GPU if available)
 #
 #   docker compose down          # keeps the volumes; `down -v` deletes them
@@ -17,11 +18,12 @@
 #   - `dvc pull` or the data steps, so data/processed/pharma/*.csv and data/raw/c3pi/images exist;
 #   - `python -m src.models.publish` (training venv, .venv-train) to fill models/ from the Model Registry.
 # `pharma-init` reloads the medicine tables from data/processed/pharma on every start, then exits;
-# `rag-init` pulls the Ollama models (first start only) and indexes data/processed/rag/corpus.
+# `rag-init` pulls the Ollama models (first start only) and indexes data/processed/rag/corpus
+# in Qdrant.
 #
 # Credentials are development defaults; override them in the shell or in a compose
 # `.env` file (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_PORT, MLFLOW_PORT,
-# BACKEND_PORT, WEB_PORT, OLLAMA_PORT, BACKEND_IMAGE, FRONTEND_IMAGE).
+# BACKEND_PORT, WEB_PORT, OLLAMA_PORT, QDRANT_PORT, BACKEND_IMAGE, FRONTEND_IMAGE).
 # Project name of this local copy (tujia2): its containers and volumes are separate from the
 # original project's (`tujya`), and so are its image tags (tujia2-*), so building here never
 # replaces the original's images. Same ports, so only one of the two runs at a time.
@@ -80,20 +82,26 @@ services:
       TUJYA_PHARMA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-tujya}:${POSTGRES_PASSWORD:-tujya}@postgres:5432/${POSTGRES_DB:-tujya}
       # Module 2: the agent's LLM and embeddings (docs/module2/agent.md, docs/module2/rag.md)
       TUJYA_OLLAMA_URL: http://ollama:11434
+      TUJYA_QDRANT_URL: http://qdrant:6333
+      # fastembed models of step 3.2 (Qdrant/bm25, bge-reranker-base), downloaded once.
+      TUJYA_RAG_MODEL_CACHE_DIR: /tujya/cache/fastembed
       TUJYA_LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
     volumes: &backend-mounts
       # The image keeps the repository layout under /tujya: these are the default paths.
       - ./config:/tujya/config:ro
       - ./data/processed/pharma:/tujya/data/processed/pharma:ro
       - ./data/raw/c3pi/images:/tujya/data/raw/c3pi/images:ro
+      # Grad-CAM of the demo gallery (DVC stage gradcam_gallery, D104); empty = none shown.
+      - ./data/processed/c3pi/gradcam:/tujya/data/processed/c3pi/gradcam:ro
       - ./data/processed/rag/corpus:/tujya/data/processed/rag/corpus:ro
       - ./models:/tujya/models:ro
+      - fastembed:/tujya/cache/fastembed
     depends_on:
       postgres:
         condition: service_healthy
     restart: "no"
 
-  # One-shot: pull the Ollama models if missing, then (re)index the RAG corpus in pgvector.
+  # One-shot: pull the Ollama models if missing, then (re)index the RAG corpus in Qdrant.
   # Idempotent: an unchanged corpus is not embedded again. The backend does not wait for it
   # (scan and interactions work without it; /api/chat answers 503 until the index exists).
   rag-init:
@@ -104,6 +112,8 @@ services:
     volumes: *backend-mounts
     depends_on:
       postgres:
+        condition: service_healthy
+      qdrant:
         condition: service_healthy
       ollama:
         condition: service_healthy
@@ -121,6 +131,27 @@ services:
         condition: service_healthy
       pharma-init:
         condition: service_completed_successfully
+      qdrant:
+        condition: service_started
+    restart: unless-stopped
+
+  # Vector database of the RAG (D113): collection tujya_chunks, one point per chunk with its
+  # metadata as payload. The web dashboard (http://localhost:6333/dashboard) shows the
+  # points, their payload and vectors, and runs filtered searches. Telemetry off.
+  qdrant:
+    image: qdrant/qdrant:v1.20.0
+    environment:
+      QDRANT__TELEMETRY_DISABLED: "true"
+    ports:
+      - "127.0.0.1:${QDRANT_PORT:-6333}:6333"
+    volumes:
+      - qdrant:/qdrant/storage
+    healthcheck:
+      # The image has no curl or wget: bash opens the port and asks /readyz.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6333 && printf 'GET /readyz HTTP/1.0\r\n\r\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     restart: unless-stopped
 
   # Local LLM and embeddings (Module 2). GPU through Docker Desktop + WSL2 (NVIDIA); on a
@@ -204,3 +235,5 @@ volumes:
   pgdata:
   mlartifacts:
   ollama:
+  qdrant:
+  fastembed:

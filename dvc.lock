@@ -125,7 +125,7 @@ stages:
   spark_split:
     cmd: python -m src.data.spark.submit split
     deps:
-    - path: config/pill_classes.csv
+    - path: config/pill_classes_v1.csv
       hash: md5
       md5: f3ae1e6b96a9b8a6caacfc27e9091f36
       size: 24518
@@ -141,8 +141,8 @@ stages:
       nfiles: 146
     - path: src/data/spark/split_job.py
       hash: md5
-      md5: f8b7b00a2eb7e1353a549554f9ada052
-      size: 11493
+      md5: 0137f2bf9ccbc82a777e7681f46f76ee
+      size: 11499
     params:
       params.yaml:
         bigdata.index.min_images: 20
@@ -193,7 +193,7 @@ stages:
   spark_epillid:
     cmd: python -m src.data.spark.submit epillid
     deps:
-    - path: config/pill_classes.csv
+    - path: config/pill_classes_v1.csv
       hash: md5
       md5: f3ae1e6b96a9b8a6caacfc27e9091f36
       size: 24518
@@ -213,8 +213,8 @@ stages:
       nfiles: 33005
     - path: src/data/spark/epillid_job.py
       hash: md5
-      md5: 2993cee0ac0c51395f616979ae38c001
-      size: 5119
+      md5: 77b3bc0ff632604aecdf1ed2ee27937d
+      size: 5125
     outs:
     - path: data/processed/c3pi/bigdata/epillid
       hash: md5
@@ -226,8 +226,8 @@ stages:
     deps:
     - path: data/processed/pharma
       hash: md5
-      md5: 35a18547ea9f852ec72371eaa1343d59.dir
-      size: 10208886
+      md5: a684fe60d324e212b38b3a7a71922375.dir
+      size: 20080598
       nfiles: 3
     - path: data/rag/interim
       hash: md5
@@ -260,8 +260,8 @@ stages:
     outs:
     - path: data/processed/rag/corpus_v2
       hash: md5
-      md5: 38707b09805dedb3988263878cbfbca2.dir
-      size: 3823607
+      md5: ea5f08db332668bd893402ab23629580.dir
+      size: 4211748
       nfiles: 33
   dataset_stats:
     cmd: python -m src.data.spark.log_stats
@@ -302,8 +302,8 @@ stages:
       nfiles: 33
     - path: src/data/spark/log_stats.py
       hash: md5
-      md5: de080eed342da6d9434e10528e1411b0
-      size: 10967
+      md5: 5f2eca50bc0383ba17243547e6d9f4dc
+      size: 10973
     outs:
     - path: data/processed/c3pi/bigdata/stats.json
       hash: md5
@@ -518,7 +518,7 @@ stages:
   prepare_classify_v2:
     cmd: python -m src.data.prepare_classify_v2
     deps:
-    - path: config/pill_classes.csv
+    - path: config/pill_classes_v1.csv
       hash: md5
       md5: f3ae1e6b96a9b8a6caacfc27e9091f36
       size: 24518
@@ -551,8 +551,8 @@ stages:
       size: 11304
     - path: src/data/prepare_classify_v2.py
       hash: md5
-      md5: 64b28a22b18bd9b8111bb25739b5796d
-      size: 14251
+      md5: 6f13259ef22c9b61cb786f99dcd376d9
+      size: 14257
     - path: src/data/prepare_detect_v2.py
       hash: md5
       md5: c4e4b01683781455879d114f3c346682
@@ -563,3 +563,100 @@ stages:
       md5: e14eb016f21452999a7abb4aa4fe88d5.dir
       size: 278653491
       nfiles: 18602
+  gradcam_gallery:
+    cmd: python -m src.models.gradcam_gallery
+    deps:
+    - path: backend/app/gallery.py
+      hash: md5
+      md5: 75fdee8200cc39bd086a8267c6f23e11
+      size: 2803
+    - path: backend/app/inference.py
+      hash: md5
+      md5: 2bc8baeffe8df2f4a0fb000529d13483
+      size: 11923
+    - path: config/demo_gallery.csv
+      hash: md5
+      md5: d5985628173b4c456a908907164e6444
+      size: 592
+    - path: config/splits/c3pi_v2/test.csv
+      hash: md5
+      md5: 477239433fae5b5cac12e0d984ff0ac4
+      size: 235012
+    - path: config/splits/selected_images.csv
+      hash: md5
+      md5: de21c22fc4a8b12ef6e410cea10f1f8b
+      size: 543427
+    - path: data/raw/c3pi/images
+      hash: md5
+      md5: 62051ba2f27a8520e490f4de3467231b.dir
+      size: 39542126444
+      nfiles: 20330
+    - path: models/classifier.onnx
+      hash: md5
+      md5: 11376ff8d465b30725771dfcc9e3cb32
+      size: 22553749
+    - path: models/detector.onnx
+      hash: md5
+      md5: ac3042742eee78d6cac3a772dc0c0fee
+      size: 37928538
+    - path: models/models.json
+      hash: md5
+      md5: 811d68775fc9470eb06750c711df287d
+      size: 2348
+    - path: models/train/classifier
+      hash: md5
+      md5: ca66f617e25a7bf27b418b76244af876.dir
+      size: 11414089
+      nfiles: 3
+    - path: models/train/classifier.json
+      hash: md5
+      md5: 35f60b6183da31488a6ba16b6bbde997
+      size: 321
+    - path: src/models/gradcam_gallery.py
+      hash: md5
+      md5: b207bcd07d681b39b7c36f29f58d148c
+      size: 9729
+    - path: src/utils/gradcam.py
+      hash: md5
+      md5: 7dde8c0d8d8a39cd1512fe7c8bc921a9
+      size: 5196
+    outs:
+    - path: data/processed/c3pi/gradcam
+      hash: md5
+      md5: 2f377d2c1b4011e9ed16f27143106b22.dir
+      size: 648536
+      nfiles: 9
+  prepare_boxes:
+    cmd: python -m src.data.medicine_boxes prepare
+    deps:
+    - path: backend/app/boxes.py
+      hash: md5
+      md5: 92da3a1a31917c9e9a3e04976be99e4c
+      size: 22651
+    - path: config/brand_aliases.csv
+      hash: md5
+      md5: 75cbf74c2651943ace56395f7e308137
+      size: 8769
+    - path: config/inn_aliases.csv
+      hash: md5
+      md5: 9192d68b9edce015b39e231cd7a3b484
+      size: 1765
+    - path: data/processed/pharma/interactions_with_any_drug.csv
+      hash: md5
+      md5: c082662967d203764f15e2f874a997a2
+      size: 18004918
+    - path: data/raw/medicine_boxes/italian_otc
+      hash: md5
+      md5: 301a3c0e388281c5f94881949bc0bd4a.dir
+      size: 49105187
+      nfiles: 720
+    - path: src/data/medicine_boxes.py
+      hash: md5
+      md5: 4d8e3eef4321151ac0cedfb2c34b8907
+      size: 10713
+    outs:
+    - path: data/processed/medicine_boxes
+      hash: md5
+      md5: f62b67417215afdc32d58fa76971e6e4.dir
+      size: 219252
+      nfiles: 2

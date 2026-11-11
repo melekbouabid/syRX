@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
@@ -135,3 +136,102 @@ def test_no_index_answers_503(app: FastAPI, pharma: str, browser: Callable[[], T
 def test_chat_route_in_openapi(chat_app: FastAPI, anonymous: TestClient) -> None:
     paths = anonymous.get("/openapi.json").json()["paths"]
     assert "/api/chat" in paths and "post" in paths["/api/chat"]
+
+
+def test_brand_in_the_question_gives_its_ingredient_and_source(
+    client: TestClient, llm: FakeChatModel, chat_app: FastAPI, tmp_path: Path
+) -> None:
+    # Step 2.7: a brand named in the question is linked to its ingredient by the brand
+    # table (here a one-row table: Diflucan is fluconazole), then checked like an INN.
+    table = tmp_path / "brands.csv"
+    table.write_text(
+        "brand,ingredients,printed_substances,country,source,reference,url\n"
+        'Diflucan,fluconazole,FLUCONAZOLE,FR,"BDPM (ANSM)","CIS 0 : DIFLUCAN",'
+        "https://base-donnees-publique.medicaments.gouv.fr/\n",
+        encoding="utf-8",
+    )
+    chat_app.state.settings.brand_table_file = table
+    llm.answer = (
+        "Le Diflucan contient du fluconazole [1]. DDInter classe l'interaction majeure [2]."
+    )
+    body = ask(client, "Puis-je prendre du Diflucan avec ma warfarine ?")
+    assert body["ingredients"] == ["warfarin", "fluconazole"]
+    assert ("check_interaction", "rule") in [
+        (c["name"], c["chosen_by"]) for c in body["tool_calls"]
+    ]
+    brand = body["citations"][0]
+    assert brand["doc_type"] == "brand" and brand["title"] == "Diflucan -> fluconazole"
+    assert brand["url"].startswith("https://base-donnees-publique")
+    assert any(c["doc_type"] == "interaction" and "Major" in c["title"] for c in body["citations"])
+    _, user = llm.prompts[-1]
+    assert "Marques reconnues : Diflucan = fluconazole" in str(user.content)
+    assert body["answer"].endswith(DISCLAIMER)
+
+
+def test_unknown_brand_adds_nothing(client: TestClient, llm: FakeChatModel) -> None:
+    llm.answer = "Je ne trouve pas cette marque dans les sources [1]."
+    body = ask(client, "Le Zorglubine interagit-il avec la warfarine ?")
+    assert body["ingredients"] == ["warfarin"]  # no invented ingredient
+    assert all(c["doc_type"] != "brand" for c in body["citations"])
+
+
+def test_a_brand_given_by_the_planner_is_checked_by_its_ingredients(
+    client: TestClient, llm: FakeChatModel, chat_app: FastAPI, tmp_path: Path
+) -> None:
+    # The planner LLM may pass the brand itself ("Diflucan"): it is replaced by its ingredient.
+    table = tmp_path / "brands.csv"
+    table.write_text(
+        "brand,ingredients,printed_substances,country,source,reference,url\n"
+        'Diflucan,fluconazole,FLUCONAZOLE,FR,"BDPM (ANSM)","CIS 0 : DIFLUCAN",'
+        "https://base-donnees-publique.medicaments.gouv.fr/\n",
+        encoding="utf-8",
+    )
+    chat_app.state.settings.brand_table_file = table
+    llm.tool_calls = [{"name": "check_interaction", "args": {"drugs": ["Diflucan", "warfarin"]}}]
+    llm.answer = "Le Diflucan contient du fluconazole [1]."
+    body = ask(client, "Diflucan et warfarine ?")
+    (call,) = [c for c in body["tool_calls"] if c["name"] == "check_interaction"]
+    assert call["chosen_by"] == "llm" and call["ok"]
+    assert call["args"]["drugs"] == ["fluconazole", "warfarin"]
+    assert any(c["doc_type"] == "interaction" and "Major" in c["title"] for c in body["citations"])
+
+
+def test_the_brand_source_is_always_cited(
+    client: TestClient, llm: FakeChatModel, chat_app: FastAPI, tmp_path: Path
+) -> None:
+    # The LLM cites only DDInter: a fixed sentence citing the brand table is added first.
+    table = tmp_path / "brands.csv"
+    table.write_text(
+        "brand,ingredients,printed_substances,country,source,reference,url\n"
+        'Diflucan,fluconazole,FLUCONAZOLE,FR,"BDPM (ANSM)","CIS 0 : DIFLUCAN",'
+        "https://base-donnees-publique.medicaments.gouv.fr/\n",
+        encoding="utf-8",
+    )
+    chat_app.state.settings.brand_table_file = table
+    llm.answer = "DDInter classe l'interaction comme majeure [2]."
+    body = ask(client, "Puis-je prendre du Diflucan avec ma warfarine ?")
+    assert body["answer"].startswith("Diflucan contient : fluconazole (table des marques) [1].")
+    assert "brand_source_added" in body["safety"]["violations"]
+    assert {c["n"] for c in body["citations"] if c["cited"]} >= {1, 2}
+    assert body["answer"].endswith(DISCLAIMER)
+
+
+def test_an_answer_denying_the_ddinter_interaction_is_corrected(
+    client: TestClient, llm: FakeChatModel
+) -> None:
+    llm.answer = "Le fluconazole n'est pas connu pour interagir avec la warfarine [2]."
+    body = ask(client, "La warfarine et le fluconazole interagissent-ils ?")
+    answer = body["answer"]
+    assert "pas connu" not in answer
+    assert answer.startswith("Interaction listée par DDInter 2.0 : ")
+    assert "(Major) [1]." in answer and answer.endswith(DISCLAIMER)
+    assert {"denies_found_interaction", "interaction_sentence_added"} <= set(
+        body["safety"]["violations"]
+    )
+
+
+def test_citations_carry_document_metadata(client: TestClient) -> None:
+    body = ask(client, "La warfarine interagit-elle avec le fluconazole ?")
+    documents = [c for c in body["citations"] if c["doc_type"] in ("label", "abstract")]
+    assert documents and all(c["doc_id"] and c["license"] for c in documents)
+    assert all(c["rerank_score"] is None for c in body["citations"])  # reranking off by default

@@ -10,12 +10,21 @@ numpy>=2.0
 opencv-python-headless>=4.10
 onnxruntime>=1.20
 python-multipart>=0.0.18
-# Module 2: agent (LangGraph, LangChain + Ollama), MCP server, pgvector
+# Medicine boxes (step 2.7, app/boxes.py): OCR in ONNX (PP-OCRv4 models included, headless
+# OpenCV like the rest of the API) and fuzzy matching of the words read.
+rapidocr==3.10.0
+rapidfuzz==3.14.6
+# Module 2: agent (LangGraph, LangChain + Ollama), MCP server, Qdrant (D113) and pgvector
 langgraph>=1.2.18
 langchain-core>=1.7.1
 langchain-ollama>=1.1.0
 mcp>=2.3.0
 pgvector>=0.5.1
+# Same minor version as the qdrant service of docker-compose.yml.
+qdrant-client>=1.20.0,<1.21
+# Step 3.2: BM25 sparse vectors (Qdrant/bm25) and the bge-reranker-base cross-encoder, both
+# in ONNX Runtime (no PyTorch in the image); models cached in TUJYA_RAG_MODEL_CACHE_DIR.
+fastembed==0.9.1
 # Bonus: toxicity tool (Tox21 model, docs/bonus/toxicity.md)
 rdkit>=2025.3
 lightgbm>=4.5

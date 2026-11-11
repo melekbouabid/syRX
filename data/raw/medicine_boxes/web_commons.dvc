@@ -1,0 +1,6 @@
+outs:
+- md5: 50479a4dbf546dfdae2bd84b05013c81.dir
+  size: 8512668
+  nfiles: 13
+  hash: md5
+  path: web_commons

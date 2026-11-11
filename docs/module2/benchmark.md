@@ -94,6 +94,70 @@ l'anglais) ou une requête BM25 traduite serait l'étape suivante ; ce n'est pas
 pour ne pas ajuster le système à son propre jeu de test. Le filtre par principe actif aide un
 peu chaque mode (+0,01 à +0,05 de Recall@5).
 
+### Qdrant contre pgvector (étape 3.1, D113)
+
+Le passage à Qdrant ne change pas la récupération : `python -m src.rag.index
+--copy-from-sql` a copié les mêmes vecteurs bge-m3, et `bench_retrieval.py --store qdrant`
+puis `--store sql` donnent, configuration par configuration, **exactement** les mêmes
+Recall@k, Coverage@k et MRR (écart 0). Seules les latences changent (dense + filtre :
+112 ms par requête sur Qdrant, 107 ms sur pgvector, surtout l'encodage de la question).
+
+| Jeu de questions | Store | dense + filtre : Recall@5 / MRR | hybride + filtre | BM25 + filtre |
+|---|---|---:|---:|---:|
+| 83 questions (tableau ci-dessus) | pgvector puis Qdrant | 0,928 / 0,852 | 0,904 / 0,796 | 0,783 / 0,660 |
+| 85 questions (+ 2 questions de marque de l'étape 2.7) | Qdrant et pgvector, identiques | 0,906 / 0,832 | 0,882 / 0,778 | 0,765 / 0,644 |
+
+La baisse de 0,928 à 0,906 vient du jeu de questions, pas du store : l'étape 2.7 a ajouté
+huit questions de marque (« Panadol... »), dont deux ont des chunks attendus ; aucune des deux
+n'est trouvée dans le top 5 (77 succès sur 83 puis 77 sur 85), car un nom de marque n'est pas
+dans les notices américaines : l'agent le traduit en principe actif par la table des marques
+avant de chercher (D112), ce que le benchmark de récupération seul ne fait pas. Runs MLflow
+(`tujya-rag`, 11/11/2026) : paramètre `store` de chaque run (`qdrant` ou `pgvector`) ;
+[`results_retrieval.json`](../../src/benchmark/results_retrieval.json) = le run Qdrant.
+
+### Recherche avancée (étape 3.2, D116-D118)
+
+Même jeu (85 questions avec chunks attendus), même index Qdrant, filtre `names` ; BM25 et hybride
+tournent maintenant dans Qdrant (vecteurs sparse `Qdrant/bm25`). `-rewrite` : requête réécrite
+par qwen2.5:3b ; `-rerank` : bge-reranker-base relit les 10 premiers résultats (`--fetch-k 10`,
+pour tenir le temps de calcul sur ce PC : le Recall@10 ne peut donc pas changer). Runs MLflow
+`tujya-rag` du 11/11/2026 (paramètres `lexical`, `rerank`, `fetch_k`, `query_rewrite`),
+[`results_retrieval.json`](../../src/benchmark/results_retrieval.json).
+
+| Configuration (filtre `names`) | Recall@1 | Recall@5 | Recall@10 | MRR | Recall@5 / MRR FR | Recall@5 / MRR EN | ms / requête |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| BM25 en mémoire (avant, étape 3.1) | 0,553 | 0,765 | 0,800 | 0,644 | | | 38 |
+| BM25 Qdrant (`Qdrant/bm25`) | 0,518 | 0,753 | 0,776 | 0,611 | 0,524 / 0,380 | 0,977 / 0,837 | 20 |
+| **dense (réglage de l'agent, D65)** | 0,776 | 0,906 | 0,953 | 0,832 | 0,857 / 0,747 | 0,954 / 0,915 | 102 |
+| hybride Qdrant (RRF) | 0,729 | 0,871 | 0,953 | 0,803 | 0,762 / 0,672 | 0,977 / 0,930 | 124 |
+| BM25 + réécriture | 0,694 | 0,882 | 0,953 | 0,779 | 0,786 / 0,690 | 0,977 / 0,866 | 20 + LLM |
+| dense + réécriture | 0,765 | 0,941 | **1,000** | 0,835 | 0,929 / 0,782 | 0,954 / 0,887 | 94 + LLM |
+| hybride + réécriture | 0,788 | 0,929 | 0,988 | 0,860 | 0,881 / 0,800 | 0,977 / 0,918 | 118 + LLM |
+| dense + reranker | 0,800 | 0,941 | 0,953 | 0,861 | 0,905 / 0,810 | 0,977 / 0,911 | 18 341 |
+| **hybride + réécriture + reranker** | **0,824** | **0,965** | 0,988 | **0,889** | 0,929 / 0,878 | 1,000 / 0,900 | 12 975 |
+
+Ce que cela montre :
+
+- **La réécriture corrige le défaut connu du lexical** (D65 : BM25 ne lit que l'anglais) :
+  BM25 passe de 0,753 à 0,882 de Recall@5 et de 0,524 à 0,786 sur les questions françaises ;
+  l'hybride gagne 0,058 de Recall@5 et 0,057 de MRR. Un premier passage donnait l'inverse pour
+  BM25 (0,612) : le petit LLM collait parfois les mots (`what_are_the_contraindications_of_metformin`),
+  un seul terme inconnu pour BM25 ; corrigé dans `clean()` (test ajouté) puis relancé.
+- **Le reranker améliore surtout le haut du classement** : sur le dense, Recall@1 0,776 -> 0,800,
+  Recall@5 0,906 -> 0,941, MRR 0,832 -> 0,861 ; sur hybride + réécriture, 0,929 -> 0,965 et
+  0,860 -> 0,889 (meilleure configuration mesurée). Il ne peut rien pour une question dont le bon
+  chunk n'est pas dans les 10 candidats.
+- **Coût** : la réécriture ajoute un appel LLM (environ 1 s sur le GPU) ; le reranker coûte 13 à
+  18 s par question sur le processeur de ce portable (10 paires de ~300 tokens, PC bridé sous
+  charge, D96), inutilisable en démonstration.
+- **Le BM25 de Qdrant n'est pas meilleur que le nôtre** : `Qdrant/bm25` ne retire que les mots
+  vides anglais et racinise en anglais, alors que notre tokeniseur retirait aussi les mots vides
+  français ; sur les questions anglaises, les deux sont à 0,977.
+
+Réglage de l'agent : **inchangé (dense, sans réécriture ni reranker)** en attendant l'étape 3.3,
+qui compare les configurations sur la génération (D117, D118). Les deux options sont un réglage :
+`TUJYA_RAG_QUERY_REWRITE=true`, `TUJYA_RAG_RERANK=true`, `TUJYA_RAG_SEARCH_MODE=hybrid`.
+
 ## Génération
 
 [`bench_answers.py`](../../src/benchmark/bench_answers.py) fait tourner le vrai agent (qwen2.5:3b,
