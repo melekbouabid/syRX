@@ -1,0 +1,6 @@
+outs:
+- md5: e23a3ee7979d7f65821cd2b534c12883.dir
+  size: 691248298
+  nfiles: 33
+  hash: md5
+  path: classifier-vit-b16
