@@ -127,6 +127,15 @@ class Settings(BaseSettings):
     # Chosen on the benchmark (docs/module2/benchmark.md, D65): dense +
     # ingredient filter is best; hybrid loses on French questions (BM25 only matches English).
     rag_search_mode: str = "dense"
+    # Step 3.2 (docs/module2/rag.md, D116-D118). BM25 sparse vectors in Qdrant (fastembed
+    # `Qdrant/bm25`), cross-encoder reranking of `rag_fetch_k` candidates, query rewriting by
+    # the LLM. fastembed models are downloaded once (Hugging Face, no account) into the cache.
+    rag_sparse_model: str = "Qdrant/bm25"
+    rag_rerank: bool = False
+    rag_rerank_model: str = "BAAI/bge-reranker-base"
+    rag_fetch_k: int = 20
+    rag_query_rewrite: bool = False
+    rag_model_cache_dir: Path = PROJECT_DIR / "models" / "fastembed"
     # An uncited answer sentence gets the source closest in meaning (bge-m3 cosine) above
     # this; calibrated on the first benchmark run (docs/module2/benchmark.md).
     # 0 disables it.
