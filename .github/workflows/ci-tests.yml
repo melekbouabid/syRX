@@ -1,7 +1,7 @@
 # Continuous integration, as the module guide asks: Python lint (flake8, black --check, plus
 # ruff and mypy), frontend lint (ESLint), unit tests of src/ (tests/) and of the API
-# (backend/tests), the PySpark jobs (tests/data/spark, with Java), frontend build, and the
-# git hooks with the commit messages of the push.
+# (backend/tests), the PySpark jobs (tests/data/spark, with Java), frontend tests and build,
+# and the git hooks with the commit messages of the push.
 # One Python environment for src/ and backend/ (requirements-dev.txt at the root, as on the
 # dev machine). The Docker images are built and smoke-tested by docker-build.yml.
 # No job touches the network beyond installing dependencies: all HTTP in the tests is mocked
@@ -46,11 +46,12 @@ jobs:
       - run: python -m mypy
 
   src:
-    name: pytest src (tests/, with PostgreSQL + pgvector)
+    name: pytest src (tests/, with PostgreSQL + pgvector and Qdrant)
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # PostgreSQL + pgvector for the RAG store tests (tests/rag/test_rag_pgvector.py). The tests
-    # use fake embeddings and a fake LLM: CI never needs Ollama or a real model.
+    # PostgreSQL + pgvector and Qdrant (same version as docker-compose.yml) for the RAG store
+    # tests (tests/rag/test_rag_pgvector.py, test_rag_qdrant.py). The tests use fake
+    # embeddings and a fake LLM: CI never needs Ollama or a real model.
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -63,8 +64,15 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U tujya" --health-interval 5s --health-timeout 5s
           --health-retries 20
+      qdrant:
+        image: qdrant/qdrant:v1.20.0
+        env:
+          QDRANT__TELEMETRY_DISABLED: "true"
+        ports:
+          - 6333:6333
     env:
       TUJYA_TEST_PG_URL: postgresql+psycopg://tujya:tujya@localhost:5432/tujya
+      TUJYA_TEST_QDRANT_URL: http://localhost:6333
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -182,7 +190,7 @@ jobs:
           exit $status
 
   frontend:
-    name: frontend (eslint, type check and build)
+    name: frontend (eslint, unit tests, type check and build)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -202,5 +210,7 @@ jobs:
       # TypeScript 7, docs/decisions.md D84).
       - run: npm ci --prefix eslint
       - run: npm run lint
+      # Vitest: helpers and components of the Scanner page (src/**/*.test.ts(x), in Node).
+      - run: npm test
       # `tsc --noEmit` (type check), then `vite build`.
       - run: npm run build

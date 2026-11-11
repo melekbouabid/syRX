@@ -7,7 +7,7 @@ import { Icon } from "../components/icons";
 const DISCLAIMER = "Information uniquement, consultez un pharmacien ou un médecin.";
 
 export interface ChatPill {
-  class_id: number;
+  class_id: number | null; // null for a medicine box (its ingredients are used instead)
   name: string;
   active_ingredients: string[];
 }
@@ -25,6 +25,7 @@ const DOC_LABELS: Record<string, string> = {
   label: "openFDA label",
   abstract: "PubMed",
   interaction: "DDInter",
+  brand: "Table des marques",
 };
 
 function suggestions(pills: ChatPill[]): string[] {
@@ -87,8 +88,13 @@ function Citations({ citations, turn }: { citations: ChatCitation[]; turn: numbe
         </a>
         <span className="cell-sub">
           {DOC_LABELS[c.doc_type] ?? c.doc_type}
-          {c.section && c.section !== "interaction" ? ` · ${c.section.replaceAll("_", " ")}` : ""}
+          {c.section && c.section !== "interaction" && c.section !== "brand" ? ` · ${c.section.replaceAll("_", " ")}` : ""}
           {c.date ? ` · ${c.date}` : ""}
+        </span>
+        <span className="cell-sub">
+          {c.source_name}
+          {c.license ? ` · ${c.license}` : ""}
+          {c.rerank_score != null ? ` · reranker ${c.rerank_score.toFixed(2)}` : ""}
         </span>
         <p className="citation-snippet">{c.snippet}</p>
       </div>
@@ -172,7 +178,9 @@ export default function ChatPanel({ pills }: { pills: ChatPill[] }) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [busy, setBusy] = useState(false);
   const counter = useRef(0);
-  const classIds = [...new Set(pills.map((pill) => pill.class_id))];
+  const classIds = [
+    ...new Set(pills.flatMap((pill) => (pill.class_id === null ? [] : [pill.class_id]))),
+  ];
 
   const update = (id: number, change: (turn: Turn) => Turn) =>
     setTurns((current) => current.map((turn) => (turn.id === id ? change(turn) : turn)));

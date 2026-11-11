@@ -44,7 +44,7 @@ from src.utils import mlflow_utils as mu
 ROOT = Path(__file__).resolve().parents[2]  # repository root
 # Ultralytics training runs (git-ignored; the results that matter are in MLflow and DVC).
 RUNS = ROOT / "runs"
-CLASSES = ROOT / "config" / "pill_classes.csv"
+CLASSES = ROOT / "config" / "pill_classes_v1.csv"
 PARAMS = ROOT / "params.yaml"
 # Outputs of the DVC stages train_detector / train_classifier (git-ignored, cached by DVC).
 OUT = ROOT / "models" / "train"

@@ -63,6 +63,8 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Découpage avec métadonnées (source, médicament, section, URL, date, licence, rétractation ; [rag.md](module2/rag.md))
 - [x] Embeddings bge-m3 dans PostgreSQL + pgvector, recherche hybride BM25 (RRF), filtres (D59)
 - [x] Corpus versionné par DVC (`data/rag/*.dvc`, étape `rag_corpus`)
+- [x] Base vectorielle consultable (étape 3.1, remarque 7) : index dans Qdrant (tableau de bord sur :6333/dashboard, payload = toutes les métadonnées + SHA-256, index de payload), copie des vecteurs pgvector sans réencodage, même Recall@5 / MRR (écart 0), page « Documents » et `GET /api/documents` ; captures 27 à 29 ([rag.md](module2/rag.md#consulter-les-documents-indexés), D113-D114)
+- [x] Recherche avancée (étape 3.2, remarque 13) : BM25 sparse `Qdrant/bm25` et hybride RRF dans Qdrant, reranker bge-reranker-base (ONNX, désactivé par défaut : 13-18 s par question sur ce CPU), réécriture de requête par le LLM, sources avec métadonnées dans le chat ; meilleur : hybride + réécriture + reranker Recall@5 0,965 / MRR 0,889 ([benchmark.md](module2/benchmark.md#recherche-avancée-étape-32), D116-D118)
 
 ## 5. Agent
 - [x] Graphe LangGraph : comprendre -> outils -> récupérer -> répondre avec citations -> contrôle de sécurité ([agent.md](module2/agent.md))
@@ -75,9 +77,13 @@ modules » du [README](../README.md#exigences-des-modules).
 
 ## 6. Site web
 - [x] Page Scanner : upload + webcam (prédictions en direct) + boîtes + galerie de démonstration (D52)
+- [x] Frontend du guide (étape 2.6) : Tailwind CSS 4, glisser-déposer, galerie du split de test en 1 clic (photos jamais vues par le détecteur v9 ni le classifieur v1, D105), webcam en inférence continue (une requête à la fois), barres de probabilité animées, boîtes colorées par classe sur canvas, latence client et serveur en ms, modèle champion (`GET /model/metadata`), tests Vitest ; captures 01 à 07 et 18 à 21 ([app.md](app.md#page-scanner-guide-du-module-1-étape-26), D106-D107)
+- [x] Grad-CAM (reporté de l'étape 2.5) : cartes de la galerie précalculées avec les poids PyTorch du classifieur servi (étape DVC `gradcam_gallery`), servies par `GET /api/demo/images/{id}/gradcam` et affichées dans le Scanner ([api.md](api.md#galerie-de-démo-et-grad-cam), D104)
 - [x] Résultat (interaction, sévérité, source) sur la page Scanner ; captures dans [docs/screenshots/](screenshots/)
 - [x] Panneau de chat avec réponse diffusée, citations cliquables, appels d'outils (page Scanner)
 - [x] Avertissement sur la page Scanner, chaque rapport d'interactions, le panneau de chat et chaque réponse
+
+- [x] Boîtes de médicaments (étape 2.7, remarque 18). Fait : OCR RapidOCR (champion, `ingredient_recall` 0,767) contre EasyOCR (0,480) sur 713 boîtes Italian-OTC-medicines, table des marques sourcée (BDPM, emc), DCI imprimée, RxNav en secours, refus hors distribution (98 % des comprimés gardés, 79 % des images hors sujet refusées), `/api/scan` avec `kind` et `box`, carte « boîte » dans le Scanner, marques dans le chat (`lookup_brand`), 8 questions de marques dans le benchmark ([boites.md](module1/boites.md), D108-D112). Validé sur 11 vraies boîtes sous licence libre de Wikimedia Commons (`--set web`, D115) : 3 Panadol sur 3 -> paracétamol avec sa source emc, 11 principes actifs justes sur 11, aucun faux. Plus tard : photos de l'utilisateur comme second jeu de test (`--set user`) ; Roboflow (compte)
 
 ## 7. Livraison
 - [x] Docker Compose : postgres + pgvector, mlflow ([docs/infra.md](infra.md))
@@ -85,7 +91,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Docker Compose : service ollama avec le GPU NVIDIA
 - [x] CI GitHub Actions (lint, tests, build du site)
 - [x] CD GitHub Actions : images construites et testées après une CI verte, non publiées (D70, [docs/cd.md](cd.md))
-- [x] Workflows du guide : `ci-tests.yml` (flake8, black --check, ruff, mypy, ESLint, pytest de `src/` et `backend/`, build du frontend) et `docker-build.yml` (images multi-stage backend et frontend + test de fumée, rien de publié) ; anciens `ci.yml` et `cd.yml` fusionnés (D87, `v2.1.0-ci`)
+- [x] Workflows du guide : `ci-tests.yml` (flake8, black --check, ruff, mypy, ESLint, pytest de `src/` et `backend/`, build du frontend ; Vitest depuis l'étape 2.6) et `docker-build.yml` (images multi-stage backend et frontend + test de fumée, rien de publié) ; anciens `ci.yml` et `cd.yml` fusionnés (D87, `v2.1.0-ci`)
 - [ ] Supprimer les deux anciens paquets sur ghcr.io (manuel : pas de droit `delete:packages`, [docs/cd.md](cd.md))
 - [x] Usage strictement local : chaque port sur 127.0.0.1, vérifié avec netstat (D69, [docs/infra.md](infra.md))
 - Pas de déploiement sur un serveur, par choix : le projet ne tourne que sur ce PC (D69)

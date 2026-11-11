@@ -1311,3 +1311,312 @@ semaine et que la limite de 12 h par session. Calcul détaillé par notebook dan
 `v3.2.0-classifieurs` avant les vrais entraînements. Rejeté : entraîner sur le GPU du PC (4 Go,
 environ 2,5 fois plus lent qu'un T4, plusieurs jours) ; une seule branche pour les six modèles
 (contraire à la remarque 5 du professeur).
+
+## Frontend du guide et Grad-CAM (2026-11-08)
+
+Numérotation : D99 à D103 sont réservées aux décisions de l'étape 2.3 (comparaison des
+classifieurs), écrites sur sa branche d'outillage et pas encore fusionnées ; celles de
+l'étape 2.6 commencent donc à D104.
+
+**D104. Grad-CAM précalculé pour la galerie de démo, hors de l'API, avec les poids PyTorch
+du classifieur servi.** Grad-CAM pondère les cartes d'une couche de convolution par la
+moyenne de leur gradient : il faut le modèle PyTorch et une passe arrière, alors que l'API
+n'exécute que l'ONNX, sans PyTorch dans son image (D97). Choix : le script
+`src/models/gradcam_gallery.py` (venv d'entraînement, étape DVC `gradcam_gallery`) calcule
+les cartes des photos de la galerie avec `src/utils/gradcam.py` (repris de l'étape 2.3 par
+cherry-pick, sans le reste de cette branche) ; il reprend la chaîne ONNX de l'API
+(`backend/app/inference.py` : mêmes boîtes, mêmes recadrages carrés de 224 px), charge les
+poids de la version servie (`models/train/classifier`, run `6dd616a6...` vérifié contre
+`models/models.json`, sinon arrêt), prend la dernière convolution de la tête Classify
+(`model.10.conv`, 1 280 cartes de 7 x 7) et la classe top-1 donnée par l'API, et s'arrête si
+PyTorch et ONNX Runtime ne donnent pas la même probabilité (écart mesuré 1,2e-7). Chaque carte
+est fondue dans le carré recadré de son comprimé sur la photo (1 280 px au plus, mêmes
+proportions, le reste assombri), pour que les boîtes du scan tombent au même endroit. Sorties
+dans `data/processed/c3pi/gradcam` (DVC, jamais dans git), montées en lecture seule dans le
+conteneur `backend` et servies par `GET /api/demo/images/{id}/gradcam` (404 sans carte) ;
+la galerie donne `gradcam_url`. Le Scanner affiche un onglet « Grad-CAM » pour une photo de la
+galerie et dit, pour toute autre photo, que la carte n'existe que pour la galerie. Rejeté :
+PyTorch dans l'image de l'API (plusieurs centaines de Mo, et une seconde implémentation du modèle à
+garder identique à l'ONNX) ; une carte de saillance par occlusion calculée en ONNX et
+présentée comme Grad-CAM (D97) ; exporter un second ONNX qui sort aussi les activations et
+leurs gradients (graphe d'entraînement à maintenir pour une seule figure) ; calculer les
+cartes dans le navigateur (même problème, sans gradients).
+
+**D105. La galerie de démo ne montre que des photos qu'aucun modèle servi n'a vues à
+l'entraînement.** Contrôle de l'étape 2.6 : la galerie (D52) vérifiait le split de test v1,
+celui du classifieur. Depuis l'étape 2.2, le détecteur servi (YOLO11s v9) est entraîné sur
+C3PI v2, et deux des huit photos (halopéridol, hydroxychloroquine) étaient dans son jeu
+d'entraînement ; deux autres (trazodone, multivitamine) n'étaient dans aucun jeu de détection v2. Règle, vérifiée par
+l'API (`backend/app/gallery.py`) avec les fichiers suivis par git : une photo « consumer » du
+split de test v2 (`config/splits/c3pi_v2/test.csv`, sessions entières, D89) qui n'est pas dans
+le train ni la val v1 (`config/splits/selected_images.csv`). Nouvelle liste de huit photos,
+toutes aussi dans `test_holdout.txt` de D93 (aucune photo de la même session vue par un modèle
+v1, ce qui couvre le classifieur v1 entraîné sur le même split), avec un test qui le vérifie
+quand les données DVC sont là. Rôles gardés : interactions Major (halopéridol, citalopram,
+fluconazole, warfarine, nortriptyline ; fluconazole + citalopram + halopéridol donnent trois
+paires Major), deux gélules AMRIX sur une photo, une photo de trazodone sous le seuil de
+confirmation (81 %), le multivitamine sans principe actif connu. Les huit sont choisies parmi
+les 244 candidates possibles avec les résultats de la chaîne servie, comme en D52 : la galerie
+montre le modèle à son avantage, sauf la photo de trazodone ; les chiffres honnêtes restent
+ceux du split de test entier. Rejeté : se fier au seul split v1 (fuite pour le détecteur) ;
+exiger `test_holdout.txt` dans l'API (fichier DVC absent de l'image et de la CI).
+
+**D106. Tailwind CSS 4 en couches CSS à côté de styles.css, sans le reset de base ; Vitest pour
+les tests du site.** Le guide demande un framework CSS. Tailwind 4.3.3 (plugin Vite, version
+publiée en juillet 2026) plutôt que MUI : le site a déjà son identité (couleurs du logo,
+composants maison) et MUI imposerait ses propres composants et son thème. `src/index.css`
+déclare les couches `theme, base, legacy, components, utilities` : thème et utilitaires de
+Tailwind, `styles.css` entier dans la couche `legacy`, sans le « preflight » (reset de base)
+qui changerait toutes les pages. Les utilitaires passent donc au-dessus des anciennes règles
+là où un composant les emploie, et les autres pages (chat, toxicité, admin, profil,
+connexion) restent identiques, vérifié par captures. Les jetons Tujya (`--surface`,
+`--primary`...) deviennent des couleurs Tailwind (`bg-surface`, `text-primary`...), donc le
+mode sombre suit. Le Scanner du guide (onglets, glisser-déposer, galerie, webcam, résultat,
+barres) est réécrit en utilitaires et ses anciennes règles sont retirées (201 lignes). Seule
+collision de nom trouvée : la classe `table` des tableaux d'administration, à qui l'utilitaire
+`table` ne fait que redonner `display: table`. Tests : Vitest 5.0.5 en environnement Node (pas
+de navigateur ni de jsdom) pour la logique pure (`src/lib/vision.ts`) et le rendu des
+composants (`react-dom/server`) ; lancés par la CI (`npm test`).
+
+**D107. Webcam : une requête à la fois ; latence client mesurée dans le navigateur ; couleurs
+de classe de la palette d'Ultralytics.** Inférence continue : la boucle (`startLiveLoop`)
+prend une image, l'envoie à `POST /api/scan` et n'attend la suivante qu'après la réponse plus
+0,4 s ; elle ne crée jamais de file d'attente si le serveur ralentit (testé avec des minuteries
+factices), et l'arrêt annule la requête en cours. `/api/scan` plutôt que `/predict` : mêmes
+modèles, plus les noms des comprimés et la règle de confirmation. Latence : client =
+`performance.now()` autour de l'appel (envoi, serveur, réception, lecture du JSON) ;
+serveur = `timings.server_ms`, ajouté à `/api/scan` (toute la requête côté API) ; modèle =
+ONNX Runtime seul ; la différence client - serveur est affichée comme « réseau et navigateur ».
+Couleurs : la formule de teinte de D97 donnait presque le même vert au fluconazole (classe 9)
+et au citalopram (120), montrés ensemble dans la démo ; les boîtes prennent maintenant la
+couleur `class_id mod 20` de la palette à 20 couleurs des tracés d'Ultralytics, dans
+`/predict/visualize` comme sur le canvas du site (même liste dans les deux codes, mêmes
+valeurs testées des deux côtés), avec un texte noir ou blanc selon la luminance. Deux classes
+distantes de 20 partagent une couleur : la couleur aide à suivre une classe d'une image à
+l'autre, le nom et la probabilité restent écrits sur chaque boîte. Rejeté : une file
+d'images en parallèle (latence qui grandit sans fin sur CPU) ; une couleur par confiance
+seulement (le guide demande une couleur par classe).
+
+## Étape 2.7 : boîtes de médicaments (remarque 18 du professeur)
+
+**D108. Données des boîtes : jeu public sans compte, vérité terrain tirée des métadonnées,
+photos de l'utilisateur et Roboflow en attente.** Le scanner ne connaît que des comprimés C3PI :
+une boîte recevait une fausse classe (7 boîtes sur 8 testées, docs/module1/boites.md). Jeu
+retenu : mennox/Italian-OTC-medicines (Hugging Face, Apache-2.0, téléchargement anonyme figé à
+la révision 29ebcd7), 718 fichiers dont 5 pages HTML écartées par leur signature, 713 photos.
+La vérité terrain vient des métadonnées, jamais de la photo : marque = premier mot du nom
+commercial (vide pour un générique nommé d'après son principe actif) ; principes actifs = texte
+« Principi attivi » entre « principio attivo » et « eccipienti » (un arôme comme « gusto Ginger »
+n'est pas un principe actif), rapproché des noms DDInter avec les mêmes règles que l'API, sans la
+table des marques (pour ne pas noter la voie « marque » contre elle-même) : 279 photos ont au
+moins un principe actif connu. Contrôle de 20 lignes au hasard : justes, parfois incomplètes.
+Images hors sujet : 16 exemples de scikit-image (CC0 ou domaine public) + 3 images générées.
+Roboflow Universe et Kaggle demandent un compte : non utilisés (rien n'est contourné) ; le petit
+détecteur YOLO « boîte » reste une option. Les photos de l'utilisateur (Panadol, Doliprane...)
+sont le jeu de test final : dossier `data/raw/medicine_boxes/user_photos` prévu, commande
+d'évaluation `--set user` prête. La validation « Panadol -> paracétamol » demande une vraie
+photo de Panadol, absente du jeu public : une image de texte synthétique ne sert qu'aux tests
+unitaires. L'étape reste donc EN ATTENTE PHOTOS : branche poussée, pas de merge ni de tag.
+
+**D109. OCR : RapidOCR servi, EasyOCR comparé ; promotion sur `ingredient_recall`.** Deux
+moteurs, une branche `experiment/ocr-<moteur>` chacun : RapidOCR 3.10 (PP-OCRv4 mobile en ONNX,
+ONNX Runtime CPU : la même pile que les modèles de comprimés, sans PyTorch dans l'image du
+backend) et EasyOCR 1.7 (CRAFT + CRNN, PyTorch, GPU, modèles italien, français et anglais ;
+venv d'entraînement seulement). Tesseract n'est pas comparé : son installateur Windows demande
+les droits d'administrateur ; TrOCR est exclu par le périmètre du projet (reconnaissance de
+lignes seulement, sans détection). Chaque moteur est un run MLflow (expérience `tujya-boxes`)
+et une version du Registry `tujya-box-ocr` (modèle pyfunc « défini par code » avec sa
+configuration : les moteurs sont préentraînés, rien n'est entraîné ici). Métrique de
+promotion : `ingredient_recall`, part des boîtes à principe actif connu dont au moins un vrai
+principe actif est trouvé par le code de l'API (gain minimal 0,005, `params.yaml`
+`compare.ocr`), avec `promote_if_better` ; la précision et le taux de principe actif faux sont
+rapportés à côté (un faux est plus grave qu'un oubli). RxNav est coupé pendant l'évaluation
+pour un score reproductible hors ligne. Latence : 30 boîtes, 3 tours séparés de 20 s ; le PC se
+bride sous charge continue (D96) : 0,4 à 0,6 s par boîte à froid pour RapidOCR, environ 3,4 s
+en régime bridé. Un moteur PyTorch champion ne serait pas servi tel quel : l'API reste en ONNX.
+
+**D110. Rapprochement du texte : table des marques sourcée, DCI imprimée, RxNav en secours,
+jamais de devinette.** `config/brand_aliases.csv` : 35 marques vendues en France ou au
+Royaume-Uni (Panadol, Doliprane, Efferalgan, Dafalgan, Augmentin...), principes actifs sous
+les noms de la table d'interactions ; chaque ligne cite le produit vérifié : la fiche emc
+(SmPC) de Panadol Advance, ou un code CIS du fichier des compositions de la BDPM (ANSM, Licence
+ouverte, fichier du 03/11/2026, substances actives vérifiées par script). Les marques
+italiennes du jeu d'évaluation n'y sont pas ajoutées (sauf celles vendues en France :
+Efferalgan, Nurofen, Gaviscon, Imodium) : l'évaluation mesure surtout la lecture de la DCI.
+`config/inn_aliases.csv` : orthographes imprimées dont le nom diffère de la table
+(paracetamolo -> acetaminophen, source RxNorm ; acido acetilsalicilico...). Comparaison
+approximative rapidfuzz (ratio >= 86 pour une marque, >= 88 pour un principe actif), seulement
+entre noms de même nombre de mots et de mêmes deux premières lettres (sinon « vitamina » donnait
+« vitamin a » et « aciclovir » le famciclovir), mots de moins de 6 lettres exacts, groupes de
+mots les plus longs d'abord, chaque mot utilisé une fois. RxNav (`approximateTerm` puis lien
+IN) n'est interrogé que si rien n'a été trouvé, pour les 3 mots imprimés les plus grands, et
+seulement avec `TUJYA_RXNAV_CONTACT_EMAIL` (même règle que le pipeline de données ; sans
+adresse, le secours est désactivé et la réponse le dit). Rien de trouvé : « boîte non
+reconnue ». Rejeté : envoyer tout le texte lu à un LLM (risque d'invention).
+
+**D111. Type de photo et refus hors distribution : texte d'abord, puis détection >= 0,5.**
+`decide_kind` : un texte qui nomme un médicament, ou au moins 20 lettres lues avec une
+confiance >= 0,5, fait une boîte ; sinon une détection de comprimé >= 0,5 fait un comprimé ;
+sinon la photo est refusée (`unknown`) et aucune classe n'est proposée ; une boîte ne reçoit
+jamais de classe de comprimé. Seuil de détection choisi sur les 995 photos du split de
+comparaison et les 19 images hors sujet : à 0,5, 98,1 % des comprimés restent des comprimés et
+15 images hors sujet sur 19 sont refusées ; à 0,6, 95,5 % et 17 sur 19. Le gain sur le jeu hors
+sujet (2 images) ne vaut pas 2,6 points de comprimés perdus. Les 4 images hors sujet acceptées
+(cellule au microscope, horloge, pièces, champ d'étoiles) sont des objets ronds sur un fond uni,
+comme un comprimé : limite connue. Rejeté : refuser les images en niveaux de gris (elles sont
+toutes en gris dans ce petit jeu, mais une vraie photo ne l'est jamais : le score serait
+artificiel) ; un classifieur « pas un comprimé » (bonne piste, demande des négatifs annotés et
+un entraînement) ; la probabilité du classifieur (médiane 0,47 sur de vrais comprimés de classes
+v2 : elle ne sépare pas).
+
+**D112. Chat : les marques de la question deviennent des principes actifs cités.** Le nœud
+`understand` cherche les marques de la table dans la question et ajoute leurs principes actifs ;
+chaque marque devient une source citable (`doc_type` `brand`, avec sa référence BDPM ou emc),
+placée en tête ; le prompt liste « Marques reconnues ». Nouvel outil `lookup_brand` (chat et
+serveur MCP) : marque -> principes actifs avec la source de chaque lien, RxNav en secours,
+« non reconnue » sinon. `identify_pills` (MCP) lit aussi les boîtes. Benchmark : 8 questions de
+type `brand` ajoutées au jeu du module 2 (96 questions, les 88 autres inchangées), dont 6 sans
+chunk attendu (paracétamol et ibuprofène ne sont pas des principes actifs des classes indexées :
+l'interaction vient de DDInter) ; `bench_brands.py` les passe dans l'agent réel avec et sans la
+table des marques.
+Corrections trouvées par ce benchmark : le LLM planificateur passait la marque brute à
+`check_interaction` (« Augmentin ») : elle est remplacée par ses principes actifs ; le modèle 3B
+citait rarement la source de la marque (1 réponse sur 8) : comme pour la toxicité, une phrase
+fixe « Panadol contient : acetaminophen (table des marques) [n]. » est placée en tête quand
+aucune source de marque n'est citée ; enfin il a écrit que le paracétamol « n'est pas connu pour
+interférer » avec la warfarine alors que sa source DDInter listait une interaction modérée :
+quand `check_interaction` trouve une interaction, une phrase qui la nie est retirée et, si aucune
+ligne DDInter n'est citée, une phrase fixe la donne avec sa source. Ces phrases fixes viennent
+des sources, jamais du LLM.
+
+**D113. Index du RAG dans Qdrant au lieu de pgvector (étape 3.1, décision du propriétaire).**
+Remarque du professeur : la base vectorielle n'était pas accessible, on ne voyait pas les
+documents utilisés ; le cours du module 2 utilise Qdrant et son tableau de bord. Service
+`qdrant` (image `qdrant/qdrant:v1.20.0` épinglée, 127.0.0.1:6333 seulement, volume `qdrant`,
+télémétrie coupée), collection `tujya_chunks` : un point par chunk, vecteur nommé `dense`
+(cosinus, dimension du modèle), identifiant = UUID v5 du `chunk_id` (Qdrant refuse les
+identifiants texte), payload = toutes les métadonnées du chunk + `content_hash` SHA-256 +
+`embedding_model`, index de payload sur chaque champ filtré (le filtrage reste exact), modèle,
+dimension et date d'indexation dans les métadonnées de la collection. Une seule interface de
+stockage (`src/rag/store.py`) avec deux implémentations : Qdrant par défaut, la table SQL
+(pgvector, SQLite dans les tests) gardée derrière `TUJYA_VECTOR_STORE=sql`, pour comparer et
+revenir en arrière. Migration sans réencodage (`--copy-from-sql` copie les vecteurs) : le
+benchmark de récupération donne exactement les mêmes Recall@k et MRR sur les deux stores
+(écart 0 sur les 6 configurations, sur 83 puis 85 questions) ; seule la latence change.
+BM25 reste en mémoire sur les textes lus dans le store (le mode sparse de Qdrant est l'objet
+de l'étape 3.2). Recherche dense exacte, pas de réglage HNSW : 8 661 points. Rejeté : garder
+pgvector avec un outil d'administration SQL (le professeur demande de voir documents et
+métadonnées, pas des lignes de table) ; Chroma (pas de tableau de bord équivalent, absent du
+cours).
+
+**D114. Les documents indexés sont consultables dans l'application : page « Documents » et
+`GET /api/documents`, reconstruits depuis les chunks de l'index.** Le catalogue
+(`src/rag/documents.py`) regroupe les chunks par `doc_id` dans l'ordre : il montre donc ce que
+l'agent peut retrouver, sans copie séparée qui pourrait diverger. Liste paginée avec filtres
+(type, principe actif dont parle ou que cite le document, section, langue, source, mots du
+titre) et facettes ; détail d'un document avec toutes ses métadonnées, le lien vers la source
+et chaque chunk avec sa section et son SHA-256 ; carte de l'index (collection, points, modèle,
+date, champs indexés, lien vers le tableau de bord de Qdrant). Réservé à un compte connecté,
+comme le chat. Les phrases de posologie chiffrée sont masquées (« […] ») comme dans les
+réponses : la règle « jamais de dose » vaut pour tout ce que l'application affiche. 503 quand
+l'index est vide ou Qdrant injoignable, pour que la page dise pourquoi elle est vide.
+Vérifié dans un vrai navigateur par `frontend/scripts/documents-screenshots.mjs` (captures 27
+à 29).
+
+**D115. Validation des boîtes (étape 2.7) sur des photos réelles sous licence libre de
+Wikimedia Commons, en attendant les photos du propriétaire.** Le jeu italien n'a pas de
+Panadol. Les photos viennent de l'API publique de Commons (`commons.wikimedia.org/w/api.php`,
+sans compte ni clé, User-Agent générique, une requête toutes les 3 s) ; seules les licences
+CC0, domaine public, CC BY et CC BY-SA sont acceptées, avec l'auteur et la licence exacts de la
+page Commons dans `labels.csv` et les crédits dans `docs/data_pipeline/LICENSES.md`. Chaque
+photo a été regardée : on garde une boîte réelle dont la marque est lisible en alphabet latin
+(11 photos : Panadol x3, Doliprane, Augmentin x3, Glucophage, Levothyrox, Spasfon, Xanax SR).
+Écartées : plaquettes seules (Panadol d'Indonésie, Efferalgan codéine), comprimés seuls
+(Augmentin 1 g, Augmentin XR), flacons (Voltaren, Advil), rayon de pharmacie avec plusieurs
+produits (Nurofen), marque imprimée seulement en chinois (Glucophage de Chine) ou en cyrillique
+(Imodium de Russie), et toute image de site marchand ou de fabricant. Les fichiers sont les
+miniatures de 1 920 px servies par Commons, renommées, non modifiées ; suivis par DVC
+(`data/raw/medicine_boxes/web_commons`), jamais dans git. `--set web` de
+`src.models.ocr.evaluate` lit ce dossier comme `--set user` (même format de `labels.csv`) ;
+run MLflow `ocr-rapidocr-web`, sans Registry (le champion reste choisi sur le jeu italien).
+Ce jeu sert de jeu de test de l'étape ; les photos du propriétaire viendront plus tard comme
+second jeu de test (`--set user`), sans changer le code. Limite : 11 photos, prises par des
+contributeurs de Commons, souvent bien éclairées ; ce n'est pas une mesure de précision, c'est
+la vérification des critères de l'étape sur de vraies boîtes.
+
+**D116. BM25 dans Qdrant par vecteurs sparse `Qdrant/bm25` (fastembed), fusion hybride faite
+par Qdrant (étape 3.2).** Comme dans le cours (FastEmbedSparse), chaque point porte un vecteur
+sparse `bm25` produit par le modèle `Qdrant/bm25` de fastembed (fréquences de termes saturées,
+k1 = 1,2, b = 0,75) et la collection applique le modificateur IDF : Qdrant calcule le BM25 et
+le tient à jour seul. Le mode hybride est une requête Qdrant (deux `prefetch` filtrés de 50
+candidats, fusion RRF) ; `k = 61` chez Qdrant (positions comptées depuis 0) reproduit exactement
+1 / (60 + rang), vérifié par un test sur le client en mémoire et sur le serveur. fastembed tourne
+en ONNX Runtime, déjà dans l'image : pas de PyTorch. Qdrant ne sait pas ajouter un vecteur à une
+collection existante : l'indexation recrée la collection en recopiant les points (payload et
+vecteurs denses, aucun encodage, 9 s) et garde ses métadonnées ; les vecteurs sparse ne sont
+recalculés que si le nom du modèle sparse change (`sparse_model` dans les métadonnées). Le
+retriever n'utilise le BM25 de Qdrant que si l'index a été fait avec le même encodeur, sinon il
+garde le BM25 en mémoire (stockage SQL compris). Mesuré : un peu moins bon que notre BM25 en
+mémoire (Recall@5 0,753 contre 0,765), car `Qdrant/bm25` ne retire que les mots vides anglais ;
+gardé quand même, parce qu'il fait le calcul dans la base (comme demandé par le cours) et que la
+réécriture de requête (D118) supprime l'écart (0,882). Rejeté : vecteurs sparse calculés par
+notre propre tokeniseur en production (gardé pour les tests seulement : `TokenBM25`, même formule,
+sans téléchargement) ; SPLADE / miniCOIL (modèles appris, anglais seulement, non demandés).
+
+**D117. Reranker cross-encoder BAAI/bge-reranker-base, en ONNX par fastembed, désactivé par
+défaut sur ce PC (étape 3.2, remarque 13).** La recherche renvoie `fetch_k` candidats (20 par
+défaut), le cross-encoder lit question + titre + texte de chaque candidat, les `k` meilleurs
+sont gardés ; les égalités gardent l'ordre de la recherche ; chaque source garde son score de
+reranker et son rang d'avant. Le modèle (1,1 Go) est téléchargé une fois depuis Hugging Face sans
+compte dans `TUJYA_RAG_MODEL_CACHE_DIR` (volume `fastembed` dans Docker, l'image lit `models/` en
+lecture seule). Benchmark (85 questions, fetch_k = 10) : dense 0,906 -> 0,941 de Recall@5 et
+0,832 -> 0,861 de MRR ; hybride + réécriture 0,929 -> 0,965 et 0,860 -> 0,889. Mais 13 à 18 s par
+question sur le processeur de ce portable (1 à 2 s par paire, le PC se bride sous charge, D96) et
+le GPU de 4 Go est pris par Ollama (qwen2.5:3b + bge-m3) : `TUJYA_RAG_RERANK` reste à faux pour
+l'agent et la démonstration ; à activer sur une machine avec un GPU libre ou un processeur plus
+rapide. Rejeté : bge-reranker-v2-m3 (568 M paramètres, plus lent encore) ; un petit reranker
+anglais (ms-marco-MiniLM, rapide mais les questions sont à moitié en français) ; le reranker en
+PyTorch (pas de PyTorch dans l'image de l'API, D97).
+
+**D118. Réécriture de requête par le LLM, en option (étape 3.2).** Le corpus est en anglais, la
+moitié des questions en français. Le LLM (celui de l'agent) réécrit la question en une requête
+anglaise de 20 mots au plus qui garde les noms de médicaments ; la recherche et le reranking
+portent sur elle, la réponse sur la question ; le filtre de principes actifs vient toujours de la
+question. Garde-fous : réécriture vide, de plus de 200 caractères ou en erreur -> question
+d'origine ; mots collés par le petit LLM séparés (défaut trouvé par le benchmark : BM25 tombait à
+0,612). Mesuré : BM25 0,753 -> 0,882, dense 0,906 -> 0,941 (Recall@10 1,000), hybride 0,871 ->
+0,929 de Recall@5. Désactivée par défaut (`TUJYA_RAG_QUERY_REWRITE`) : un appel LLM de plus par
+question, et le planificateur de l'agent écrit déjà une requête anglaise quand il choisit
+`search_documents` ; l'étape 3.3 décidera du réglage de l'agent sur la génération, pas seulement
+sur la récupération (même prudence que D65 : ne pas régler le système sur son propre jeu de test
+sans mesurer les réponses).
+
+## Fin de l'étape 2.3 : classifieurs (2026-11-11)
+
+**D119. La table de classes de l'API passe aux 380 classes de C3PI v2 ; celle de v1 garde son
+rôle sous un autre nom ; le corpus RAG servi reste celui de v1.** Le champion de l'étape 2.3 a
+380 sorties aux identifiants v2 (D101) : `config/pill_classes.csv` décrit désormais ces 380
+classes (`python -m src.data.corpus classes`, copie de `config/splits/c3pi_v2/classes.csv` avec
+les mêmes identifiants et les colonnes de principes actifs), puis `ingredients` et
+`interactions` refont les tables de `data/processed/pharma` avec la méthode et les sources de
+v1 (RxNav : NDC -> RxCUI -> principes actifs de base ; DDInter 2.0, 14 fichiers, reconstruit
+depuis les fichiers bruts du disque). Résultat : 379 classes sur 380 associées par leurs NDC
+(les 149 de v1 retrouvent exactement leurs principes actifs), 176 principes actifs, 8 611 paires
+entre classes et 75 653 avec tout médicament. La classe sans principe actif est la même qu'en v1
+(vitamines et minéraux, NDC « ALIEN » chez RxNav) : l'API dit déjà qu'aucune vérification n'est
+possible, rien n'est deviné. Huit alias USAN -> DCI ajoutés à `config/ingredient_aliases.csv`
+(alendronate, clavulanate, clomiphene, ethinyl estradiol, levomefolate, medroxyprogesterone,
+norethindrone, oméga-3) ; le fer (deux formes, une seule entrée « Iron » dans DDInter) n'est pas
+rapproché, un nom DDInter ne pouvant désigner qu'un principe actif. La table de v1 devient
+`config/pill_classes_v1.csv`, lue par les étapes qui décrivent le jeu v1 (`data_cli select`,
+entraînement v1, jobs Spark `split` et `epillid`, statistiques, `prepare_classify_v2`) ; leurs
+étapes DVC ne changent que de chemin (`dvc commit -f`). La galerie de démo passe aux identifiants
+v2 (même produit, vérifié par `class_key`). Le corpus RAG servi (`rag_corpus`) dépend des tables
+de `data/processed/pharma` : il est gelé dans `dvc.yaml` et reste celui des 150 classes de v1
+(82 principes actifs), pour que l'index Qdrant et les benchmarks de l'étape 3.3 restent mesurés
+sur le corpus décrit ; `check_interaction` et l'écran Vérifier, qui lisent les tables, couvrent
+les 380 classes. Les notices et résumés des nouveaux principes actifs viendront de la collecte
+RAG v2 (D90). Rejeté : deux tables de classes côte à côte dans l'API (deux sources de vérité,
+D101) ; réécrire les sorties du modèle vers les identifiants v1 (230 classes n'en ont pas) ;
+reconstruire le corpus RAG maintenant (il ajouterait environ 6 000 paires DDInter sans notice,
+plus que tout le corpus actuel, juste avant le benchmark de la récupération).

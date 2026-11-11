@@ -1,7 +1,7 @@
 """Job `split`: train / val / test of the C3PI dataset v2, stratified by class, without leakage.
 
 Inputs: index/selection and index/classes (job `index`), quality/judged and
-quality/near_duplicates (job `quality`), config/pill_classes.csv (the 150 classes of v1,
+quality/near_duplicates (job `quality`), config/pill_classes_v1.csv (the 150 classes of v1,
 only to flag them).
 
 1. Classes: candidates that still have at least `min_images` usable consumer photos after
@@ -41,7 +41,7 @@ from src.data.spark.session import BIGDATA, ROOT, SPLITS_V2, write_json, write_r
 INDEX = BIGDATA / "index"
 QUALITY = BIGDATA / "quality"
 OUT = BIGDATA / "split"
-CLASSES_V1 = ROOT / "config" / "pill_classes.csv"
+CLASSES_V1 = ROOT / "config" / "pill_classes_v1.csv"
 SESSION = ["class_key", "ndc11", "camera", "background", "illumination", "acquisition_date"]
 SPLITS = ("train", "val", "test")
 CLASS_COLUMNS = [

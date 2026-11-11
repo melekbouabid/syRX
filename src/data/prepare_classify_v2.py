@@ -21,7 +21,7 @@ same pill, as v1):
 
 Inputs: the v2 split (data/processed/c3pi/bigdata/split: split, session group, role of every
 image), the augmented images, the v1 lists (config/splits/selected_images.csv,
-config/pill_classes.csv) and the class list of v2 (config/splits/c3pi_v2/classes.csv).
+config/pill_classes_v1.csv) and the class list of v2 (config/splits/c3pi_v2/classes.csv).
 Outputs, under data/processed/c3pi/datasets_v2/classify/ (DVC, never git):
 
 - <split>/<class_id:03d>/<name>_<k>.jpg  crops, CROP_SIZE px (folders = v2 class ids);
@@ -63,7 +63,7 @@ IMAGES = ROOT / "data" / "raw" / "c3pi" / "images"
 SPLIT = ROOT / "data" / "processed" / "c3pi" / "bigdata" / "split" / "images"
 AUGMENTED = ROOT / "data" / "processed" / "c3pi" / "bigdata" / "augmented"
 V1_LIST = ROOT / "config" / "splits" / "selected_images.csv"
-V1_CLASSES = ROOT / "config" / "pill_classes.csv"
+V1_CLASSES = ROOT / "config" / "pill_classes_v1.csv"
 V2_CLASSES = ROOT / "config" / "splits" / "c3pi_v2" / "classes.csv"
 OUT = ROOT / "data" / "processed" / "c3pi" / "datasets_v2" / "classify"
 CROP_SIZE = 256  # leaves room for an image-size search up to 256 px (resized at training)

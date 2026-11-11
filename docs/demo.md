@@ -75,46 +75,56 @@ et temps mesurés à cette occasion.
   dense dans pgvector, LLM local) ; tout tourne en local avec Docker Compose, rien n'est
   exposé hors de ce PC. »
 
-## 3. Scan en direct : photos de démo (2 min)
+## 3. Scan en direct : galerie de démo (2 min)
 
-- **Faire** : page **Scanner** -> onglet **Demo photos** -> cliquer la photo
-  **Fluconazole** -> **Confirm this pill** ; puis **Citalopram** -> **Confirm this pill**.
-- **Le jury voit** : la boîte dessinée sur le comprimé, le nom, le top-5 avec les
-  probabilités (fluconazole ≈ 99,6 %), le temps d'inférence (≈ 50 à 220 ms), la liste
-  « My pills ».
-- **Dire** : « Ces photos viennent du split de test de C3PI, jamais vues à l'entraînement ;
-  sur les 600 photos de test, le comprimé est trouvé dans 98,5 % des cas et identifié en
-  top-1 à 89,3 %. »
+- **Faire** : page **Scanner** : montrer d'abord la carte **Models served** (détecteur YOLO11s
+  v9 et classifieur YOLO11s-cls v1, alias `champion` et `served`, scores de test, lus par
+  `GET /model/metadata`). Onglet **Demo gallery** -> cliquer la photo **Fluconazole** ->
+  **Confirm this pill** ; puis **Citalopram** -> **Confirm this pill**.
+- **Le jury voit** : la boîte dessinée sur un canvas dans la couleur de la classe, le nom et
+  la probabilité, les barres animées du top-5 (fluconazole ≈ 95 %), la latence **client**
+  (mesurée dans le navigateur) et **serveur** (renvoyée par l'API) en ms, la liste « My pills ».
+- **Dire** : « Ces photos viennent du split de test de C3PI : ni le détecteur ni le
+  classifieur servis ne les ont vues à l'entraînement (D105) ; sur les photos de test, le
+  comprimé est trouvé dans 98,5 % des cas et identifié en top-1 à 89,3 %. »
+- **Grad-CAM** : sur la photo des deux gélules **AMRIX**, onglet **Grad-CAM** au-dessus de la
+  photo : « carte calculée hors de l'API avec les poids PyTorch de la même version du
+  classifieur (l'API n'exécute que l'ONNX, D104) : le rouge montre ce qui pèse le plus dans la
+  classe proposée, ici surtout la moitié imprimée de chaque gélule. »
 
-## 4. Cas incertain et upload (1 min)
+## 4. Cas incertain et glisser-déposer (1 min)
 
-- **Faire** : cliquer la photo **Trazodone** (65 %).
-- **Le jury voit** : boîte orange, badge **Please confirm**, top-5, champ de recherche d'un
-  autre comprimé.
+- **Faire** : cliquer la photo **Trazodone** (81 %).
+- **Le jury voit** : boîte en pointillés, badge **Please confirm**, top-5, champ de recherche
+  d'un autre comprimé.
 - **Dire** : « Sous le seuil de 0,85, choisi sur la validation, l'application demande une
   confirmation : en test, 70,5 % des photos passent sans confirmation et 99,3 % de celles-ci
   sont justes ; l'identification reste une suggestion. »
-- **Optionnel** : onglet **Upload**, glisser une photo C3PI de test.
+- **Faire** : onglet **Upload or drop a photo**, glisser une photo C3PI de test depuis
+  l'explorateur sur la zone (elle se colore pendant le glisser) : le scan part au dépôt ; sans
+  Grad-CAM pour une photo hors galerie, et l'écran le dit.
 
-## 5. Webcam (1 min)
+## 5. Webcam en inférence continue (1 min)
 
-- **Faire** : onglet **Webcam** -> **Start the camera** -> montrer un comprimé (ou une
-  boîte) -> **Capture and identify**.
-- **Le jury voit** : la vidéo, les boîtes mises à jour environ chaque seconde, le temps
-  d'inférence.
-- **Dire** : « Les prédictions sont faites en direct par la même API ; le modèle n'a vu que
-  des photos C3PI, donc sur une webcam les scores sont plus bas, et c'est justement là que
-  la confirmation sert. »
-- Testé seulement avec la caméra factice de Chromium (0 comprimé, mire de test) : essayer
-  avec la vraie caméra avant la soutenance ; si ça ne reconnaît rien, le dire honnêtement.
+- **Faire** : onglet **Webcam (live)** -> **Start the camera** -> montrer un comprimé (ou une
+  boîte) -> **Capture and identify** pour l'ajouter.
+- **Le jury voit** : la vidéo avec les boîtes colorées par classe, le top-5 animé de chaque
+  comprimé, la confiance, la latence client et serveur de chaque image, le numéro de l'image.
+- **Dire** : « Une image est envoyée, la suivante seulement après la réponse (plus 0,4 s) :
+  les requêtes ne s'empilent jamais, même si le serveur ralentit. Le modèle n'a vu que des
+  photos C3PI, donc sur une webcam les scores sont plus bas, et c'est justement là que la
+  confirmation sert. »
+- Testé avec la caméra factice de Chromium alimentée par une vidéo faite de deux photos de
+  test (capture [06](screenshots/06-webcam.jpg)) : essayer avec la vraie caméra avant la
+  soutenance ; si ça ne reconnaît rien, le dire honnêtement.
 
 ## 6. Interactions (1 min)
 
-- **Faire** : **Check interactions** (avec fluconazole et citalopram confirmés ; ajouter
-  **traMADOL** pour avoir trois paires).
-- **Le jury voit** : fluconazole + citalopram **Major**, citalopram + tramadol **Major**,
-  fluconazole + tramadol **Moderate**, avec la source DDInter, la citation et
-  l'avertissement « Information uniquement, consultez un pharmacien ou un médecin. »
+- **Faire** : **Check interactions** (avec fluconazole et citalopram confirmés ; ajouter la
+  photo **Haloperidol** de la galerie pour avoir trois paires).
+- **Le jury voit** : fluconazole + citalopram, fluconazole + halopéridol et citalopram +
+  halopéridol **Major**, avec la source DDInter, la citation et l'avertissement « Information
+  uniquement, consultez un pharmacien ou un médecin. »
 - **Dire** : « Les sévérités viennent de DDInter, avec la source affichée ; quand rien
   n'est trouvé, l'application dit « aucune interaction connue dans cette base de données »,
   jamais que c'est sûr. »
@@ -257,7 +267,7 @@ et temps mesurés à cette occasion.
 
 ```bash
 cd frontend
-BASE=http://localhost:8080 node scripts/screenshots.mjs        # scan, interactions, webcam, Swagger
+BASE=http://localhost:8080 FAKE_VIDEO=<fichier .y4m> node scripts/screenshots.mjs   # scan, Grad-CAM, webcam, Swagger
 BASE=http://localhost:8080 node scripts/chat-screenshots.mjs   # chat, citation, dose refusée
 node scripts/mlflow-screenshots.mjs                            # MLflow (expériences, registre)
 ```

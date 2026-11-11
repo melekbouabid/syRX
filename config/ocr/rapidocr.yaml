@@ -1,0 +1,4 @@
+# OCR engine of experiment/ocr-rapidocr (src/models/ocr/evaluate.py, D109): RapidOCR 3,
+# PP-OCRv4 mobile detection + recognition in ONNX, CPU, as served by the API (app/boxes.py).
+engine: rapidocr
+threads: 4  # ONNX Runtime intra-op threads (TUJYA_OCR_THREADS)

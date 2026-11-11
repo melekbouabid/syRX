@@ -2,3 +2,11 @@ rxnorm_ingredient,ddinter_name,note
 valproate,Valproic acid,RxNorm IN for divalproex and valproic acid products
 vitamin b12,Cyanocobalamin,the B12 form in the Folbic tablet (RxNorm 644794)
 vitamin b6,Pyridoxine,the B6 form in the Folbic tablet (RxNorm 644794)
+alendronate,Alendronic acid,USAN salt name; DDInter uses the INN of the acid
+clavulanate,Clavulanic acid,USAN salt name; DDInter uses the INN of the acid
+clomiphene,Clomifene,USAN; DDInter uses the INN
+ethinyl estradiol,Ethinylestradiol,USAN; DDInter uses the INN
+levomefolate,Levomefolic acid,USAN salt name; DDInter uses the INN of the acid
+medroxyprogesterone,Medroxyprogesterone acetate,DDInter lists only the acetate; the form of the tablets
+norethindrone,Norethisterone,USAN; DDInter uses the INN
+omega-3 acid ethyl esters (usp),Omega-3 fatty acids,DDInter groups the omega-3 products under one entry

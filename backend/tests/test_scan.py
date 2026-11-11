@@ -62,6 +62,7 @@ def test_scan_finds_and_identifies_every_pill(user: TestClient, models: Path, ph
     body = response.json()
     assert (body["image_width"], body["image_height"]) == (200, 100)
     assert body["inference_ms"] >= 0 and body["timings"]["total_ms"] == body["inference_ms"]
+    assert body["timings"]["server_ms"] >= body["inference_ms"]  # whole request, in ms
     assert body["message"] is None
     assert "consultez un pharmacien ou un médecin" in body["disclaimer"]
     assert {s["name"] for s in body["sources"]} == {"c3pi", "rxnav"}

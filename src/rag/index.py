@@ -1,12 +1,17 @@
-"""Index the RAG corpus: data/processed/rag/corpus/chunks.parquet -> table rag_chunks (pgvector).
+"""Index the RAG corpus: data/processed/rag/corpus/chunks.parquet -> Qdrant collection
+tujya_chunks (or the SQL table rag_chunks with `--store sql`).
 
-Idempotent: each row keeps a hash of its text, metadata and embedding model, so a second
-run embeds nothing, a changed chunk is re-embedded, and a chunk gone from the corpus is
-deleted. Changing the embedding model (or its dimension) rebuilds the table.
+Idempotent: each chunk keeps a SHA-256 hash of its text, metadata and embedding model, so a
+second run embeds nothing, a changed chunk is re-embedded, and a chunk gone from the corpus
+is deleted. Changing the embedding model (or its dimension) rebuilds the collection.
+In Qdrant each chunk also gets its BM25 sparse vector (`Qdrant/bm25`, step 3.2, D116); a
+collection made before that is migrated in place (points copied, nothing embedded again)
+and a new sparse encoder recomputes the sparse vectors only.
 
     python -m src.rag.index          # settings from TUJYA_* env
     python -m src.rag.index --pull   # also pull the Ollama models first
-    python -m src.rag.index --database-url postgresql+psycopg://...
+    python -m src.rag.index --store sql --database-url postgresql+psycopg://...
+    python -m src.rag.index --copy-from-sql   # move the pgvector vectors to Qdrant, no embedding
 """
 
 from __future__ import annotations
@@ -27,7 +32,9 @@ import pyarrow.parquet as pq
 from app.config import Settings
 from app.db import make_engine
 from src.rag.embeddings import Embedder, OllamaEmbedder
-from src.rag.store import METADATA_COLUMNS, ChunkStore
+from src.rag.sparse import FastEmbedBM25, SparseEncoder
+from src.rag.store import METADATA_COLUMNS, ChunkStore, VectorStore
+from src.rag.stores import open_store
 
 
 def read_chunks(path: Path) -> list[dict[str, Any]]:
@@ -49,16 +56,20 @@ def content_hash(row: dict[str, Any], model: str) -> str:
 
 
 async def index_chunks(
-    store: ChunkStore,
+    store: VectorStore,
     embedder: Embedder,
     rows: list[dict[str, Any]],
     *,
     batch_size: int = 32,
     log: Any = None,
-) -> dict[str, int]:
+    sparse: SparseEncoder | None = None,
+) -> dict[str, float]:
+    sparse = sparse if store.kind == "qdrant" else None  # sparse vectors live in Qdrant only
     meta = store.get_meta() if store.exists() else {}
     if meta and (meta.get("model") != embedder.model or meta.get("dim") != str(store.dim)):
         store.drop()  # another embedding model: every vector must be recomputed
+        meta = {}
+    migrated = store.add_sparse() if sparse is not None else 0
     store.create()
     existing = store.hashes()
     wanted = {row["chunk_id"]: content_hash(row, embedder.model) for row in rows}
@@ -67,33 +78,97 @@ async def index_chunks(
     started = time.perf_counter()
     for start in range(0, len(todo), batch_size):
         batch = todo[start : start + batch_size]
-        vectors = await embedder.embed([f"{r['title']}\n{r['text']}" for r in batch])
-        records = [
-            {
-                **{k: r.get(k) for k in METADATA_COLUMNS},
-                "content_hash": wanted[r["chunk_id"]],
-                "embedding": vector,
-            }
-            for r, vector in zip(batch, vectors, strict=True)
-        ]
-        with store.engine.begin() as conn:
-            store.upsert(conn, records)
+        texts = [f"{r['title']}\n{r['text']}" for r in batch]
+        vectors = await embedder.embed(texts)
+        sparse_vectors = sparse.documents(texts) if sparse is not None else [None] * len(batch)
+        store.write(
+            [
+                {
+                    **{k: r.get(k) for k in METADATA_COLUMNS},
+                    "content_hash": wanted[r["chunk_id"]],
+                    "embedding_model": embedder.model,
+                    "embedding": vector,
+                    "sparse": sparse_vector,
+                }
+                for r, vector, sparse_vector in zip(batch, vectors, sparse_vectors, strict=True)
+            ]
+        )
         if log and (start // batch_size) % 20 == 0:
             done = start + len(batch)
             log(f"embedded {done}/{len(todo)} ({time.perf_counter() - started:.0f} s)")
-    changed = bool(todo or stale)
-    with store.engine.begin() as conn:
-        if stale:
-            store.delete_ids(conn, stale)
-        values = {"model": embedder.model, "dim": str(store.dim), "chunks": str(len(rows))}
-        if changed or "indexed_at" not in meta:
-            values["indexed_at"] = datetime.now(UTC).isoformat(timespec="seconds")
-        store.set_meta(conn, values)
+    values = {"model": embedder.model, "dim": str(store.dim), "chunks": str(len(rows))}
+    resparsed = 0
+    if sparse is not None:
+        if meta.get("sparse_model") != sparse.name:  # new encoder, or migrated collection
+            embedded = {r["chunk_id"] for r in todo}
+            rest = [r for r in rows if r["chunk_id"] not in embedded]
+            for start in range(0, len(rest), 256):
+                batch = rest[start : start + 256]
+                encoded = sparse.documents([f"{r['title']}\n{r['text']}" for r in batch])
+                store.set_sparse({r["chunk_id"]: v for r, v in zip(batch, encoded, strict=True)})
+            resparsed = len(rest)
+        values["sparse_model"] = sparse.name
+    if todo or stale or resparsed or "indexed_at" not in meta:
+        values["indexed_at"] = now()
+    store.finish(stale, values)
     return {
         "total": len(rows),
         "embedded": len(todo),
         "deleted": len(stale),
         "unchanged": len(rows) - len(todo),
+        "sparse_recomputed": resparsed,
+        "migrated": migrated,
+        "seconds": round(time.perf_counter() - started, 1),
+    }
+
+
+def now() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds")
+
+
+def copy_index(
+    source: VectorStore, target: VectorStore, *, batch_size: int = 256
+) -> dict[str, float]:
+    """Copy chunks, hashes and vectors from one store to another, without embedding anything.
+
+    Used once to move the pgvector index to Qdrant (D113): same vectors, so the benchmark
+    compares the stores and nothing else. A later `index_chunks` on the target finds every
+    hash unchanged.
+    """
+    meta = source.get_meta()
+    if not meta:
+        raise ValueError("the source store has no index")
+    if target.dim != source.dim:
+        raise ValueError(f"dimension {source.dim} -> {target.dim}")
+    target_meta = target.get_meta() if target.exists() else {}
+    if target_meta and target_meta.get("model") != meta.get("model"):
+        target.drop()
+    target.create()
+    started = time.perf_counter()
+    chunks = source.load_chunks()
+    ids, matrix = source.load_embeddings()
+    position = {cid: i for i, cid in enumerate(ids)}
+    hashes = source.hashes()
+    stale = sorted(set(target.hashes()) - set(hashes))
+    for start in range(0, len(chunks), batch_size):
+        target.write(
+            [
+                {
+                    **{k: getattr(c, k) for k in METADATA_COLUMNS},
+                    "content_hash": hashes[c.chunk_id],
+                    "embedding_model": meta.get("model", ""),
+                    "embedding": matrix[position[c.chunk_id]].tolist(),
+                }
+                for c in chunks[start : start + batch_size]
+            ]
+        )
+    # Copied points have no sparse vector: the next `index_chunks` computes them.
+    target.finish(
+        stale, {**meta, "indexed_at": now(), "copied_from": source.kind, "sparse_model": ""}
+    )
+    return {
+        "copied": len(chunks),
+        "deleted": len(stale),
         "seconds": round(time.perf_counter() - started, 1),
     }
 
@@ -116,23 +191,52 @@ def main(argv: list[str] | None = None) -> None:
     settings = Settings()
     parser = argparse.ArgumentParser(prog="python -m src.rag.index")
     parser.add_argument("--chunks", type=Path, default=settings.rag_chunks_file)
+    parser.add_argument("--store", choices=["qdrant", "sql"], default=settings.vector_store)
+    parser.add_argument("--qdrant-url", default=settings.qdrant_url)
     parser.add_argument("--database-url", default=settings.pharma_database_url)
     parser.add_argument("--ollama-url", default=settings.ollama_url)
     parser.add_argument("--model", default=settings.embedding_model)
     parser.add_argument("--dim", type=int, default=settings.embedding_dim)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--pull", action="store_true", help="pull missing Ollama models first")
+    parser.add_argument("--sparse-model", default=settings.rag_sparse_model)
+    parser.add_argument("--no-sparse", action="store_true", help="dense vectors only")
+    parser.add_argument(
+        "--copy-from-sql",
+        action="store_true",
+        help="copy the SQL table rag_chunks (--database-url) into Qdrant, without embedding",
+    )
     args = parser.parse_args(argv)
+    target = settings.model_copy(
+        update={
+            "vector_store": args.store,
+            "qdrant_url": args.qdrant_url,
+            "pharma_database_url": args.database_url,
+        }
+    )
+    store = open_store(target, args.dim)
+    if args.copy_from_sql:
+        if args.store != "qdrant":
+            sys.exit("--copy-from-sql copies into Qdrant: use it with --store qdrant")
+        source = ChunkStore(make_engine(args.database_url), args.dim)
+        print(json.dumps(copy_index(source, store)))
+        return
     if not args.chunks.is_file():
         sys.exit(f"{args.chunks} not found: run `python -m src.data.corpus corpus` or dvc pull")
     if args.pull:
         asyncio.run(pull_models(args.ollama_url, [args.model, settings.llm_model]))
     rows = read_chunks(args.chunks)
-    store = ChunkStore(make_engine(args.database_url), args.dim)
     embedder = OllamaEmbedder(
         args.ollama_url, args.model, args.dim, num_ctx=settings.embedding_num_ctx
     )
-    stats = asyncio.run(index_chunks(store, embedder, rows, batch_size=args.batch_size, log=print))
+    sparse = (
+        None
+        if args.no_sparse
+        else FastEmbedBM25(args.sparse_model, cache_dir=settings.rag_model_cache_dir)
+    )
+    stats = asyncio.run(
+        index_chunks(store, embedder, rows, batch_size=args.batch_size, log=print, sparse=sparse)
+    )
     print(json.dumps(stats))
 
 
