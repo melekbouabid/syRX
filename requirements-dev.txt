@@ -19,7 +19,8 @@ alembic>=1.13,<2
 optuna==5.0.0
 nbformat>=5.10
 # Medicine box photos of step 2.7 (src/data/medicine_boxes.py): anonymous Hugging Face download.
-huggingface_hub==2.4.0
+# Below 2.0: fastembed (step 3.2, backend/requirements.txt) needs huggingface_hub<2.
+huggingface_hub>=1.33,<2
 ruff>=0.5
 # The module guide's linters (.flake8, [tool.black] in pyproject.toml); black's stable
 # style only changes once a year, so the major version is pinned.
