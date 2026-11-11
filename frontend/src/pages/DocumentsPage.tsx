@@ -38,7 +38,7 @@ function IndexCard({ index }: { index: IndexInfo }) {
         {facts.map(([label, value]) => (
           <div key={label}>
             <dt className="cell-sub">{label}</dt>
-            <dd className="cell-title">{value}</dd>
+            <dd className="cell-title m-0">{value}</dd>
           </div>
         ))}
       </dl>
@@ -79,7 +79,7 @@ function DocumentDialog({ docId, onClose }: { docId: string; onClose: () => void
             ).map(([label, value]) => (
               <div key={label}>
                 <dt className="cell-sub">{label}</dt>
-                <dd className="break-words">{value}</dd>
+                <dd className="m-0 break-words">{value}</dd>
               </div>
             ))}
           </dl>
@@ -117,7 +117,11 @@ function DocumentRow({ doc, index, onOpen }: { doc: IndexedDocument; index: numb
   return (
     <tr className="row-enter" style={staggerIndex(index)}>
       <td>
-        <button type="button" className="text-left" onClick={onOpen}>
+        <button
+          type="button"
+          className="cursor-pointer border-0 bg-transparent p-0 text-left"
+          onClick={onOpen}
+        >
           <span className="cell-title">{doc.title}</span>
           <span className="cell-sub">{doc.doc_id}</span>
         </button>
