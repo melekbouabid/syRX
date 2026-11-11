@@ -176,3 +176,19 @@ def test_sentence_filter_can_hold_back_more_sentences() -> None:
     shown += held.feed("autre chose [2]. Fin [1].")
     shown += held.flush()
     assert "".join(shown).strip() == "La warfarine est un anticoagulant [1]. Fin [1]."
+
+
+def test_a_sentence_denying_a_found_interaction_is_removed() -> None:
+    # Step 2.7: the 3B model wrote that paracetamol is "not known to interfere" with
+    # warfarin while its own DDInter source listed a Moderate interaction.
+    denial = "Le paracétamol n'est pas connu pour interférer avec la warfarine [2]."
+    fact = "La warfarine est un anticoagulant [1]."
+    found = check_answer(f"{denial} {fact}", 2, interaction_found=True)
+    assert "interférer" not in found.answer and fact in found.answer
+    assert "denies_found_interaction" in found.violations and found.action == "rewritten"
+    # Without an interaction found, the same sentence is not a contradiction.
+    kept = check_answer(f"{denial} {fact}", 2, interaction_found=False)
+    assert "interférer" in kept.answer and "denies_found_interaction" not in kept.violations
+    # A cautionary sentence that mentions an interaction stays.
+    caution = "Not recommended with NSAIDs because of an interaction [1]."
+    assert caution in check_answer(caution, 1, interaction_found=True).answer

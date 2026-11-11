@@ -1,0 +1,6 @@
+outs:
+- md5: 301a3c0e388281c5f94881949bc0bd4a.dir
+  size: 49105187
+  nfiles: 720
+  hash: md5
+  path: italian_otc

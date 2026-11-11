@@ -1,0 +1,55 @@
+/* Entry stylesheet. Tailwind CSS v4 (docs/decisions.md D106) next to the Tujya design of
+   styles.css, ordered by cascade layers:
+   - theme: Tailwind's variables, plus the Tujya tokens below as Tailwind colours;
+   - legacy: styles.css, the design of every page (unchanged);
+   - utilities: Tailwind classes, which win over legacy rules where a component uses them.
+   No Tailwind preflight (base reset): it would restyle the pages built on styles.css. */
+@layer theme, base, legacy, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "./styles.css" layer(legacy);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* The Tujya tokens of styles.css (light and dark) as Tailwind theme values: `bg-surface`,
+   `text-muted`, `border-line`, `rounded-card`... follow the logo colours in both modes. */
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-page: var(--bg);
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+  --color-ink: var(--text);
+  --color-heading: var(--heading);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-text: var(--primary-text);
+  --color-accent: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-green: var(--brand-green);
+  --radius-card: var(--radius);
+  --shadow-card: var(--shadow);
+  --shadow-lift: var(--shadow-lg);
+  --ease-brand: var(--ease);
+  --animate-grow: grow-x 0.7s var(--ease) both;
+}
+
+/* Probability bars fill from zero when they appear (animated bars of the course guide). */
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@utility bg-brand-line {
+  background: var(--brand-line);
+}
+
+@utility bg-brand-gradient {
+  background: var(--brand-gradient);
+}

@@ -6,6 +6,8 @@ Every tool returns plain JSON-serialisable data with the sources it used, never 
 
 Extension point: a new tool is one async method on `Toolbox` plus one entry in
 `TOOL_SPECS`. Bonus tool: `predict_toxicity` (Tox21 in vitro assays, docs/bonus/toxicity.md).
+`lookup_brand` (step 2.7) links a brand ("Panadol", "Doliprane") to its active ingredients
+with the source of the brand table (config/brand_aliases.csv), RxNav as a fallback.
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
+from app.boxes import BoxReader, OcrHolder, OcrLine, RxNavClient, TextMatcher
 from app.config import Settings
 from app.inference import ScannerHolder
 from app.medicines import DISCLAIMER, PharmaUnavailable, search_pills
@@ -28,6 +31,7 @@ from app.pharma import Ingredient
 from src.models.toxicity.model import ToxHolder, ToxicityUnavailable, predict_molecules
 from src.rag.names import NameIndex
 from src.rag.retrieval import Hit, Mode, RetrieverHolder
+from src.rag.rewrite import QueryRewriter
 from src.rag.store import Filters
 
 DOC_TYPES = ("label", "abstract", "interaction")
@@ -51,19 +55,25 @@ def hit_source(hit: Hit) -> dict[str, Any]:
     chunk = hit.chunk
     return {
         "chunk_id": chunk.chunk_id,
+        "doc_id": chunk.doc_id,
         "doc_type": chunk.doc_type,
         "title": chunk.title,
         "section": chunk.section,
         "url": chunk.url,
         "source_name": chunk.source_name,
         "date": chunk.date,
+        "version": chunk.version,
         "license": chunk.license,
+        "language": chunk.language,
         "ingredients": chunk.ingredients,
         "is_retracted": chunk.is_retracted,
         "article_type": chunk.article_type,
         "text": chunk.text,
         "snippet": chunk.text[:SNIPPET_CHARS],
         "score": round(hit.score, 5),
+        # Cross-encoder score and the rank before reranking (None when not reranked).
+        "rerank_score": None if hit.rerank_score is None else round(hit.rerank_score, 4),
+        "retrieval_rank": hit.retrieval_rank,
     }
 
 
@@ -74,6 +84,8 @@ class Toolbox:
     retrievers: RetrieverHolder
     scanner: ScannerHolder | None = None
     toxicity: ToxHolder | None = None
+    boxes: BoxReader | None = None
+    rewriter: QueryRewriter | None = None  # TUJYA_RAG_QUERY_REWRITE (D118)
     _names: NameIndex | None = None
 
     # ----------------------------------------------------------- helpers
@@ -92,6 +104,41 @@ class Toolbox:
             if name and name not in found:
                 found.append(name)
         return found
+
+    def box_reader(self) -> BoxReader:
+        """The API's box reader, or one built from the settings (MCP server, benchmarks)."""
+        if self.boxes is None:
+            self.boxes = BoxReader(
+                OcrHolder(self.settings.ocr_threads, enabled=self.settings.box_ocr_enabled),
+                self.settings.brand_table_file,
+                self.settings.inn_aliases_file,
+                RxNavClient(
+                    self.settings.rxnav_contact_email,
+                    base_url=self.settings.rxnav_url,
+                    timeout=self.settings.rxnav_timeout_seconds,
+                ),
+            )
+        return self.boxes
+
+    def brand_matcher(self) -> TextMatcher:
+        return self.box_reader().matcher(lambda: self.names().names)
+
+    def find_brands(self, text: str) -> list[dict[str, Any]]:
+        """Brands of the brand table named in a question, with their ingredients and source."""
+        line = OcrLine(text, 1.0, (0.0, 0.0, 0.0, 0.0))
+        return [
+            {
+                "brand": brand.brand,
+                "matched_text": matched,
+                "country": brand.country,
+                "ingredients": list(brand.ingredients),
+                "printed_substances": brand.printed_substances,
+                "source": brand.source,
+                "reference": brand.reference,
+                "url": brand.url,
+            }
+            for brand, matched, _ in self.brand_matcher().brands_in([line])
+        ]
 
     def retriever(self) -> Any:
         retriever = self.retrievers.get()
@@ -120,9 +167,11 @@ class Toolbox:
             raise ToolError("give image_path or image_base64")
         scanner = await run_in_threadpool(self.scanner.get)
 
+        boxes = self.box_reader()
+
         def run() -> dict[str, Any]:
             with Session(self.pharma_engine) as session:
-                result = _run(scanner, data, self.settings, session)
+                result = _run(scanner, data, self.settings, session, boxes)
             return result.model_dump(mode="json")
 
         return await run_in_threadpool(run)
@@ -195,7 +244,9 @@ class Toolbox:
         mode: str | None = None,
     ) -> dict[str, Any]:
         """Search labels, PubMed abstracts and DDInter (mode from settings: dense by default,
-        bm25 or hybrid on request)."""
+        bm25 or hybrid on request), with the metadata filters; then, when the settings ask for
+        it, rerank by the cross-encoder (D117). With query rewriting (D118) the search runs on
+        the LLM's English query; `search_query` shows it."""
         filters = Filters(
             ingredients=tuple(self.normalise(ingredients or [])),
             doc_types=tuple(t for t in (doc_types or []) if t in DOC_TYPES),
@@ -205,9 +256,21 @@ class Toolbox:
         retriever = self.retriever()
         k = max(1, min(int(k), 20))
         mode = mode or self.settings.rag_search_mode
-        hits = await retriever.search(query, k=k, mode=cast(Mode, mode), filters=filters)
+        search_query = await self.rewriter.rewrite(query) if self.rewriter else query
+        rerank = self.settings.rag_rerank and retriever.reranker is not None
+        hits = await retriever.search(
+            search_query,
+            k=k,
+            mode=cast(Mode, mode),
+            filters=filters,
+            rerank=rerank,
+            fetch_k=self.settings.rag_fetch_k,
+        )
         return {
             "query": query,
+            "search_query": search_query,
+            "mode": mode,
+            "reranked": rerank,
             "filters": {
                 "ingredients": list(filters.ingredients),
                 "doc_types": list(filters.doc_types),
@@ -216,6 +279,41 @@ class Toolbox:
             },
             "results": [hit_source(hit) for hit in hits],
         }
+
+    async def lookup_brand(self, name: str) -> dict[str, Any]:
+        """Active ingredients of a medicine brand: brand table first, then the INN written in
+        the name, then RxNorm (RxNav) when a contact email is configured. Never a guess."""
+        if not name or not name.strip():
+            raise ToolError("give a brand name, e.g. 'Panadol'")
+
+        def run() -> dict[str, Any]:
+            match = self.brand_matcher().match([OcrLine(name, 1.0, (0.0, 0.0, 0.0, 0.0))])
+            return {
+                "query": name,
+                "found": match.recognised,
+                "brand": match.brand.brand if match.brand else None,
+                "country": match.brand.country if match.brand else None,
+                "ingredients": [
+                    {
+                        "name": i.name,
+                        "method": i.method,
+                        "source": i.source,
+                        "reference": i.reference,
+                        "url": i.url,
+                        "in_interaction_table": i.in_interaction_table,
+                    }
+                    for i in match.ingredients
+                ],
+                "rxnav": self.box_reader().rxnav_status,
+                "message": (
+                    None
+                    if match.recognised
+                    else "Marque non reconnue dans cette base : aucun principe actif n'est proposé."
+                ),
+                "disclaimer": DISCLAIMER,
+            }
+
+        return await run_in_threadpool(run)
 
     async def predict_toxicity(self, molecules: list[str]) -> dict[str, Any]:
         """Tox21 in vitro assay probabilities for one or two molecules, each on its own."""
@@ -269,6 +367,10 @@ class SearchArgs(BaseModel):
     k: int = Field(5, ge=1, le=20, description="Number of results")
 
 
+class BrandArgs(BaseModel):
+    name: str = Field(description="Brand name as written on the box, e.g. 'Panadol', 'Doliprane'")
+
+
 class ToxicityArgs(BaseModel):
     molecules: list[str] = Field(
         description="One or two molecules: active ingredient names (e.g. 'warfarin') or SMILES",
@@ -302,6 +404,12 @@ TOOL_SPECS: dict[str, tuple[str, type[BaseModel], str]] = {
         "Search openFDA labels, PubMed abstracts and DDInter rows (bge-m3 embeddings, BM25 "
         "or hybrid), with filters on ingredient, document type and section.",
     ),
+    "lookup_brand": (
+        "lookup_brand",
+        BrandArgs,
+        "Active ingredients of a medicine brand (Panadol, Doliprane, Efferalgan...), with the "
+        "source of each link; 'not recognised' when the brand is unknown, never a guess.",
+    ),
     "predict_toxicity": (
         "predict_toxicity",
         ToxicityArgs,
@@ -312,8 +420,14 @@ TOOL_SPECS: dict[str, tuple[str, type[BaseModel], str]] = {
     ),
 }
 # The agent's model is never given identify_pills: a chat question carries no image (the
-# app sends the confirmed pills instead). MCP clients get all five.
-CHAT_TOOLS = ("check_interaction", "get_drug_info", "search_documents", "predict_toxicity")
+# app sends the confirmed pills instead). MCP clients get all six.
+CHAT_TOOLS = (
+    "check_interaction",
+    "get_drug_info",
+    "search_documents",
+    "lookup_brand",
+    "predict_toxicity",
+)
 
 
 def langchain_tools(toolbox: Toolbox, names: tuple[str, ...] = CHAT_TOOLS) -> list[BaseTool]:
