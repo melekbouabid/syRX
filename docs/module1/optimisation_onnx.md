@@ -37,7 +37,11 @@ les mêmes informations quelle que soit la précision.
   version 2, le 06/11) : mAP@[.5:.95] sur le split de comparaison de l'étape 2.2 (`test_holdout.txt` de C3PI v2, 995 photos, 1 133
   boîtes), par le même code ([metrics.py](../../src/models/detection/metrics.py), décodage comme
   l'API). Pas de mesure sur le test v1 : des photos du train v2 peuvent y figurer.
-- Classifieur (YOLO11s-cls, version 1) : top-1 et top-5 sur les 588 crops de test de C3PI v1.
+- Classifieur : depuis la fin de l'étape 2.3 (EfficientNetV2-S, version 8, 380 classes, tag
+  `label_space=c3pi-v2`), top-1 sur le split de comparaison de l'étape 2.3 (`test_holdout.txt`
+  du jeu de crops v2, 1 131 crops, `test_v2_top1`, la métrique de promotion), calibration INT8
+  sur ses crops de validation ; avant (YOLO11s-cls, version 1, 150 classes), top-1 et top-5 sur
+  les 588 crops de test de C3PI v1.
 - Latence : ONNX Runtime CPU, une image par appel, dans un processus neuf
   ([latency.py](../../src/models/detection/latency.py)), 20 images de test, 5 tours entrelacés
   de 30 passes avec 20 s de pause avant chaque mesure, médiane des tours (le PC portable se bride
@@ -49,6 +53,44 @@ les mêmes informations quelle que soit la précision.
 - MLflow : un run par variante dans `tujya-vision` (tag `stage=optimize`, `precision`,
   `variant_of`, provenance `git_commit` / `dvc_rev`) ; chaque variante FP16 / INT8 est une
   version du même modèle enregistré.
+
+## Résultats du champion de l'étape 2.3 (12/11/2026)
+
+Classifieur EfficientNetV2-S (version 8, champion depuis la fin de l'étape 2.3, D120), entrée
+224 px, 380 classes ; précision sur le split de comparaison (1 131 crops), latence avec la
+limite de 1,5 s de charge par mesure.
+
+| Modèle | Variante | Précision | Écart vs FP32 | Latence moyenne (ms) | Latence p95 (ms) | Taille (Mo) | Version Registry | Run MLflow |
+|---|---|---:|---:|---:|---:|---:|---|---|
+| tujya-pill-classifier (EfficientNetV2-S 224) | **FP32 (servie)** | 0,9089 (top-1) | - | **18,3** | 21,7 | 82,5 | v8 (`champion`, `served`) | `780779e2` |
+| | FP16 | 0,9089 | 0,0000 | 18,1 | 20,4 | 41,4 | v14 | `f2b5956e` |
+| | INT8 statique | 0,7772 | -0,1317 | 38,1 | 41,1 | 23,4 | v15 | `d8ccda87` |
+| | INT8 dynamique | 0,8966 | -0,0124 | 63,2 | 70,4 | 21,6 | v16 | `f0c91bd2` |
+
+Le FP32 ONNX mesuré ici (0,9089) est exactement le score de l'évaluation sur Kaggle.
+
+- **Variante servie : FP32** (règle `choose_variant` inchangée) : le FP16 garde exactement la
+  même précision mais n'est que 1 % plus rapide (sous le seuil de 5 %) ; il divise seulement la
+  taille par deux.
+- **INT8 écarté** : 2 à 3,5 fois plus lent et moins précis. L'INT8 statique perd 13 points :
+  les blocs Squeeze-and-Excitation et les activations SiLU d'EfficientNet supportent mal une
+  quantification des activations calibrée par MinMax ; le dynamique (poids seuls) perd 1,2 point
+  et dépasse donc aussi la tolérance de 0,01.
+- Les variantes de l'ancien champion (versions 5 à 7, YOLO11s-cls v1) restent dans le Registry
+  (`variant_of=1`) ; l'alias `served` est passé de la version 1 à la version 8.
+- `models/` sauvegardé avant la publication (`runs/backup/models_2026-11-12/`, hors git) ;
+  retour arrière : recopier ce dossier dans `models/` ; comme le classifieur v1 a 150 sorties aux
+  identifiants v1, la table de classes de l'API doit alors redevenir celle de v1
+  (`config/pill_classes_v1.csv`, D101, D119), sinon `publish` et l'API refusent le décalage.
+
+Vérification dans l'API (12/11, image backend reconstruite, tables pharma des 380 classes
+rechargées par `pharma-init`) : `GET /model/metadata` classifieur `efficientnetv2s` version 8,
+alias `champion` et `served`, FP32, 380 classes ; `POST /predict` sur 60 photos du split de
+comparaison réparties sur tout le split : un comprimé trouvé sur chacune, bonne classe en top-1
+pour 58 (temps serveur médian 165 ms, détection 101 ms, classification 43 ms, serveur en
+arrière-plan) ; `POST /api/scan` donne le nom, le principe actif (lamotrigine, halopéridol,
+quinine) et la confiance, `POST /api/interactions` la paire halopéridol + quinine (Major, DDInter)
+avec la source et l'avertissement.
 
 ## Résultats du champion de l'étape 2.2 (07/11/2026)
 
@@ -123,12 +165,12 @@ modèles publiés, seuil de détection 0,25) sur 100 photos du split de comparai
 sur 117 trouvées (IoU >= 0,5), 119 prédites : rappel 0,974, précision 0,958. `models/models.json`
 indique la version, la précision et la version champion d'origine (`variant_of`).
 
-## Registry après l'étape (mis à jour le 07/11, fin de l'étape 2.2)
+## Registry après l'étape (mis à jour le 12/11, fin de l'étape 2.3)
 
 | Modèle | Versions | Alias |
 |---|---|---|
 | tujya-pill-detector | v1 YOLO11n FP32 (baseline), v2 YOLOv8n, v9 YOLO11s, v10 YOLOv10n, v11 YOLOv8s, v12 Faster R-CNN (FP32, étape 2.2) ; v13-v15 variantes de v9 ; v6-v8 variantes de v2 (v3-v5 : première mesure, `status=superseded`, D96) | `champion` v9, `challenger` v10, `served` v9 |
-| tujya-pill-classifier | v1 YOLO11s-cls FP32, v5-v7 variantes de v1 (v2-v4 `superseded`) | `champion` v1, `served` v1 |
+| tujya-pill-classifier | v1 YOLO11s-cls FP32 (150 classes, v1) ; v8 EfficientNetV2-S, v9 ResNet-50, v10 ConvNeXt-Tiny, v11 YOLO11s-cls v2, v12 ViT-B/16, v13 CNN maison (étape 2.3, 380 classes) ; v14-v16 variantes de v8 ; v5-v7 variantes de v1 (v2-v4 `superseded`) | `champion` v8, `challenger` v9, `served` v8 |
 
 L'alias `champion` reste sur un modèle FP32 : les détecteurs Kaggle encore à importer sont
 comparés FP32 contre FP32 par `promote_if_better` (D95).

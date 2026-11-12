@@ -147,6 +147,25 @@ PANELS = (
 )
 
 
+def label_offsets(points: list[tuple[float, float]]) -> list[float]:
+    """Vertical offset (points) of each label: neighbours on a log x axis are moved downwards.
+
+    Two points are neighbours when their x differ by less than a factor 2.2 and their y by
+    less than 0.05 (the three best classifiers of step 2.3 sit within 1.2 points of top-1).
+    """
+    offsets = [4.0] * len(points)
+    order = sorted(range(len(points)), key=lambda i: -points[i][1])
+    for rank, i in enumerate(order):
+        x, y = points[i]
+        above = [
+            j
+            for j in order[:rank]
+            if max(x, points[j][0]) / min(x, points[j][0]) < 2.2 and abs(y - points[j][1]) < 0.05
+        ]
+        offsets[i] = 4.0 if not above else -8.0 - 22.0 * len(above)
+    return offsets
+
+
 def plot(rows: list[Row], path: Path) -> Path:
     """Top-1 (comparison split) against CPU latency and ONNX size, champion in orange."""
     import matplotlib
@@ -157,7 +176,8 @@ def plot(rows: list[Row], path: Path) -> Path:
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.6), dpi=150, sharey=True)
     for ax, (field, xlabel) in zip(axes, PANELS, strict=True):
         points = [r for r in rows if r.top1 is not None and getattr(r, field) is not None]
-        for r in points:
+        offsets = label_offsets([(getattr(r, field), r.top1 or 0.0) for r in points])
+        for r, dy in zip(points, offsets, strict=True):
             champion = r.status == "champion"
             x = getattr(r, field)
             ax.scatter(
@@ -170,12 +190,13 @@ def plot(rows: list[Row], path: Path) -> Path:
                 linewidths=2,
                 zorder=3,
             )
-            label = f"{r.arch}\n({r.status})" if r.status else r.arch
+            label = f"{r.arch} ({r.status})" if r.status else r.arch
             ax.annotate(
                 label,
                 (x, r.top1),
-                xytext=(7, 4),
+                xytext=(7, dy),
                 textcoords="offset points",
+                arrowprops=None if dy > 0 else {"arrowstyle": "-", "color": MUTED, "lw": 0.6},
                 fontsize=7.5,
                 color=INK,
             )

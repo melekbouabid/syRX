@@ -1,0 +1,6 @@
+outs:
+- md5: 4dc2127235d2e43d25269afcd8bf0412.dir
+  size: 168170766
+  nfiles: 35
+  hash: md5
+  path: classifier-efficientnetv2s

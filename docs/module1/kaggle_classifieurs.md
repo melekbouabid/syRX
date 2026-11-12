@@ -10,11 +10,14 @@ D99 (jeu de données et split de comparaison), D100 (notation du champion v1 et 
 promotion), D101 (export ONNX et liste de classes), D102 (recette d'entraînement et recherche),
 D103 (organisation et budget GPU) dans [docs/decisions.md](../decisions.md).
 
-**État (08/11/2026) : EN ATTENTE KAGGLE.** L'outillage, les six branches, leurs configurations
-et leurs notebooks sont prêts et testés (tests de fumée locaux de chaque architecture, export
-ONNX et import MLflow compris), le jeu de crops est empaqueté pour Kaggle et le champion v1 est
-réévalué sur le split de comparaison. Il reste à lancer les six notebooks sur Kaggle, à importer
-leurs exports, puis à finir l'étape (section 8).
+**État (12/11/2026) : runs Kaggle faits et importés.** Les six notebooks ont tourné sur un
+Tesla T4 (12 à 16 essais Optuna chacun, 1,2 à 2,6 h), leurs exports sont dans MLflow (runs
+parents et enfants, versions 8 à 13 de `tujya-pill-classifier`) et leurs poids dans DVC sur
+chaque branche. Champion : **EfficientNetV2-S** (version 8, top-1 0,909 sur le split de
+comparaison contre 0,183 pour le champion v1), challenger ResNet-50 (version 9) ; choix
+expliqué dans D120 et dans la section « Analyse » plus bas. Il est servi par l'API depuis le
+12/11 (FP32, la table de classes de l'API décrit les 380 classes, D119) : variantes FP16 / INT8
+et vérification dans [optimisation_onnx.md](optimisation_onnx.md).
 
 ## Les modèles et leurs branches
 
@@ -317,12 +320,62 @@ fichier ONNX).
 <!-- comparison:begin -->
 | Modèle | top-1 val | top-1 test | top-5 test | F1 macro test | top-1 classes v1 | top-1 test v2 complet | Latence ONNX CPU (ms) | Taille ONNX (Mo) | Paramètres (M) | Version | Statut | Run MLflow |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|
-| (en attente des runs Kaggle) | | | | | | | | | | | | |
+| efficientnetv2s | 0.9302 | 0.9089 | 0.9841 | 0.8790 | 0.9527 | 0.9136 | 17.6 | 82.5 | 20.6 | v8 | champion | `f1ed9edd` |
+| resnet50 | 0.9138 | 0.9027 | 0.9673 | 0.8665 | 0.9418 | 0.9054 | 18.6 | 97.1 | 24.3 | v9 | challenger | `a53eb8fa` |
+| convnext-tiny | 0.9288 | 0.8966 | 0.9814 | 0.8609 | 0.9491 | 0.9101 | 32.7 | 112.6 | 28.1 | v10 | archived | `8d2dac1f` |
+| yolo11s-cls | 0.8925 | 0.8594 | 0.9646 | 0.8021 | 0.8982 | 0.8710 | 4.5 | 23.7 | 5.9 | v11 | archived | `9c8b058d` |
+| vit-b16 | 0.8966 | 0.8515 | 0.9752 | 0.7888 | 0.8691 | 0.8517 | 84.9 | 344.6 | 86.1 | v12 | archived | `64a5682a` |
+| baseline-cnn | 0.4346 | 0.3669 | 0.6101 | 0.2673 | 0.4618 | 0.3631 | 11.4 | 11.1 | 2.8 | v13 | archived | `4d756fb9` |
+| yolo11s-cls (champion v1, 150 classes) |  | 0.1830 | 0.2246 | 0.1119 | 0.7527 | 0.4466 | 4.4 | 22.6 | 5.6 | v1 | archived | `2b4fd382` |
 <!-- comparison:end -->
 
 Le tableau est écrit par `python -m src.models.classification.compare` une fois les exports
 importés (section 7) ; « top-1 test » est `test_v2_top1` (split de comparaison, métrique de
 promotion), « top-1 classes v1 » `test_v2_v1c_top1` (garde-fou).
+
+![Top-1 contre latence et taille des classifieurs](assets/classifieurs_comparaison.png)
+
+### Analyse
+
+- **Transfer learning contre CNN maison.** Le CNN maison (2,8 M de paramètres, aucun poids
+  préentraîné, même recette et même budget de recherche) plafonne à 0,367 de top-1 ; le moins bon
+  modèle préentraîné sur ImageNet fait 0,852. Avec 40 images d'entraînement par classe en
+  moyenne (15 424 crops pour 380 classes), apprendre les filtres de bas niveau à partir de zéro
+  ne suffit pas : les poids ImageNet apportent l'essentiel.
+- **ViT contre CNN.** ViT-B/16 a le plus de paramètres (86 M) mais finit dernier des modèles
+  préentraînés en top-1 (0,852) et en F1 macro (0,789), et il est 4,8 fois plus lent que le
+  champion sur CPU (84,9 ms par crop). Un transformeur n'a pas l'a priori de localité des
+  convolutions : il lui faut plus d'images par classe pour en tirer parti. Son top-5 (0,975)
+  reste proche des CNN : il range bien la bonne classe parmi les premières, mais tranche moins
+  bien entre comprimés voisins.
+- **Trois meilleurs à égalité statistique.** EfficientNetV2-S (0,9089), ResNet-50 (0,9027) et
+  ConvNeXt-Tiny (0,8966) sont à moins de 1,3 point l'un de l'autre ; l'intervalle de confiance à
+  95 % d'un top-1 de 0,9 sur 1 131 crops est d'environ +/- 1,7 point, et chaque modèle n'a été
+  entraîné qu'une fois. La règle de promotion fixée avant les résultats (D100) désigne
+  EfficientNetV2-S ; il a aussi le meilleur F1 macro, le meilleur score sur les classes v1 et
+  la latence la plus basse des trois (17,6 ms). ConvNeXt-Tiny avait le meilleur top-1 de
+  validation (0,929, à 0,001 du champion) : la validation sert à choisir les hyperparamètres,
+  pas le modèle.
+- **Compromis rapide.** YOLO11s-cls v2 (0,859 ; 4,5 ms ; 23,7 Mo) reste le choix si la latence
+  devient la contrainte ; il fait déjà 4,7 fois mieux que la version v1 sur les 380 classes.
+- **Nature des erreurs du champion.** 41 % de ses 103 erreurs (42) donnent une classe aux
+  mêmes principes actifs : autre dosage du même médicament (gabapentine 600 / 800 mg,
+  halopéridol 0,5 / 1 / 5 mg) ou autre fabricant du même générique (glipizide LP 10 mg,
+  dicloxacilline). Le principe actif, qui seul sert à chercher les interactions, est donc juste
+  pour 94,6 % des crops ; le dosage, lui, ne doit jamais être déduit de la photo (et l'application
+  ne donne jamais de dose). Part des erreurs « même principe actif » : 38 % pour ResNet-50, 34 %
+  pour ConvNeXt-Tiny, 28 % pour YOLO11s-cls, 32 % pour ViT-B/16, 8 % pour le CNN maison.
+- **Grad-CAM.** Sur les crops bien classés, la carte se pose sur la gélule, son empreinte et la
+  jonction des deux couleurs. Trois des quatre erreurs de l'export sont des crops sans comprimé
+  (boîte automatique ratée, D99), où la carte s'étale sur le fond : une limite des boîtes
+  automatiques plus que du classifieur ; la quatrième est un comprimé blanc rond sécable sans
+  empreinte visible, pris pour un autre comprimé blanc (cas difficile même pour un humain).
+
+![Matrice de confusion du champion sur le split de comparaison](assets/classifieurs_confusion_efficientnetv2s.png)
+
+| Bien classé | Erreur (crop vide) |
+|---|---|
+| ![Grad-CAM, gélule bien classée](assets/classifieurs_gradcam_ok.png) | ![Grad-CAM, crop sans comprimé](assets/classifieurs_gradcam_erreur.png) |
 
 ## Vérification locale (tests de fumée)
 

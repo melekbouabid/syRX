@@ -13,8 +13,10 @@ For the version holding the alias `champion` of each registered model:
    split, never the test split) and INT8 dynamic;
 2. scores every variant with the same code: the detector with src/models/detection/metrics.py
    on the comparison split of step 2.2 (`test_holdout.txt` of C3PI v2, decoded like the API by
-   src/models/detection/latency.py `onnx_predict`), the classifier on the test crops of C3PI v1
-   (top-1 / top-5, preprocessed like the API); CPU latency (mean, p95) in a fresh process
+   src/models/detection/latency.py `onnx_predict`), the classifier on the test crops of its
+   label space, preprocessed like the API: C3PI v1 (top-1 / top-5) for the 150-class model of
+   step 2.1, the comparison split of step 2.3 (`test_v2_*`) for a champion tagged
+   `label_space=c3pi-v2`; CPU latency (mean, p95) in a fresh process
    (`isolated_latency`) on the same test images; file size;
 3. logs one MLflow run per variant (experiment tujya-vision, tag stage=optimize, provenance tags
    of src/utils/mlflow_utils.py) and registers each FP16 / INT8 variant as a new version of
@@ -102,6 +104,24 @@ SPECS = {
         "test crops of C3PI v1",
     ),
 }
+# Step 2.3 (D99, D100): a champion trained on the 380 classes of C3PI v2 is scored on the
+# comparison split of its own dataset, with the promotion metric of the comparison.
+CLASSIFY_V2 = TaskSpec(
+    "classify",
+    "classifier",
+    "c3pi-v2-classify",
+    "data/processed/c3pi/datasets_v2/classify",
+    "test_v2_top1",
+    "test_holdout.txt of C3PI v2 (comparison split of step 2.3)",
+)
+
+
+def task_spec(task: str, champion: Any = None) -> TaskSpec:
+    """The spec of `task`, read from the label space of the champion for the classifier."""
+    tags = getattr(champion, "tags", None) or {}
+    if task == "classify" and tags.get("label_space") == "c3pi-v2":
+        return CLASSIFY_V2
+    return SPECS[task]
 
 
 def load_settings(path: Path = PARAMS) -> dict[str, Any]:
@@ -179,6 +199,21 @@ def score_classifier(model: Path, data: Path) -> dict[str, float]:
     return {"test_top1": top1 / n, "test_top5": top5 / n, "test_images": float(len(files))}
 
 
+def score_classifier_v2(model: Path, data: Path) -> dict[str, float]:
+    """test_v2_* (comparison split), test_v2_all_* and test_v2_v1c_* of a 380-class model,
+    computed like the candidates of step 2.3 (output index = v2 class id)."""
+    from src.models.classification import data as D
+    from src.models.classification.runner import split_scores
+
+    session = ort.InferenceSession(str(model), providers=["CPUExecutionProvider"])
+    size, name = input_size(session), session.get_inputs()[0].name
+    test = D.crops(data, "test")
+    probs = np.concatenate(
+        [session.run(None, {name: D.load_tensor(c.path, size)})[0] for c in test]
+    )
+    return split_scores(probs, test, D.v1_classes(D.read_classes(data)))
+
+
 def latency_files(task: str, data: Path, n: int) -> list[Path]:
     if task == "detect":
         return [s.image for s in samples(data, "test", holdout_names(data))[:n]]
@@ -229,10 +264,12 @@ def build_variants(
     return out
 
 
-def measure(task: str, path: Path, data: Path) -> dict[str, float]:
-    scorer: Callable[[Path, Path], dict[str, float]] = (
-        score_detector if task == "detect" else score_classifier
-    )
+def measure(task: str, path: Path, data: Path, spec: TaskSpec | None = None) -> dict[str, float]:
+    scorer: Callable[[Path, Path], dict[str, float]] = score_classifier
+    if task == "detect":
+        scorer = score_detector
+    elif spec is CLASSIFY_V2:
+        scorer = score_classifier_v2
     return {**scorer(path, data), "model_size_mb": q.size_mb(path)}
 
 
@@ -381,12 +418,12 @@ def optimise(
     data: Path | None = None,
     client: MlflowClient | None = None,
 ) -> dict[str, Any]:
-    spec = SPECS[task]
     settings = settings or load_settings()
-    data = data or (DETECT_DATA if task == "detect" else CLASSIFY_DATA)
     client = client or MlflowClient()
     name = serving.REGISTERED[task]
     champion = client.get_model_version_by_alias(name, serving.CHAMPION)
+    spec = task_spec(task, champion)
+    data = data or ROOT / spec.dataset_path
     seed = int(settings.get("seed", 0))
     with tempfile.TemporaryDirectory() as tmp:
         work = Path(tmp)
@@ -404,7 +441,7 @@ def optimise(
             task, {precision: path for precision, (path, _) in variants.items()}, data, settings
         )
         for precision, (path, how) in variants.items():
-            metrics = {**measure(task, path, data), **latency[precision]}
+            metrics = {**measure(task, path, data, spec), **latency[precision]}
             print(
                 f"{task} {precision}: {spec.metric}={metrics[spec.metric]:.4f} "
                 f"{metrics['onnx_cpu_latency_ms']:.1f} ms",
@@ -505,8 +542,12 @@ def main(argv: list[str] | None = None) -> None:
         task: optimise(task, register=not args.no_register, settings=settings)
         for task in args.task or ["detect", "classify"]
     }
+    # One task at a time (--task classify) keeps the report of the other one.
+    previous = json.loads(REPORT.read_text(encoding="utf-8")) if REPORT.is_file() else {}
     REPORT.parent.mkdir(parents=True, exist_ok=True)
-    REPORT.write_text(json.dumps(report, indent=2, default=str) + "\n", encoding="utf-8")
+    REPORT.write_text(
+        json.dumps({**previous, **report}, indent=2, default=str) + "\n", encoding="utf-8"
+    )
     print(markdown_table(report))
     if args.publish:
         from src.models import publish

@@ -60,3 +60,11 @@ def test_comparison_figure(tmp_path: Path) -> None:
         compare.Row("b", "b" * 32, None, 0.8, None, None, None, None, None, 5.0, None, ""),
     ]
     assert compare.plot(rows, tmp_path / "figure.png").stat().st_size > 0
+
+
+def test_neighbour_labels_are_stacked() -> None:
+    # Latency panel of step 2.3: EfficientNetV2-S, ResNet-50, ConvNeXt-Tiny close together.
+    points = [(17.6, 0.9089), (18.6, 0.9027), (32.7, 0.8966), (4.5, 0.8594), (84.9, 0.8515)]
+    offsets = compare.label_offsets(points)
+    assert offsets[:3] == [4.0, -30.0, -52.0]  # below, in the empty part of the plot
+    assert offsets[3:] == [4.0, 4.0]  # far on the log axis: label above the point

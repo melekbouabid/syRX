@@ -195,6 +195,16 @@ describe("headlineMetrics", () => {
       { label: "test top-1", value: "93.7%" },
       { label: "test top-5", value: "98.5%" },
     ]);
+    expect(
+      headlineMetrics({
+        task: "classify",
+        metrics: { test_v2_top1: 0.90893, test_v2_top5: 0.98408, test_top1: 0.5, onnx_cpu_latency_ms: 18.3 },
+      }),
+    ).toEqual([
+      { label: "test top-1", value: "90.9%" },
+      { label: "test top-5", value: "98.4%" },
+      { label: "CPU latency", value: "18 ms" },
+    ]);
   });
 
   it("falls back to older split names and skips what is missing", () => {

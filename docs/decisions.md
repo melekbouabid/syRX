@@ -1620,3 +1620,35 @@ RAG v2 (D90). Rejeté : deux tables de classes côte à côte dans l'API (deux s
 D101) ; réécrire les sorties du modèle vers les identifiants v1 (230 classes n'en ont pas) ;
 reconstruire le corpus RAG maintenant (il ajouterait environ 6 000 paires DDInter sans notice,
 plus que tout le corpus actuel, juste avant le benchmark de la récupération).
+
+**D120. Champion des classifieurs : EfficientNetV2-S (version 8) ; ResNet-50 challenger
+(version 9) ; les écarts entre les trois meilleurs ne sont pas significatifs (étape 2.3).**
+Six exports Kaggle (Tesla T4, recette commune D102, 12 à 16 essais Optuna chacun) importés en un
+appel du meilleur au moins bon (D98, D100). `test_v2_top1` sur le split de comparaison (1 131
+crops que le champion v1 n'a jamais vus) : EfficientNetV2-S 0,9089, ResNet-50 0,9027,
+ConvNeXt-Tiny 0,8966, YOLO11s-cls v2 0,8594, ViT-B/16 0,8515, CNN maison 0,3669 ; champion v1
+0,1830 (0,7527 sur ses 150 classes). Tous passent la garde de D100 (top-1 sur les classes v1 de
+0,8691 à 0,9527 contre 0,7527, sauf le CNN maison à 0,4618, archivé). Règle appliquée sans
+exception : le meilleur `test_v2_top1` qui bat le champion en place de 0,005 devient champion,
+le deuxième challenger. Lecture honnête : l'intervalle de confiance binomial à 95 % est
+d'environ +/- 1,7 point sur 1 131 crops ; les trois premiers (0,6 point puis 0,6 point d'écart)
+sont à égalité statistique et une seule graine a été entraînée par modèle. EfficientNetV2-S
+garde aussi le meilleur F1 macro (0,879), le meilleur top-1 sur les classes v1 (0,953) et la
+latence CPU la plus basse des trois (17,6 ms par crop contre 18,6 et 32,7, D96, 5 tours
+entrelacés), pour un ONNX de 82,5 Mo ; le choix ne dépend donc pas de ce seul écart. 41 % de
+ses 103 erreurs donnent une classe aux mêmes principes actifs (autre dosage ou autre fabricant
+du même générique) : le principe actif, qui seul compte pour les interactions, est juste pour
+94,6 % des crops. Le transfer learning est décisif (CNN maison sans poids ImageNet : 0,367 avec
+le même budget) ; le ViT-B/16, plus gros (86 M de paramètres) et 4,8 fois plus lent, finit sous
+les CNN : avec 40 images d'entraînement par classe en moyenne, l'a priori de convolution aide
+plus que la capacité. YOLO11s-cls v2 reste le compromis le plus rapide (4,5 ms, 23,7 Mo, 0,859)
+si la latence devient la contrainte. Le tag `status` de la version 1 restait « challenger »
+(alias `served` gardé) : corrigé dans `_set_status` (test ajouté) et sur la version. Rejeté :
+servir ResNet-50 ou ConvNeXt-Tiny « parce que l'écart est faible » (la règle fixée avant les
+résultats décide) ; une moyenne sur plusieurs graines (budget GPU Kaggle, D103). Servi en FP32
+(`optimize --task classify`, noté sur le split de comparaison pour un champion `label_space=c3pi-v2`) :
+le FP16 a la même précision mais n'est que 1 % plus rapide, l'INT8 statique perd 13 points et
+le dynamique 1,2 point, tous deux plus lents (docs/module1/optimisation_onnx.md). Grad-CAM de la
+galerie : poids PyTorch de la version servie (`data/models/classifiers/classifier-efficientnetv2s`,
+DVC), couche `ClassifierNet.parts().cam_layer` (dernier bloc convolutif, `body.features.7`),
+même top-1 et même probabilité qu'ONNX sur les 10 comprimés des 8 photos.
