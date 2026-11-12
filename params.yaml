@@ -89,6 +89,19 @@ compare:
   detector:
     dataset: c3pi-v2-detect
     metric: test_v2_mAP50_95
+  # Step 2.3, comparison of classifiers (src/models/classification,
+  # docs/module1/kaggle_classifieurs.md, D99-D100): candidates trained on the 380 classes of
+  # C3PI v2 (Kaggle) and the v1 champion (150 classes) are scored on the comparison split
+  # (test_holdout.txt of stage prepare_classify_v2), the classes a model does not know counting
+  # as errors, and promoted on `metric` with registry.classifier.min_gain. Guard: a candidate
+  # whose top-1 on the comparison crops of the 150 v1 classes, prediction restricted to them
+  # (`guard_metric`), is more than `guard_max_drop` below the v1 champion's is archived.
+  # The search spaces are in config/hpo/classifier_<arch>.yaml.
+  classifier:
+    dataset: c3pi-v2-classify
+    metric: test_v2_top1
+    guard_metric: test_v2_v1c_top1
+    guard_max_drop: 0.01     # one point of top-1 (about 3 of the 275 crops), as optimize.max_drop
   # Step 2.7, OCR engines of the medicine boxes (src/models/ocr/evaluate.py, D110): box photos
   # with a known ingredient where a true one is found; Registry tujya-box-ocr.
   ocr:

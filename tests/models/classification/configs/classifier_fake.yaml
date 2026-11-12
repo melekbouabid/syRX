@@ -1,0 +1,35 @@
+# Search of the fake model family of tests/models/classification/helpers.py.
+arch: fake
+model: fake
+family: torch
+pretrained: true
+branch: experiment/classifier-fake
+seed: 0
+search:
+  n_trials: 3
+  epochs: 2
+  fraction: 0.5
+  metric: val_top1
+  sampler: tpe
+  startup_trials: 2
+  space:
+    lr: {type: float, low: 1.0e-5, high: 1.0e-1, log: true}
+    imgsz: {type: categorical, choices: [32, 48]}
+    unfreeze: {type: categorical, choices: [1, 2]}
+    imbalance: {type: categorical, choices: [none, class_weights, focal]}
+    mix_prob: {type: float, low: 0.0, high: 0.5}
+fixed:
+  batch: 4
+  workers: 0
+  head_epochs: 1
+final:
+  epochs: 3
+  patience: 2
+  head_epochs: 2
+  max_hours: 0.1
+smoke:
+  n_trials: 2
+  epochs: 1
+  final_epochs: 1
+  images: {train: 6, val: 4, test: 4}
+  fixed: {imgsz: 32, unfreeze: 1}

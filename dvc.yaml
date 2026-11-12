@@ -39,8 +39,12 @@ stages:
     outs:
       - data/processed/c3pi/labels
       - data/processed/c3pi/datasets
+  # Frozen (D119): the served RAG corpus stays the one of the 150 v1 classes while
+  # data/processed/pharma describes the 380 classes of the served classifier; its sources for
+  # the new ingredients are the RAG v2 collection (D90). Unfreeze to rebuild it on 380 classes.
   rag_corpus:
     cmd: python -m src.data.corpus corpus
+    frozen: true
     deps:
       - data/rag/interim
       - data/rag/raw/pubmed
@@ -74,7 +78,7 @@ stages:
     deps:
       - data/processed/c3pi/bigdata/index
       - data/processed/c3pi/bigdata/quality
-      - config/pill_classes.csv
+      - config/pill_classes_v1.csv
       - src/data/spark/split_job.py
     params:
       - bigdata.seed
@@ -102,7 +106,7 @@ stages:
       - data/raw/epillid
       - data/processed/c3pi/bigdata/index
       - config/splits/c3pi_v2/classes.csv
-      - config/pill_classes.csv
+      - config/pill_classes_v1.csv
       - src/data/spark/epillid_job.py
     outs:
       - data/processed/c3pi/bigdata/epillid
@@ -147,6 +151,25 @@ stages:
       - src/data/prepare_detect_v2.py
     outs:
       - data/processed/c3pi/datasets_v2/detect
+  # Step 2.3 (docs/module1/kaggle_classifieurs.md, D99): classification dataset of C3PI v2
+  # (square pill crops of every image of the v2 split and of the offline augmentation, the
+  # crop the API feeds the classifier) and its comparison split test_holdout.txt (v2 test
+  # sessions the v1 champion never saw). Packaged for Kaggle by
+  # `python -m src.models.classification.package_kaggle`.
+  prepare_classify_v2:
+    cmd: python -m src.data.prepare_classify_v2
+    deps:
+      - data/raw/c3pi/images
+      - data/processed/c3pi/bigdata/split
+      - data/processed/c3pi/bigdata/augmented
+      - config/splits/selected_images.csv
+      - config/splits/c3pi_v2/classes.csv
+      - config/pill_classes_v1.csv
+      - src/data/autolabel.py
+      - src/data/prepare_detect_v2.py
+      - src/data/prepare_classify_v2.py
+    outs:
+      - data/processed/c3pi/datasets_v2/classify
   # Step 2.7 (docs/module1/boites.md, D108): ground truth of the medicine box photos
   # (Italian-OTC-medicines, Hugging Face, Apache-2.0), brand and active ingredients taken from
   # the metadata, scored against the OCR engines by `python -m src.models.ocr.evaluate`.

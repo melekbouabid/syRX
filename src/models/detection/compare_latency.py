@@ -3,6 +3,7 @@
     # training venv, MLflow server running, dataset of stage prepare_detect_v2 on disk
     python -m src.models.detection.compare_latency             # measure and log
     python -m src.models.detection.compare_latency --dry-run   # measure and print only
+    python -m src.models.detection.compare_latency --task classify   # the classifiers (2.3)
 
 The development PC is a laptop whose CPU slows down under a sustained load (D96): a model
 timed alone, right after another one, is measured on a hotter CPU. So the FP32 detectors of the
@@ -46,6 +47,8 @@ from src.utils.console import console_utf8
 
 ROOT = mu.ROOT
 SUMMARY = ROOT / "models" / "compare" / "latency.json"
+# Crops of step 2.3 (stage prepare_classify_v2): `--task classify` times the classifiers.
+CLASSIFY_V2_DATA = ROOT / "data" / "processed" / "c3pi" / "datasets_v2" / "classify"
 FLOAT_TYPES = {onnx.TensorProto.FLOAT, onnx.TensorProto.FLOAT16, onnx.TensorProto.DOUBLE}
 
 
@@ -90,16 +93,19 @@ def protocol(settings: dict[str, Any]) -> str:
 
 def measure_all(
     *,
-    name: str = REGISTERED["detect"],
+    task: str = "detect",
+    name: str | None = None,
     experiment: str = optimize.EXPERIMENT,
     data: Path = optimize.DETECT_DATA,
     settings: dict[str, Any] | None = None,
     log: bool = True,
     client: MlflowClient | None = None,
 ) -> dict[str, Any]:
-    """Time every compared detector together; log the figures unless `log` is False."""
+    """Time every compared model of `task` together (detect: the detectors of step 2.2,
+    classify: the classifiers of step 2.3); log the figures unless `log` is False."""
     import mlflow
 
+    name = name or REGISTERED[task]
     client = client or MlflowClient()
     settings = settings or optimize.load_settings()
     versions = compared_versions(name, client)
@@ -131,7 +137,7 @@ def measure_all(
         order = dict(sorted(paths.items(), key=lambda item: rows[item[0]]["model_size_mb"]))
         rounds: dict[str, list[dict[str, float]]] = {}
         start = time.time()
-        medians = optimize.measure_latency("detect", order, data, settings, rounds_out=rounds)
+        medians = optimize.measure_latency(task, order, data, settings, rounds_out=rounds)
     for key, row in rows.items():
         row["latency"] = medians[key]
         row["round_means_ms"] = [r["onnx_cpu_latency_ms"] for r in rounds[key]]
@@ -175,12 +181,14 @@ def _log(row: dict[str, Any], summary: dict[str, Any], client: MlflowClient) -> 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m src.models.detection.compare_latency")
     parser.add_argument("--dry-run", action="store_true", help="measure and print, log nothing")
-    parser.add_argument("--data", type=Path, default=optimize.DETECT_DATA)
+    parser.add_argument("--task", choices=sorted(REGISTERED), default="detect")
+    parser.add_argument("--data", type=Path, help="test images (default: the task's dataset)")
     args = parser.parse_args(argv)
     console_utf8()
     os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
     mu.configure()
-    summary = measure_all(data=args.data, log=not args.dry_run)
+    default = optimize.DETECT_DATA if args.task == "detect" else CLASSIFY_V2_DATA
+    summary = measure_all(task=args.task, data=args.data or default, log=not args.dry_run)
     for key, row in summary["models"].items():
         lat = row["latency"]
         print(
@@ -190,8 +198,9 @@ def main(argv: list[str] | None = None) -> None:
             f"{row['model_size_mb']:.1f} MB, {row['onnx_parameters'] / 1e6:.2f} M parameters"
         )
     if not args.dry_run:
-        SUMMARY.parent.mkdir(parents=True, exist_ok=True)
-        SUMMARY.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+        target = SUMMARY if args.task == "detect" else SUMMARY.with_name("latency_classify.json")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

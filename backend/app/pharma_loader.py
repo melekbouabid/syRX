@@ -148,8 +148,10 @@ def load(engine: Engine, inputs: Inputs) -> LoadReport:
                 imprint=row.get("imprint", ""),
                 color=row.get("color", ""),
                 shape=row.get("shape", ""),
-                n_images=_int(row.get("n_consumer_selected"))
-                + _int(row.get("n_reference_selected")),
+                # v1 table: images selected for training; v2 table (D119): consumer photos
+                # and reference images of the class in C3PI v2.
+                n_images=_int(row.get("n_consumer_selected", row.get("n_consumer")))
+                + _int(row.get("n_reference_selected", row.get("n_reference"))),
                 source=sources["c3pi"],
             )
             pills[pill.class_id] = pill

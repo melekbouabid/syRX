@@ -175,3 +175,28 @@ def test_collect_reads_candidates_and_baseline_without_smoke_runs(
     assert (rows[0].status, rows[0].version, rows[0].size_mb) == ("champion", champion, 37.9)
     assert rows[0].val_map == 0.8063  # the retained checkpoint, not the last epoch
     assert (rows[1].status, rows[1].version) == ("archived", baseline)
+
+
+def test_classifiers_are_timed_with_their_task(
+    tracking: SimpleNamespace, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    data = make_dataset(tmp_path / "detect", holdout=2)
+    _version(tracking, "cls", 32, {})
+    tasks: list[str] = []
+
+    def fake(task: str, paths: dict[str, Path], data: Path, settings: dict, rounds_out: dict):
+        tasks.append(task)
+        rounds_out.update({key: [{"onnx_cpu_latency_ms": 3.0}] for key in paths})
+        return {key: {"onnx_cpu_latency_ms": 3.0, "onnx_cpu_latency_p95_ms": 4.0} for key in paths}
+
+    monkeypatch.setattr(optimize, "measure_latency", fake)
+    compare_latency.measure_all(
+        task="classify",
+        name=tracking.model,
+        experiment=tracking.experiment,
+        data=data,
+        settings=SETTINGS,
+        log=False,
+        client=tracking.client,
+    )
+    assert tasks == ["classify"]  # the crops of the classifier, not the detector's photos

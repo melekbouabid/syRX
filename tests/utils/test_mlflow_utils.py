@@ -250,6 +250,20 @@ def test_better_version_is_promoted_and_old_champion_becomes_challenger(
     assert _status(tracking, v1) == mu.ARCHIVED
 
 
+def test_served_alias_does_not_keep_a_lost_status(tracking: SimpleNamespace) -> None:
+    # Step 2.3: the v1 classifier still held `served` (step 2.4) when it lost `challenger`.
+    v1 = new_version(tracking, {"top1": 0.90})
+    mu.promote_if_better(tracking.model, v1, "top1")
+    tracking.client.set_registered_model_alias(tracking.model, "served", v1)
+    v2 = new_version(tracking, {"top1": 0.95})
+    assert mu.promote_if_better(tracking.model, v2, "top1", min_gain=0.01).promoted
+    assert _status(tracking, v1) == mu.CHALLENGER
+    v3 = new_version(tracking, {"top1": 0.93})
+    assert mu.promote_if_better(tracking.model, v3, "top1", min_gain=0.01).status == mu.CHALLENGER
+    assert mu.alias_version(tracking.model, "served") == v1
+    assert _status(tracking, v1) == mu.ARCHIVED
+
+
 def test_worse_version_is_not_promoted(tracking: SimpleNamespace) -> None:
     v1 = new_version(tracking, {"top1": 0.90})
     mu.promote_if_better(tracking.model, v1, "top1")
@@ -354,3 +368,23 @@ def test_sequential_promotion_depends_on_the_import_order(tracking: SimpleNamesp
         "yolov10n",
         "yolo11s",
     )
+
+
+def test_ineligible_version_is_archived_whatever_its_score(tracking: SimpleNamespace) -> None:
+    # A guard checked by the caller failed (D100): never champion nor challenger.
+    v1 = new_version(tracking, {"top1": 0.40})
+    mu.promote_if_better(tracking.model, v1, "top1")
+    v2 = new_version(tracking, {"top1": 0.95})
+    result = mu.promote_if_better(
+        tracking.model, v2, "top1", min_gain=0.005, eligible=False, ineligible_reason="guard"
+    )
+    assert not result.promoted
+    assert result.status == mu.ARCHIVED
+    assert mu.alias_version(tracking.model, mu.CHAMPION) == v1
+    assert mu.alias_version(tracking.model, mu.CHALLENGER) is None
+    assert _status(tracking, v2) == mu.ARCHIVED
+    promotion = tracking.client.get_model_version(tracking.model, v2).tags["promotion"]
+    assert promotion.startswith("not eligible: guard")
+    # An eligible candidate is still compared as before.
+    v3 = new_version(tracking, {"top1": 0.90})
+    assert mu.promote_if_better(tracking.model, v3, "top1", min_gain=0.005).promoted

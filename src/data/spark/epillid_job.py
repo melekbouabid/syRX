@@ -8,7 +8,7 @@ data: its consumer images are crops of C3PI photos, so adding them would duplica
 we already have (and could put a copy of a test photo in train).
 
 Input: data/raw/epillid/ePillID_data/all_labels.csv (DVC), index/images (job `index`),
-config/splits/c3pi_v2/classes.csv (job `split`) and config/pill_classes.csv (v1).
+config/splits/c3pi_v2/classes.csv (job `split`) and config/pill_classes_v1.csv (v1).
 Each ePillID row gets its NDC9 (labeler + product code, zero-padded) and its kind:
 `consumer` (fcn_mix_weight/dc_224), `challenge_reference` (fcn_mix_weight/dr_224) or
 `pillbox_reference` (segmented_nih_pills_224).
@@ -29,7 +29,7 @@ from src.data.spark.session import BIGDATA, ROOT, SPLITS_V2, write_json
 
 EPILLID = ROOT / "data" / "raw" / "epillid" / "ePillID_data" / "all_labels.csv"
 INDEX = BIGDATA / "index" / "images"
-CLASSES_V1 = ROOT / "config" / "pill_classes.csv"
+CLASSES_V1 = ROOT / "config" / "pill_classes_v1.csv"
 OUT = BIGDATA / "epillid"
 
 

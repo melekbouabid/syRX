@@ -8,10 +8,13 @@ needs the gradients of the PyTorch model. This script does it offline, in the tr
 
 or through DVC (stage `gradcam_gallery` of dvc.yaml, output data/processed/c3pi/gradcam,
 never in git). For each photo it runs the served ONNX scan (app/inference.py: same boxes and
-same 224 px square crops as the API), then Grad-CAM (src/utils/gradcam.py) of the PyTorch
-weights of the same classifier version (models/train/classifier, checked against the run id
-of models/models.json) on the last convolution before the pooling of the head, for the top-1
-class the API gives. The heat map of each pill is blended over its crop square in the photo,
+same square crops as the API), then Grad-CAM (src/utils/gradcam.py) of the PyTorch weights of
+the same classifier version, for the top-1 class the API gives. The weights are found from the
+run id of models/models.json: a classifier of the step 2.3 comparison (export of
+src/models/classification in data/models/classifiers/classifier-<arch>, DVC, matched through
+its import summary models/compare/classifier_<arch>.json; layer `ClassifierNet.parts().cam_layer`,
+D120) or the YOLO11s-cls of v1 (models/train/classifier, Ultralytics; the 1 x 1 convolution of
+the Classify head). The heat map of each pill is blended over its crop square in the photo,
 so the picture keeps the proportions of the photo and the scan boxes fit on it.
 
 Outputs: one JPEG per photo (name from `app.gallery.gradcam_name`) and gradcam.json (model,
@@ -51,6 +54,8 @@ DEFAULTS = {
     "images": ROOT / "data" / "raw" / "c3pi" / "images",
     "models": ROOT / "models",
     "weights": ROOT / "models" / "train" / "classifier",
+    "exports": ROOT / "data" / "models" / "classifiers",
+    "compare": ROOT / "models" / "compare",
     "out": ROOT / "data" / "processed" / "c3pi" / "gradcam",
 }
 MAX_SIDE = 1280  # longest side of the saved pictures (the photos are up to 4,000 px)
@@ -126,6 +131,21 @@ def shrink(picture: np.ndarray, max_side: int = MAX_SIDE) -> np.ndarray:
     return cv2.resize(picture, size, interpolation=cv2.INTER_AREA)
 
 
+def export_weights(served: dict[str, Any], exports: Path, compare: Path) -> Path | None:
+    """best.pt of the step 2.3 export the served classifier comes from, None if it is not one.
+
+    The import summary of that export names its run and Registry version; an optimised
+    variant (step 2.4) is served under the version it was made from (`variant_of`)."""
+    summary = compare / f"classifier_{served.get('arch')}.json"
+    if not summary.is_file():
+        return None
+    imported = json.loads(summary.read_text("utf-8"))
+    same_run = imported.get("run_id") == served.get("run_id")
+    if not same_run and served.get("variant_of") != imported.get("version"):
+        return None
+    return exports / f"classifier-{served['arch']}" / "weights" / "best.pt"
+
+
 def served_classifier(models_dir: Path, weights_dir: Path) -> dict[str, Any]:
     """The served classifier's Registry entry; fails if the PyTorch weights are another run."""
     manifest = json.loads((models_dir / "models.json").read_text("utf-8"))
@@ -145,17 +165,38 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     )
     if not photos:
         raise SystemExit("no gallery photo available (config files or C3PI images missing)")
-    served = served_classifier(args.models, args.weights)
+    manifest = json.loads((args.models / "models.json").read_text("utf-8"))
+    exported = export_weights(manifest["classify"], args.exports, args.compare)
 
     import torch
-    from ultralytics import YOLO
 
     from src.utils.gradcam import GradCAM
 
-    weights = args.weights / "weights" / "best.pt"
-    net = YOLO(str(weights)).model.float().eval()
-    head = len(net.model) - 1
-    layer = net.model[head].conv  # 1 x 1 convolution of the Classify head, 7 x 7 at 224 px
+    if exported is not None:  # step 2.3 classifier: logits out, softmax as in its ONNX export
+        from src.models.classification import torch_backend
+
+        served, weights = dict(manifest["classify"]), exported
+        model = torch_backend.load(weights)
+        parts = model.parts()
+        net, layer, tokens = model, parts.cam_layer, parts.cam_tokens
+        layer_name = next(name for name, module in model.named_modules() if module is layer)
+
+        def probabilities_of(tensor: torch.Tensor) -> np.ndarray:
+            return torch.softmax(net(tensor), dim=1)[0].numpy()
+
+    else:  # YOLO11s-cls of v1 (Ultralytics): the Classify head outputs probabilities
+        from ultralytics import YOLO
+
+        served = served_classifier(args.models, args.weights)
+        weights = args.weights / "weights" / "best.pt"
+        net = YOLO(str(weights)).model.float().eval()
+        head = len(net.model) - 1
+        layer = net.model[head].conv  # 1 x 1 convolution of the Classify head, 7 x 7 at 224 px
+        tokens, layer_name = False, f"model.{head}.conv"
+
+        def probabilities_of(tensor: torch.Tensor) -> np.ndarray:
+            return net(tensor)[0][0].numpy()
+
     scanner = PillScanner.from_dir(args.models)
 
     args.out.mkdir(parents=True, exist_ok=True)
@@ -163,7 +204,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         stale.unlink()
 
     entries = []
-    with GradCAM(net, layer) as cam:
+    with GradCAM(net, layer, tokens=tokens) as cam:
         for photo in photos:
             image = decode_image(photo.file.read_bytes())
             output = scanner.scan(image)
@@ -173,7 +214,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 tensor = torch.from_numpy(to_tensor(crop))
                 index = scanner.class_ids.index(detection.classes[0])
                 with torch.no_grad():
-                    probabilities = net(tensor)[0][0].numpy()
+                    probabilities = probabilities_of(tensor)
                 onnx_probability = detection.probabilities[0]
                 difference = abs(float(probabilities[index]) - onnx_probability)
                 if difference > MAX_PROB_DIFF or int(probabilities.argmax()) != index:
@@ -208,7 +249,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     report = {
         "method": "Grad-CAM (Selvaraju et al., 2017), src/utils/gradcam.py",
         "target": "top-1 class of the served ONNX scan, for each detected pill",
-        "layer": f"model.{head}.conv",
+        "layer": layer_name,
         "classifier": {
             key: served.get(key)
             for key in ("registered_model", "version", "aliases", "run_id", "arch", "precision")

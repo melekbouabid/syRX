@@ -129,6 +129,34 @@ jobs:
       - run: pip install -r src/data/spark/requirements.txt
       - run: python -m pytest tests/data/spark --noconftest -p tests.data.spark.fixtures
 
+  # The classifiers of step 2.3 (src/models/architecture.py, classification/torch_backend.py,
+  # src/utils/gradcam.py): their tests need PyTorch, torchvision and Ultralytics (YOLO11s-cls),
+  # which the other jobs do not install. CPU wheels only (no CUDA download), same versions as
+  # the training venv; the networks are built without pretrained weights: no data, no download
+  # beyond the packages. The job `src` runs the same folders and skips these tests.
+  vision:
+    name: pytest classifiers with PyTorch (CPU)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            backend/requirements.txt
+            pyproject.toml
+            src/models/requirements-train.txt
+      - run: pip install torch==2.14.1 torchvision==0.29.1 --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -r requirements-dev.txt ultralytics==8.4.191
+      # Ultralytics pulls the GUI build of OpenCV; keep the headless build of the API.
+      - run: |
+          pip uninstall -y opencv-python
+          pip install --force-reinstall --no-deps "opencv-python-headless>=4.10"
+      - run: python -m pytest tests/models/test_architecture.py tests/models/classification tests/utils/test_gradcam.py -rs
+
   hooks:
     name: git hooks (tools/hooks, secrets and commit messages)
     runs-on: ubuntu-latest

@@ -13,11 +13,19 @@ TUJYA_MODELS_DIR, same default). The files are the ONNX exports registered by
 by default the champions chosen by promote_if_better (src/utils/mlflow_utils.py), in the
 precision chosen by `python -m src.models.optimize` (alias `served`: FP32, FP16 or INT8 variant
 of the champion, src/models/serving.py). `--exact` publishes the alias as it is.
+
+A classifier that carries its class list (ONNX metadata `class_keys`, the C3PI product of
+every output: the classifiers of step 2.3, D101) is published only if its `names` point, for
+every output, to the class_id of the same product in the API's class table
+(config/pill_classes.csv); otherwise the API would show the wrong medicine. The Ultralytics
+export of v1 has no `class_keys` and is published as before.
 """
 
 from __future__ import annotations
 
 import argparse
+import ast
+import csv
 import hashlib
 import json
 import os
@@ -32,6 +40,7 @@ from src.models.serving import CHAMPION, PRECISION_TAG, REGISTERED, served_versi
 
 ROOT = Path(__file__).resolve().parents[2]  # repository root
 RUNS = ROOT / "runs"  # Ultralytics training runs (src/models/train.py)
+CLASS_TABLE = ROOT / "config" / "pill_classes.csv"  # what the API resolves class ids with
 
 FILES = {"detect": "detector.onnx", "classify": "classifier.onnx"}
 
@@ -42,6 +51,32 @@ def sha256(path: Path) -> str:
         for block in iter(lambda: handle.read(1 << 20), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def check_class_table(model: Path, table: Path = CLASS_TABLE) -> None:
+    """Refuse a classifier whose outputs would name other products in the API's class table.
+
+    `names` (output index -> class folder) is what backend/app/inference.py reads as the
+    class_id of `table`; `class_keys` (output index -> C3PI class key, NDC9 + part) says which
+    product each output really is. Both must agree for every output (D101).
+    """
+    props = onnx.load(str(model), load_external_data=False).metadata_props
+    meta = {p.key: p.value for p in props}
+    if "class_keys" not in meta:
+        return  # Ultralytics export (v1): its names are the class ids of the table
+    names = ast.literal_eval(meta.get("names", "{}"))
+    keys = json.loads(meta["class_keys"])
+    with table.open(newline="", encoding="utf-8") as handle:
+        known = {int(row["class_id"]): row["class_key"] for row in csv.DictReader(handle)}
+    wrong = [i for i in sorted(names) if known.get(int(names[i])) != keys.get(str(i))]
+    if wrong:
+        raise SystemExit(
+            f"the classifier's class list ({meta.get('label_space', '?')}, "
+            f"{len(names)} outputs) does not match {table.name}: {len(wrong)} outputs would "
+            f"name another product (first: output {wrong[0]}, {keys.get(str(wrong[0]))}). "
+            "Move the API's class table to the model's label space first "
+            "(docs/module1/kaggle_classifieurs.md, decision D101)."
+        )
 
 
 def from_registry(
@@ -158,6 +193,8 @@ def publish(
                 path, info = from_runs(task)
             else:
                 path, info = from_registry(task, versions[task], Path(tmp), alias, exact=exact)
+            if task == "classify":
+                check_class_table(path)
             # MLflow stores the weights as external data next to model.onnx; loading and
             # saving again gives one self-contained file (these models are far below 2 GB).
             onnx.save_model(onnx.load(str(path)), str(out / filename))

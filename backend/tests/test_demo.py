@@ -196,7 +196,7 @@ def test_the_shipped_gallery_was_never_seen_in_training() -> None:
     for row in gallery:
         assert row["path"] in test_v2 and test_v2[row["path"]]["image_type"] == "C3PI_Test"
         assert v1.get(row["path"], {}).get("split", "test") == "test", row["path"]
-        assert row["class_id"] in classes  # a class of the served classifier (v1 ids)
+        assert row["class_id"] in classes  # a class of the served classifier (v2 ids, D119)
 
 
 def test_the_shipped_gallery_is_in_the_detection_holdout() -> None:
@@ -208,11 +208,13 @@ def test_the_shipped_gallery_is_in_the_detection_holdout() -> None:
     held = set((holdout / "test_holdout.txt").read_text(encoding="utf-8").split())
     index = {r["path"]: r for r in _rows(holdout / "index.csv")}
     config = PROJECT_DIR / "config"
-    v1_keys = {r["class_id"]: r["class_key"] for r in _rows(config / "pill_classes.csv")}
+    served_keys = {r["class_id"]: r["class_key"] for r in _rows(config / "pill_classes.csv")}
+    v1_keys = {r["class_key"] for r in _rows(config / "pill_classes_v1.csv")}
     v2_keys = {
         r["class_id"]: r["class_key"] for r in _rows(config / "splits" / "c3pi_v2" / "classes.csv")
     }
     for row in _rows(config / "demo_gallery.csv"):
         entry = index[row["path"]]
         assert entry["file"] in held and entry["holdout"] == "1", row["path"]
-        assert v2_keys[entry["class_id"]] == v1_keys[row["class_id"]], row["path"]
+        assert v2_keys[entry["class_id"]] == served_keys[row["class_id"]], row["path"]
+        assert served_keys[row["class_id"]] in v1_keys, row["path"]  # same product in v1
