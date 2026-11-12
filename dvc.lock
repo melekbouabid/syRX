@@ -576,8 +576,8 @@ stages:
       size: 11923
     - path: config/demo_gallery.csv
       hash: md5
-      md5: d5985628173b4c456a908907164e6444
-      size: 592
+      md5: e243fe024a2e2234bf98fc617776eb92
+      size: 591
     - path: config/splits/c3pi_v2/test.csv
       hash: md5
       md5: 477239433fae5b5cac12e0d984ff0ac4
@@ -593,16 +593,16 @@ stages:
       nfiles: 20330
     - path: models/classifier.onnx
       hash: md5
-      md5: 11376ff8d465b30725771dfcc9e3cb32
-      size: 22553749
+      md5: b318e07d0ea3fb58e6728f0119aa263f
+      size: 82536121
     - path: models/detector.onnx
       hash: md5
       md5: ac3042742eee78d6cac3a772dc0c0fee
       size: 37928538
     - path: models/models.json
       hash: md5
-      md5: 811d68775fc9470eb06750c711df287d
-      size: 2348
+      md5: 96acd9c0234874e856c871c709668823
+      size: 3084
     - path: models/train/classifier
       hash: md5
       md5: ca66f617e25a7bf27b418b76244af876.dir
@@ -614,8 +614,8 @@ stages:
       size: 321
     - path: src/models/gradcam_gallery.py
       hash: md5
-      md5: b207bcd07d681b39b7c36f29f58d148c
-      size: 9729
+      md5: dfb044e353321ad867e69e01a1edad56
+      size: 11904
     - path: src/utils/gradcam.py
       hash: md5
       md5: 7dde8c0d8d8a39cd1512fe7c8bc921a9
@@ -623,8 +623,8 @@ stages:
     outs:
     - path: data/processed/c3pi/gradcam
       hash: md5
-      md5: 2f377d2c1b4011e9ed16f27143106b22.dir
-      size: 648536
+      md5: c63710470dd35a6830924455e0c3ed58.dir
+      size: 647556
       nfiles: 9
   prepare_boxes:
     cmd: python -m src.data.medicine_boxes prepare
