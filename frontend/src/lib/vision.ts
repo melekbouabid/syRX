@@ -178,8 +178,9 @@ export function headlineMetrics(model: {
     if (!found) score("val mAP50-95", "val_mAP50_95", false);
     if (!score("test mAP50", "test_v2_mAP50", false)) score("test mAP50", "test_mAP50", false);
   } else {
-    score("test top-1", "test_top1", true);
-    score("test top-5", "test_top5", true);
+    // Promotion metric of step 2.3 (comparison split of C3PI v2, D100), else the v1 test split.
+    if (!score("test top-1", "test_v2_top1", true)) score("test top-1", "test_top1", true);
+    if (!score("test top-5", "test_v2_top5", true)) score("test top-5", "test_top5", true);
   }
   if (m.onnx_cpu_latency_ms !== undefined) {
     out.push({ label: "CPU latency", value: formatMs(m.onnx_cpu_latency_ms) });
