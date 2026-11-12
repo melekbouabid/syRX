@@ -139,3 +139,8 @@ evaluate:
 boxes:
   pill_confidence: 0.5     # best pill detection needed to call the photo a pill
   box_text_chars: 20       # letters read with confidence >= 0.5 that make it a box
+# Step 3.5, question / passage pairs of the embedding fine-tuning (src/models/embedding/pairs.py,
+# stage finetune_pairs): documents split train / val by a hash of their id, with this seed.
+finetune:
+  seed: 0
+  val_share: 0.10          # share of the documents kept for validation (never trained on)

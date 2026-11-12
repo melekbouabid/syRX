@@ -269,3 +269,13 @@ stages:
       - src/utils/gradcam.py
     outs:
       - data/processed/c3pi/gradcam
+  finetune_pairs:
+    cmd: python -m src.models.embedding.pairs
+    deps:
+      - data/processed/rag/corpus
+      - src/benchmark/rag_questions.jsonl
+      - src/models/embedding/pairs.py
+    params:
+      - finetune
+    outs:
+      - data/processed/rag/finetune

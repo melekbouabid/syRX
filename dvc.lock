@@ -660,3 +660,30 @@ stages:
       md5: f62b67417215afdc32d58fa76971e6e4.dir
       size: 219252
       nfiles: 2
+  finetune_pairs:
+    cmd: python -m src.models.embedding.pairs
+    deps:
+    - path: data/processed/rag/corpus
+      hash: md5
+      md5: 67ab752e53fb16523e9e01787320cf55.dir
+      size: 1832839
+      nfiles: 2
+    - path: src/benchmark/rag_questions.jsonl
+      hash: md5
+      md5: 8d27705dcde10d0b6768e3c4927225bf
+      size: 70930
+    - path: src/models/embedding/pairs.py
+      hash: md5
+      md5: c646c4be932fa13676e2cd931be6957a
+      size: 13130
+    params:
+      params.yaml:
+        finetune:
+          seed: 0
+          val_share: 0.1
+    outs:
+    - path: data/processed/rag/finetune
+      hash: md5
+      md5: 83dadcc283e903b8b4d636709c6530ab.dir
+      size: 17546000
+      nfiles: 3
