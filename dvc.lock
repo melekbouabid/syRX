@@ -297,8 +297,8 @@ stages:
       nfiles: 35
     - path: data/processed/rag/corpus_v2
       hash: md5
-      md5: 38707b09805dedb3988263878cbfbca2.dir
-      size: 3823607
+      md5: ea5f08db332668bd893402ab23629580.dir
+      size: 4211748
       nfiles: 33
     - path: src/data/spark/log_stats.py
       hash: md5
@@ -307,8 +307,8 @@ stages:
     outs:
     - path: data/processed/c3pi/bigdata/stats.json
       hash: md5
-      md5: 34068241432af1a48169a7f4520c8481
-      size: 1984
+      md5: 9c4a1be4f35552ab6feef0157dca7496
+      size: 1987
   train_detector:
     cmd: python -m src.models.train detect
     deps:
