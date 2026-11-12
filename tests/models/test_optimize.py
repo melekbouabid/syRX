@@ -230,3 +230,38 @@ def test_latency_budget_reaches_every_timing(
         "detect", {"a": tmp_path / "a", "b": tmp_path / "b"}, tmp_path, settings
     )
     assert seen == [1.5] * 4
+
+
+def test_a_v2_champion_is_scored_on_the_comparison_split_of_step_2_3(
+    tracking: SimpleNamespace, tmp_path: Path
+) -> None:
+    from tests.models.classification import helpers as h
+
+    data = h.make_dataset(tmp_path / "classify_v2")
+    v2 = h.tiny_classifier(metadata={"label_space": "c3pi-v2"})
+    scores = optimize.score_classifier_v2(_saved(v2, tmp_path / "v2.onnx"), data)
+    assert scores["test_v2_images"] == h.CLASSES  # test_holdout.txt: one crop per class
+    assert scores["test_v2_all_images"] == h.CLASSES * h.PER_SPLIT["test"]
+    assert scores["test_v2_v1c_images"] == len(h.V1_IDS)
+
+    mlflow.set_experiment(optimize.EXPERIMENT)
+    with mlflow.start_run():
+        info = mu.log_model(v2, name="classifier")
+    mu.register(
+        info.model_uri, tracking.model, alias=serving.CHAMPION, tags={"label_space": "c3pi-v2"}
+    )
+    champion = tracking.client.get_model_version_by_alias(tracking.model, serving.CHAMPION)
+    assert optimize.task_spec("classify", champion) is optimize.CLASSIFY_V2
+    assert optimize.task_spec("classify") is optimize.SPECS["classify"]  # v1 model of step 2.1
+
+    report = optimize.optimise("classify", settings=SETTINGS, data=data, client=tracking.client)
+    assert report["metric"] == "test_v2_top1"
+    fp32 = report["variants"][q.FP32]["metrics"]
+    assert fp32["test_v2_top1"] == pytest.approx(scores["test_v2_top1"])
+    run = tracking.client.get_run(report["variants"][q.FP16]["run_id"])
+    assert run.data.params["test_split"] == optimize.CLASSIFY_V2.test_split
+
+
+def _saved(model: onnx.ModelProto, path: Path) -> Path:
+    onnx.save(model, str(path))
+    return path

@@ -128,7 +128,7 @@ optimize:
     calibration_method: minmax
     exclude_head: true        # keep the box decoding of the YOLO head in float (D96)
   classifier:
-    calibration_images: 300   # spread over the 560 validation crops of C3PI v1
+    calibration_images: 300   # spread over the validation crops (C3PI v2: 1,461; v1: 560)
     calibration_method: minmax
     exclude_head: false
 # Stage evaluate (src/models/evaluate.py): detector confidence threshold, end to end.
