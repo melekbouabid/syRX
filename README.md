@@ -5,7 +5,7 @@
 
 **Tujya** est une application de sécurité du médicament. On photographie un ou plusieurs
 comprimés (upload ou webcam) : un modèle YOLO **détecte** chaque comprimé, un classifieur
-entraîné par *transfer learning* l'**identifie** parmi 150 comprimés du jeu public NLM C3PI,
+entraîné par *transfer learning* l'**identifie** parmi 380 comprimés du jeu public NLM C3PI,
 avec sa confiance. Tujya relie chaque comprimé à ses principes actifs, vérifie leurs
 **interactions** dans DDInter, puis un agent LangGraph répond aux questions de suivi par
 **RAG** sur les notices openFDA, des résumés PubMed et DDInter, en **citant ses sources**.
@@ -109,11 +109,11 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | DVC (versionnement des données) | ✅ | [dvc.yaml](dvc.yaml) (données, puis `train_detector`, `train_classifier`, `export_onnx`, `evaluate`), [params.yaml](params.yaml), [docs/infra.md](docs/infra.md) |
 | Plus de données et Big Data avec PySpark (demande du professeur) | ✅ | [src/data/spark/](src/data/spark/), cluster Spark de [docker-compose.yml](docker-compose.yml), [docs/module1/big_data.md](docs/module1/big_data.md) (data card) |
 | Comparaison de détecteurs (YOLOv8n/s, YOLO11s, YOLOv10n, Faster R-CNN) et recherche d'hyperparamètres Optuna, une branche par modèle | ✅ | branches `experiment/detector-*`, 8 à 12 essais Optuna par modèle (runs enfants MLflow), tableau et figure précision / latence / taille : [docs/module1/kaggle_detecteurs.md](docs/module1/kaggle_detecteurs.md) (YOLO11s champion, YOLOv10n challenger, D98) |
-| Comparaison de classifieurs (baseline CNN maison, ResNet-50, EfficientNetV2-S, ConvNeXt-Tiny, ViT-B/16, YOLO11s-cls), recherche d'hyperparamètres Optuna, Grad-CAM, une branche par modèle | ⏳ | **en attente Kaggle** : outillage, branches `experiment/classifier-*`, configurations et notebooks prêts et testés en local, champion v1 réévalué sur le split de comparaison : [docs/module1/kaggle_classifieurs.md](docs/module1/kaggle_classifieurs.md) (D99-D103) |
+| Comparaison de classifieurs (baseline CNN maison, ResNet-50, EfficientNetV2-S, ConvNeXt-Tiny, ViT-B/16, YOLO11s-cls), recherche d'hyperparamètres Optuna, Grad-CAM, une branche par modèle | ✅ | six runs Kaggle (T4, 12 à 16 essais Optuna chacun), une branche `experiment/classifier-*` par modèle (poids DVC) ; champion **EfficientNetV2-S** (top-1 0,909 sur 380 classes, contre 0,183 pour le classifieur v1), challenger ResNet-50, CNN maison 0,367 : [docs/module1/kaggle_classifieurs.md](docs/module1/kaggle_classifieurs.md) (D99-D103, D120) |
 | MLflow : tracking des expériences | ✅ | expérience `tujya-vision`, runs tracés (`git_commit`, `dvc_rev`, `dataset`, `seed`, requirements + `dvc.lock`) : [src/utils/mlflow_utils.py](src/utils/mlflow_utils.py), [docs/module1/mlflow.md](docs/module1/mlflow.md) |
-| MLflow : Model Registry | ✅ | `tujya-pill-detector`, `tujya-pill-classifier`, alias `champion` / `challenger` / `served`, `promote_if_better` ; détecteur : YOLO11s champion, YOLOv10n challenger ; classifieur : baseline v1 champion |
+| MLflow : Model Registry | ✅ | `tujya-pill-detector`, `tujya-pill-classifier`, alias `champion` / `challenger` / `served`, `promote_if_better` ; détecteur : YOLO11s champion, YOLOv10n challenger ; classifieur : EfficientNetV2-S champion, ResNet-50 challenger |
 | Export ONNX et inférence ONNX Runtime | ✅ | [backend/app/inference.py](backend/app/inference.py) |
-| Optimisation : quantification FP16 / INT8, comparaison précision / latence / taille | ✅ | [src/models/quantize.py](src/models/quantize.py), [src/models/optimize.py](src/models/optimize.py), [docs/module1/optimisation_onnx.md](docs/module1/optimisation_onnx.md) (détecteur YOLO11s et classifieur servis en FP32 : le FP16 n'est pas assez plus rapide sur ce CPU) |
+| Optimisation : quantification FP16 / INT8, comparaison précision / latence / taille | ✅ | [src/models/quantize.py](src/models/quantize.py), [src/models/optimize.py](src/models/optimize.py), [docs/module1/optimisation_onnx.md](docs/module1/optimisation_onnx.md) (détecteur YOLO11s et classifieur EfficientNetV2-S servis en FP32 : le FP16 n'est pas assez plus rapide sur ce CPU, l'INT8 est plus lent et moins précis) |
 | Docker Compose | ✅ | [docker-compose.yml](docker-compose.yml) |
 | Git avancé : branches, tags annotés, hooks (secrets, messages de commit) | ✅ | [docs/git_workflow.md](docs/git_workflow.md), [tools/hooks/](tools/hooks/) |
 | GitHub Actions CI/CD | ✅ | [ci-tests.yml](.github/workflows/ci-tests.yml) (flake8, black, ESLint, pytest, Vitest, build), [docker-build.yml](.github/workflows/docker-build.yml) (images multi-stage + test de fumée), [docs/cd.md](docs/cd.md) |

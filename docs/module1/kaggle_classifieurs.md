@@ -15,7 +15,9 @@ Tesla T4 (12 à 16 essais Optuna chacun, 1,2 à 2,6 h), leurs exports sont dans 
 parents et enfants, versions 8 à 13 de `tujya-pill-classifier`) et leurs poids dans DVC sur
 chaque branche. Champion : **EfficientNetV2-S** (version 8, top-1 0,909 sur le split de
 comparaison contre 0,183 pour le champion v1), challenger ResNet-50 (version 9) ; choix
-expliqué dans D120 et dans la section « Analyse » plus bas.
+expliqué dans D120 et dans la section « Analyse » plus bas. Il est servi par l'API depuis le
+12/11 (FP32, la table de classes de l'API décrit les 380 classes, D119) : variantes FP16 / INT8
+et vérification dans [optimisation_onnx.md](optimisation_onnx.md).
 
 ## Les modèles et leurs branches
 
