@@ -13,6 +13,7 @@ from app.accounts import seed_accounts, warn_about_default_password
 from app.boxes import BoxReader, OcrHolder, RxNavClient
 from app.config import Settings
 from app.db import Base, make_engine
+from app.drift import DriftMonitor
 from app.inference import ScannerHolder
 from app.limits import BodySizeLimit
 from app.routers import (
@@ -22,6 +23,7 @@ from app.routers import (
     demo,
     documents,
     medicines,
+    monitoring,
     scan,
     toxicity,
     vision,
@@ -94,6 +96,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             timeout=settings.rxnav_timeout_seconds,
         ),
     )
+    # Data drift (step 2.8): statistics of the scanned photos in a sliding window, in memory.
+    app.state.drift = DriftMonitor.from_file(settings.drift_reference_file)
     # Bonus: Tox21 toxicity model, loaded on first use (models/tox21, docs/bonus/toxicity.md).
     app.state.toxicity = ToxHolder(settings.tox_model_dir, settings.ingredient_smiles_file)
     # Module 2 agent: built on the first /api/chat call (Ollama, chunk index in Qdrant).
@@ -113,6 +117,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(toxicity.router)
     # Endpoints of the course guide: /health, /model/metadata, /predict, /predict/visualize.
     app.include_router(vision.router)
+    app.include_router(monitoring.router)
 
     @app.get("/api/health", tags=["health"])
     def health() -> dict[str, str]:

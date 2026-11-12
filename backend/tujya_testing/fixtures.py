@@ -45,6 +45,8 @@ def app(tmp_path: Path, pharma_url: str) -> Iterator[FastAPI]:
         demo_holdout_file=tmp_path / "demo_holdout.csv",
         demo_gallery_file=tmp_path / "demo_gallery.csv",
         demo_gradcam_dir=tmp_path / "demo_gradcam",
+        # No drift reference unless a test writes one (backend/tests/test_drift.py).
+        drift_reference_file=tmp_path / "drift_reference.json",
         # The fake RAG corpus is indexed in the pharma database (rag_fakes.build_index);
         # the Qdrant tests pass their own in-memory store to AgentHolder.
         vector_store="sql",
