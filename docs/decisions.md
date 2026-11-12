@@ -1652,3 +1652,31 @@ le dynamique 1,2 point, tous deux plus lents (docs/module1/optimisation_onnx.md)
 galerie : poids PyTorch de la version servie (`data/models/classifiers/classifier-efficientnetv2s`,
 DVC), couche `ClassifierNet.parts().cam_layer` (dernier bloc convolutif, `body.features.7`),
 même top-1 et même probabilité qu'ONNX sur les 10 comprimés des 8 photos.
+
+**D121. Fine-tuning de l'étape 3.5 : le modèle d'embedding bge-m3, sur des paires question /
+passage tirées du corpus sans aucune question du benchmark (étape 3.5, en attente Kaggle).**
+Option par défaut retenue pour l'étape : affiner le maillon qui décide de ce que le LLM peut
+citer, l'embedding bge-m3 (568 M de paramètres, XLM-RoBERTa large) qui sert l'agent aujourd'hui.
+Données (`src/models/embedding/pairs.py`, étape DVC `finetune_pairs`) : une question écrite par
+gabarit pour chaque passage, sans LLM (reproductible) : deux par section de notice (anglais et
+français, formulées autrement que le benchmark), une par paire DDInter (langue alternée), le
+titre pour un résumé PubMed ; un négatif difficile par paire (autre passage du même principe
+actif). Aucune fuite : les 332 chunks attendus par les 96 questions du benchmark et les 34
+articles ou paires DDInter qui les contiennent sont exclus, aucune question d'entraînement n'est
+égale à une question du benchmark (`check_no_leak`, testé) ; 8 077 paires d'entraînement et
+1 007 de validation, réparties par document (aucun document dans les deux). Entraînement
+(sentence-transformers 5.1.2, `config/finetune/bge-m3.yaml`) : CachedMultipleNegativesRankingLoss
+(63 négatifs du lot + 64 négatifs difficiles, GradCache par 8 séquences), 2 époques, taux 1e-5,
+FP16, graine 0, sur le T4 de Kaggle (16 Go ; environ 9 Go pour poids, gradients et états AdamW
+en FP32). Si le T4 manque de mémoire, le run repart seul avec les embeddings et les 16 couches
+basses gelés (8 couches hautes affinées, adaptation légère enregistrée dans `run.json` et le tag
+MLflow `frozen_layers`) ; ce repli libère d'abord le premier modèle (vérifié en simulant l'erreur).
+Mesure : Recall@1/5/10, MRR@10 et nDCG@10 des questions de validation dans tout le corpus avant
+et après (signal de l'entraînement) ; la comparaison décisive est le benchmark de l'étape 3.3
+(questions jamais vues, précision et latence), où le modèle affiné entre comme une configuration
+d'embedding de plus. Il ne remplace bge-m3 que s'il y gagne. Rejeté : affiner le reranker (13 à
+18 s par question sur ce CPU, absent de la configuration servie) ; un LoRA de qwen2.5:3b (pas de
+réponses de référence, export GGUF pour Ollama, gain mal mesurable sur 96 questions) ; des
+questions écrites par un LLM (non reproductibles, lentes sur 4 Go, risque de paraphraser le
+benchmark) ; un adaptateur LoRA sur l'embedding (le fine-tuning complet tient sur le T4, le gel
+des couches basses suffit comme repli). Limite : questions par gabarits, une seule graine.
