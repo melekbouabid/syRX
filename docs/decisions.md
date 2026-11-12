@@ -1645,4 +1645,10 @@ plus que la capacité. YOLO11s-cls v2 reste le compromis le plus rapide (4,5 ms,
 si la latence devient la contrainte. Le tag `status` de la version 1 restait « challenger »
 (alias `served` gardé) : corrigé dans `_set_status` (test ajouté) et sur la version. Rejeté :
 servir ResNet-50 ou ConvNeXt-Tiny « parce que l'écart est faible » (la règle fixée avant les
-résultats décide) ; une moyenne sur plusieurs graines (budget GPU Kaggle, D103).
+résultats décide) ; une moyenne sur plusieurs graines (budget GPU Kaggle, D103). Servi en FP32
+(`optimize --task classify`, noté sur le split de comparaison pour un champion `label_space=c3pi-v2`) :
+le FP16 a la même précision mais n'est que 1 % plus rapide, l'INT8 statique perd 13 points et
+le dynamique 1,2 point, tous deux plus lents (docs/module1/optimisation_onnx.md). Grad-CAM de la
+galerie : poids PyTorch de la version servie (`data/models/classifiers/classifier-efficientnetv2s`,
+DVC), couche `ClassifierNet.parts().cam_layer` (dernier bloc convolutif, `body.features.7`),
+même top-1 et même probabilité qu'ONNX sur les 10 comprimés des 8 photos.
