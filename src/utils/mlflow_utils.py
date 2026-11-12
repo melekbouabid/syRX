@@ -390,6 +390,6 @@ def _set_status(client: MlflowClient, name: str, version: str, alias: str) -> No
     client.set_model_version_tag(name, version, STATUS_TAG, alias)
     if previous is not None and previous != version:
         holder = client.get_model_version(name, previous)
-        aliases = set(holder.aliases or [])
-        if not aliases:
+        # Only champion / challenger are statuses: `served` (step 2.4) does not keep one.
+        if not set(holder.aliases or []) & {CHAMPION, CHALLENGER}:
             client.set_model_version_tag(name, previous, STATUS_TAG, ARCHIVED)
