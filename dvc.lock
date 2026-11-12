@@ -674,8 +674,8 @@ stages:
       size: 70930
     - path: src/models/embedding/pairs.py
       hash: md5
-      md5: c646c4be932fa13676e2cd931be6957a
-      size: 13130
+      md5: bcefc5f5fbdd0dedd07fce876e9f7315
+      size: 13155
     params:
       params.yaml:
         finetune:
