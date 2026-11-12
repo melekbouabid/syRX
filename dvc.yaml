@@ -269,3 +269,21 @@ stages:
       - src/utils/gradcam.py
     outs:
       - data/processed/c3pi/gradcam
+  drift_reference:
+    cmd: python -m src.data.drift_reference
+    deps:
+      - data/processed/c3pi/datasets_v2/detect/index.csv
+      - data/raw/c3pi/images
+      - models/detector.onnx
+      - models/classifier.onnx
+      - models/models.json
+      - backend/app/drift.py
+      - backend/app/inference.py
+      - src/data/drift_reference.py
+    params:
+      - drift
+    outs:
+      - data/processed/c3pi/drift/reference.json
+    metrics:
+      - data/processed/c3pi/drift/summary.json:
+          cache: false
