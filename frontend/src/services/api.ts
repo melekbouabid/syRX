@@ -374,6 +374,31 @@ export interface DocumentFilters {
   offset: number;
 }
 
+// Data drift of the scanned photos (GET /monitoring/drift, docs/module1/derive.md, step 2.8).
+export interface DriftFeature {
+  feature: string;
+  description: string;
+  reference_n: number;
+  current_n: number;
+  reference_mean: number | null;
+  current_mean: number | null;
+  ks_statistic: number | null;
+  ks_pvalue: number | null;
+  psi: number | null;
+  status: "insufficient" | "ok" | "warning" | "drift";
+}
+
+export interface DriftReport {
+  status: "unavailable" | "insufficient" | "ok" | "warning" | "drift";
+  window_size: number;
+  window_max: number;
+  photos_seen: number;
+  drifted: string[];
+  features: DriftFeature[];
+  thresholds: Record<string, number>;
+  reference: Record<string, unknown>;
+}
+
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Something went wrong.";
 }
@@ -542,6 +567,9 @@ export const api = {
     request<DocumentsPage>("GET", "/documents", { query: { ...filters }, signal }),
   document: (docId: string, signal?: AbortSignal) =>
     request<DocumentDetail>("GET", `/documents/${encodeURIComponent(docId)}`, { signal }),
+  /** Data drift of the recent scans against the training photos (no sign-in needed). */
+  drift: (signal?: AbortSignal) =>
+    request<DriftReport>("GET", "/monitoring/drift", { signal, root: true, anonymous: true }),
   /** A demo photo as a file, to send it to the scan like an upload. */
   demoImage: async (image: DemoImage): Promise<Blob> => {
     const response = await fetch(image.url, { credentials: "same-origin" });
