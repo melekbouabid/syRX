@@ -74,6 +74,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Jeu de benchmark : 88 questions FR/EN construites à partir du corpus, relues à la main (D66)
 - [x] Benchmark de la récupération (Recall@k, MRR) et de la génération (sécurité, citations, RAGAS) ; MLflow `tujya-rag`
 - [x] Serveur MCP exposant les mêmes outils (SDK officiel, stdio + HTTP ; [mcp.md](module2/mcp.md))
+- [ ] Fine-tuning de l'embedding bge-m3 (étape 3.5, EN ATTENTE KAGGLE) : paires question / passage du corpus sans fuite du benchmark (8 077 / 1 007, étape DVC `finetune_pairs`), notebook Kaggle vérifié en mode smoke, import MLflow `tujya-rag-finetuning` ; à faire : run sur un T4 (environ 1 h), comparaison dans le benchmark de l'étape 3.3 ([kaggle_finetuning.md](module2/kaggle_finetuning.md), D121)
 
 ## 6. Site web
 - [x] Page Scanner : upload + webcam (prédictions en direct) + boîtes + galerie de démonstration (D52)
