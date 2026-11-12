@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent } from "react";
+import { Link } from "react-router-dom";
 import {
   api,
   errorMessage,
@@ -17,6 +18,7 @@ import { useDebounced, useQuery } from "../hooks";
 import { Icon, type IconName } from "../components/icons";
 import { LatencyReadout, ModelCard, ProbBar, ProbabilityBars, ScanCanvas } from "../components/vision";
 import { percent, startLiveLoop, type Latency } from "../lib/vision";
+import { showDriftBanner } from "../lib/drift";
 import ChatPanel from "./ChatPanel";
 
 // Safety texts are shown exactly as the project rules write them (docs/project_rules.md, D53).
@@ -831,6 +833,21 @@ function ResultStage({
   );
 }
 
+/** Data drift alert (GET /monitoring/drift, step 2.8): shown only when the recent photos
+ * really differ from the training photos, re-checked after every scan. */
+function DriftBanner({ scans }: { scans: number }) {
+  const drift = useQuery((signal) => api.drift(signal), [scans]);
+  const report = drift.data;
+  if (!report || !showDriftBanner(report.status)) return null;
+  return (
+    <Alert>
+      Data drift: the recent photos differ from the training photos ({report.drifted.join(", ")}).
+      Identification is less reliable; take the photo in good light, sharp, one pill on a plain
+      background. <Link to="/monitoring">See the monitoring page</Link>.
+    </Alert>
+  );
+}
+
 export default function ScanPage() {
   const [mode, setMode] = useState<Mode>("upload");
   const [photo, setPhoto] = useState<Photo | null>(null);
@@ -841,6 +858,7 @@ export default function ScanPage() {
   const [mine, setMine] = useState<Confirmed[]>([]);
   const [report, setReport] = useState<InteractionsResult | null>(null);
   const [checking, setChecking] = useState(false);
+  const [scans, setScans] = useState(0);
   const resultRef = useRef<HTMLElement>(null);
 
   // Release the previous photo's memory when it is replaced or the page is left.
@@ -858,6 +876,7 @@ export default function ScanPage() {
       const { value, clientMs } = await api.scanTimed(image, name);
       setResult(value);
       setLatency(latencyOf(value, clientMs));
+      setScans((count) => count + 1);
       window.setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     } catch (failure) {
       setError(errorMessage(failure));
@@ -948,6 +967,7 @@ export default function ScanPage() {
       <Disclaimer />
 
       <ModelCard />
+      <DriftBanner scans={scans} />
 
       <section className="card mb-5" aria-label="Photo">
         <div className="mb-4 flex flex-wrap gap-1 rounded-xl bg-surface-2 p-1" role="tablist" aria-label="Photo source">
