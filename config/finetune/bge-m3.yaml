@@ -1,0 +1,24 @@
+# Step 3.5: fine-tuning of the embedding model of the RAG (src/models/embedding/train.py,
+# docs/module2/kaggle_finetuning.md, decision in docs/decisions.md). Kaggle GPU T4 16 GB.
+model: BAAI/bge-m3            # the model Ollama serves to the agent today (XLM-RoBERTa large, 568 M)
+seed: 0
+max_seq_length: 384           # chunks are ~690 characters on average (about 180 tokens)
+batch_size: 64                # questions per step: 63 in-batch negatives + 64 hard negatives
+mini_batch_size: 8            # GradCache chunk: the memory of 8 sequences at a time
+epochs: 2
+learning_rate: 1.0e-5         # small: the model is already good, keep its multilingual skills
+warmup_ratio: 0.1
+weight_decay: 0.01
+fp16: true
+frozen_layers: 0              # full fine-tuning first
+fallback_frozen_layers: 16    # out of GPU memory: train only the upper 8 of the 24 layers
+encode_batch_size: 32
+logging_steps: 10
+# Local check of the notebook (TUJYA_SMOKE=1, RTX 2050 4 GB): a small multilingual model with
+# the same architecture family, 64 pairs, one epoch. Its metrics mean nothing.
+smoke:
+  model: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+  max_seq_length: 128
+  batch_size: 16
+  mini_batch_size: 4
+  fallback_frozen_layers: 6

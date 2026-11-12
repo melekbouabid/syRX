@@ -1,0 +1,7 @@
+# Packages installed by the Kaggle notebook of step 3.5 (notebooks/kaggle/finetune_bge-m3.ipynb)
+# on top of the Kaggle image, which already has PyTorch, numpy and PyYAML.
+# Same pins as the training venv (src/models/requirements-train.txt).
+sentence-transformers==5.1.2
+transformers==4.57.6
+datasets==5.0.1
+accelerate==1.15.0
