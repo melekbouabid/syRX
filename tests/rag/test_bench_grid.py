@@ -182,6 +182,38 @@ def test_selection_keeps_the_best_metric_within_the_latency_budget() -> None:
     ]
 
 
+def test_another_chunking_is_chosen_only_when_its_gain_is_significant() -> None:
+    def record(mrr: float, chars: int) -> dict[str, float]:
+        return {
+            "mrr": mrr,
+            "ms_per_question": 500,
+            "chunk_max_chars": chars,
+            "chunk_overlap_sentences": 1,
+        }
+
+    results = {"served": record(0.82, 1500), "c800": record(0.87, 800)}
+    selection = {"metric": "mrr", "latency_budget_ms": 2000, "rebuild_needs_significance": True}
+    assert G.choose(results, selection) == ["served"]
+    assert G.choose(results, selection, {"c800": False}) == ["served"]
+    assert G.choose(results, selection, {"c800": True}) == ["c800", "served"]
+    assert G.choose(results, {**selection, "rebuild_needs_significance": False}) == [
+        "c800",
+        "served",
+    ]
+
+
+def test_paired_bootstrap_interval() -> None:
+    better = [1.0] * 40 + [0.5] * 10
+    worse = [0.5] * 40 + [0.5] * 10
+    diff, low, high = G.paired_bootstrap(better, worse)
+    assert diff == pytest.approx(0.4) and 0 < low <= diff <= high
+    same = [1.0, 0.0] * 25
+    diff, low, high = G.paired_bootstrap(same, list(reversed(same)))
+    assert diff == 0 and low < 0 < high
+    with pytest.raises(ValueError):
+        G.paired_bootstrap([1.0], [1.0, 0.0])
+
+
 def test_precomputed_embedder_returns_chunk_and_query_vectors(tmp_path: Path) -> None:
     path = tmp_path / "m.npz"
     np.savez(
