@@ -1652,3 +1652,28 @@ le dynamique 1,2 point, tous deux plus lents (docs/module1/optimisation_onnx.md)
 galerie : poids PyTorch de la version servie (`data/models/classifiers/classifier-efficientnetv2s`,
 DVC), couche `ClassifierNet.parts().cam_layer` (dernier bloc convolutif, `body.features.7`),
 même top-1 et même probabilité qu'ONNX sur les 10 comprimés des 8 photos.
+
+**D122. Module de dérive des photos scannées : huit statistiques par photo, test de
+Kolmogorov-Smirnov et PSI contre le split de validation de C3PI v2, scipy plutôt qu'Evidently
+(étape 2.8).** Le guide de mi-parcours demande de surveiller la dérive des données en
+production. L'API calcule pour chaque photo scannée (`/predict`, `/predict/visualize`,
+`/api/scan`) luminosité, contraste, netteté (variance du laplacien à 512 px), mégapixels,
+rapport d'aspect, nombre de comprimés trouvés, confiance moyenne du détecteur et du
+classifieur ; elle garde ces huit nombres seulement (jamais l'image ni rien sur l'utilisateur),
+en mémoire, dans une fenêtre des 200 dernières photos. `GET /monitoring/drift` compare chaque
+statistique à la référence : dérive si la p-value KS est sous 0,01 et le PSI (déciles de la
+référence) d'au moins 0,25, avertissement à partir de 0,1 ; moins de 30 photos : pas de test.
+Seuils dans `params.yaml` (`drift`). Référence : étape DVC `drift_reference`, 600 photos, run
+MLflow dans `tujya-monitoring`. La consigne disait « train v2 » ; mesuré sur 200 photos du test
+v2 (jamais vues), une référence calculée sur le train signale à tort une dérive sur cinq
+statistiques (PSI de 0,27 à 1,0) pour deux raisons : les modèles sont plus sûrs d'eux sur les
+photos qu'ils ont apprises (confiance du classifieur 0,93 sur le train, 0,85 sur le val, 0,81 sur
+le test), et le job de split remplit test puis val avec les sessions de prise de vue qui y
+tiennent, laissant au train les plus grosses (appareils de 12 Mpx : 8,9 Mpx en moyenne contre
+6,4 pour val et test). La référence est donc le **split de validation** (jamais appris, choisi
+comme le test) : le test v2 ressort `ok`, des photos assombries et floues ressortent en dérive.
+Le scénario `train-v2` de la démonstration rend cet écart reproductible. Evidently AI (0.7.23)
+écarté : 26 dépendances directes (pandas, plotly, statsmodels, nltk, litestar, télémétrie) pour
+deux tests que scipy fait déjà dans l'image. Rejeté : stocker les images (données
+personnelles) ; bloquer un scan en dérive (l'alerte dit seulement que la confiance est moins
+fiable) ; une référence sur le train avec des seuils relevés (elle masquerait de vraies dérives).
