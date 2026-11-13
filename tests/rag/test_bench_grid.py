@@ -236,3 +236,38 @@ def test_rows_of_matches_the_indexer_reading() -> None:
     rows = G.rows_of(served(1500))
     assert all(isinstance(r["ingredients"], list) for r in rows)
     assert all(isinstance(r["chunk_index"], int) and isinstance(r["date"], str) for r in rows)
+
+
+def test_only_an_embedding_the_api_computes_can_be_chosen() -> None:
+    results = {
+        "e5": {"mrr": 0.9, "ms_per_question": 100, "embedding_backend": "st"},
+        "bge": {"mrr": 0.8, "ms_per_question": 100, "embedding_backend": "ollama"},
+    }
+    selection = {"metric": "mrr", "latency_budget_ms": 2000}
+    assert G.choose(results, selection) == ["e5", "bge"]
+    assert G.choose(results, {**selection, "servable_only": True}) == ["bge"]
+
+
+def test_agent_settings_of_a_configuration() -> None:
+    config = G.Config("ollama:bge-m3", mode="hybrid", rewrite=True, rerank="m/r", fetch_k=8)
+    assert G.agent_settings(config.params()) == {
+        "embedding_model": "bge-m3",
+        "rag_search_mode": "hybrid",
+        "rag_query_rewrite": True,
+        "rag_rerank": True,
+        "rag_rerank_model": "m/r",
+        "rag_fetch_k": 8,
+    }
+    assert G.agent_settings(G.Config("ollama:bge-m3").params())["rag_rerank"] is False
+    with pytest.raises(ValueError):
+        G.agent_settings(G.Config("st:e5").params())
+
+
+@pytest.mark.skipif(not G.CHAMPION.is_file(), reason="no registered champion yet")
+def test_the_agent_defaults_are_the_registered_champion() -> None:
+    from app.config import Settings
+
+    champion = json.loads(G.CHAMPION.read_text(encoding="utf-8"))
+    fields = Settings.model_fields
+    for key, value in champion["agent_settings"].items():
+        assert fields[key].default == value, key
