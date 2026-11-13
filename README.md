@@ -236,6 +236,11 @@ et [docs/data_pipeline/LICENSES.md](docs/data_pipeline/LICENSES.md). Jeu C3PI en
 - Règles du projet (sécurité des réponses, usage local) : [docs/project_rules.md](docs/project_rules.md).
 - Historique : `git log` et tags git (`v1.0-avant-restructuration` : état du projet d'origine avant la restructuration).
 
+## Licence
+
+Code publié pour consultation dans le cadre d'une évaluation académique, tous droits réservés :
+voir [LICENSE](LICENSE) (les données gardent leurs propres licences, section précédente).
+
 ## Auteur
 
 **Melek Bouabid**, projet étudiant réalisé seul.

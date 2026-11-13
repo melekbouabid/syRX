@@ -1,0 +1,25 @@
+Copyright (c) 2026 Melek Bouabid. All rights reserved.
+
+FRANÇAIS
+
+Ce code source est publié uniquement pour être consulté dans le cadre d'une évaluation
+académique. Toute copie, modification, réutilisation, redistribution ou utilisation
+commerciale, totale ou partielle, est interdite sans l'autorisation écrite de l'auteur.
+
+Les données utilisées par le projet (NLM C3PI, ePillID, DDInter, RxNorm, openFDA, PubMed,
+Tox21 et les autres sources citées) ne sont pas couvertes par ce fichier : chacune reste
+soumise à sa propre licence et à ses propres conditions d'utilisation, listées dans
+docs/data_pipeline/LICENSES.md.
+
+ENGLISH
+
+This source code is published only so that it can be read as part of an academic
+assessment. Any copying, modification, reuse, redistribution or commercial use, in whole or
+in part, is forbidden without the written permission of the author.
+
+The data used by the project (NLM C3PI, ePillID, DDInter, RxNorm, openFDA, PubMed, Tox21
+and the other sources cited) is not covered by this file: each source remains subject to its
+own licence and terms of use, listed in docs/data_pipeline/LICENSES.md.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. It gives information only
+and is not medical advice.
