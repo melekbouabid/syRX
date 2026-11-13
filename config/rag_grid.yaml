@@ -12,9 +12,13 @@
 
 # Choice of the agent's setting (D123): the best MRR among the configurations whose median
 # time per question on this PC (rewrite + search + rerank, interleaved rounds of D96) stays
-# within the budget; the second best within the budget is the challenger.
+# within the budget; the second best within the budget is the challenger. A configuration on
+# another chunking than the served one (1500/1) needs the served index rebuilt and the chunk
+# ids of the benchmarks remapped: it is kept only if its gain over the best served-chunking
+# configuration is significant (paired bootstrap over the questions, 95 % interval above 0).
 selection:
   metric: mrr
+  rebuild_needs_significance: true
   latency_budget_ms: 2000
   latency_questions: 12
   latency_rounds: 3

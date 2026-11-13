@@ -501,21 +501,93 @@ def all_results() -> dict[str, dict[str, Any]]:
     return found
 
 
-def choose(results: dict[str, dict[str, Any]], selection: dict[str, Any]) -> list[str]:
-    """Names within the latency budget, best `metric` first (ties: faster first). The time is
-    the interleaved measurement when there is one, the time of the run otherwise."""
+def paired_bootstrap(
+    a: list[float], b: list[float], samples: int = 5000, seed: int = 0
+) -> tuple[float, float, float]:
+    """Mean of a - b over the same questions and its 95 % percentile bootstrap interval
+    (questions drawn with replacement, the pairs kept together)."""
+    if len(a) != len(b) or not a:
+        raise ValueError("paired scores of the same questions are needed")
+    diff = np.asarray(a, dtype=float) - np.asarray(b, dtype=float)
+    rng = np.random.default_rng(seed)
+    means = diff[rng.integers(0, len(diff), size=(samples, len(diff)))].mean(axis=1)
+    low, high = np.percentile(means, [2.5, 97.5])
+    return round(float(diff.mean()), 4), round(float(low), 4), round(float(high), 4)
+
+
+def per_question(run_id: str, metric: str) -> dict[str, float]:
+    """The per-question scores a run logged (artifact `per_question/<name>.json`)."""
+    import mlflow
+
+    from src.utils import mlflow_utils as mu
+
+    mu.configure()
+    with tempfile.TemporaryDirectory() as tmp:
+        folder = Path(
+            mlflow.artifacts.download_artifacts(f"runs:/{run_id}/per_question", dst_path=tmp)
+        )
+        rows = json.loads(next(folder.glob("*.json")).read_text(encoding="utf-8"))
+    return {str(r["id"]): float(r[metric]) for r in rows}
+
+
+def time_of(record: dict[str, Any]) -> float:
+    """The interleaved measurement (D96) when there is one, the time of the run otherwise."""
+    return float(record.get("latency_d96_ms") or record["ms_per_question"])
+
+
+def choose(
+    results: dict[str, dict[str, Any]],
+    selection: dict[str, Any],
+    significant: dict[str, bool] | None = None,
+) -> list[str]:
+    """Names within the latency budget, best `metric` first (ties: faster first).
+
+    A configuration on another chunking than the served one needs the whole served index
+    rebuilt (and the chunk ids the benchmarks expect remapped): with
+    `rebuild_needs_significance`, it stays in the ranking only if `significant[name]` says
+    its gain over the best served-chunking configuration is significant."""
     metric, budget = selection["metric"], float(selection["latency_budget_ms"])
-
-    def time_of(record: dict[str, Any]) -> float:
-        return float(record.get("latency_d96_ms") or record["ms_per_question"])
-
     within = [n for n, r in results.items() if time_of(r) <= budget and not r.get("smoke")]
+    if selection.get("rebuild_needs_significance"):
+        within = [
+            n for n in within if served_chunking(results[n]) or (significant or {}).get(n, False)
+        ]
     return sorted(within, key=lambda n: (-float(results[n][metric]), time_of(results[n])))
+
+
+def served_chunking(record: dict[str, Any]) -> bool:
+    chunk = f"{record['chunk_max_chars']}/{record['chunk_overlap_sentences']}"
+    return chunk == SERVED_CHUNK
+
+
+def significance(
+    results: dict[str, dict[str, Any]], selection: dict[str, Any]
+) -> dict[str, tuple[float, float, float]]:
+    """Paired bootstrap of `metric` (per question, from MLflow) of every configuration within
+    the budget that beats the best served-chunking one, against that one."""
+    metric = selection["metric"]
+    served = choose(results, {**selection, "rebuild_needs_significance": False})
+    base = next((n for n in served if served_chunking(results[n])), None)
+    if base is None:
+        return {}
+    reference = per_question(results[base]["run_id"], metric)
+    found = {}
+    for name in served:
+        record = results[name]
+        if float(record[metric]) <= float(results[base][metric]) or not record.get("run_id"):
+            continue
+        scores = per_question(record["run_id"], metric)
+        ids = sorted(reference)
+        found[name] = paired_bootstrap([scores[i] for i in ids], [reference[i] for i in ids])
+        diff, low, high = found[name]
+        print(f"  {name} - {base}: {metric} {diff:+.4f} (95 % CI {low:+.4f} .. {high:+.4f})")
+    return found
 
 
 def cmd_select(selection: dict[str, Any], register: bool) -> None:
     results = all_results()
-    ranked = choose(results, selection)
+    tested = significance(results, selection) if selection.get("rebuild_needs_significance") else {}
+    ranked = choose(results, selection, {n: ci[1] > 0 for n, ci in tested.items()})
     best_any = max(results, key=lambda n: float(results[n][selection["metric"]]))
     print(f"best {selection['metric']} whatever the time: {best_any}")
     for status, name in zip(("champion", "challenger"), ranked, strict=False):
