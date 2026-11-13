@@ -1,0 +1,60 @@
+# Retrieval grid of step 3.3 (src/benchmark/bench_grid.py, docs/module2/benchmark_retrieval.md).
+# One group = one experiment branch `experiment/rag-<group>`; one configuration = one MLflow
+# run in the experiment `tujya-rag-retrieval`. Every configuration uses the ingredient filter
+# the agent applies (`names`) and the 85 benchmark questions that have expected chunks.
+#
+# embedding: `ollama:<model>` (served path, vectors from Ollama) or `st:<slug>` (vectors of
+#            src/benchmark/encode_st.py, data/processed/rag/bench/vectors/<slug>.npz)
+# chunk:     max characters / overlapping sentences of the corpus variant (1500/1 = served)
+# mode:      dense | hybrid (dense + BM25 sparse, RRF in Qdrant) | bm25
+# rewrite:   the LLM rewrites the question into an English query first (D118)
+# rerank:    fastembed cross-encoder reading the first `fetch_k` candidates (D117)
+
+# Choice of the agent's setting (D123): the best MRR among the configurations whose median
+# time per question on this PC (rewrite + search + rerank, interleaved rounds of D96) stays
+# within the budget; the second best within the budget is the challenger.
+selection:
+  metric: mrr
+  latency_budget_ms: 2000
+  latency_questions: 12
+  latency_rounds: 3
+  latency_pause_s: 10
+
+groups:
+  bge-m3:
+    - {embedding: "ollama:bge-m3", mode: dense}
+    - {embedding: "ollama:bge-m3", mode: hybrid}
+    - {embedding: "ollama:bge-m3", mode: bm25}
+    - {embedding: "ollama:bge-m3", mode: dense, rewrite: true}
+    - {embedding: "ollama:bge-m3", mode: hybrid, rewrite: true}
+  multilingual-e5-base:
+    - {embedding: "st:multilingual-e5-base", mode: dense}
+    - {embedding: "st:multilingual-e5-base", mode: hybrid}
+    - {embedding: "st:multilingual-e5-base", mode: hybrid, rewrite: true}
+  all-minilm-l6-v2:
+    - {embedding: "st:all-minilm-l6-v2", mode: dense}
+    - {embedding: "st:all-minilm-l6-v2", mode: hybrid}
+    - {embedding: "st:all-minilm-l6-v2", mode: hybrid, rewrite: true}
+  chunking:
+    - {embedding: "ollama:bge-m3", chunk: 800/1, mode: dense}
+    - {embedding: "ollama:bge-m3", chunk: 800/1, mode: hybrid, rewrite: true}
+    - {embedding: "ollama:bge-m3", chunk: 2500/1, mode: dense}
+    - {embedding: "ollama:bge-m3", chunk: 2500/1, mode: hybrid, rewrite: true}
+    - {embedding: "ollama:bge-m3", chunk: 1500/0, mode: hybrid, rewrite: true}
+    - {embedding: "ollama:bge-m3", chunk: 1500/2, mode: hybrid, rewrite: true}
+  rerankers:
+    - {embedding: "ollama:bge-m3", mode: hybrid, rewrite: true, rerank: BAAI/bge-reranker-base, fetch_k: 10}
+    - {embedding: "ollama:bge-m3", mode: hybrid, rewrite: true, rerank: BAAI/bge-reranker-base, fetch_k: 5}
+    - {embedding: "ollama:bge-m3", mode: hybrid, rewrite: true, rerank: Xenova/ms-marco-MiniLM-L-6-v2, fetch_k: 10}
+    - {embedding: "ollama:bge-m3", mode: hybrid, rewrite: true, rerank: Xenova/ms-marco-MiniLM-L-6-v2, fetch_k: 20}
+    - {embedding: "ollama:bge-m3", mode: hybrid, rewrite: true, rerank: Xenova/ms-marco-MiniLM-L-12-v2, fetch_k: 20}
+    - {embedding: "ollama:bge-m3", mode: hybrid, rewrite: true, rerank: jinaai/jina-reranker-v1-turbo-en, fetch_k: 20}
+    - {embedding: "ollama:bge-m3", mode: dense, rerank: BAAI/bge-reranker-base, fetch_k: 5}
+  # Step 3.5: the bge-m3 fine-tuned on Kaggle, added once its export is imported
+  # (docs/module2/benchmark_retrieval.md, "Ajouter bge-m3 fine-tuné"). `bge-m3-st` is the
+  # untuned model through the same sentence-transformers path: the fair "before".
+  bge-m3-finetuned:
+    - {embedding: "st:bge-m3-st", mode: dense}
+    - {embedding: "st:bge-m3-st", mode: hybrid, rewrite: true}
+    - {embedding: "st:bge-m3-finetuned", mode: dense}
+    - {embedding: "st:bge-m3-finetuned", mode: hybrid, rewrite: true}
