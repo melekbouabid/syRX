@@ -169,6 +169,21 @@ def test_the_grid_file_is_valid_and_names_are_unique() -> None:
     assert all(bool(c.rerank) == bool(c.fetch_k) for items in groups.values() for c in items)
 
 
+def test_a_reranked_configuration_reading_fewer_than_k_candidates_is_refused(
+    tmp_path: Path,
+) -> None:
+    grid = tmp_path / "grid.yaml"
+    grid.write_text(
+        "selection: {metric: mrr}\ngroups:\n  g:\n"
+        "    - {embedding: 'ollama:bge-m3', rerank: BAAI/bge-reranker-base, fetch_k: 5}\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="fetch_k 5"):
+        G.load_grid(grid)
+    grid.write_text(grid.read_text(encoding="utf-8").replace("fetch_k: 5", "fetch_k: 10"))
+    assert G.load_grid(grid)[1]["g"][0].fetch_k == 10
+
+
 def test_selection_keeps_the_best_metric_within_the_latency_budget() -> None:
     results = {
         "slow-best": {"mrr": 0.9, "ms_per_question": 15000},

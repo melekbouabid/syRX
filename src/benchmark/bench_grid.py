@@ -56,6 +56,7 @@ CHAMPION = RESULTS / "champion.json"
 EXPERIMENT = "tujya-rag-retrieval"
 REGISTERED = "tujya-rag-retrieval"
 KS = (1, 3, 5, 10)
+TOP_K = 10  # results kept per question (the metrics read at most the top 10)
 SERVED_CHUNK = "1500/1"
 
 
@@ -131,6 +132,12 @@ def load_grid(path: Path = GRID) -> tuple[dict[str, Any], dict[str, list[Config]
         group: [Config(**{**item, "group": group}) for item in items]
         for group, items in raw["groups"].items()
     }
+    for config in (c for items in groups.values() for c in items):
+        if config.rerank and config.fetch_k < TOP_K:
+            raise ValueError(
+                f"{config.name}: fetch_k {config.fetch_k} < {TOP_K}; the retriever reads "
+                f"max(k, fetch_k) candidates, so it would repeat fetch_k {TOP_K}"
+            )
     return raw["selection"], groups
 
 
