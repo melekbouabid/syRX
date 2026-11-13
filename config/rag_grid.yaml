@@ -16,8 +16,11 @@
 # another chunking than the served one (1500/1) needs the served index rebuilt and the chunk
 # ids of the benchmarks remapped: it is kept only if its gain over the best served-chunking
 # configuration is significant (paired bootstrap over the questions, 95 % interval above 0).
+# The agent embeds its queries with Ollama: a sentence-transformers embedding (e5, MiniLM, the
+# fine-tuned bge-m3) is compared but cannot be the champion (the backend image has no torch).
 selection:
   metric: mrr
+  servable_only: true
   rebuild_needs_significance: true
   latency_budget_ms: 2000
   latency_questions: 12

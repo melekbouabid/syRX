@@ -52,6 +52,7 @@ BENCH = ROOT / "data" / "processed" / "rag" / "bench"
 QUERIES = BENCH / "queries.json"
 VECTORS = BENCH / "vectors"
 RESULTS = ROOT / "src" / "benchmark" / "grid"
+CHAMPION = RESULTS / "champion.json"
 EXPERIMENT = "tujya-rag-retrieval"
 REGISTERED = "tujya-rag-retrieval"
 KS = (1, 3, 5, 10)
@@ -496,6 +497,8 @@ async def cmd_latency(runtime: Runtime, configs: list[Config], selection: dict[s
 def all_results() -> dict[str, dict[str, Any]]:
     found: dict[str, dict[str, Any]] = {}
     for path in sorted(RESULTS.glob("*.json")):
+        if path == CHAMPION:
+            continue
         for name, record in json.loads(path.read_text(encoding="utf-8")).items():
             found[name] = record
     return found
@@ -542,12 +545,17 @@ def choose(
 ) -> list[str]:
     """Names within the latency budget, best `metric` first (ties: faster first).
 
+    With `servable_only`, only the embeddings the API can compute (Ollama) are kept: the
+    sentence-transformers ones need torch, which the backend image does not have.
+
     A configuration on another chunking than the served one needs the whole served index
     rebuilt (and the chunk ids the benchmarks expect remapped): with
     `rebuild_needs_significance`, it stays in the ranking only if `significant[name]` says
     its gain over the best served-chunking configuration is significant."""
     metric, budget = selection["metric"], float(selection["latency_budget_ms"])
     within = [n for n, r in results.items() if time_of(r) <= budget and not r.get("smoke")]
+    if selection.get("servable_only"):
+        within = [n for n in within if results[n].get("embedding_backend", "ollama") == "ollama"]
     if selection.get("rebuild_needs_significance"):
         within = [
             n for n in within if served_chunking(results[n]) or (significant or {}).get(n, False)
@@ -610,6 +618,7 @@ def register_configs(
 
     mu.configure()
     client = MlflowClient()
+    chosen: dict[str, dict[str, Any]] = {}
     for status, name in zip(("champion", "challenger"), names, strict=False):
         record = results[name]
         config = {k: record[k] for k in config_keys() if k in record}
@@ -634,6 +643,62 @@ def register_configs(
             client=client,
         )
         print(f"{REGISTERED} v{version.version} <- {status} ({name})")
+        chosen[status] = {"config": name, "version": str(version.version), **config}
+    path = write_champion(chosen, results, best_any, selection)
+    print(f"-> {path}: the agent's settings must match it (backend/app/config.py)")
+
+
+def write_champion(
+    chosen: dict[str, dict[str, Any]],
+    results: dict[str, dict[str, Any]],
+    best_any: str,
+    selection: dict[str, Any],
+) -> Path:
+    """The registered champion / challenger, the settings of the agent the champion means
+    and the figures behind the choice (versioned with the code: the agent's defaults in
+    backend/app/config.py are checked against it by the tests)."""
+    metric = selection["metric"]
+    champion = chosen["champion"]
+    data = {
+        "registered_model": REGISTERED,
+        "selection": selection,
+        "best_whatever_the_time": {
+            "config": best_any,
+            metric: results[best_any][metric],
+            "ms_per_question": time_of(results[best_any]),
+        },
+        **{
+            status: {
+                **item,
+                metric: results[item["config"]][metric],
+                "recall_at_5": results[item["config"]]["recall_at_5"],
+                "ms_per_question": time_of(results[item["config"]]),
+            }
+            for status, item in chosen.items()
+        },
+        "agent_settings": agent_settings(champion),
+    }
+    CHAMPION.write_text(
+        json.dumps(data, indent=1, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
+    )
+    return CHAMPION
+
+
+def agent_settings(config: dict[str, Any]) -> dict[str, Any]:
+    """The fields of backend/app/config.py `Settings` a retrieval configuration sets."""
+    if config["embedding_backend"] != "ollama":
+        raise ValueError("the agent embeds with Ollama: a champion needs an Ollama embedding")
+    rerank = bool(config["rerank"])
+    found: dict[str, Any] = {
+        "embedding_model": config["embedding_model"],
+        "rag_search_mode": config["mode"],
+        "rag_query_rewrite": bool(config["query_rewrite"]),
+        "rag_rerank": rerank,
+    }
+    if rerank:
+        found["rag_rerank_model"] = config["rerank_model"]
+        found["rag_fetch_k"] = int(config["fetch_k"])
+    return found
 
 
 def config_keys() -> list[str]:
