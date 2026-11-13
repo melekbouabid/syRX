@@ -109,6 +109,17 @@ avec leur SHA-256. Captures 27 à 29 : `cd frontend && node scripts/documents-sc
 (`QDRANT=http://localhost:6333` pour le tableau de bord). Détails :
 [module2/rag.md](module2/rag.md#consulter-les-documents-indexés).
 
+## Page Monitoring (module 1, étape 2.8)
+
+La dérive des photos scannées récemment par rapport aux photos de référence de C3PI v2
+([`MonitoringPage.tsx`](../frontend/src/pages/MonitoringPage.tsx), `GET /monitoring/drift`) :
+statut global, taille de la fenêtre, et pour chacune des huit statistiques (luminosité,
+contraste, netteté, taille, rapport d'aspect, comprimés trouvés, confiances du détecteur et du
+classifieur) les moyennes, le test de Kolmogorov-Smirnov, le PSI et un statut. La page Scanner
+affiche un bandeau rouge quand le statut est `drift`. Captures 30 et 31 :
+`cd frontend && BASE=http://localhost:8080 node scripts/monitoring-screenshots.mjs` après un
+scénario de [module1/derive.md](module1/derive.md#démonstration-reproductible).
+
 ## Comptes
 
 Le premier démarrage crée deux comptes :

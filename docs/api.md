@@ -17,6 +17,7 @@ démonstration (D46). Les quatre routes du guide du module 1 (`/health`, `/model
 | `GET /api/demo/images/{id}/gradcam` | Grad-CAM précalculée d'une photo de la galerie (JPEG, 404 sinon, D104) | [ci-dessous](#galerie-de-démo-et-grad-cam) |
 | `/api/auth/*`, `/api/admin/*` | comptes, sessions, administration | [docs/app.md](app.md#comptes) |
 | `GET /health`, `GET /model/metadata`, `POST /predict`, `POST /predict/visualize` | endpoints du guide : état, métadonnées, prédiction JSON, image annotée (sans compte) | [ci-dessous](#endpoints-du-guide-du-module-1-sans-compte) |
+| `GET /monitoring/drift`, `POST /monitoring/drift/reset` | dérive des photos scannées contre la référence (sans compte ; remise à zéro : administrateur, étape 2.8) | [docs/module1/derive.md](module1/derive.md#api-et-interface) |
 
 Chaque réponse sur des médicaments porte `sources` (nom, titre, URL, licence, citation) et
 `disclaimer` = « Information uniquement, consultez un pharmacien ou un médecin. ». Aucune
@@ -36,6 +37,7 @@ garde `POST /api/scan`, qui ajoute noms, principes actifs, sources et règle de 
 | `GET /model/metadata` | pour le détecteur et le classifieur : nom, architecture (tag `arch` du Registry), version, alias, précision, run, taille d'entrée, métriques de validation et de test (celles de la version publiée, `models.json`), classes et leur nombre | 503 modèles non chargés |
 | `POST /predict` (multipart, champ `image`) | `count`, `pills` (boîte en pixels et normalisée, confiance de détection, `top5` = classes et probabilités), `timings` (`detection_ms`, `classification_ms`, `inference_ms`, `server_ms` = toute la requête), versions des modèles, avertissement | 400 pas une image lisible (type ou contenu), 413 trop grande, 422 champ manquant, 503 modèles non chargés |
 | `POST /predict/visualize` (multipart, champ `image`, `?max_side=1280`) | image PNG annotée : une boîte par comprimé, couleur stable par classe, étiquette « classe probabilité (det confiance) » ; en-têtes `X-Pill-Count`, `X-Inference-Ms`, `X-Server-Ms` | mêmes erreurs que `/predict` |
+| `GET /monitoring/drift` | dérive des photos scannées : statut (`unavailable`, `insufficient`, `ok`, `warning`, `drift`), fenêtre, statistiques en dérive, et pour chacune des huit : moyennes, KS, p-value, PSI, statut ([derive.md](module1/derive.md)) ; chaque photo de `/predict`, `/predict/visualize` et `/api/scan` y ajoute ses huit nombres, jamais l'image | aucune : toujours 200 |
 
 L'ancienne route `GET /api/health` (sonde de Docker Compose) reste inchangée.
 
