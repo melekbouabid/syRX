@@ -721,6 +721,28 @@ class RetrievalConfig:  # a minimal mlflow.pyfunc.PythonModel, imported lazily
         return _Model(config)
 
 
+def table(results: dict[str, dict[str, Any]], groups: dict[str, list[Config]]) -> str:
+    """Markdown table of the results, in the order of the grid file (docs/module2)."""
+    head = (
+        "| Groupe | Configuration | R@1 | R@5 | R@10 | MRR | nDCG@10 | MRR fr | MRR en "
+        "| ms / question | Run |\n|---|---|---|---|---|---|---|---|---|---|---|"
+    )
+    lines = [head]
+    for group, items in groups.items():
+        for config in items:
+            r = results.get(config.name)
+            if r is None:
+                lines.append(f"| {group} | {config.name} | " + "| " * 8 + "à venir | |")
+                continue
+            took = f"{time_of(r):.0f}" + (" (D96)" if r.get("latency_d96_ms") else "")
+            lines.append(
+                f"| {group} | {config.name} | {r['recall_at_1']:.3f} | {r['recall_at_5']:.3f} "
+                f"| {r['recall_at_10']:.3f} | {r['mrr']:.3f} | {r['ndcg_at_10']:.3f} "
+                f"| {r['mrr_fr']:.3f} | {r['mrr_en']:.3f} | {took} | `{r['run_id'][:8]}` |"
+            )
+    return "\n".join(lines)
+
+
 def pick(groups: dict[str, list[Config]], group: str, names: str) -> list[Config]:
     every = [c for items in groups.values() for c in items]
     if names:
@@ -737,7 +759,9 @@ def pick(groups: dict[str, list[Config]], group: str, names: str) -> list[Config
 
 async def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m src.benchmark.bench_grid")
-    parser.add_argument("command", choices=["rewrites", "run", "latency", "select", "list"])
+    parser.add_argument(
+        "command", choices=["rewrites", "run", "latency", "select", "list", "table"]
+    )
     parser.add_argument("--group", default="")
     parser.add_argument("--configs", default="", help="comma-separated configuration names")
     parser.add_argument("--no-mlflow", action="store_true")
@@ -749,6 +773,9 @@ async def main(argv: list[str] | None = None) -> None:
         for group, items in groups.items():
             for config in items:
                 print(f"{group:22s} {config.name}")
+        return
+    if args.command == "table":
+        print(table(all_results(), groups))
         return
     if args.command == "select":
         cmd_select(selection, args.register)
