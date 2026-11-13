@@ -665,8 +665,8 @@ stages:
     deps:
     - path: backend/app/drift.py
       hash: md5
-      md5: 2b506d9a24733cf810d5ec138d68bf80
-      size: 10800
+      md5: ec5bfae06b375d721d632d0a155e5c0c
+      size: 10870
     - path: backend/app/inference.py
       hash: md5
       md5: 2bc8baeffe8df2f4a0fb000529d13483

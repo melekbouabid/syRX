@@ -4,7 +4,7 @@ import { Alert, Badge, Spinner, formatNumber } from "../components";
 import { Icon } from "../components/icons";
 import { driftStatusLabel, driftTone, formatStat } from "../lib/drift";
 
-// Data drift of the scanned photos against the training photos (GET /monitoring/drift, step 2.8).
+// Data drift of the scanned photos against the reference photos (GET /monitoring/drift, step 2.8).
 
 function Summary({ report }: { report: DriftReport }) {
   const facts: [string, string][] = [
@@ -26,7 +26,8 @@ function Summary({ report }: { report: DriftReport }) {
       </dl>
       <p className="cell-sub mt-3">
         Only eight numbers per scanned photo are kept, in memory: no image and nothing about you.
-        The reference is the training photos of the models (C3PI v2).
+        The reference is 600 photos of the C3PI v2 validation split: the same kind as the
+        training photos, never trained on.
       </p>
     </section>
   );
@@ -66,8 +67,8 @@ export default function MonitoringPage() {
             <h1>Monitoring</h1>
             <p className="muted">
               Do the photos scanned recently still look like the photos the models were trained
-              on? Each statistic is compared with the training photos (Kolmogorov-Smirnov test and
-              population stability index).
+              on? Each statistic is compared with reference photos of the same kind (Kolmogorov-Smirnov
+              test and population stability index).
             </p>
           </div>
         </div>
@@ -80,7 +81,7 @@ export default function MonitoringPage() {
       {!report && drift.loading && <Spinner label="Loading the drift report" />}
       {report && report.status === "drift" && (
         <Alert>
-          Data drift: the recent photos differ from the training photos ({report.drifted.join(", ")}).
+          Data drift: the recent photos differ from the reference photos ({report.drifted.join(", ")}).
           The confidence shown for a pill is less reliable; retake the photo in good light, sharp,
           on a plain background.
         </Alert>

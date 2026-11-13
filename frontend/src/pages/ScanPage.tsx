@@ -834,14 +834,14 @@ function ResultStage({
 }
 
 /** Data drift alert (GET /monitoring/drift, step 2.8): shown only when the recent photos
- * really differ from the training photos, re-checked after every scan. */
+ * really differ from the reference photos, re-checked after every scan. */
 function DriftBanner({ scans }: { scans: number }) {
   const drift = useQuery((signal) => api.drift(signal), [scans]);
   const report = drift.data;
   if (!report || !showDriftBanner(report.status)) return null;
   return (
     <Alert>
-      Data drift: the recent photos differ from the training photos ({report.drifted.join(", ")}).
+      Data drift: the recent photos differ from the reference photos ({report.drifted.join(", ")}).
       Identification is less reliable; take the photo in good light, sharp, one pill on a plain
       background. <Link to="/monitoring">See the monitoring page</Link>.
     </Alert>

@@ -546,7 +546,7 @@ DriftStatus = Literal["unavailable", "insufficient", "ok", "warning", "drift"]
 
 
 class DriftFeature(Strict):
-    """One statistic of the window against the training photos."""
+    """One statistic of the window against the reference photos."""
 
     feature: str
     description: str

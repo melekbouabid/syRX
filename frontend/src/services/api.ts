@@ -567,7 +567,7 @@ export const api = {
     request<DocumentsPage>("GET", "/documents", { query: { ...filters }, signal }),
   document: (docId: string, signal?: AbortSignal) =>
     request<DocumentDetail>("GET", `/documents/${encodeURIComponent(docId)}`, { signal }),
-  /** Data drift of the recent scans against the training photos (no sign-in needed). */
+  /** Data drift of the recent scans against the reference photos (no sign-in needed). */
   drift: (signal?: AbortSignal) =>
     request<DriftReport>("GET", "/monitoring/drift", { signal, root: true, anonymous: true }),
   /** A demo photo as a file, to send it to the scan like an upload. */

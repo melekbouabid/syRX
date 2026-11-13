@@ -3,7 +3,8 @@
 The models were trained on the photos of C3PI v2 (consumer-grade photos of one pill on a
 plain background). A scan that looks different (dark, blurred, a phone photo of another size,
 something that is not a pill) is scored with less certainty, and the confidence the app shows
-means less. This module compares the photos the API receives with the training photos:
+means less. This module compares the photos the API receives with reference photos of the same kind
+(the C3PI v2 validation split, never trained on: D122):
 
 - `image_stats` / `scan_stats`: eight numbers per photo, the same in the reference stage
   (src/data/drift_reference.py) and in the API: brightness, contrast, sharpness, size, aspect
@@ -145,7 +146,7 @@ def psi(reference: np.ndarray, current: np.ndarray, bins: int = 10) -> float:
 
 @dataclass(frozen=True)
 class Reference:
-    """Statistics of the training photos (written by the DVC stage `drift_reference`)."""
+    """Statistics of the reference photos (written by the DVC stage `drift_reference`)."""
 
     values: dict[str, list[float]]  # feature -> sample of the reference photos
     thresholds: dict[str, float]
