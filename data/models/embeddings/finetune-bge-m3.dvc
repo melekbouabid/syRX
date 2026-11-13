@@ -1,0 +1,6 @@
+outs:
+- md5: b5ff765781649f39cbb8b26a62b64ac7.dir
+  size: 1157753120
+  nfiles: 12
+  hash: md5
+  path: finetune-bge-m3
