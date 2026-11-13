@@ -98,6 +98,12 @@ class Settings(BaseSettings):
     # Grad-CAM pictures of the gallery photos, precomputed with the PyTorch weights of the
     # served classifier (`python -m src.models.gradcam_gallery`, DVC stage, D104).
     demo_gradcam_dir: Path = PROJECT_DIR / "data" / "processed" / "c3pi" / "gradcam"
+    # Statistics of the reference photos (C3PI v2 val split, D122) for the data drift monitor
+    # (step 2.8, DVC stage drift_reference, docs/module1/derive.md); missing: GET
+    # /monitoring/drift says so.
+    drift_reference_file: Path = (
+        PROJECT_DIR / "data" / "processed" / "c3pi" / "drift" / "reference.json"
+    )
 
     # Module 2: RAG and agent (docs/module2/rag.md, agent.md). The chunk index
     # lives in Qdrant (collection tujya_chunks, D113); `python -m src.rag.index` fills it

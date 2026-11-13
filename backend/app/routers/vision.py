@@ -23,6 +23,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.config import Settings
 from app.deps import SettingsDep
+from app.drift import DriftMonitor
 from app.inference import (
     CLASSIFIER_FILE,
     DETECTOR_FILE,
@@ -206,13 +207,18 @@ async def read_image(image: UploadFile, settings: Settings) -> bytes:
     return data
 
 
-def _scan(scanner: PillScanner, data: bytes, settings: Settings) -> tuple[np.ndarray, ScanOutput]:
-    """Blocking part (decoding, ONNX Runtime), run in the thread pool."""
+def _scan(
+    scanner: PillScanner, data: bytes, settings: Settings, drift: DriftMonitor | None = None
+) -> tuple[np.ndarray, ScanOutput]:
+    """Blocking part (decoding, ONNX Runtime, drift statistics), run in the thread pool."""
     try:
         picture = decode_image(data, max_pixels=settings.scan_max_pixels)
     except InvalidImage as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
-    return picture, scanner.scan(picture)
+    output = scanner.scan(picture)
+    if drift is not None:
+        drift.record_scan(picture, output)
+    return picture, output
 
 
 async def predict_upload(
@@ -220,7 +226,8 @@ async def predict_upload(
 ) -> tuple[np.ndarray, ScanOutput, PillScanner]:
     data = await read_image(image, settings)
     scanner = await run_in_threadpool(loaded_scanner, request)
-    picture, output = await run_in_threadpool(_scan, scanner, data, settings)
+    drift: DriftMonitor | None = getattr(request.app.state, "drift", None)
+    picture, output = await run_in_threadpool(_scan, scanner, data, settings, drift)
     return picture, output, scanner
 
 

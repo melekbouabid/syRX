@@ -6,6 +6,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import Users from "./pages/admin/Users";
 import AuthPage from "./pages/AuthPage";
 import DocumentsPage from "./pages/DocumentsPage";
+import MonitoringPage from "./pages/MonitoringPage";
 import Home from "./pages/Home";
 import Intro from "./pages/Intro";
 import Profile from "./pages/Profile";
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/scan" element={<ScanPage />} />
           <Route path="/toxicity" element={<ToxicityPage />} />
           <Route path="/documents" element={<DocumentsPage />} />
+          <Route path="/monitoring" element={<MonitoringPage />} />
           <Route path="/profile" element={<Profile />} />
         </Route>
       </Route>

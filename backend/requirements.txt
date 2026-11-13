@@ -8,6 +8,8 @@ pyarrow>=15
 psycopg[binary]>=3.2
 numpy>=2.0
 opencv-python-headless>=4.10
+# Data drift (step 2.8, app/drift.py): two-sample Kolmogorov-Smirnov test.
+scipy>=1.13
 onnxruntime>=1.20
 python-multipart>=0.0.18
 # Medicine boxes (step 2.7, app/boxes.py): OCR in ONNX (PP-OCRv4 models included, headless

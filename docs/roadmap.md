@@ -43,6 +43,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Export ONNX, inférence avec ONNX Runtime, sorties identiques à PyTorch
 - [x] Optimisation des champions (étape 2.4) : variantes FP16 / INT8 (statique calibrée sur le val, dynamique), précision, latence moyenne / p95 et taille dans MLflow ; détecteur YOLOv8n servi en FP16 (-0,0016 mAP, 7 % plus rapide), classifieur en FP32 ; INT8 plus lent sur ce CPU ; relancé le 07/11 sur le champion YOLO11s : servi en FP32 (FP16 3,9 % plus rapide seulement) ([optimisation_onnx.md](module1/optimisation_onnx.md), D95-D96, D98)
 - [x] Mesurer top-1 / top-5 (identification) et mAP (détection)
+- [x] Dérive des données en production (étape 2.8, guide de mi-parcours) : huit statistiques par photo scannée (jamais l'image), KS + PSI contre 600 photos du val v2 (étape DVC `drift_reference`, run MLflow `tujya-monitoring`), `GET /monitoring/drift`, page Monitoring et bandeau du Scanner, démonstration en cinq scénarios (test v2 `ok` ; train v2, assombri, flou, hors distribution `drift`) ; captures 30 et 31 ([derive.md](module1/derive.md), D122)
 - [ ] Comparer avec ePillID sur son propre split et ses métriques ([vision.md](module1/vision.md))
 - [ ] Vérifier à la main les boîtes de test ; second passage d'étiquetage avec le détecteur entraîné
 

@@ -538,3 +538,37 @@ class DocumentChunkOut(BaseModel):
 
 class DocumentDetail(DocumentOut):
     chunks: list[DocumentChunkOut]
+
+
+# --- Data drift of the scanned photos (GET /monitoring/drift, step 2.8) ----------------------
+
+DriftStatus = Literal["unavailable", "insufficient", "ok", "warning", "drift"]
+
+
+class DriftFeature(Strict):
+    """One statistic of the window against the reference photos."""
+
+    feature: str
+    description: str
+    reference_n: int = Field(description="Reference photos with this statistic")
+    current_n: int = Field(description="Photos of the window with this statistic")
+    reference_mean: float | None
+    current_mean: float | None
+    ks_statistic: float | None = Field(description="Two-sample Kolmogorov-Smirnov statistic")
+    ks_pvalue: float | None
+    psi: float | None = Field(description="Population Stability Index, bins = reference deciles")
+    status: Literal["insufficient", "ok", "warning", "drift"]
+
+
+class DriftReport(Strict):
+    status: DriftStatus = Field(
+        description="unavailable: no reference file; insufficient: fewer photos than "
+        "min_samples; otherwise the worst status of the statistics"
+    )
+    window_size: int = Field(description="Photos in the sliding window (memory only)")
+    window_max: int
+    photos_seen: int = Field(description="Photos scanned since the API started")
+    drifted: list[str] = Field(description="Statistics in drift")
+    features: list[DriftFeature]
+    thresholds: dict[str, float] = Field(description="params.yaml `drift`, from the reference")
+    reference: dict[str, Any] = Field(description="Photos and served models of the reference")
