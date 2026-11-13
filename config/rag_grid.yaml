@@ -50,13 +50,14 @@ groups:
     - {embedding: "ollama:bge-m3", chunk: 1500/0, mode: hybrid, rewrite: true}
     - {embedding: "ollama:bge-m3", chunk: 1500/2, mode: hybrid, rewrite: true}
   rerankers:
+    # fetch_k >= 10: the retriever reads max(k, fetch_k) candidates and the grid keeps a top 10
+    # (two fetch_k 5 runs repeated fetch_k 10 and were withdrawn: tag `withdrawn` in MLflow).
     - {embedding: "ollama:bge-m3", mode: hybrid, rewrite: true, rerank: BAAI/bge-reranker-base, fetch_k: 10}
-    - {embedding: "ollama:bge-m3", mode: hybrid, rewrite: true, rerank: BAAI/bge-reranker-base, fetch_k: 5}
     - {embedding: "ollama:bge-m3", mode: hybrid, rewrite: true, rerank: Xenova/ms-marco-MiniLM-L-6-v2, fetch_k: 10}
     - {embedding: "ollama:bge-m3", mode: hybrid, rewrite: true, rerank: Xenova/ms-marco-MiniLM-L-6-v2, fetch_k: 20}
     - {embedding: "ollama:bge-m3", mode: hybrid, rewrite: true, rerank: Xenova/ms-marco-MiniLM-L-12-v2, fetch_k: 20}
     - {embedding: "ollama:bge-m3", mode: hybrid, rewrite: true, rerank: jinaai/jina-reranker-v1-turbo-en, fetch_k: 20}
-    - {embedding: "ollama:bge-m3", mode: dense, rerank: BAAI/bge-reranker-base, fetch_k: 5}
+    - {embedding: "ollama:bge-m3", mode: dense, rerank: Xenova/ms-marco-MiniLM-L-6-v2, fetch_k: 10}
   # Step 3.5: the bge-m3 fine-tuned on Kaggle, added once its export is imported
   # (docs/module2/benchmark_retrieval.md, "Ajouter bge-m3 fine-tuné"). `bge-m3-st` is the
   # untuned model through the same sentence-transformers path: the fair "before".
