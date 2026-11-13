@@ -1,0 +1,6 @@
+outs:
+- md5: 65cd62d26e2f2cd39e33356107fd789c.dir
+  size: 66647318
+  nfiles: 4
+  hash: md5
+  path: vectors
