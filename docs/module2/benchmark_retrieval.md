@@ -140,7 +140,8 @@ un GPU libre, MiniLM-L12 sur 20 candidats est le meilleur mesuré.
 
 ## bge-m3 fine-tuné (étape 3.5)
 
-Le modèle affiné sur Kaggle (D121 ; run MLflow `03c72c9c` dans `tujya-rag-finetuning`, poids par
+Le modèle affiné sur Kaggle (code, guide [kaggle_finetuning.md](https://github.com/melekbouabid/syRX/blob/experiment/fine-tuning-embedding/docs/module2/kaggle_finetuning.md)
+et décision D121 sur la branche `experiment/fine-tuning-embedding` ; run MLflow `03c72c9c` dans `tujya-rag-finetuning`, poids par
 DVC sur la branche `experiment/fine-tuning-embedding`) passe sur ses paires de validation de
 0,784 à 0,960 de MRR@10. Ces paires sont écrites par gabarits, donc plus faciles : c'est le
 benchmark des 85 questions qui tranche (groupe `bge-m3-finetuned`, même chemin

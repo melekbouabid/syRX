@@ -1695,7 +1695,7 @@ ms-marco-MiniLM-L-12-v2 sur 20 candidats (MRR 0,922), coûte 11,3 s par question
 reranker le plus rapide (MiniLM-L6, 10 candidats, 0,896) 3,6 s, soit +70 % sur une réponse de
 4,7 s : le reranker reste une option, désormais MiniLM-L6 sur 10 candidats (bge-reranker-base,
 0,863 en 15 s, est ici moins bon sur des requêtes réécrites en anglais). Chunks de 800
-caractères : +0,034 de MRR, non significatif (-0,026 à +0,099). Le bge-m3 fine-tuné (D121)
+caractères : +0,034 de MRR, non significatif (-0,026 à +0,099). Le bge-m3 fine-tuné (D121, écrite sur la branche experiment/fine-tuning-embedding)
 gagne +0,083 de MRR (significatif) mais perd 0,11 de Coverage@10 (significatif), et son gain
 vient des 75 questions dont la notice a fourni d'autres sections aux paires d'entraînement
 (0,848 -> 0,960 ; 0,717 -> 0,583 sur les 10 autres) : non servi, branche
