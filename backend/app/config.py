@@ -126,6 +126,9 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = 180.0
     # A small model can loop on itself; answers are 3-6 sentences, far below this.
     llm_max_tokens: int = 450
+    # Version of the answer prompt (src/agent/prompts.py), chosen on the generation benchmark
+    # of step 3.4 (docs/module2/benchmark_generation.md).
+    llm_prompt_version: str = "v1"
     embedding_model: str = "bge-m3"
     embedding_dim: int = 1024
     embedding_num_ctx: int = 2048  # chunks are at most ~400 tokens
