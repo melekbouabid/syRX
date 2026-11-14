@@ -11,6 +11,12 @@
   "filter": "names",
   "group": "rerankers",
   "hybrid_candidates": 50,
+  "latency_d96_ms": 3148.7,
+  "latency_d96_rounds": [
+   3104.294900003879,
+   3148.666550001508,
+   3475.9961500021745
+  ],
   "mode": "dense",
   "mrr": 0.8638,
   "mrr_en": 0.9496,
@@ -110,6 +116,12 @@
   "filter": "names",
   "group": "rerankers",
   "hybrid_candidates": 50,
+  "latency_d96_ms": 11250.8,
+  "latency_d96_rounds": [
+   11030.213099998946,
+   10103.031049999117,
+   10924.801499997557
+  ],
   "mode": "hybrid",
   "mrr": 0.9225,
   "mrr_en": 0.9474,
@@ -143,6 +155,12 @@
   "filter": "names",
   "group": "rerankers",
   "hybrid_candidates": 50,
+  "latency_d96_ms": 3617.4,
+  "latency_d96_rounds": [
+   3449.620800001867,
+   2990.82234999878,
+   3291.4352500047244
+  ],
   "mode": "hybrid",
   "mrr": 0.8956,
   "mrr_en": 0.9176,

@@ -44,6 +44,12 @@
   "filter": "names",
   "group": "chunking",
   "hybrid_candidates": 50,
+  "latency_d96_ms": 68.2,
+  "latency_d96_rounds": [
+   69.87890000164043,
+   65.17054999858374,
+   68.23604999954114
+  ],
   "mode": "dense",
   "mrr": 0.8575,
   "mrr_en": 0.8903,
@@ -176,6 +182,12 @@
   "filter": "names",
   "group": "chunking",
   "hybrid_candidates": 50,
+  "latency_d96_ms": 389.3,
+  "latency_d96_rounds": [
+   63.28379999831668,
+   71.82535000174539,
+   63.231600001017796
+  ],
   "mode": "hybrid",
   "mrr": 0.8681,
   "mrr_en": 0.9289,
