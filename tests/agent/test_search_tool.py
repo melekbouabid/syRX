@@ -77,7 +77,7 @@ def test_agent_holder_wires_the_rewriter_only_when_asked(app: FastAPI, pharma: s
     rewriter = holder.toolbox().rewriter
     assert rewriter is not None and rewriter.llm is llm
     off = AgentHolder(
-        app.state.settings,
+        app.state.settings.model_copy(update={"rag_query_rewrite": False}),
         app.state.pharma_engine,
         llm=llm,
         embedder=FakeEmbedder(DIM),
