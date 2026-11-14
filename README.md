@@ -129,7 +129,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | Base vectorielle consultable : Qdrant (tableau de bord), page « Documents » et `GET /api/documents` (documents indexés, métadonnées, chunks) | ✅ | [src/rag/qdrant_store.py](src/rag/qdrant_store.py), [src/rag/documents.py](src/rag/documents.py), [backend/app/routers/documents.py](backend/app/routers/documents.py), [DocumentsPage.tsx](frontend/src/pages/DocumentsPage.tsx), [docs/module2/rag.md](docs/module2/rag.md#consulter-les-documents-indexés) (captures 27 à 29, D113-D114) |
 | Tool calling / MCP | ✅ | [src/agent/tools.py](src/agent/tools.py), [src/mcp_server/](src/mcp_server/) |
 | LangChain et/ou LangGraph | ✅ | [src/agent/graph.py](src/agent/graph.py) |
-| Benchmark de la récupération et de la génération | ✅ | [src/benchmark/](src/benchmark/) |
+| Benchmark de la récupération et de la génération | ✅ | [src/benchmark/](src/benchmark/) ; grille de récupération de 27 configurations (embeddings, modes, découpage, réécriture, rerankers, bge-m3 fine-tuné), un run MLflow chacune (`tujya-rag-retrieval`), champion enregistré et servi : [docs/module2/benchmark_retrieval.md](docs/module2/benchmark_retrieval.md) (D123) |
 | Interface web | ✅ | chat dans [frontend/](frontend/) |
 | Dépôt GitHub documenté avec commits réguliers | ✅ | `git log`, tags git, [docs/git_workflow.md](docs/git_workflow.md) (branches, Conventional Commits, hooks) |
 | Rapport technique | ✅ | [rapport du module 2](docs/module2/rapport_module2_ai_engineering.pdf) |
@@ -147,6 +147,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | RAG (88 questions FR/EN, MLflow `tujya-rag`) | Résultat |
 |---|---:|
 | Récupération dense bge-m3 + filtre : Recall@5 / MRR (83 questions ; identique sur Qdrant et pgvector) | 0,928 / 0,852 |
+| Récupération servie depuis l'étape 3.3, dense + réécriture (85 questions, `tujya-rag-retrieval` champion) : Recall@5 / MRR / temps | 0,941 / 0,834 / 389 ms |
 | Phrases citées soutenues par leur source (juge local) | 94,0 % |
 | Doses chiffrées / « sûr » dans les réponses ; questions de dose refusées | 0 / 0 ; 2/2 |
 | RAGAS : fidélité / précision du contexte | 0,979 / 0,809 |

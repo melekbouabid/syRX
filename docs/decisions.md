@@ -1677,3 +1677,29 @@ Le scénario `train-v2` de la démonstration rend cet écart reproductible. Evid
 deux tests que scipy fait déjà dans l'image. Rejeté : stocker les images (données
 personnelles) ; bloquer un scan en dérive (l'alerte dit seulement que la confiance est moins
 fiable) ; une référence sur le train avec des seuils relevés (elle masquerait de vraies dérives).
+
+**D123. Réglage de récupération de l'agent choisi sur une grille de 27 configurations :
+dense bge-m3 + réécriture de la requête, sans reranker ; bge-m3 fine-tuné non servi
+(étapes 3.3 et 3.5).** Grille de [config/rag_grid.yaml](../config/rag_grid.yaml) (embeddings
+bge-m3, multilingual-e5-base, all-MiniLM-L6-v2, bge-m3 fine-tuné ; dense, hybride, BM25 ;
+découpages 800, 1 500 et 2 500 caractères, recouvrement 0 à 2 phrases ; réécriture ; cinq
+rerankers), un run MLflow par configuration (`tujya-rag-retrieval`), 85 questions, filtre par
+principe actif comme l'agent. Règle écrite avant les résultats : meilleur MRR parmi les
+configurations servables par l'API (embedding Ollama, pas de PyTorch dans l'image) qui tiennent
+2 s par question sur ce PC (temps D96) ; un autre découpage seulement si son gain est
+significatif (bootstrap apparié, 95 %). Champion : dense + réécriture (MRR 0,834, Recall@5
+0,941, 389 ms), version 1 de `tujya-rag-retrieval` ; challenger : dense (0,832, 0,906, 63 ms),
+version 2 ; valeurs par défaut de l'agent alignées et vérifiées par un test
+(`TUJYA_RAG_QUERY_REWRITE=true`). Le meilleur sans contrainte de temps, hybride + réécriture +
+ms-marco-MiniLM-L-12-v2 sur 20 candidats (MRR 0,922), coûte 11,3 s par question sur ce CPU ; le
+reranker le plus rapide (MiniLM-L6, 10 candidats, 0,896) 3,6 s, soit +70 % sur une réponse de
+4,7 s : le reranker reste une option, désormais MiniLM-L6 sur 10 candidats (bge-reranker-base,
+0,863 en 15 s, est ici moins bon sur des requêtes réécrites en anglais). Chunks de 800
+caractères : +0,034 de MRR, non significatif (-0,026 à +0,099). Le bge-m3 fine-tuné (D121)
+gagne +0,083 de MRR (significatif) mais perd 0,11 de Coverage@10 (significatif), et son gain
+vient des 75 questions dont la notice a fourni d'autres sections aux paires d'entraînement
+(0,848 -> 0,960 ; 0,717 -> 0,583 sur les 10 autres) : non servi, branche
+`experiment/fine-tuning-embedding` gardée comme trace. Rejeté : relever le budget après avoir vu
+les scores ; servir le modèle fine-tuné par une conversion GGUF et une réindexation complète
+pour un gain non démontré hors des documents appris. Détails :
+[docs/module2/benchmark_retrieval.md](module2/benchmark_retrieval.md).

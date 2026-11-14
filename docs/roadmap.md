@@ -66,6 +66,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Corpus versionné par DVC (`data/rag/*.dvc`, étape `rag_corpus`)
 - [x] Base vectorielle consultable (étape 3.1, remarque 7) : index dans Qdrant (tableau de bord sur :6333/dashboard, payload = toutes les métadonnées + SHA-256, index de payload), copie des vecteurs pgvector sans réencodage, même Recall@5 / MRR (écart 0), page « Documents » et `GET /api/documents` ; captures 27 à 29 ([rag.md](module2/rag.md#consulter-les-documents-indexés), D113-D114)
 - [x] Recherche avancée (étape 3.2, remarque 13) : BM25 sparse `Qdrant/bm25` et hybride RRF dans Qdrant, reranker bge-reranker-base (ONNX, désactivé par défaut : 13-18 s par question sur ce CPU), réécriture de requête par le LLM, sources avec métadonnées dans le chat ; meilleur : hybride + réécriture + reranker Recall@5 0,965 / MRR 0,889 ([benchmark.md](module2/benchmark.md#recherche-avancée-étape-32), D116-D118)
+- [x] Benchmark de la récupération (étape 3.3) : grille de 27 configurations, un run MLflow chacune (`tujya-rag-retrieval`), champion dense + réécriture (MRR 0,834, 389 ms) enregistré avec l'alias `champion` et servi, rerankers trop lents sur ce CPU (3,6 à 11 s), bge-m3 fine-tuné comparé et non servi ([benchmark_retrieval.md](module2/benchmark_retrieval.md), D123)
 
 ## 5. Agent
 - [x] Graphe LangGraph : comprendre -> outils -> récupérer -> répondre avec citations -> contrôle de sécurité ([agent.md](module2/agent.md))
