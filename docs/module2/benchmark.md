@@ -154,9 +154,16 @@ Ce que cela montre :
   vides anglais et racinise en anglais, alors que notre tokeniseur retirait aussi les mots vides
   français ; sur les questions anglaises, les deux sont à 0,977.
 
-Réglage de l'agent : **inchangé (dense, sans réécriture ni reranker)** en attendant l'étape 3.3,
+Réglage de l'agent à cette étape : **inchangé (dense, sans réécriture ni reranker)** en attendant l'étape 3.3,
 qui compare les configurations sur la génération (D117, D118). Les deux options sont un réglage :
 `TUJYA_RAG_QUERY_REWRITE=true`, `TUJYA_RAG_RERANK=true`, `TUJYA_RAG_SEARCH_MODE=hybrid`.
+
+### Grille de configurations (étape 3.3, D123)
+
+27 configurations (embeddings, modes, découpage, réécriture, rerankers, bge-m3 fine-tuné), un run
+MLflow chacune (`tujya-rag-retrieval`), champion enregistré : voir
+[benchmark_retrieval.md](benchmark_retrieval.md). **Réglage servi depuis : dense bge-m3 +
+réécriture de la requête** (MRR 0,834, Recall@5 0,941, 389 ms par question), sans reranker.
 
 ## Génération
 

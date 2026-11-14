@@ -236,17 +236,21 @@ requête, filtres de métadonnées), mesuré dans [benchmark.md](benchmark.md#re
   denses, 50 candidats BM25, chacun avec les filtres de métadonnées) fusionnés par Qdrant en RRF.
   Qdrant compte les positions à partir de 0 : `k = 61` chez lui donne exactement 1 / (60 + rang),
   la fusion du stockage SQL (vérifié par un test, en mémoire et sur le serveur).
-- **Reranker cross-encoder (D117)** : `BAAI/bge-reranker-base` (le modèle du TP, multilingue) en
-  ONNX par fastembed ([`src/rag/rerank.py`](../../src/rag/rerank.py)), donc sans PyTorch dans
-  l'API. La recherche renvoie `fetch_k` candidats (20 par défaut, `TUJYA_RAG_FETCH_K`), le
-  cross-encoder lit la question avec chacun (titre + texte) et garde les `k` meilleurs ; chaque
-  source garde son score et son rang avant reranking. Désactivé par défaut (`TUJYA_RAG_RERANK`) :
-  1 à 2 s par paire question-chunk sur le processeur de ce PC.
+- **Reranker cross-encoder (D117, D123)** : un cross-encoder ONNX par fastembed
+  ([`src/rag/rerank.py`](../../src/rag/rerank.py)), donc sans PyTorch dans l'API ;
+  `Xenova/ms-marco-MiniLM-L-6-v2` par défaut depuis l'étape 3.3 (`TUJYA_RAG_RERANK_MODEL` ;
+  `BAAI/bge-reranker-base`, le modèle du TP, reste possible). La recherche renvoie
+  `max(k, fetch_k)` candidats (`fetch_k` 10 par défaut, `TUJYA_RAG_FETCH_K`), le cross-encoder
+  lit la question avec chacun (titre + texte) et garde les `k` meilleurs ; chaque source garde son
+  score et son rang avant reranking. Désactivé par défaut (`TUJYA_RAG_RERANK`) : 3 à 11 s par
+  question sur le processeur de ce PC ([benchmark_retrieval.md](benchmark_retrieval.md)).
 - **Réécriture de requête (D118)** : le LLM réécrit la question en une requête de recherche
   anglaise courte qui garde les noms de médicaments ([`src/rag/rewrite.py`](../../src/rag/rewrite.py)) ;
   la recherche (et le reranking) portent sur cette requête, la réponse sur la question. Une
   réécriture vide, trop longue ou en erreur garde la question ; les mots collés par un petit
-  LLM (`what_are_the_...`) sont séparés. Désactivée par défaut (`TUJYA_RAG_QUERY_REWRITE`).
+  LLM (`what_are_the_...`) sont séparés. **Activée par défaut depuis l'étape 3.3**
+  (`TUJYA_RAG_QUERY_REWRITE`, D123) : champion de la grille de récupération, Recall@5 0,906 ->
+  0,941 pour environ 0,3 s de plus.
 - **Filtres de métadonnées** (tous les modes, dans Qdrant par index de payload) : principe actif
   (dont parle ou que cite le chunk), type de document, section, publications rétractées ;
   l'outil `search_documents` les expose à l'agent et au serveur MCP.
