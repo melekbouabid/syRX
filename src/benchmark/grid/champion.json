@@ -1,0 +1,65 @@
+{
+ "agent_settings": {
+  "embedding_model": "bge-m3",
+  "rag_query_rewrite": true,
+  "rag_rerank": false,
+  "rag_search_mode": "dense"
+ },
+ "best_whatever_the_time": {
+  "config": "bge-m3-hybrid-rewrite-rerank-minilm-l-12-v2-f20",
+  "mrr": 0.9225,
+  "ms_per_question": 11250.8
+ },
+ "challenger": {
+  "chunk_max_chars": 1500,
+  "chunk_overlap_sentences": 1,
+  "config": "bge-m3-dense",
+  "embedding_backend": "ollama",
+  "embedding_model": "bge-m3",
+  "fetch_k": 0,
+  "filter": "names",
+  "group": "bge-m3",
+  "hybrid_candidates": 50,
+  "mode": "dense",
+  "mrr": 0.8323,
+  "ms_per_question": 63.0,
+  "query_rewrite": false,
+  "recall_at_5": 0.9059,
+  "rerank": false,
+  "rerank_model": "",
+  "rrf_k": 60,
+  "top_k": 10,
+  "version": "2"
+ },
+ "champion": {
+  "chunk_max_chars": 1500,
+  "chunk_overlap_sentences": 1,
+  "config": "bge-m3-dense-rewrite",
+  "embedding_backend": "ollama",
+  "embedding_model": "bge-m3",
+  "fetch_k": 0,
+  "filter": "names",
+  "group": "bge-m3",
+  "hybrid_candidates": 50,
+  "mode": "dense",
+  "mrr": 0.8337,
+  "ms_per_question": 389.1,
+  "query_rewrite": true,
+  "recall_at_5": 0.9412,
+  "rerank": false,
+  "rerank_model": "",
+  "rrf_k": 60,
+  "top_k": 10,
+  "version": "1"
+ },
+ "registered_model": "tujya-rag-retrieval",
+ "selection": {
+  "latency_budget_ms": 2000,
+  "latency_pause_s": 10,
+  "latency_questions": 12,
+  "latency_rounds": 3,
+  "metric": "mrr",
+  "rebuild_needs_significance": true,
+  "servable_only": true
+ }
+}
