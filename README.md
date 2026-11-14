@@ -101,7 +101,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | Exigence | État | Où |
 |---|:---:|---|
 | Détection des comprimés avec YOLOv8/v11 | ✅ | [src/models/](src/models/) (YOLO11s, champion de l'étape 2.2 ; baseline YOLO11n) |
-| Identification de chaque comprimé par transfer learning | ✅ | [src/models/](src/models/) (YOLO11s-cls) |
+| Identification de chaque comprimé par transfer learning | ✅ | [src/models/](src/models/) (EfficientNetV2-S préentraîné sur ImageNet, 380 classes, champion de l'étape 2.3 ; baseline YOLO11s-cls) |
 | Backend FastAPI asynchrone, schémas Pydantic, Swagger sur `/docs` | ✅ | [backend/](backend/), [backend/app/inference.py](backend/app/inference.py) ; endpoints du guide `GET /health`, `GET /model/metadata`, `POST /predict`, `POST /predict/visualize` (400 / 503) : [backend/app/routers/vision.py](backend/app/routers/vision.py), [docs/api.md](docs/api.md#endpoints-du-guide-du-module-1-sans-compte) |
 | Frontend React du guide : framework CSS (Tailwind), glisser-déposer, galerie d'exemples du split de test, webcam en inférence continue, barres de probabilité animées, boîtes colorées par classe, latence client et serveur (ms), modèle champion affiché | ✅ | [frontend/src/pages/ScanPage.tsx](frontend/src/pages/ScanPage.tsx), [services/api.ts](frontend/src/services/api.ts), [docs/app.md](docs/app.md#page-scanner-guide-du-module-1-étape-26) (captures 01 à 07, 18 à 21) |
 | Grad-CAM (explicabilité du classifieur) | ✅ | précalculé avec les poids PyTorch du classifieur servi pour la galerie de démo, affiché dans le Scanner : [src/utils/gradcam.py](src/utils/gradcam.py), [src/models/gradcam_gallery.py](src/models/gradcam_gallery.py) (étape DVC `gradcam_gallery`), [docs/api.md](docs/api.md#galerie-de-démo-et-grad-cam) (D104) |
@@ -114,6 +114,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | MLflow : Model Registry | ✅ | `tujya-pill-detector`, `tujya-pill-classifier`, alias `champion` / `challenger` / `served`, `promote_if_better` ; détecteur : YOLO11s champion, YOLOv10n challenger ; classifieur : EfficientNetV2-S champion, ResNet-50 challenger |
 | Export ONNX et inférence ONNX Runtime | ✅ | [backend/app/inference.py](backend/app/inference.py) |
 | Optimisation : quantification FP16 / INT8, comparaison précision / latence / taille | ✅ | [src/models/quantize.py](src/models/quantize.py), [src/models/optimize.py](src/models/optimize.py), [docs/module1/optimisation_onnx.md](docs/module1/optimisation_onnx.md) (détecteur YOLO11s et classifieur EfficientNetV2-S servis en FP32 : le FP16 n'est pas assez plus rapide sur ce CPU, l'INT8 est plus lent et moins précis) |
+| Suivi de la dérive des données en production (guide de mi-parcours) | ✅ | huit statistiques par photo scannée (jamais l'image), test de Kolmogorov-Smirnov et PSI contre la référence DVC `drift_reference`, `GET /monitoring/drift`, page Monitoring et bandeau du Scanner, démonstration reproductible : [backend/app/drift.py](backend/app/drift.py), [src/data/drift_demo.py](src/data/drift_demo.py), [docs/module1/derive.md](docs/module1/derive.md) (D122) |
 | Docker Compose | ✅ | [docker-compose.yml](docker-compose.yml) |
 | Git avancé : branches, tags annotés, hooks (secrets, messages de commit) | ✅ | [docs/git_workflow.md](docs/git_workflow.md), [tools/hooks/](tools/hooks/) |
 | GitHub Actions CI/CD | ✅ | [ci-tests.yml](.github/workflows/ci-tests.yml) (flake8, black, ESLint, pytest, Vitest, build), [docker-build.yml](.github/workflows/docker-build.yml) (images multi-stage + test de fumée), [docs/cd.md](docs/cd.md) |
@@ -128,7 +129,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | Base vectorielle consultable : Qdrant (tableau de bord), page « Documents » et `GET /api/documents` (documents indexés, métadonnées, chunks) | ✅ | [src/rag/qdrant_store.py](src/rag/qdrant_store.py), [src/rag/documents.py](src/rag/documents.py), [backend/app/routers/documents.py](backend/app/routers/documents.py), [DocumentsPage.tsx](frontend/src/pages/DocumentsPage.tsx), [docs/module2/rag.md](docs/module2/rag.md#consulter-les-documents-indexés) (captures 27 à 29, D113-D114) |
 | Tool calling / MCP | ✅ | [src/agent/tools.py](src/agent/tools.py), [src/mcp_server/](src/mcp_server/) |
 | LangChain et/ou LangGraph | ✅ | [src/agent/graph.py](src/agent/graph.py) |
-| Benchmark de la récupération et de la génération | ✅ | [src/benchmark/](src/benchmark/) |
+| Benchmark de la récupération et de la génération | ✅ | [src/benchmark/](src/benchmark/) ; grille de récupération de 27 configurations (embeddings, modes, découpage, réécriture, rerankers, bge-m3 fine-tuné), un run MLflow chacune (`tujya-rag-retrieval`), champion enregistré et servi : [docs/module2/benchmark_retrieval.md](docs/module2/benchmark_retrieval.md) (D123) |
 | Interface web | ✅ | chat dans [frontend/](frontend/) |
 | Dépôt GitHub documenté avec commits réguliers | ✅ | `git log`, tags git, [docs/git_workflow.md](docs/git_workflow.md) (branches, Conventional Commits, hooks) |
 | Rapport technique | ✅ | [rapport du module 2](docs/module2/rapport_module2_ai_engineering.pdf) |
@@ -146,6 +147,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | RAG (88 questions FR/EN, MLflow `tujya-rag`) | Résultat |
 |---|---:|
 | Récupération dense bge-m3 + filtre : Recall@5 / MRR (83 questions ; identique sur Qdrant et pgvector) | 0,928 / 0,852 |
+| Récupération servie depuis l'étape 3.3, dense + réécriture (85 questions, `tujya-rag-retrieval` champion) : Recall@5 / MRR / temps | 0,941 / 0,834 / 389 ms |
 | Phrases citées soutenues par leur source (juge local) | 94,0 % |
 | Doses chiffrées / « sûr » dans les réponses ; questions de dose refusées | 0 / 0 ; 2/2 |
 | RAGAS : fidélité / précision du contexte | 0,979 / 0,809 |
@@ -234,6 +236,11 @@ et [docs/data_pipeline/LICENSES.md](docs/data_pipeline/LICENSES.md). Jeu C3PI en
 - Soutenance : [script de démonstration](docs/demo.md), [questions probables du jury](docs/questions_jury.md).
 - Règles du projet (sécurité des réponses, usage local) : [docs/project_rules.md](docs/project_rules.md).
 - Historique : `git log` et tags git (`v1.0-avant-restructuration` : état du projet d'origine avant la restructuration).
+
+## Licence
+
+Code publié pour consultation dans le cadre d'une évaluation académique, tous droits réservés :
+voir [LICENSE](LICENSE) (les données gardent leurs propres licences, section précédente).
 
 ## Auteur
 

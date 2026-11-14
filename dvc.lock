@@ -687,3 +687,60 @@ stages:
       md5: 83dadcc283e903b8b4d636709c6530ab.dir
       size: 17546000
       nfiles: 3
+  drift_reference:
+    cmd: python -m src.data.drift_reference
+    deps:
+    - path: backend/app/drift.py
+      hash: md5
+      md5: ec5bfae06b375d721d632d0a155e5c0c
+      size: 10870
+    - path: backend/app/inference.py
+      hash: md5
+      md5: 2bc8baeffe8df2f4a0fb000529d13483
+      size: 11923
+    - path: data/processed/c3pi/datasets_v2/detect/index.csv
+      hash: md5
+      md5: 54be74bd56cc53c3a78059a86efde107
+      size: 1509284
+    - path: data/raw/c3pi/images
+      hash: md5
+      md5: 62051ba2f27a8520e490f4de3467231b.dir
+      size: 39542126444
+      nfiles: 20330
+    - path: models/classifier.onnx
+      hash: md5
+      md5: b318e07d0ea3fb58e6728f0119aa263f
+      size: 82536121
+    - path: models/detector.onnx
+      hash: md5
+      md5: ac3042742eee78d6cac3a772dc0c0fee
+      size: 37928538
+    - path: models/models.json
+      hash: md5
+      md5: 96acd9c0234874e856c871c709668823
+      size: 3084
+    - path: src/data/drift_reference.py
+      hash: md5
+      md5: cd8094349a148e37e1eae3fe7c9d808d
+      size: 8150
+    params:
+      params.yaml:
+        drift:
+          seed: 0
+          reference_split: val
+          reference_images: 600
+          window: 200
+          min_samples: 30
+          ks_alpha: 0.01
+          psi_warning: 0.1
+          psi_drift: 0.25
+          bins: 10
+    outs:
+    - path: data/processed/c3pi/drift/reference.json
+      hash: md5
+      md5: f5a76c59a38d59485df18b68c500184d
+      size: 99542
+    - path: data/processed/c3pi/drift/summary.json
+      hash: md5
+      md5: e2ce108e81baf019b4a76246253403f6
+      size: 1293

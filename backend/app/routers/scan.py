@@ -19,6 +19,7 @@ from starlette.concurrency import run_in_threadpool
 from app.boxes import BoxMatch, BoxReader, KindThresholds, OcrResult, decide_kind
 from app.config import Settings
 from app.deps import PharmaSession, SettingsDep, get_current_user
+from app.drift import DriftMonitor
 from app.inference import (
     InvalidImage,
     ModelsMissing,
@@ -111,6 +112,7 @@ def _run(
     settings: Settings,
     db: Session,
     boxes: BoxReader | None = None,
+    drift: DriftMonitor | None = None,
 ) -> ScanResult:
     """Blocking part (decode, ONNX Runtime, OCR, database), run in the thread pool."""
     try:
@@ -118,6 +120,8 @@ def _run(
     except InvalidImage as exc:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, str(exc)) from exc
     output = scanner.scan(image)
+    if drift is not None:  # eight numbers of the photo (data drift, step 2.8), never the photo
+        drift.record_scan(image, output)
     ocr, match = None, None
     engine = boxes.ocr.get() if boxes is not None else None
     try:
@@ -236,6 +240,7 @@ async def scan(
             f"The image is larger than {settings.scan_max_bytes // (1024 * 1024)} MB.",
         )
     scanner = await run_in_threadpool(get_scanner, request)
-    result = await run_in_threadpool(_run, scanner, data, settings, db, get_boxes(request))
+    drift = getattr(request.app.state, "drift", None)
+    result = await run_in_threadpool(_run, scanner, data, settings, db, get_boxes(request), drift)
     result.timings.server_ms = round((time.perf_counter() - started) * 1000, 1)
     return result

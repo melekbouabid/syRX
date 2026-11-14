@@ -98,6 +98,12 @@ class Settings(BaseSettings):
     # Grad-CAM pictures of the gallery photos, precomputed with the PyTorch weights of the
     # served classifier (`python -m src.models.gradcam_gallery`, DVC stage, D104).
     demo_gradcam_dir: Path = PROJECT_DIR / "data" / "processed" / "c3pi" / "gradcam"
+    # Statistics of the reference photos (C3PI v2 val split, D122) for the data drift monitor
+    # (step 2.8, DVC stage drift_reference, docs/module1/derive.md); missing: GET
+    # /monitoring/drift says so.
+    drift_reference_file: Path = (
+        PROJECT_DIR / "data" / "processed" / "c3pi" / "drift" / "reference.json"
+    )
 
     # Module 2: RAG and agent (docs/module2/rag.md, agent.md). The chunk index
     # lives in Qdrant (collection tujya_chunks, D113); `python -m src.rag.index` fills it
@@ -124,17 +130,23 @@ class Settings(BaseSettings):
     embedding_dim: int = 1024
     embedding_num_ctx: int = 2048  # chunks are at most ~400 tokens
     rag_top_k: int = 6
-    # Chosen on the benchmark (docs/module2/benchmark.md, D65): dense +
-    # ingredient filter is best; hybrid loses on French questions (BM25 only matches English).
+    # Chosen on the benchmark (docs/module2/benchmark.md, D65; confirmed by the step 3.3
+    # grid, D123): dense + ingredient filter; hybrid loses on French questions (BM25 only
+    # matches English).
     rag_search_mode: str = "dense"
     # Step 3.2 (docs/module2/rag.md, D116-D118). BM25 sparse vectors in Qdrant (fastembed
     # `Qdrant/bm25`), cross-encoder reranking of `rag_fetch_k` candidates, query rewriting by
     # the LLM. fastembed models are downloaded once (Hugging Face, no account) into the cache.
     rag_sparse_model: str = "Qdrant/bm25"
+    # Step 3.3 (docs/module2/benchmark_retrieval.md, D123): the registered champion of
+    # `tujya-rag-retrieval` (src/benchmark/grid/champion.json, checked by the tests) is dense
+    # search of the rewritten query, without reranker: every cross-encoder costs 3 to 11 s per
+    # question on this laptop's CPU. When turned on, the reranker is the fastest one measured
+    # (ms-marco-MiniLM-L-6-v2 on 10 candidates: MRR 0.896 in hybrid mode, about 3.5 s).
     rag_rerank: bool = False
-    rag_rerank_model: str = "BAAI/bge-reranker-base"
-    rag_fetch_k: int = 20
-    rag_query_rewrite: bool = False
+    rag_rerank_model: str = "Xenova/ms-marco-MiniLM-L-6-v2"
+    rag_fetch_k: int = 10
+    rag_query_rewrite: bool = True
     rag_model_cache_dir: Path = PROJECT_DIR / "models" / "fastembed"
     # An uncited answer sentence gets the source closest in meaning (bge-m3 cosine) above
     # this; calibrated on the first benchmark run (docs/module2/benchmark.md).

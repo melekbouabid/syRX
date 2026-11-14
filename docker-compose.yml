@@ -93,6 +93,7 @@ services:
       - ./data/raw/c3pi/images:/tujya/data/raw/c3pi/images:ro
       # Grad-CAM of the demo gallery (DVC stage gradcam_gallery, D104); empty = none shown.
       - ./data/processed/c3pi/gradcam:/tujya/data/processed/c3pi/gradcam:ro
+      - ./data/processed/c3pi/drift:/tujya/data/processed/c3pi/drift:ro
       - ./data/processed/rag/corpus:/tujya/data/processed/rag/corpus:ro
       - ./models:/tujya/models:ro
       - fastembed:/tujya/cache/fastembed

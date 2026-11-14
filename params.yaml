@@ -144,3 +144,16 @@ boxes:
 finetune:
   seed: 0
   val_share: 0.10          # share of the documents kept for validation (never trained on)
+# Step 2.8, data drift of the scanned photos (backend/app/drift.py, stage drift_reference,
+# docs/module1/derive.md): statistics of `reference_images` photos of C3PI v2, and the tests
+# the API runs on its sliding window of the last `window` scanned photos.
+drift:
+  seed: 0
+  reference_split: val     # never trained on, chosen like the test photos (train drifts: D122)
+  reference_images: 600    # spread over that split of the detection dataset v2
+  window: 200              # last scanned photos kept by the API (eight numbers each, memory only)
+  min_samples: 30          # fewer photos in the window: "insufficient", no test
+  ks_alpha: 0.01           # two-sample Kolmogorov-Smirnov p-value under which a shift is real
+  psi_warning: 0.1         # and its size (Population Stability Index): moderate
+  psi_drift: 0.25          # large: drift
+  bins: 10                 # PSI bins = deciles of the reference

@@ -27,7 +27,7 @@ Rapport technique : [docs/module2/rapport_module2_ai_engineering.pdf](rapport_mo
 | Tool calling | outils LangChain `identify_pills`, `check_interaction`, `get_drug_info`, `search_documents` (et `predict_toxicity`, [docs/bonus/](../bonus/README.md)) : [src/agent/tools.py](../../src/agent/tools.py) |
 | MCP | serveur MCP (SDK officiel, stdio et HTTP limité à 127.0.0.1), mêmes outils, même code : [src/mcp_server/server.py](../../src/mcp_server/server.py) ; essai de bout en bout : [src/mcp_server/smoke.py](../../src/mcp_server/smoke.py) ; [docs/module2/mcp.md](mcp.md) |
 | LangChain et/ou LangGraph | graphe LangGraph comprendre → outils → récupération → réponse citée → contrôle de sécurité : [src/agent/graph.py](../../src/agent/graph.py) ; câblage pour l'API : [src/agent/runtime.py](../../src/agent/runtime.py) ; schéma : [docs/module2/assets/agent_graph.png](assets/agent_graph.png) |
-| Benchmark de la récupération | Recall@1/3/5/10 et MRR, BM25 / dense / hybride, avec et sans filtre : [src/benchmark/bench_retrieval.py](../../src/benchmark/bench_retrieval.py) ; résultats : [src/benchmark/results_retrieval.json](../../src/benchmark/results_retrieval.json) |
+| Benchmark de la récupération | grille de 27 configurations (embeddings bge-m3 / multilingual-e5-base / all-MiniLM-L6-v2 / bge-m3 fine-tuné, dense / hybride / BM25, découpage, réécriture, 5 rerankers), Recall@k, MRR, nDCG@10, latence D96, un run MLflow par configuration (`tujya-rag-retrieval`), champion enregistré avec alias : [src/benchmark/bench_grid.py](../../src/benchmark/bench_grid.py), [config/rag_grid.yaml](../../config/rag_grid.yaml), [src/benchmark/grid/](../../src/benchmark/grid/) ; [benchmark_retrieval.md](benchmark_retrieval.md) (D123) ; mesures antérieures : [bench_retrieval.py](../../src/benchmark/bench_retrieval.py), [results_retrieval.json](../../src/benchmark/results_retrieval.json) |
 | Benchmark de la génération | réponses, sécurité, citations vérifiées par un juge local, RAGAS : [src/benchmark/bench_answers.py](../../src/benchmark/bench_answers.py), [bench_generation.py](../../src/benchmark/bench_generation.py), [bench_judge_control.py](../../src/benchmark/bench_judge_control.py) ; jeu de 88 questions : [src/benchmark/rag_questions.jsonl](../../src/benchmark/rag_questions.jsonl) ; [docs/module2/benchmark.md](benchmark.md) |
 | Fine-tuning (option du module) | embedding bge-m3 affiné sur des paires question / passage du corpus, sans question du benchmark : [src/models/embedding/](../../src/models/embedding/) (paires, entraînement, notebook Kaggle, import MLflow), [notebooks/kaggle/finetune_bge-m3.ipynb](../../notebooks/kaggle/finetune_bge-m3.ipynb) ; guide et état : [kaggle_finetuning.md](kaggle_finetuning.md) (en attente du run Kaggle, D121) |
 | Interface web | panneau « Ask about your pills » : [frontend/src/pages/ChatPanel.tsx](../../frontend/src/pages/ChatPanel.tsx) ; `POST /api/chat` (JSON ou flux SSE) : [backend/app/routers/chat.py](../../backend/app/routers/chat.py) ; captures [08](../screenshots/08-chat-empty.jpg) à [11](../screenshots/11-chat-dose-refused.jpg) |
@@ -48,6 +48,16 @@ dans MLflow (expérience `tujya-rag`).
 | BM25 + filtre principe actif | 0,566 | 0,747 | 0,783 | 0,819 | 0,660 |
 | hybride (RRF) + filtre | 0,711 | 0,892 | 0,904 | 0,928 | 0,796 |
 | **dense (bge-m3) + filtre, retenu** | **0,795** | **0,880** | **0,928** | **0,976** | **0,852** |
+
+Grille de l'étape 3.3 (85 questions, [benchmark_retrieval.md](benchmark_retrieval.md), D123) :
+
+| Récupération (85 questions, top 10) | Recall@1 | Recall@5 | MRR | ms / question (D96) |
+|---|---:|---:|---:|---:|
+| dense bge-m3 + filtre (challenger) | 0,776 | 0,906 | 0,832 | 63 |
+| **dense bge-m3 + filtre + réécriture (champion, servi)** | **0,765** | **0,941** | **0,834** | **389** |
+| hybride + réécriture + reranker MiniLM-L6 (10 candidats) | 0,859 | 0,941 | 0,896 | 3 617 |
+| hybride + réécriture + reranker MiniLM-L12 (20 candidats) | 0,894 | 0,965 | 0,922 | 11 251 |
+| bge-m3 fine-tuné, dense (non servi) | 0,906 | 0,929 | 0,916 | 393 (run) |
 
 | Génération (qwen2.5:3b, juge gemma3:4b) | Résultat |
 |---|---:|

@@ -7,13 +7,15 @@
 # dependencies below are those of the data collection pipeline (src/data/tujya_data).
 # Training (PyTorch, Ultralytics) has its own venv: src/models/requirements-train.txt.
 [build-system]
-requires = ["hatchling>=1.24"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
 name = "tujya"
 version = "0.3.0"
 description = "Tujya: pill identification (vision), interaction checks and a cited RAG agent."
+license = "LicenseRef-Proprietary"  # all rights reserved: see LICENSE
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
     "httpx>=0.27",

@@ -1680,3 +1680,54 @@ réponses de référence, export GGUF pour Ollama, gain mal mesurable sur 96 que
 questions écrites par un LLM (non reproductibles, lentes sur 4 Go, risque de paraphraser le
 benchmark) ; un adaptateur LoRA sur l'embedding (le fine-tuning complet tient sur le T4, le gel
 des couches basses suffit comme repli). Limite : questions par gabarits, une seule graine.
+
+**D122. Module de dérive des photos scannées : huit statistiques par photo, test de
+Kolmogorov-Smirnov et PSI contre le split de validation de C3PI v2, scipy plutôt qu'Evidently
+(étape 2.8).** Le guide de mi-parcours demande de surveiller la dérive des données en
+production. L'API calcule pour chaque photo scannée (`/predict`, `/predict/visualize`,
+`/api/scan`) luminosité, contraste, netteté (variance du laplacien à 512 px), mégapixels,
+rapport d'aspect, nombre de comprimés trouvés, confiance moyenne du détecteur et du
+classifieur ; elle garde ces huit nombres seulement (jamais l'image ni rien sur l'utilisateur),
+en mémoire, dans une fenêtre des 200 dernières photos. `GET /monitoring/drift` compare chaque
+statistique à la référence : dérive si la p-value KS est sous 0,01 et le PSI (déciles de la
+référence) d'au moins 0,25, avertissement à partir de 0,1 ; moins de 30 photos : pas de test.
+Seuils dans `params.yaml` (`drift`). Référence : étape DVC `drift_reference`, 600 photos, run
+MLflow dans `tujya-monitoring`. La consigne disait « train v2 » ; mesuré sur 200 photos du test
+v2 (jamais vues), une référence calculée sur le train signale à tort une dérive sur cinq
+statistiques (PSI de 0,27 à 1,0) pour deux raisons : les modèles sont plus sûrs d'eux sur les
+photos qu'ils ont apprises (confiance du classifieur 0,93 sur le train, 0,85 sur le val, 0,81 sur
+le test), et le job de split remplit test puis val avec les sessions de prise de vue qui y
+tiennent, laissant au train les plus grosses (appareils de 12 Mpx : 8,9 Mpx en moyenne contre
+6,4 pour val et test). La référence est donc le **split de validation** (jamais appris, choisi
+comme le test) : le test v2 ressort `ok`, des photos assombries et floues ressortent en dérive.
+Le scénario `train-v2` de la démonstration rend cet écart reproductible. Evidently AI (0.7.23)
+écarté : 26 dépendances directes (pandas, plotly, statsmodels, nltk, litestar, télémétrie) pour
+deux tests que scipy fait déjà dans l'image. Rejeté : stocker les images (données
+personnelles) ; bloquer un scan en dérive (l'alerte dit seulement que la confiance est moins
+fiable) ; une référence sur le train avec des seuils relevés (elle masquerait de vraies dérives).
+
+**D123. Réglage de récupération de l'agent choisi sur une grille de 27 configurations :
+dense bge-m3 + réécriture de la requête, sans reranker ; bge-m3 fine-tuné non servi
+(étapes 3.3 et 3.5).** Grille de [config/rag_grid.yaml](../config/rag_grid.yaml) (embeddings
+bge-m3, multilingual-e5-base, all-MiniLM-L6-v2, bge-m3 fine-tuné ; dense, hybride, BM25 ;
+découpages 800, 1 500 et 2 500 caractères, recouvrement 0 à 2 phrases ; réécriture ; cinq
+rerankers), un run MLflow par configuration (`tujya-rag-retrieval`), 85 questions, filtre par
+principe actif comme l'agent. Règle écrite avant les résultats : meilleur MRR parmi les
+configurations servables par l'API (embedding Ollama, pas de PyTorch dans l'image) qui tiennent
+2 s par question sur ce PC (temps D96) ; un autre découpage seulement si son gain est
+significatif (bootstrap apparié, 95 %). Champion : dense + réécriture (MRR 0,834, Recall@5
+0,941, 389 ms), version 1 de `tujya-rag-retrieval` ; challenger : dense (0,832, 0,906, 63 ms),
+version 2 ; valeurs par défaut de l'agent alignées et vérifiées par un test
+(`TUJYA_RAG_QUERY_REWRITE=true`). Le meilleur sans contrainte de temps, hybride + réécriture +
+ms-marco-MiniLM-L-12-v2 sur 20 candidats (MRR 0,922), coûte 11,3 s par question sur ce CPU ; le
+reranker le plus rapide (MiniLM-L6, 10 candidats, 0,896) 3,6 s, soit +70 % sur une réponse de
+4,7 s : le reranker reste une option, désormais MiniLM-L6 sur 10 candidats (bge-reranker-base,
+0,863 en 15 s, est ici moins bon sur des requêtes réécrites en anglais). Chunks de 800
+caractères : +0,034 de MRR, non significatif (-0,026 à +0,099). Le bge-m3 fine-tuné (D121)
+gagne +0,083 de MRR (significatif) mais perd 0,11 de Coverage@10 (significatif), et son gain
+vient des 75 questions dont la notice a fourni d'autres sections aux paires d'entraînement
+(0,848 -> 0,960 ; 0,717 -> 0,583 sur les 10 autres) : non servi, branche
+`experiment/fine-tuning-embedding` gardée comme trace. Rejeté : relever le budget après avoir vu
+les scores ; servir le modèle fine-tuné par une conversion GGUF et une réindexation complète
+pour un gain non démontré hors des documents appris. Détails :
+[docs/module2/benchmark_retrieval.md](module2/benchmark_retrieval.md).
