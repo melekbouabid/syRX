@@ -8,10 +8,11 @@ vecteurs pour la recherche dans Qdrant. L'entraînement se fait sur le GPU gratu
 (T4, 16 Go) ; le PC (RTX 2050, 4 Go) ne sert qu'aux tests de fumée. Décision : D121 dans
 [docs/decisions.md](../decisions.md).
 
-**État (12/11/2026) : EN ATTENTE KAGGLE.** L'outillage est prêt et testé : paires construites
-(étape DVC `finetune_pairs`), dataset Kaggle empaqueté, notebook vérifié en local en mode smoke,
-import MLflow testé. Il reste à lancer le notebook sur Kaggle (section « Mode d'emploi »), à
-importer l'export, puis à comparer le modèle affiné dans le benchmark de l'étape 3.3.
+**État (14/11/2026) : FAIT, modèle non servi.** Run Kaggle (T4, 152 min) importé dans MLflow,
+poids versionnés par DVC, modèle comparé dans la grille de l'étape 3.3 (section « Résultats ») :
+meilleur MRR (+0,083, significatif) mais couverture du top 10 plus faible et gain concentré sur
+les documents vus à l'entraînement ; il n'est pas servi (D123) et cette branche reste la trace
+de l'expérience.
 
 ## Pourquoi l'embedding (et pas le reranker ni un LLM)
 
@@ -148,11 +149,49 @@ pas et `loss.png`), `run.json`, tags de provenance (`git_commit` du PC, `kaggle_
 ### 5. Comparer dans le benchmark (étape 3.3)
 
 Le modèle affiné entre dans la grille de l'étape 3.3 comme une configuration d'embedding de plus
-(« bge-m3 fine-tuné », lu en local par sentence-transformers) et il est mesuré sur les 96
-questions du benchmark, qu'il n'a jamais vues. La meilleure configuration de la grille (précision
-et latence) reçoit l'alias `champion` ; s'il gagne, le tag `model/embedding-bge-m3-finetuned-v1.0.0`
-et la fin de l'étape 3.5 (`v4.4.0-fine-tuning`) suivent. S'il ne gagne pas, c'est un résultat
-aussi : il sera documenté ici avec les chiffres.
+(groupe `bge-m3-finetuned` de [config/rag_grid.yaml](../../config/rag_grid.yaml), lu en local par
+sentence-transformers) et il est mesuré sur les 85 questions du benchmark qui ont des chunks
+attendus, qu'il n'a jamais vues :
+
+```bash
+# GPU libre : arrêter d'abord les modèles Ollama
+.venv-train/Scripts/python -m src.benchmark.encode_st --model BAAI/bge-m3 --slug bge-m3-st
+.venv-train/Scripts/python -m src.benchmark.encode_st --model data/models/embeddings/finetune-bge-m3/model --slug bge-m3-finetuned
+python -m src.benchmark.bench_grid run --group bge-m3-finetuned     # venv du projet
+```
+
+## Résultats (14/11/2026)
+
+Run Kaggle : Tesla T4, 2 époques sur 8 077 paires (128 pas), 152 min, aucune couche gelée ;
+run MLflow `03c72c9c` (`tujya-rag-finetuning`) ; poids : `data/models/embeddings/finetune-bge-m3.dvc`
+(1,16 Go, DVC). Paires de validation (gabarits, 1 007) : Recall@5 0,930 -> 0,999, MRR@10 0,784 ->
+0,960.
+
+Benchmark de l'application (85 questions, filtre par principe actif, top 10 ; même chemin
+sentence-transformers avant et après : le bge-m3 d'origine y redonne le MRR d'Ollama, 0,833
+contre 0,832) :
+
+| Configuration | R@1 | R@5 | R@10 | MRR | nDCG@10 | Coverage@10 | Run |
+|---|---:|---:|---:|---:|---:|---:|---|
+| bge-m3 d'origine, dense | 0,776 | 0,906 | 0,953 | 0,833 | 0,781 | 0,810 | `e5300cff` |
+| **bge-m3 fine-tuné, dense** | **0,906** | 0,929 | 0,941 | **0,916** | 0,746 | 0,699 | `1b6da11e` |
+| bge-m3 d'origine, hybride + réécriture | 0,753 | 0,906 | 0,988 | 0,827 | 0,782 | 0,826 | `9c2504bf` |
+| bge-m3 fine-tuné, hybride + réécriture | 0,859 | 0,965 | 0,988 | 0,898 | 0,780 | 0,769 | `d96fc302` |
+
+Bootstrap apparié (dense, après moins avant, intervalle à 95 %) : MRR +0,083 (+0,025 à +0,146),
+Recall@1 +0,129 (+0,059 à +0,212), Recall@5 +0,024 (-0,024 à +0,071), Coverage@10 -0,111
+(-0,175 à -0,049).
+
+**Fuite** : aucun chunk attendu, aucune question identique ni proche (Jaccard des mots >= 0,8)
+dans les 9 084 paires. Mais **75 des 85 questions** visent une notice dont d'autres sections ont
+servi à l'entraînement : MRR dense 0,848 -> 0,960 sur elles, 0,717 -> 0,583 sur les 10 autres.
+
+**Décision (D123)** : modèle **non servi**. Le gain vient des documents appris et n'est pas
+démontré au-delà ; la couverture du contexte donné au LLM baisse (significatif) ; le servir
+demanderait une conversion GGUF pour Ollama et la réindexation des 8 661 chunks. Le réglage servi
+reste bge-m3 d'origine (dense + réécriture, champion de la grille 3.3). Tag
+`model/embedding-bge-m3-finetuned-v1.0.0` (statut : archivé, non servi). Détails :
+[benchmark_retrieval.md](benchmark_retrieval.md#bge-m3-fine-tuné-étape-35).
 
 ## Vérification locale (test de fumée)
 
@@ -188,5 +227,7 @@ marqué `FAILED` avec le tag `superseded_by`.
 - Une seule graine, une seule configuration (pas de recherche d'hyperparamètres : un run
   coûte environ une heure de T4) ; la comparaison décisive est celle du benchmark 3.3.
 - L'agent appelle bge-m3 par Ollama ; servir le modèle affiné demanderait soit une conversion
-  GGUF pour Ollama, soit un service d'embedding local (sentence-transformers). Ce choix ne se fait
-  que si le benchmark montre un gain.
+  GGUF pour Ollama, soit un service d'embedding local (sentence-transformers).
+- Paires tirées des mêmes notices que le benchmark (sections différentes) : un prochain essai
+  devrait tenir à l'écart des documents entiers et garder plusieurs positifs par question (la
+  perte à un seul positif fait baisser la couverture du top 10).
