@@ -30,6 +30,7 @@ from langgraph.graph import END, START, StateGraph
 from sqlalchemy.orm import Session
 
 from app.medicines import DISCLAIMER, pill_infos
+from src.agent.prompts import DEFAULT_PROMPT_VERSION, TOOLS_PROMPT, answer_prompt
 from src.agent.safety import (
     CROSS_REFERENCE,
     REFUSAL_DOSE,
@@ -105,45 +106,6 @@ def detect_language(question: str) -> str:
     french = sum(1 for w in words if w in FRENCH_HINTS)
     accents = bool(re.search(r"[éèêàùçôîâ]", question.lower()))
     return "fr" if french >= 2 or accents else "en"
-
-
-TOOLS_PROMPT = """You are the tool planner of Tujya, a medicine-information assistant.
-Call the tools needed to answer the user's question about medicines:
-- check_interaction when the question is about two or more drugs together;
-- get_drug_info for facts about one drug (contraindications, warnings, mechanism);
-- search_documents for anything else, with an English query and the drug names as filters;
-- predict_toxicity only when the question is about toxicity (one or two molecules).
-Use the active ingredient names given. Do not answer the question yourself."""
-
-ANSWER_PROMPT = {
-    "fr": """Tu es Tujya, un assistant d'information sur les médicaments. Réponds en français.
-Règles absolues :
-- Réponds UNIQUEMENT à partir des sources numérotées ci-dessous. Si elles ne répondent pas, dis-le.
-- Chaque phrase se termine par le numéro de la source qui la soutient, entre crochets.
-  Exemple : « La metformine est contre-indiquée en cas d'insuffisance rénale sévère [2]. »
-- Ne donne JAMAIS de dose, de posologie, de nombre de comprimés ou de fréquence de prise.
-- N'écris JAMAIS qu'une association est « sûre » ou « sans danger ». S'il n'y a pas d'interaction
-  dans les sources, écris : « aucune interaction connue dans cette base de données ».
-- Ne donne aucun conseil d'horaire ou d'espacement des prises sauf si une source le dit ; cite-la.
-- Si une marque est reconnue, commence par dire quel principe actif elle contient, en citant la
-  source de la table des marques.
-- 3 à 6 phrases courtes, sans titre ni liste : d'abord la réponse directe (par exemple
-  la sévérité DDInter), puis ce que disent les notices ou les articles (mécanisme, effets,
-  surveillance).""",
-    "en": """You are Tujya, a medicine-information assistant. Answer in English.
-Absolute rules:
-- Answer ONLY from the numbered sources below. If they do not answer, say so.
-- Every sentence ends with the number of the source that supports it, in brackets.
-  Example: "Metformin is contraindicated in severe renal impairment [2]."
-- NEVER give a dose, a dosage, a number of tablets or how often to take a medicine.
-- NEVER write that a combination is "safe". If the sources show no interaction, write:
-  "no known interaction in this database".
-- Give no timing or spacing advice unless a source says it; cite it.
-- If a brand is recognised, first say which active ingredient it contains, citing the
-  brand-table source.
-- 3 to 6 short sentences, no heading, no list: first the direct answer (e.g. the DDInter
-  severity), then what the labels or articles say (mechanism, effects, monitoring).""",
-}
 
 
 def _summary(name: str, result: dict[str, Any] | None, error: str | None) -> str:
@@ -374,8 +336,11 @@ class TujyaAgent:
         *,
         top_k: int = 6,
         attribution_threshold: float = 0.0,
+        prompt_version: str = DEFAULT_PROMPT_VERSION,
     ) -> None:
         self.llm, self.toolbox, self.top_k = llm, toolbox, top_k
+        answer_prompt(prompt_version, "en")  # fails now on an unknown version
+        self.prompt_version = prompt_version
         self.attribution_threshold = attribution_threshold
         self.tools = {t.name: t for t in langchain_tools(toolbox, CHAT_TOOLS)}
         graph = StateGraph(AgentState)
@@ -560,7 +525,7 @@ class TujyaAgent:
             + (f"Marques reconnues : {'; '.join(brands)}\n" if brands else "")
             + f"Sources :\n{context}\n\nQuestion : {state['question']}"
         )
-        return [SystemMessage(ANSWER_PROMPT[language]), HumanMessage(user)]
+        return [SystemMessage(answer_prompt(self.prompt_version, language)), HumanMessage(user)]
 
     async def answer(self, state: AgentState) -> AgentState:
         started = time.perf_counter()
