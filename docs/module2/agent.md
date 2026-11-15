@@ -20,7 +20,7 @@ START -> understand --(question de dose)-----------------------> safety -> END
 | Nœud | Rôle | LLM |
 |---|---|---|
 | `understand` | noms de médicaments dans la question (français ou anglais : « warfarine » -> warfarin, « paracétamol » -> acetaminophen) et principes actifs des comprimés confirmés ; langue (fr / en) ; question de dose ? | non |
-| `tools` | le LLM choisit les appels d'outils (appel d'outils d'Ollama avec les trois outils du chat) ; le graphe ajoute les appels qu'une question exige toujours si le modèle les a oubliés (`check_interaction` dès deux médicaments, `search_documents` toujours), exécute chaque appel et l'enregistre (`chosen_by` : `llm` ou `rule`) | oui (planificateur) |
+| `tools` | le LLM choisit les appels d'outils (appel d'outils d'Ollama avec les trois outils du chat) ; le graphe ajoute les appels qu'une question exige toujours si le modèle les a oubliés (`check_interaction` dès deux médicaments, `search_documents` toujours), exécute chaque appel et l'enregistre (`chosen_by` : `llm` ou `rule`) ; des `pills` proposés par le LLM, seuls les comprimés confirmés par l'utilisateur sont gardés (étape 3.6 : qwen2.5:3b inventait des identifiants de classe) | oui (planificateur) |
 | `retrieve` | sources numérotées [1], [2]... : d'abord les résultats DDInter de `check_interaction`, puis les extraits de notice de `get_drug_info`, puis les résultats de `search_documents` (dense avec filtre par principe actif par défaut, D65 ; articles rétractés exclus) ; 8 au plus | non |
 | `answer` | le LLM répond à partir des seules sources numérotées, avec les règles dans le prompt système (français ou anglais) ; réponse diffusée phrase par phrase à travers le filtre de sécurité | oui |
 | `safety` | les règles ci-dessous sur toute la réponse : réécrire, ou refuser | non |
@@ -100,6 +100,25 @@ Configuration (`TUJYA_*`) : `OLLAMA_URL` (compose : `http://ollama:11434`), `LLM
 
 En ligne de commande (venv du projet `.venv`) :
 `python -m src.agent.ask "question" [--pills 9 120]`.
+
+## Exemple sur une classe de v2 (vrais modèles, 2026-11-15, étape 3.6)
+
+`python -m src.agent.ask "Puis-je prendre ce comprimé avec de la warfarine ?" --pills 151`
+(classe 151, citalopram, ajoutée en v2 et identifiée sur une photo du split de test par
+`identify_pills`). Avant la correction, le planificateur avait appelé `check_interaction` avec
+`"pills": [123, 456]`, deux classes inventées : les sources mélangeaient l'halopéridol et la
+réponse s'appuyait sur l'interaction « Major » halopéridol + citalopram. Après :
+
+```
+tool check_interaction (llm) {'drugs': ['warfarin', 'citalopram']} -> 1 paire(s) sur 1 avec une interaction connue dans cette base de données.
+tool search_documents (rule) {'query': 'Puis-je prendre ce comprimé avec de la warfarine ?', 'ingredients': ['warfarin', 'citalopram']} -> 5 documents
+[1] DDInter 2.0: warfarin + citalopram (Moderate) https://ddinter2.scbdd.com/
+[2] Warfarin label (Warfarin Sodium): Drug interactions ...
+
+[1] DDInter 2.0 liste une interaction entre citalopram et la warfarine avec gravité Moderate.
+
+Information uniquement, consultez un pharmacien ou un médecin.
+```
 
 ## Exemple (vrais modèles, 2026-10-28)
 
