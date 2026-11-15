@@ -1703,3 +1703,24 @@ vient des 75 questions dont la notice a fourni d'autres sections aux paires d'en
 les scores ; servir le modèle fine-tuné par une conversion GGUF et une réindexation complète
 pour un gain non démontré hors des documents appris. Détails :
 [docs/module2/benchmark_retrieval.md](module2/benchmark_retrieval.md).
+
+**D124. Génération : qwen2.5:3b avec le prompt v1 reste le réglage de l'agent, choisi sur une
+grille notée par RAGAS et MLflow GenAI (étape 3.4).** Trois configurations (le LLM fait tourner
+tout l'agent ; récupération servie de D123) sur les 96 questions : qwen2.5:3b avec le prompt v1
+(servi) et v2 (réponse directe d'abord, un fait d'une source par phrase), puis llama3.2:3b avec
+le meilleur des deux (v1). Juge unique phi4-mini (autre famille que les générateurs ; qwen2.5:3b
+se contredisait comme juge, gemma3:4b de D67 ne tient qu'à moitié sur le GPU), servi avec toutes
+ses couches sur le GPU (`phi4-mini-judge`, Modelfile versionné) : sinon ~5 min par question.
+Notes : RAGAS 0.4.4 (fidélité, pertinence, précision et rappel du contexte), `mlflow.genai.evaluate`
+(Correctness, Safety, scorers citation / dose / avertissement), citations, sécurité. Règle écrite
+avant les runs (config/rag_generation.yaml) : barrières de sécurité déterministes, puis moyenne
+de cinq métriques, budget 15 s médianes par question, à 0,01 près le plus rapide. Le verdict
+Safety du juge a été retiré des barrières avant les runs (un essai de 3 questions l'a vu juger
+« non sûre » une interaction DDInter citée). Résultats : qwen v1 0,761 en 4,9 s, qwen v2 0,708
+(v1 meilleur : +0,050 par question, intervalle à 95 % [+0,010 ; +0,089]), llama3.2:3b 0,768 mais
+24 s (il ne tient pas avec bge-m3 sur les 4 Go, Ollama échange les modèles à chaque question ;
+avance non significative, [-0,028 ; +0,069]). Champion : qwen v1 (Registry `tujya-rag-generation`
+v1, alias `champion` des prompts v1), challenger : qwen v2. Grille réduite à deux LLM plutôt que
+de réduire les questions (une évaluation complète : 1 h 30 à 2 h 30 sur ce PC). Rejeté : un
+troisième LLM (gemma3:4b déborde sur le CPU, 12 s par réponse en D57) ; changer la règle après
+coup pour llama. Détails : [docs/module2/benchmark_generation.md](module2/benchmark_generation.md).
