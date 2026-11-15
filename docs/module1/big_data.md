@@ -47,14 +47,26 @@ Corpus RAG traité par Spark (espace v1, D90) : 975 sections de notices lues, 96
 1 570 résumés, 1 565 gardés (4 non anglais ou trop courts, 1 quasi-doublon MinHash) ;
 8 642 chunks (3 997 documents) contre 8 661 pour le corpus v1 en pandas.
 
+Corpus RAG v2 (16/11, D126), servi par l'application : les deux espaces de collecte
+(`data/rag` pour les 82 principes actifs de v1, `data/rag_v2` pour les 93 principes actifs des
+nouvelles classes : 90 notices openFDA, 3 413 résumés PubMed, au plus 40 par principe actif).
+2 065 sections de notices lues, 2 048 gardées ; 4 983 résumés lus (4 935 PMID distincts),
+4 878 gardés (7 quasi-doublons MinHash) ; 8 611 paires DDInter entre les principes actifs des
+380 classes. Résultat : **27 302 chunks, 13 660 documents** (171 notices, 4 878 résumés,
+8 611 paires), 175 principes actifs couverts sur 176 (le dernier, « inert ingredients », est
+le placebo d'une plaquette, pas un médicament : paramètre `bigdata.rag.not_drugs`).
+
 ## Limites
 
 - C3PI ne dit pas quel comprimé physique est photographié : le test mesure la
   généralisation à une nouvelle session de prise de vue (autre appareil, fond ou lumière),
   pas à un autre comprimé du même produit (D89). 347 des 380 classes n'ont qu'un paquet NDC11.
 - Les images ePillID ne sont pas ajoutées à l'entraînement (recadrages d'images C3PI, D90).
-- La collecte RAG des nouvelles classes (RxNav, openFDA, PubMed à 40 résumés par principe
-  actif) est prête mais attend un `CONTACT_EMAIL` dans `.env` (D90).
+- Collecte RAG v2 (D126) : 3 principes actifs n'ont pas de notice openFDA (fer carbonyle,
+  rosiglitazone, ticlopidine : retirés du marché américain ou absents de l'API), ils ont des
+  résumés PubMed et des paires DDInter. Les principes actifs de v1 gardent leurs 20 résumés
+  (ceux des nouvelles classes en ont jusqu'à 40) : les chunks attendus des benchmarks restent
+  ceux sur lesquels les questions ont été écrites.
 - La réexécution de l'étape `prepare` (jeu v1) avec OpenCV 5.0 a déplacé de quelques pixels
   91 des 4 206 boîtes ; la version d'origine reste dans le cache DVC (dvc.lock de `v2.1.0-ci`).
 
@@ -117,11 +129,11 @@ python -m src.data.spark.submit quality
 python -m src.data.spark.submit split
 python -m src.data.spark.submit augment
 python -m src.data.spark.submit epillid
-python -m src.data.spark.rag_sources ingredients     # .venv : RxNav, openFDA, PubMed (polis)
-python -m src.data.spark.rag_sources labels
+python -m src.data.spark.rag_sources ingredients     # .venv : RxNav, openFDA, PubMed (polis,
+python -m src.data.spark.rag_sources labels          #   CONTACT_EMAIL dans .env)
 python -m src.data.spark.rag_sources pubmed
-dvc add data/rag_v2
-python -m src.data.spark.submit rag
+dvc add data/rag_v2/raw data/rag_v2/interim data/rag_v2/manifest.json data/rag_v2/*.csv
+python -m src.data.spark.submit rag                  # ou dvc repro spark_rag
 .venv-train/Scripts/python -m src.data.spark.log_stats   # MLflow : docker compose up -d mlflow
 # ou, une fois les données en place : dvc repro ; dvc dag ; dvc metrics show
 ```
