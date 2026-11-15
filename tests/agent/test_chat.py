@@ -235,3 +235,22 @@ def test_citations_carry_document_metadata(client: TestClient) -> None:
     documents = [c for c in body["citations"] if c["doc_type"] in ("label", "abstract")]
     assert documents and all(c["doc_id"] and c["license"] for c in documents)
     assert all(c["rerank_score"] is None for c in body["citations"])  # reranking off by default
+
+
+def test_pill_ids_invented_by_the_planner_are_dropped(
+    client: TestClient, llm: FakeChatModel
+) -> None:
+    """Found on the real agent (step 3.6): qwen2.5:3b passed "pills": [123, 456] for a
+    question about one confirmed pill; check_interaction then reported other medicines."""
+    llm.tool_calls = [
+        {"name": "check_interaction", "args": {"drugs": ["warfarin"], "pills": [9, 5, 999]}},
+    ]
+    body = ask(client, "Can I take this pill with warfarin?", pills=[5])
+    (check,) = [c for c in body["tool_calls"] if c["name"] == "check_interaction"]
+    assert check["chosen_by"] == "llm" and check["args"]["pills"] == [5]  # 9 and 999 dropped
+    assert {"warfarin", "losartan", "hydrochlorothiazide"} <= set(check["args"]["drugs"])
+    llm.tool_calls = [{"name": "check_interaction", "args": {"pills": [123, 456]}}]
+    body = ask(client, "Can I take this pill with warfarin?", pills=[5])
+    (check,) = [c for c in body["tool_calls"] if c["name"] == "check_interaction"]
+    assert "pills" not in check["args"]
+    assert {"warfarin", "losartan", "hydrochlorothiazide"} <= set(check["args"]["drugs"])

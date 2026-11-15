@@ -423,11 +423,19 @@ class TujyaAgent:
             for c in calls
             if c.get("name") in self.tools
         ][:MAX_TOOL_CALLS]
+        confirmed = set(state.get("pills", []))
         for call in planned:
             if call["name"] == "check_interaction":
                 call["args"]["drugs"] = self._with_brand_ingredients(
                     list(call["args"].get("drugs") or []), ingredients
                 )
+                # A small model invents pill class ids ("pills": [123, 456]): only the pills
+                # the user confirmed are kept; their ingredients are already in `drugs`.
+                pills = [p for p in call["args"].get("pills") or [] if p in confirmed]
+                if pills:
+                    call["args"]["pills"] = pills
+                else:
+                    call["args"].pop("pills", None)
         names = {c["name"] for c in planned}
         if len(ingredients) >= 2 and "check_interaction" not in names:
             planned.append(
