@@ -20,6 +20,10 @@ and `--register` registers the champion and challenger (registered model
     # from the repository root, project venv (.venv) active; Ollama and MLflow running
     python -m src.benchmark.bench_generation --llm qwen2.5:3b --prompt v1
     python -m src.benchmark.bench_generation --select [--register]
+    # the champion again on the corpus of the 380 classes (D126): answers with
+    # `bench_answers --corpus v2`, then
+    python -m src.benchmark.bench_generation --llm qwen2.5:3b --prompt v1 --corpus v2
+    python -m src.benchmark.bench_generation --select --corpus v2   # compared per corpus
 """
 
 from __future__ import annotations
@@ -49,7 +53,7 @@ from src.agent.safety import (
     sentence_problems,
     split_sentences,
 )
-from src.benchmark.bench_answers import EXPERIMENT, answers_path, config_name
+from src.benchmark.bench_answers import COLLECTIONS, EXPERIMENT, answers_path, config_name
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = ROOT / "config" / "rag_generation.yaml"
@@ -439,12 +443,15 @@ def summarize(entries: list[dict[str, Any]]) -> dict[str, float]:
     return {k: round(float(v), 4) for k, v in metrics.items()}
 
 
-def evaluate_config(llm: str, prompt: str, cfg: dict[str, Any], *, log: bool = True) -> Path:
+def evaluate_config(
+    llm: str, prompt: str, cfg: dict[str, Any], *, log: bool = True, corpus: str = "v1"
+) -> Path:
     from langchain_ollama import ChatOllama
 
     base_url = os.environ.get("TUJYA_OLLAMA_URL", "http://127.0.0.1:11434")
-    name = config_name(llm, prompt)
-    rows = [json.loads(line) for line in answers_path(llm, prompt).read_text("utf-8").splitlines()]
+    name = config_name(llm, prompt, corpus)
+    path = answers_path(llm, prompt, corpus)
+    rows = [json.loads(line) for line in path.read_text("utf-8").splitlines()]
     judge = ChatOllama(
         model=cfg["judge"], base_url=base_url, temperature=0, num_ctx=4096, num_predict=3
     )
@@ -471,7 +478,7 @@ def evaluate_config(llm: str, prompt: str, cfg: dict[str, Any], *, log: bool = T
     # twice (on the 3rd and the 43rd of 96 answers): the two never share a process now.
     command = [sys.executable, "-m", "src.benchmark.bench_generation", "--ragas-only"]
     subprocess.run(  # noqa: S603 (this module, with the configuration's own names)
-        [*command, "--llm", llm, "--prompt", prompt], check=True, cwd=ROOT
+        [*command, "--llm", llm, "--prompt", prompt, "--corpus", corpus], check=True, cwd=ROOT
     )
     for qid, scores in run_ragas(rows, cfg, base_url, compute=False).items():
         entries[qid]["ragas"] = scores
@@ -489,6 +496,7 @@ def evaluate_config(llm: str, prompt: str, cfg: dict[str, Any], *, log: bool = T
         "ragas_version": RAGAS_VERSION,
         "ragas_contexts": cfg["ragas"]["contexts"],
         "questions": len(rows),
+        "corpus": corpus,
     }
     run_id = None
     if log:
@@ -634,9 +642,10 @@ def best_prompt(results: dict[str, dict[str, Any]], llm: str, selection: dict[st
     return str(results[ranked[0]]["params"]["prompt_version"])
 
 
-def cmd_select(cfg: dict[str, Any], register: bool) -> None:
+def cmd_select(cfg: dict[str, Any], register: bool, corpus: str = "v1") -> None:
     selection = cfg["selection"]
-    results = all_results()
+    # One corpus at a time (D126): the scores of two corpora are not comparable.
+    results = {n: r for n, r in all_results().items() if r["params"].get("corpus", "v1") == corpus}
     for name, record in results.items():
         metrics = record["metrics"]
         failed = passes_gates(metrics, selection["gates"])
@@ -755,10 +764,11 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--ragas-only", action="store_true", help="fill the RAGAS cache only")
     parser.add_argument("--select", action="store_true", help="apply the selection rule")
     parser.add_argument("--register", action="store_true", help="select: register the winners")
+    parser.add_argument("--corpus", default="v1", choices=sorted(COLLECTIONS))
     args = parser.parse_args(argv)
     cfg = load_config()
     if args.select:
-        cmd_select(cfg, args.register)
+        cmd_select(cfg, args.register, args.corpus)
         return
     if not args.llm or not args.prompt:
         parser.error("--llm and --prompt (or --select)")
@@ -769,10 +779,11 @@ def main(argv: list[str] | None = None) -> None:
         print(f"best prompt: {prompt}")
     if args.ragas_only:
         base_url = os.environ.get("TUJYA_OLLAMA_URL", "http://127.0.0.1:11434")
-        rows = [json.loads(line) for line in answers_path(args.llm, prompt).open(encoding="utf-8")]
+        path = answers_path(args.llm, prompt, args.corpus)
+        rows = [json.loads(line) for line in path.open(encoding="utf-8")]
         run_ragas(rows, cfg, base_url)
         return
-    evaluate_config(args.llm, prompt, cfg, log=not args.no_log)
+    evaluate_config(args.llm, prompt, cfg, log=not args.no_log, corpus=args.corpus)
 
 
 if __name__ == "__main__":

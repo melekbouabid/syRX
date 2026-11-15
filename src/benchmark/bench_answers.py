@@ -5,7 +5,9 @@ PubMed abstracts): question, draft (before the safety node), answer, sources wit
 text, tool calls, safety report, timings. Step 2 is bench_generation.py.
 
 A configuration is the LLM (`--llm`, an Ollama model) and the answer prompt version
-(`--prompt`, src/agent/prompts.py); retrieval is the agent's served setting (step 3.3, D123).
+(`--prompt`, src/agent/prompts.py); retrieval is the agent's served setting (step 3.3, D123),
+on the corpus `--corpus` (v1: the 150 first classes, collection tujya_chunks, the corpus of
+step 3.4; v2: the 380 classes, collection tujya_chunks_v2, D126).
 With `--trace`, MLflow traces every question (experiment `tujya-rag-generation`): LangChain
 autolog records the LangGraph nodes, the LLM calls and one span per tool call, under a root
 span `question` tagged with the configuration and the question id.
@@ -33,15 +35,19 @@ ROOT = Path(__file__).resolve().parents[2]
 QUESTIONS = ROOT / "src" / "benchmark" / "rag_questions.jsonl"
 GENERATION_DIR = ROOT / "data" / "processed" / "rag" / "bench" / "generation"
 EXPERIMENT = "tujya-rag-generation"
+# Qdrant collection of each corpus (src/benchmark/bench_grid.py COLLECTIONS, same names).
+COLLECTIONS = {"v1": "tujya_chunks", "v2": "tujya_chunks_v2"}
 
 
-def config_name(llm: str, prompt: str) -> str:
-    """`qwen2.5:3b` + `v1` -> `qwen2.5-3b__v1` (a folder and MLflow-friendly name)."""
-    return f"{llm.replace(':', '-').replace('/', '-')}__{prompt}"
+def config_name(llm: str, prompt: str, corpus: str = "v1") -> str:
+    """`qwen2.5:3b` + `v1` -> `qwen2.5-3b__v1` (a folder and MLflow-friendly name); on the
+    corpus v2: `qwen2.5-3b__v1__corpus-v2`."""
+    name = f"{llm.replace(':', '-').replace('/', '-')}__{prompt}"
+    return name if corpus == "v1" else f"{name}__corpus-{corpus}"
 
 
-def answers_path(llm: str, prompt: str) -> Path:
-    return GENERATION_DIR / config_name(llm, prompt) / "answers.jsonl"
+def answers_path(llm: str, prompt: str, corpus: str = "v1") -> Path:
+    return GENERATION_DIR / config_name(llm, prompt, corpus) / "answers.jsonl"
 
 
 def record_of(item: dict[str, Any], state: dict[str, Any], seconds: float, s: Settings) -> dict:
@@ -113,14 +119,15 @@ async def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--resume", action="store_true", help="keep the answers already written")
     parser.add_argument("--trace", action="store_true", help="MLflow traces (tujya-rag-generation)")
     parser.add_argument("--limit", type=int, default=0, help="first N questions only (trial)")
+    parser.add_argument("--corpus", default="v1", choices=sorted(COLLECTIONS))
     args = parser.parse_args(argv)
-    overrides = {}
+    overrides: dict[str, str] = {"qdrant_collection": COLLECTIONS[args.corpus]}
     if args.llm:
         overrides["llm_model"] = args.llm
     if args.prompt:
         overrides["llm_prompt_version"] = args.prompt
     settings = Settings(**overrides)
-    out = answers_path(settings.llm_model, settings.llm_prompt_version)
+    out = answers_path(settings.llm_model, settings.llm_prompt_version, args.corpus)
     agent = AgentHolder(settings, make_engine(settings.pharma_database_url)).agent()
     items = [json.loads(line) for line in QUESTIONS.read_text(encoding="utf-8").splitlines()]
     if args.limit:
@@ -133,7 +140,8 @@ async def main(argv: list[str] | None = None) -> None:
     mlflow = start_tracing(settings) if args.trace else None
     tags = {
         "benchmark": "generation",
-        "config": config_name(settings.llm_model, settings.llm_prompt_version),
+        "config": config_name(settings.llm_model, settings.llm_prompt_version, args.corpus),
+        "corpus": args.corpus,
         "llm": settings.llm_model,
         "prompt_version": settings.llm_prompt_version,
     }

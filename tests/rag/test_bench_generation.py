@@ -33,6 +33,25 @@ def row(qid: str, *, answer: str = "", reference: str = "ref", sources: int = 3)
 def test_config_name_and_answers_path() -> None:
     assert config_name("qwen2.5:3b", "v1") == "qwen2.5-3b__v1"
     assert answers_path("llama3.2:3b", "v2").parts[-2:] == ("llama3.2-3b__v2", "answers.jsonl")
+    # The corpus of the 380 classes (D126) keeps its own answers and scores.
+    assert config_name("qwen2.5:3b", "v1", "v2") == "qwen2.5-3b__v1__corpus-v2"
+    assert answers_path("qwen2.5:3b", "v1", "v2").parent.name == "qwen2.5-3b__v1__corpus-v2"
+
+
+def test_selection_compares_the_configurations_of_one_corpus(tmp_path, monkeypatch, capsys):
+    selection = {"gates": {}, "score": ["ragas_faithfulness"], "tie": 0.01, "latency_budget_s": 15}
+    for name, corpus, score in (("on-v1", None, 0.9), ("on-v2", "v2", 0.8)):
+        params = {"llm": "m", "prompt_version": "v1", **({"corpus": corpus} if corpus else {})}
+        metrics = {"ragas_faithfulness": score, "median_seconds": 5}
+        record = {"config": name, "params": params, "metrics": metrics}
+        (tmp_path / f"{name}.json").write_text(json.dumps(record), encoding="utf-8")
+    read = bg.all_results
+    monkeypatch.setattr(bg, "all_results", lambda: read(tmp_path))
+    bg.cmd_select({"selection": selection}, register=False, corpus="v2")
+    out = capsys.readouterr().out
+    assert "champion: on-v2" in out and "on-v1" not in out  # a run before D126 is corpus v1
+    bg.cmd_select({"selection": selection}, register=False)
+    assert "champion: on-v1" in capsys.readouterr().out
 
 
 def test_ragas_sample_strips_citations_and_fixed_texts() -> None:
