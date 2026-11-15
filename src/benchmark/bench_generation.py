@@ -233,8 +233,9 @@ def _ragas_batch(
             num_predict=int(cfg["ragas"]["max_tokens"]),
         )
     )
+    on_cpu = {"num_gpu": 0} if cfg.get("judge_embeddings_on_cpu") else {}
     embeddings = LangchainEmbeddingsWrapper(
-        OllamaEmbeddings(model=cfg["judge_embeddings"], base_url=base_url)
+        OllamaEmbeddings(model=cfg["judge_embeddings"], base_url=base_url, **on_cpu)
     )
     result = evaluate(
         EvaluationDataset.from_list(samples),
@@ -434,7 +435,7 @@ def evaluate_config(llm: str, prompt: str, cfg: dict[str, Any], *, log: bool = T
     name = config_name(llm, prompt)
     rows = [json.loads(line) for line in answers_path(llm, prompt).read_text("utf-8").splitlines()]
     judge = ChatOllama(
-        model=cfg["judge"], base_url=base_url, temperature=0, num_ctx=2048, num_predict=3
+        model=cfg["judge"], base_url=base_url, temperature=0, num_ctx=4096, num_predict=3
     )
     entries: dict[str, dict[str, Any]] = {}
     started = time.perf_counter()
