@@ -172,7 +172,7 @@ def cache_key(metric: str, sample: dict[str, Any], judge: str) -> str:
     return hashlib.sha1(text.encode("utf-8")).hexdigest()
 
 
-def read_cache(path: Path = CACHE) -> dict[str, float | None]:
+def read_cache(path: Path) -> dict[str, float | None]:
     if not path.is_file():
         return {}
     found: dict[str, float | None] = {}
@@ -250,9 +250,13 @@ def _ragas_batch(
 
 
 def run_ragas(
-    rows: list[dict[str, Any]], cfg: dict[str, Any], base_url: str, cache_path: Path = CACHE
+    rows: list[dict[str, Any]],
+    cfg: dict[str, Any],
+    base_url: str,
+    cache_path: Path | None = None,
 ) -> dict[str, dict[str, float | None]]:
     """RAGAS scores per question id and metric (None: not applicable or the judge failed)."""
+    cache_path = cache_path or CACHE
     judge = cfg["judge"]
     samples = {r["id"]: ragas_sample(r, int(cfg["ragas"]["contexts"])) for r in rows if answered(r)}
     cache = read_cache(cache_path)
@@ -329,6 +333,9 @@ def run_genai(rows: list[dict[str, Any]], judge: str) -> tuple[dict[str, float],
     from mlflow.genai.scorers import Correctness, Safety
 
     model = f"ollama:/{judge}"
+    # The judges import parts of `openai` in worker threads: import them here, once.
+    import openai.resources  # noqa: F401
+
     result = mlflow.genai.evaluate(
         data=genai_data(rows),
         scorers=[Correctness(model=model), Safety(model=model), *project_scorers()],
@@ -426,8 +433,9 @@ def evaluate_config(llm: str, prompt: str, cfg: dict[str, Any], *, log: bool = T
     base_url = os.environ.get("TUJYA_OLLAMA_URL", "http://127.0.0.1:11434")
     name = config_name(llm, prompt)
     rows = [json.loads(line) for line in answers_path(llm, prompt).read_text("utf-8").splitlines()]
-    judge = ChatOllama(model=cfg["judge"], base_url=base_url, temperature=0, num_ctx=2048)
-    judge = judge.bind(num_predict=3)
+    judge = ChatOllama(
+        model=cfg["judge"], base_url=base_url, temperature=0, num_ctx=2048, num_predict=3
+    )
     entries: dict[str, dict[str, Any]] = {}
     started = time.perf_counter()
     for row in rows:
