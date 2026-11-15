@@ -129,7 +129,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | Base vectorielle consultable : Qdrant (tableau de bord), page « Documents » et `GET /api/documents` (documents indexés, métadonnées, chunks) | ✅ | [src/rag/qdrant_store.py](src/rag/qdrant_store.py), [src/rag/documents.py](src/rag/documents.py), [backend/app/routers/documents.py](backend/app/routers/documents.py), [DocumentsPage.tsx](frontend/src/pages/DocumentsPage.tsx), [docs/module2/rag.md](docs/module2/rag.md#consulter-les-documents-indexés) (captures 27 à 29, D113-D114) |
 | Tool calling / MCP | ✅ | [src/agent/tools.py](src/agent/tools.py), [src/mcp_server/](src/mcp_server/) |
 | LangChain et/ou LangGraph | ✅ | [src/agent/graph.py](src/agent/graph.py) |
-| Benchmark de la récupération et de la génération | ✅ | [src/benchmark/](src/benchmark/) ; grille de récupération de 27 configurations (embeddings, modes, découpage, réécriture, rerankers, bge-m3 fine-tuné), un run MLflow chacune (`tujya-rag-retrieval`), champion enregistré et servi : [docs/module2/benchmark_retrieval.md](docs/module2/benchmark_retrieval.md) (D123) |
+| Benchmark de la récupération et de la génération | ✅ | [src/benchmark/](src/benchmark/) ; grille de récupération de 27 configurations (embeddings, modes, découpage, réécriture, rerankers, bge-m3 fine-tuné), un run MLflow chacune (`tujya-rag-retrieval`), champion enregistré et servi : [docs/module2/benchmark_retrieval.md](docs/module2/benchmark_retrieval.md) (D123) ; génération : RAGAS 0.4.4 (fidélité, pertinence, précision et rappel du contexte) sur les 96 questions, 2 LLM et 2 versions du prompt, MLflow 3 GenAI (traces de l'agent, Prompt Registry, `mlflow.genai.evaluate` avec Correctness, Safety et scorers du projet), champion enregistré (`tujya-rag-generation`) : [docs/module2/benchmark_generation.md](docs/module2/benchmark_generation.md) (D124) |
 | Interface web | ✅ | chat dans [frontend/](frontend/) |
 | Dépôt GitHub documenté avec commits réguliers | ✅ | `git log`, tags git, [docs/git_workflow.md](docs/git_workflow.md) (branches, Conventional Commits, hooks) |
 | Rapport technique | ✅ | [rapport du module 2](docs/module2/rapport_module2_ai_engineering.pdf) |
@@ -150,7 +150,8 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | Récupération servie depuis l'étape 3.3, dense + réécriture (85 questions, `tujya-rag-retrieval` champion) : Recall@5 / MRR / temps | 0,941 / 0,834 / 389 ms |
 | Phrases citées soutenues par leur source (juge local) | 94,0 % |
 | Doses chiffrées / « sûr » dans les réponses ; questions de dose refusées | 0 / 0 ; 2/2 |
-| RAGAS : fidélité / précision du contexte | 0,979 / 0,809 |
+| RAGAS sur les 96 questions, réglage servi qwen2.5:3b + prompt v1 (étape 3.4, juge phi4-mini) : fidélité / pertinence / précision / rappel du contexte | 0,931 / 0,704 / 0,940 / 0,695 |
+| MLflow GenAI (même réglage) : Correctness / citation présente / aucune dose / avertissement | 0,536 / 100 % / 100 % / 100 % |
 | Temps de réponse moyen (RTX 2050) | 4,7 s |
 
 Détails : [module 1](docs/module1/README.md#résultats),

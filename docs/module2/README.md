@@ -28,7 +28,7 @@ Rapport technique : [docs/module2/rapport_module2_ai_engineering.pdf](rapport_mo
 | MCP | serveur MCP (SDK officiel, stdio et HTTP limité à 127.0.0.1), mêmes outils, même code : [src/mcp_server/server.py](../../src/mcp_server/server.py) ; essai de bout en bout : [src/mcp_server/smoke.py](../../src/mcp_server/smoke.py) ; [docs/module2/mcp.md](mcp.md) |
 | LangChain et/ou LangGraph | graphe LangGraph comprendre → outils → récupération → réponse citée → contrôle de sécurité : [src/agent/graph.py](../../src/agent/graph.py) ; câblage pour l'API : [src/agent/runtime.py](../../src/agent/runtime.py) ; schéma : [docs/module2/assets/agent_graph.png](assets/agent_graph.png) |
 | Benchmark de la récupération | grille de 27 configurations (embeddings bge-m3 / multilingual-e5-base / all-MiniLM-L6-v2 / bge-m3 fine-tuné, dense / hybride / BM25, découpage, réécriture, 5 rerankers), Recall@k, MRR, nDCG@10, latence D96, un run MLflow par configuration (`tujya-rag-retrieval`), champion enregistré avec alias : [src/benchmark/bench_grid.py](../../src/benchmark/bench_grid.py), [config/rag_grid.yaml](../../config/rag_grid.yaml), [src/benchmark/grid/](../../src/benchmark/grid/) ; [benchmark_retrieval.md](benchmark_retrieval.md) (D123) ; mesures antérieures : [bench_retrieval.py](../../src/benchmark/bench_retrieval.py), [results_retrieval.json](../../src/benchmark/results_retrieval.json) |
-| Benchmark de la génération | réponses, sécurité, citations vérifiées par un juge local, RAGAS : [src/benchmark/bench_answers.py](../../src/benchmark/bench_answers.py), [bench_generation.py](../../src/benchmark/bench_generation.py), [bench_judge_control.py](../../src/benchmark/bench_judge_control.py) ; jeu de 88 questions : [src/benchmark/rag_questions.jsonl](../../src/benchmark/rag_questions.jsonl) ; [docs/module2/benchmark.md](benchmark.md) |
+| Benchmark de la génération | grille LLM (qwen2.5:3b, llama3.2:3b) × prompt (v1, v2, [src/agent/prompts.py](../../src/agent/prompts.py)) sur les 96 questions : sécurité, citations vérifiées par un juge local, RAGAS 0.4.4 (4 métriques, toutes les réponses), MLflow 3 GenAI (traces LangGraph avec un span par outil, Prompt Registry, `mlflow.genai.evaluate` avec Correctness, Safety et 3 scorers du projet), un run par configuration (`tujya-rag-generation`), champion enregistré avec alias : [bench_answers.py](../../src/benchmark/bench_answers.py), [bench_generation.py](../../src/benchmark/bench_generation.py), [register_prompts.py](../../src/benchmark/register_prompts.py), [config/rag_generation.yaml](../../config/rag_generation.yaml), [src/benchmark/generation/](../../src/benchmark/generation/) ; [benchmark_generation.md](benchmark_generation.md) (D124) ; premier benchmark (88 questions) : [benchmark.md](benchmark.md) |
 | Interface web | panneau « Ask about your pills » : [frontend/src/pages/ChatPanel.tsx](../../frontend/src/pages/ChatPanel.tsx) ; `POST /api/chat` (JSON ou flux SSE) : [backend/app/routers/chat.py](../../backend/app/routers/chat.py) ; captures [08](../screenshots/08-chat-empty.jpg) à [11](../screenshots/11-chat-dose-refused.jpg) |
 | Sécurité des réponses | jamais de dose, jamais « sûr », horaires seulement si la source les donne, avertissement : [src/agent/safety.py](../../src/agent/safety.py), [tests/agent/test_safety.py](../../tests/agent/test_safety.py) |
 | Dépôt GitHub documenté, commits réguliers | ce README, [README.md](../../README.md), `git log`, tags git, [docs/git_workflow.md](../git_workflow.md) (branches, Conventional Commits, hooks) |
@@ -58,7 +58,13 @@ Grille de l'étape 3.3 (85 questions, [benchmark_retrieval.md](benchmark_retriev
 | hybride + réécriture + reranker MiniLM-L12 (20 candidats) | 0,894 | 0,965 | 0,922 | 11 251 |
 | bge-m3 fine-tuné, dense (non servi) | 0,906 | 0,929 | 0,916 | 393 (run) |
 
-| Génération (qwen2.5:3b, juge gemma3:4b) | Résultat |
+| Génération, grille de l'étape 3.4 (96 questions, juge phi4-mini, D124) | Note | Fidélité | Pertinence | Correctness | s / question |
+|---|---:|---:|---:|---:|---:|
+| **qwen2.5:3b + prompt v1 (champion, servi)** | **0,761** | **0,931** | **0,704** | **0,536** | **4,9** |
+| qwen2.5:3b + prompt v2 (challenger) | 0,708 | 0,880 | 0,673 | 0,378 | 4,5 |
+| llama3.2:3b + prompt v1 (hors budget de 15 s) | 0,768 | 0,906 | 0,747 | 0,512 | 24,2 |
+
+| Premier benchmark de génération (qwen2.5:3b, juge gemma3:4b, 88 questions) | Résultat |
 |---|---:|
 | Phrases citées soutenues par leur source | 94,0 % |
 | Phrases avec citation | 69,8 % |
