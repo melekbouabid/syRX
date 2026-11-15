@@ -1,5 +1,8 @@
-"""Index the RAG corpus: data/processed/rag/corpus/chunks.parquet -> Qdrant collection
-tujya_chunks (or the SQL table rag_chunks with `--store sql`).
+"""Index the RAG corpus: data/processed/rag/corpus_v2/chunks (Parquet partitioned by
+document type, Spark job `rag`, 380 classes, D126) -> Qdrant collection tujya_chunks_v2 (or
+the SQL table rag_chunks with `--store sql`). The corpus of the 150 first classes
+(data/processed/rag/corpus/chunks.parquet, collection tujya_chunks) is indexed the same way
+with `--chunks` and TUJYA_QDRANT_COLLECTION.
 
 Idempotent: each chunk keeps a SHA-256 hash of its text, metadata and embedding model, so a
 second run embeds nothing, a changed chunk is re-embedded, and a chunk gone from the corpus
@@ -221,8 +224,8 @@ def main(argv: list[str] | None = None) -> None:
         source = ChunkStore(make_engine(args.database_url), args.dim)
         print(json.dumps(copy_index(source, store)))
         return
-    if not args.chunks.is_file():
-        sys.exit(f"{args.chunks} not found: run `python -m src.data.corpus corpus` or dvc pull")
+    if not args.chunks.exists():  # a Parquet file (v1) or a partitioned folder (v2, Spark)
+        sys.exit(f"{args.chunks} not found: run `dvc repro spark_rag` or `dvc pull`")
     if args.pull:
         asyncio.run(pull_models(args.ollama_url, [args.model, settings.llm_model]))
     rows = read_chunks(args.chunks)

@@ -3,7 +3,8 @@
 docker compose runs the server (`qdrant`, http://127.0.0.1:6333, dashboard on /dashboard);
 the tests use the client's local in-memory mode (`QdrantClient(":memory:")`), same API.
 
-- Collection `tujya_chunks` (TUJYA_QDRANT_COLLECTION); named vector `dense` (cosine, the
+- Collection `tujya_chunks_v2` for the app (TUJYA_QDRANT_COLLECTION, D126; `tujya_chunks`,
+  the default here, holds the corpus of the 150 first classes); named vector `dense` (cosine, the
   embedding model's dimension) and sparse vector `bm25` with the IDF modifier (step 3.2,
   D116, src/rag/sparse.py). Hybrid search = both lists fused by Qdrant (RRF, k = 60).
 - Point id: UUID v5 of the chunk id (Qdrant ids are integers or UUIDs); the chunk id stays

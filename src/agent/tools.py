@@ -149,9 +149,9 @@ class Toolbox:
 
     def indexed_ingredients(self) -> frozenset[str]:
         """Active ingredients that have at least one indexed document (label, abstract or
-        DDInter row). The served corpus is still the one of the 150 classes of v1 (D119): the
-        ingredients of the 230 new classes of v2 have pill data and DDInter interactions, but no
-        indexed document yet."""
+        DDInter row). The served corpus covers the 380 classes (D126): 175 of their 176 names,
+        the placebo tablets of a pack ("inert ingredients") being no medicine; an index of the
+        corpus of v1 (TUJYA_QDRANT_COLLECTION=tujya_chunks) covers 82."""
         retriever = self.retriever()
         if self._indexed is None or self._indexed[0] != id(retriever):
             names = frozenset(i for chunk in retriever.chunks for i in chunk.ingredients)
@@ -166,8 +166,8 @@ class Toolbox:
         if missing:
             found["not_indexed"] = missing
             found["coverage_note"] = (
-                f"No document is indexed yet for {', '.join(missing)}: the corpus covers the "
-                f"{len(indexed)} active ingredients of the first pill classes. DDInter "
+                f"No document is indexed yet for {', '.join(missing)}: the corpus covers "
+                f"{len(indexed)} active ingredients of the pill classes. DDInter "
                 "interactions are still checked by check_interaction."
             )
         return found

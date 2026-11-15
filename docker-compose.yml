@@ -18,8 +18,8 @@
 #   - `dvc pull` or the data steps, so data/processed/pharma/*.csv and data/raw/c3pi/images exist;
 #   - `python -m src.models.publish` (training venv, .venv-train) to fill models/ from the Model Registry.
 # `pharma-init` reloads the medicine tables from data/processed/pharma on every start, then exits;
-# `rag-init` pulls the Ollama models (first start only) and indexes data/processed/rag/corpus
-# in Qdrant.
+# `rag-init` pulls the Ollama models (first start only) and indexes
+# data/processed/rag/corpus_v2 (corpus of the 380 classes, DVC stage spark_rag, D126) in Qdrant.
 #
 # Credentials are development defaults; override them in the shell or in a compose
 # `.env` file (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_PORT, MLFLOW_PORT,
@@ -94,7 +94,7 @@ services:
       # Grad-CAM of the demo gallery (DVC stage gradcam_gallery, D104); empty = none shown.
       - ./data/processed/c3pi/gradcam:/tujya/data/processed/c3pi/gradcam:ro
       - ./data/processed/c3pi/drift:/tujya/data/processed/c3pi/drift:ro
-      - ./data/processed/rag/corpus:/tujya/data/processed/rag/corpus:ro
+      - ./data/processed/rag/corpus_v2:/tujya/data/processed/rag/corpus_v2:ro
       - ./models:/tujya/models:ro
       - fastembed:/tujya/cache/fastembed
     depends_on:
@@ -136,7 +136,8 @@ services:
         condition: service_started
     restart: unless-stopped
 
-  # Vector database of the RAG (D113): collection tujya_chunks, one point per chunk with its
+  # Vector database of the RAG (D113): collection tujya_chunks_v2 (D126; tujya_chunks = the
+  # corpus of the 150 first classes, kept for the benchmarks), one point per chunk with its
   # metadata as payload. The web dashboard (http://localhost:6333/dashboard) shows the
   # points, their payload and vectors, and runs filtered searches. Telemetry off.
   qdrant:
