@@ -99,5 +99,6 @@ class AgentHolder:
                 self.toolbox(),
                 top_k=self.settings.rag_top_k,
                 attribution_threshold=self.settings.rag_attribution_threshold,
+                prompt_version=self.settings.llm_prompt_version,
             )
         return self._agent

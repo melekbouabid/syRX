@@ -75,6 +75,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] LLM local Ollama : qwen2.5:3b dans le service `ollama`, sur le GPU (D57, D58)
 - [x] Jeu de benchmark : 88 questions FR/EN construites à partir du corpus, relues à la main (D66)
 - [x] Benchmark de la récupération (Recall@k, MRR) et de la génération (sécurité, citations, RAGAS) ; MLflow `tujya-rag`
+- [x] Benchmark de la génération, étape 3.4 : RAGAS (4 métriques) sur les 96 questions, 2 LLM × 2 prompts, MLflow 3 GenAI (traces, Prompt Registry, `mlflow.genai.evaluate`), champion qwen2.5:3b + prompt v1 ([benchmark_generation.md](module2/benchmark_generation.md), D124)
 - [x] Serveur MCP exposant les mêmes outils (SDK officiel, stdio + HTTP ; [mcp.md](module2/mcp.md))
 
 ## 6. Site web

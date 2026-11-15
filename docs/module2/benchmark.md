@@ -167,6 +167,11 @@ réécriture de la requête** (MRR 0,834, Recall@5 0,941, 389 ms par question), 
 
 ## Génération
 
+**Depuis l'étape 3.4**, la génération est comparée sur une grille (2 LLM, 2 versions du prompt,
+RAGAS sur toutes les questions, MLflow 3 GenAI) : voir
+[benchmark_generation.md](benchmark_generation.md) (D124). La suite décrit le premier benchmark
+(28/10, 88 questions).
+
 [`bench_answers.py`](../../src/benchmark/bench_answers.py) fait tourner le vrai agent (qwen2.5:3b,
 recherche dense, nœud de sécurité) sur les 88 questions ;
 [`bench_generation.py`](../../src/benchmark/bench_generation.py) note les réponses. Juge :
