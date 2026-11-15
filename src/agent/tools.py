@@ -87,6 +87,7 @@ class Toolbox:
     boxes: BoxReader | None = None
     rewriter: QueryRewriter | None = None  # TUJYA_RAG_QUERY_REWRITE (D118)
     _names: NameIndex | None = None
+    _indexed: tuple[int, frozenset[str]] | None = None
 
     # ----------------------------------------------------------- helpers
 
@@ -145,6 +146,31 @@ class Toolbox:
         if retriever is None:
             raise ToolError("the document index is empty: run `python -m src.rag.index`")
         return retriever
+
+    def indexed_ingredients(self) -> frozenset[str]:
+        """Active ingredients that have at least one indexed document (label, abstract or
+        DDInter row). The served corpus is still the one of the 150 classes of v1 (D119): the
+        ingredients of the 230 new classes of v2 have pill data and DDInter interactions, but no
+        indexed document yet."""
+        retriever = self.retriever()
+        if self._indexed is None or self._indexed[0] != id(retriever):
+            names = frozenset(i for chunk in retriever.chunks for i in chunk.ingredients)
+            self._indexed = (id(retriever), names)
+        return self._indexed[1]
+
+    def coverage(self, names: list[str]) -> dict[str, Any]:
+        """Which of `names` the document corpus covers, with a note for the others."""
+        indexed = self.indexed_ingredients()
+        missing = [n for n in names if n not in indexed]
+        found: dict[str, Any] = {"documents_indexed": [n for n in names if n in indexed]}
+        if missing:
+            found["not_indexed"] = missing
+            found["coverage_note"] = (
+                f"No document is indexed yet for {', '.join(missing)}: the corpus covers the "
+                f"{len(indexed)} active ingredients of the first pill classes. DDInter "
+                "interactions are still checked by check_interaction."
+            )
+        return found
 
     # ------------------------------------------------------------- tools
 
@@ -230,6 +256,7 @@ class Toolbox:
             "known": name in self.names().names,
             "pill_classes": classes,
             "label_sections": excerpts,
+            **self.coverage([name]),
             "disclaimer": DISCLAIMER,
         }
 
@@ -278,6 +305,7 @@ class Toolbox:
                 "exclude_retracted": exclude_retracted,
             },
             "results": [hit_source(hit) for hit in hits],
+            **self.coverage(list(filters.ingredients)),
         }
 
     async def lookup_brand(self, name: str) -> dict[str, Any]:

@@ -77,6 +77,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Benchmark de la récupération (Recall@k, MRR) et de la génération (sécurité, citations, RAGAS) ; MLflow `tujya-rag`
 - [x] Benchmark de la génération, étape 3.4 : RAGAS (4 métriques) sur les 96 questions, 2 LLM × 2 prompts, MLflow 3 GenAI (traces, Prompt Registry, `mlflow.genai.evaluate`), champion qwen2.5:3b + prompt v1 ([benchmark_generation.md](module2/benchmark_generation.md), D124)
 - [x] Serveur MCP exposant les mêmes outils (SDK officiel, stdio + HTTP ; [mcp.md](module2/mcp.md))
+- [x] Étape 3.6 : chat et MCP sur la même boîte à outils (récupération servie, classifieur à 380 classes), couverture du corpus signalée, identifiants de comprimés inventés écartés (D125)
 
 ## 6. Site web
 - [x] Page Scanner : upload + webcam (prédictions en direct) + boîtes + galerie de démonstration (D52)

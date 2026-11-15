@@ -5,11 +5,13 @@
     python -m src.mcp_server --transport streamable-http --port 8765
                                                            # http://127.0.0.1:8765/mcp
 
-Same tools, same code as the LangGraph agent (agent/tools.py): identify_pills,
-check_interaction, get_drug_info, search_documents, lookup_brand (medicine brands, step 2.7),
-predict_toxicity (bonus). Settings come
-from the TUJYA_* environment (database, Ollama URL for the query embeddings, models
-directory); see docs/module2/mcp.md for client configuration.
+Same tools, same code and the same toolbox as the LangGraph agent (agent/tools.py, built by
+agent/runtime.py): identify_pills (the served detector and 380-class classifier),
+check_interaction, get_drug_info, search_documents (the served retrieval setting of step 3.3:
+bge-m3 dense, ingredient filter, query rewriting by the LLM; D123), lookup_brand (medicine
+brands, step 2.7), predict_toxicity (bonus). Settings come from the TUJYA_* environment
+(database, Ollama URL for the query embeddings and the rewriting LLM, models directory); see
+docs/module2/mcp.md for client configuration.
 """
 
 from __future__ import annotations
@@ -17,30 +19,54 @@ from __future__ import annotations
 import argparse
 from typing import Any
 
+from langchain_core.language_models import BaseChatModel
 from mcp.server.mcpserver import MCPServer
+from sqlalchemy import distinct, func, select
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app.config import Settings
 from app.db import make_engine
 from app.inference import ScannerHolder
 from app.medicines import DISCLAIMER
-from src.agent.tools import TOOL_SPECS, Toolbox
-from src.models.toxicity.model import ToxHolder
-from src.rag.embeddings import Embedder, OllamaEmbedder
-from src.rag.stores import open_store, retriever_holder
+from app.pharma import Pill, PillIngredient
+from src.agent.runtime import AgentHolder
+from src.agent.tools import TOOL_SPECS, Toolbox, ToolError
+from src.rag.embeddings import Embedder
 
 INSTRUCTIONS = (
-    "Medicine information for the 150 Tujya pill classes and their 82 active ingredients: "
-    "pill identification from a photo, DDInter interactions, openFDA label excerpts, and "
-    "hybrid search of labels, PubMed abstracts and DDInter. Cite the returned sources. Never "
-    "give doses; never call a combination safe (say 'aucune interaction connue dans cette "
-    "base de données'). predict_toxicity is a model prediction on in vitro tests, not a "
-    "clinical evaluation: report each molecule separately, never conclude about a mixture. "
+    "Medicine information for the {classes} Tujya pill classes and their {ingredients} active "
+    "ingredients: pill identification from a photo, DDInter interactions, openFDA label "
+    "excerpts, and search of labels, PubMed abstracts and DDInter rows ({indexed} active "
+    "ingredients have indexed documents; the others get pill data and DDInter interactions "
+    "only). Cite the returned sources. Never give doses; never call a combination safe (say "
+    "'aucune interaction connue dans cette base de données'). predict_toxicity is a model "
+    "prediction on in vitro tests, not a clinical evaluation: report each molecule "
+    "separately, never conclude about a mixture. "
     f"{DISCLAIMER}"
 )
 
 
+def catalogue(toolbox: Toolbox) -> dict[str, int | str]:
+    """Pill classes and active ingredients of the pharma database, ingredients with documents."""
+    try:
+        with Session(toolbox.pharma_engine) as session:
+            classes: int | str = session.scalar(select(func.count()).select_from(Pill)) or 0
+            ingredients: int | str = (
+                session.scalar(select(func.count(distinct(PillIngredient.ingredient_id)))) or 0
+            )
+    except SQLAlchemyError:  # no database yet: the server still starts
+        classes = ingredients = "the"
+    try:
+        indexed: int | str = len(toolbox.indexed_ingredients())
+    except ToolError:  # no index yet
+        indexed = "no"
+    return {"classes": classes, "ingredients": ingredients, "indexed": indexed}
+
+
 def build_server(toolbox: Toolbox) -> MCPServer:
-    server: MCPServer = MCPServer("tujya", instructions=INSTRUCTIONS)
+    instructions = INSTRUCTIONS.format(**catalogue(toolbox))
+    server: MCPServer = MCPServer("tujya", instructions=instructions)
 
     @server.tool(name="identify_pills", description=TOOL_SPECS["identify_pills"][2])
     async def identify_pills(
@@ -87,23 +113,20 @@ def build_server(toolbox: Toolbox) -> MCPServer:
     return server
 
 
-def default_toolbox(settings: Settings, embedder: Embedder | None = None) -> Toolbox:
+def default_toolbox(
+    settings: Settings, embedder: Embedder | None = None, llm: BaseChatModel | None = None
+) -> Toolbox:
+    """The agent's own toolbox (AgentHolder): same store, retriever, query rewriter, scanner
+    and toxicity model, so an MCP client gets exactly what the chat uses."""
     engine = make_engine(settings.pharma_database_url)
-    embedder = embedder or OllamaEmbedder(
-        settings.ollama_url,
-        settings.embedding_model,
-        settings.embedding_dim,
-        num_ctx=settings.embedding_num_ctx,
-    )
     scanner = ScannerHolder(
         settings.models_dir,
         providers=settings.onnx_providers,
         threads=settings.onnx_threads,
         conf=settings.scan_detection_confidence,
     )
-    retrievers = retriever_holder(settings, open_store(settings, embedder.dim, engine), embedder)
-    toxicity = ToxHolder(settings.tox_model_dir, settings.ingredient_smiles_file)
-    return Toolbox(settings, engine, retrievers, scanner, toxicity=toxicity)
+    holder = AgentHolder(settings, engine, scanner, llm=llm, embedder=embedder)
+    return holder.toolbox()
 
 
 # Strictly local (docs/infra.md): the HTTP transport only ever listens on the loopback.

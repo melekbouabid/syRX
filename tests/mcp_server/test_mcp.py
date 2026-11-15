@@ -14,20 +14,24 @@ from app.config import Settings
 from src.mcp_server.server import build_server, default_toolbox, main
 from src.rag.embeddings import FakeEmbedder
 from tujya_testing.pharma_data import load_pharma
-from tujya_testing.rag_fakes import DIM, build_index
+from tujya_testing.rag_fakes import DIM, FakeChatModel, build_index
 
 
-def _server(tmp_path: Path) -> Any:
+def _settings(tmp_path: Path, **extra: Any) -> Settings:
     url = f"sqlite:///{(tmp_path / 'pharma.db').as_posix()}"
     load_pharma(url, tmp_path / "inputs")
     asyncio.run(build_index(url))
-    settings = Settings(
+    return Settings(
         _env_file=None,
         pharma_database_url=url,
         models_dir=tmp_path / "none",
         vector_store="sql",  # build_index wrote the fake corpus into this database
+        **{"rag_query_rewrite": False, **extra},  # no LLM in these tests unless given
     )
-    return build_server(default_toolbox(settings, FakeEmbedder(DIM)))
+
+
+def _server(tmp_path: Path) -> Any:
+    return build_server(default_toolbox(_settings(tmp_path), FakeEmbedder(DIM)))
 
 
 def _payload(result: Any) -> dict[str, Any]:
@@ -111,3 +115,61 @@ def test_http_transport_refuses_a_non_loopback_host() -> None:
     for host in ("0.0.0.0", "192.168.1.10"):  # noqa: S104
         with pytest.raises(SystemExit):
             main(["--transport", "streamable-http", "--host", host])
+
+
+def test_the_server_uses_the_agents_toolbox_and_retrieval_setting(tmp_path: Path) -> None:
+    """Same retrieval as the chat (D123): with query rewriting on, search_documents searches
+    the LLM's English query, exactly like the agent's tool."""
+    llm = FakeChatModel(prompts=[], answer="warfarin contraindications")
+    toolbox = default_toolbox(
+        _settings(tmp_path, rag_query_rewrite=True), FakeEmbedder(DIM), llm=llm
+    )
+    assert toolbox.rewriter is not None and toolbox.rewriter.llm is llm
+    assert toolbox.scanner is not None and toolbox.toxicity is not None
+
+    async def run() -> Any:
+        async with Client(build_server(toolbox)) as client:
+            return await client.call_tool("search_documents", {"query": "warfarine grossesse"})
+
+    found = _payload(asyncio.run(run()))
+    assert found["query"] == "warfarine grossesse"
+    assert found["search_query"] == "warfarin contraindications"
+
+
+def test_instructions_give_the_real_catalogue(tmp_path: Path) -> None:
+    server = _server(tmp_path)
+
+    async def run() -> Any:
+        async with Client(server) as client:
+            return client.instructions
+
+    text = asyncio.run(run()) or ""
+    # 4 classes and 3 active ingredients in the fake tables; fluconazole, warfarin and
+    # losartan have documents in the fake corpus.
+    assert "4 Tujya pill classes and their 3 active ingredients" in text
+    assert "3 active ingredients have indexed documents" in text
+    assert "150" not in text and "Information uniquement" in text
+
+
+def test_an_ingredient_without_documents_is_said_so(tmp_path: Path) -> None:
+    """A class of v2 whose ingredient has no indexed document (D119): pill data, no label
+    excerpt, and an explicit note instead of a silent empty result."""
+    server = _server(tmp_path)
+
+    async def run() -> tuple[Any, Any, Any]:
+        async with Client(server) as client:
+            info = await client.call_tool("get_drug_info", {"drug": "hydrochlorothiazide"})
+            covered = await client.call_tool("get_drug_info", {"drug": "warfarin"})
+            search = await client.call_tool(
+                "search_documents", {"query": "side effects", "ingredients": ["losartan", "hctz"]}
+            )
+            return info, covered, search
+
+    info, covered, search = (_payload(r) for r in asyncio.run(run()))
+    assert [c["class_id"] for c in info["pill_classes"]] == [5]
+    assert info["label_sections"] == [] and info["not_indexed"] == ["hydrochlorothiazide"]
+    assert "No document is indexed yet for hydrochlorothiazide" in info["coverage_note"]
+    assert "check_interaction" in info["coverage_note"]
+    assert covered["documents_indexed"] == ["warfarin"] and "not_indexed" not in covered
+    assert covered["label_sections"]
+    assert search["documents_indexed"] == ["losartan"] and search["not_indexed"] == ["hctz"]
