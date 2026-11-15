@@ -487,7 +487,7 @@ def evaluate_config(
     params = {
         "llm": llm,
         "prompt_version": prompt,
-        "retrieval": "bge-m3 dense + ingredient filter + query rewriting (D123)",
+        "retrieval": f"bge-m3 {rows[0]['search_mode']} + ingredient filter + query rewriting",
         "search_mode": rows[0]["search_mode"],
         "query_rewrite": rows[0].get("query_rewrite"),
         "rerank": rows[0].get("rerank"),
