@@ -93,8 +93,10 @@ Erreurs : 401 si non connecté ; 503 si l'index est vide (« run
 `python -m src.rag.index` ») ou si Ollama est injoignable.
 
 Configuration (`TUJYA_*`) : `OLLAMA_URL` (compose : `http://ollama:11434`), `LLM_MODEL`
-(`qwen2.5:3b`), `LLM_TEMPERATURE` (0.1), `LLM_NUM_CTX` (4096, D68), `LLM_MAX_TOKENS` (450),
-`EMBEDDING_MODEL` (`bge-m3`), `RAG_TOP_K` (6).
+(`qwen2.5:3b`), `LLM_PROMPT_VERSION` (`v1` : version du prompt de réponse,
+[prompts.py](../../src/agent/prompts.py), choisie sur le benchmark de génération de l'étape 3.4,
+[benchmark_generation.md](benchmark_generation.md), D124), `LLM_TEMPERATURE` (0.1), `LLM_NUM_CTX`
+(4096, D68), `LLM_MAX_TOKENS` (450), `EMBEDDING_MODEL` (`bge-m3`), `RAG_TOP_K` (6).
 
 En ligne de commande (venv du projet `.venv`) :
 `python -m src.agent.ask "question" [--pills 9 120]`.
