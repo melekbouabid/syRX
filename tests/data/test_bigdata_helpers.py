@@ -9,6 +9,7 @@ from pathlib import Path
 from src.data import c3pi, data_cli
 from src.data.corpus.ingredients import IngredientRow
 from src.data.spark import log_stats, rag_sources, submit
+from src.data.tujya_data.literature.queries import read_ingredients
 
 
 def test_submit_runs_the_job_in_the_master_container():
@@ -75,6 +76,16 @@ def test_v2_classes_reuse_the_v1_mapping(tmp_path, monkeypatch):
         ("B_1", ""),
         ("A_1", "aspirin; warfarin"),
     ]
+
+
+def test_v2_collection_targets_only_ingredients_absent_from_v1(tmp_path, monkeypatch):
+    rows = [_row(0, "A_1", "Warfarin"), _row(1, "B_1", "acarbose"), _row(2, "C_1", "aspirin")]
+    monkeypatch.setattr(rag_sources, "NEW_INGREDIENTS", tmp_path / "new_ingredients.csv")
+    assert rag_sources.write_new_ingredients(rows, {"warfarin", "Aspirin"}) == ["acarbose"]
+    # The connectors read this file with the same reader as the class table.
+    assert read_ingredients(tmp_path / "new_ingredients.csv") == ["acarbose"]
+    for source in ("openfda_label", "pubmed"):
+        assert any("new_ingredients.csv" in o for o in rag_sources.SOURCE_OVERRIDES[source])
 
 
 def test_download_list_selects_index_records(tmp_path: Path):
