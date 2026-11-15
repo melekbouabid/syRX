@@ -334,6 +334,10 @@ def run_genai(rows: list[dict[str, Any]], judge: str) -> tuple[dict[str, float],
     from mlflow.genai.scorers import Correctness, Safety
 
     model = f"ollama:/{judge}"
+    # Ollama answers one request at a time (OLLAMA_NUM_PARALLEL=1): with MLflow's 10 parallel
+    # workers the queued judges hit their 300 s timeout (2 in 3 failed on the first run).
+    os.environ["MLFLOW_GENAI_EVAL_MAX_WORKERS"] = "1"
+    os.environ["MLFLOW_GENAI_EVAL_MAX_SCORER_WORKERS"] = "1"
     # The judges import parts of `openai` in worker threads: import them here, once.
     import openai.resources  # noqa: F401
 
