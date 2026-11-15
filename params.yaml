@@ -33,12 +33,15 @@ bigdata:
     target_per_class: 40
     size: 512              # long side of the generated JPEGs
   rag:
-    # Collection workspaces read by the job, and the ingredient lists of their classes.
-    # data/rag_v2 (classes of v2, `python -m src.data.spark.rag_sources`) is added here, and
-    # to the deps of the stage spark_rag, once collected: the polite client needs a
-    # CONTACT_EMAIL in .env (D90).
-    workspaces: [data/rag]
+    # Collection workspaces read by the job, and the ingredient list of their classes:
+    # data/rag (v1 classes) and data/rag_v2 (the 94 ingredients of the v2 classes that v1
+    # lacks, `python -m src.data.spark.rag_sources`, D126); data/processed/pharma lists the
+    # 176 ingredients of the 380 served classes (D119).
+    workspaces: [data/rag, data/rag_v2]
     ingredient_files: [data/processed/pharma/pill_ingredients.csv]
+    # Names of the class tables that are no medicine (placebo tablets of a pack): no ingredient
+    # here, their PubMed queries ignored (src/data/spark/rag_sources.py NOT_DRUGS, same list).
+    not_drugs: [inert ingredients]
     # Chunks keep the size of the module 2 corpus (1,500 characters, src/data/corpus/corpus.py).
     min_chars: 80          # shorter cleaned texts are dropped
     near_duplicate: 0.2    # MinHash Jaccard distance under which two abstracts are duplicates
