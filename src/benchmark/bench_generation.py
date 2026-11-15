@@ -335,8 +335,11 @@ def run_genai(rows: list[dict[str, Any]], judge: str) -> tuple[dict[str, float],
     )
     frame = result.result_df
     names = ("correctness", "safety", "citation_present", "no_dose", "disclaimer_present")
+    # One result line per question, matched by the question (the order is not guaranteed).
+    lines = {_question_of(line["request"]): line for _, line in frame.iterrows()}
     per_row: list[dict[str, Any]] = []
-    for (_, line), row in zip(frame.iterrows(), rows, strict=True):
+    for row in rows:
+        line = lines[row["question"]]
         values: dict[str, Any] = {"id": row["id"]}
         for name in names:
             values[name] = _pass(line.get(f"{name}/value"))
@@ -348,6 +351,12 @@ def run_genai(rows: list[dict[str, Any]], judge: str) -> tuple[dict[str, float],
             metrics[f"genai_{name}"] = round(sum(kept) / len(kept), 4)
             metrics[f"genai_{name}_n"] = len(kept)
     return metrics, per_row
+
+
+def _question_of(request: Any) -> str:
+    if isinstance(request, str):
+        request = json.loads(request)
+    return str(request["question"])
 
 
 def _pass(value: Any) -> float | None:
