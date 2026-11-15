@@ -7,3 +7,7 @@ FROM phi4-mini
 PARAMETER num_gpu 99
 PARAMETER num_ctx 4096
 PARAMETER temperature 0
+# The MLflow judges (OpenAI-compatible API) send no token limit: without one, phi4-mini
+# sometimes repeats itself until Ollama's 5-minute timeout. RAGAS and the citation judge set
+# their own, smaller limit.
+PARAMETER num_predict 1024
