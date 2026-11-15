@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import csv
+import json
 from collections import defaultdict
 from dataclasses import replace
 from pathlib import Path
@@ -50,6 +51,16 @@ INGREDIENTS = ROOT / WORKSPACE / "ingredients.csv"
 CLASS_INGREDIENTS = ROOT / WORKSPACE / "class_ingredients.csv"
 NEW_INGREDIENTS = ROOT / WORKSPACE / "new_ingredients.csv"
 PUBMED_PER_INGREDIENT = 40
+# Names of the class tables that are no medicine (the placebo tablets of a pack): never searched
+# (PubMed returns pesticide studies for them); params.yaml bigdata.rag.not_drugs, same list.
+NOT_DRUGS = frozenset({"inert ingredients"})
+# PubMed terms for a name it does not know as written (RxNorm adds the pharmacopoeia).
+PUBMED_ALIASES = {
+    "omega-3 acid ethyl esters (usp)": [
+        "omega-3-acid ethyl esters",
+        "omega-3 fatty acid ethyl esters",
+    ]
+}
 OVERRIDES = [
     f"data_dir={WORKSPACE}",
     f"manifest_path={WORKSPACE}/manifest.json",
@@ -62,6 +73,7 @@ SOURCE_OVERRIDES = {
     "pubmed": [
         "sources.pubmed.options.mode=ingredients",
         f"sources.pubmed.options.ingredients_file={WORKSPACE}/new_ingredients.csv",
+        f"sources.pubmed.options.ingredient_aliases={json.dumps(PUBMED_ALIASES)}",
         "sources.pubmed.options.max_queries=1000",
         f"sources.pubmed.options.max_records_per_query={PUBMED_PER_INGREDIENT}",
         f"sources.pubmed.options.batch_size={PUBMED_PER_INGREDIENT}",
@@ -117,8 +129,9 @@ def write_class_ingredients(rows: list[ing.IngredientRow], classes: list[dict[st
 
 def write_new_ingredients(rows: list[ing.IngredientRow], v1_names: set[str]) -> list[str]:
     """The ingredients of the v2 classes that no v1 class has, one per row (`active_ingredients`,
-    the column the connectors read)."""
-    new = sorted({r.ingredient.lower() for r in rows} - {n.lower() for n in v1_names})
+    the column the connectors read); the names of `NOT_DRUGS` are left out."""
+    known = {n.lower() for n in v1_names} | NOT_DRUGS
+    new = sorted({r.ingredient.lower() for r in rows} - known)
     with NEW_INGREDIENTS.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle, lineterminator="\n")
         writer.writerow(["active_ingredients"])
