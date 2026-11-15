@@ -1724,3 +1724,18 @@ v1, alias `champion` des prompts v1), challenger : qwen v2. Grille réduite à d
 de réduire les questions (une évaluation complète : 1 h 30 à 2 h 30 sur ce PC). Rejeté : un
 troisième LLM (gemma3:4b déborde sur le CPU, 12 s par réponse en D57) ; changer la règle après
 coup pour llama. Détails : [docs/module2/benchmark_generation.md](module2/benchmark_generation.md).
+
+**D125. Agent et MCP sur le réglage final (étape 3.6) : une seule boîte à outils, couverture du
+corpus dite, identifiants de comprimés inventés écartés.** Le serveur MCP construit ses outils
+avec le `AgentHolder` du chat : même magasin Qdrant, même récupération servie (D123 : dense
+bge-m3, filtre, réécriture de la requête par le LLM, qui manquait au serveur MCP), mêmes modèles
+de vision (détecteur YOLO11s v9, classifieur EfficientNetV2-S à 380 classes, D120), même modèle de
+toxicité ; ses instructions donnent le catalogue compté dans la base (380 classes, 176 principes
+actifs) au lieu des chiffres de v1. Le corpus RAG reste celui de v1 (D119) : 94 des 176 principes
+actifs n'ont aucun document ; `get_drug_info` et `search_documents` renvoient `not_indexed` et une
+note au lieu d'un résultat vide sans explication. Un essai réel a montré que qwen2.5:3b invente
+des `pills` (« [123, 456] ») dans `check_interaction` : le graphe ne garde que les comprimés
+confirmés par l'utilisateur (test de non-régression). Rejeté : chercher sans filtre quand un
+principe actif n'a pas de document (des notices d'autres médicaments seraient citées) ; collecter
+le corpus v2 maintenant (il faut une adresse de contact pour les API publiques, D90).
+Détails : [docs/module2/mcp.md](module2/mcp.md), [docs/module2/agent.md](module2/agent.md).
