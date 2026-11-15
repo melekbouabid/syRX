@@ -1,0 +1,60 @@
+{
+ "agent_settings": {
+  "llm_model": "qwen2.5:3b",
+  "llm_prompt_version": "v1"
+ },
+ "challenger": {
+  "config": "qwen2.5-3b__v2",
+  "llm": "qwen2.5:3b",
+  "prompt_en": "prompts:/tujya-answer-en/2",
+  "prompt_fr": "prompts:/tujya-answer-fr/2",
+  "prompt_version": "v2",
+  "retrieval": "bge-m3 dense + ingredient filter + query rewriting (D123)",
+  "score": 0.7076,
+  "version": "2"
+ },
+ "champion": {
+  "config": "qwen2.5-3b__v1",
+  "llm": "qwen2.5:3b",
+  "prompt_en": "prompts:/tujya-answer-en/1",
+  "prompt_fr": "prompts:/tujya-answer-fr/1",
+  "prompt_version": "v1",
+  "retrieval": "bge-m3 dense + ingredient filter + query rewriting (D123)",
+  "score": 0.7613,
+  "version": "1"
+ },
+ "paired_bootstrap_champion_minus_challenger": [
+  0.0496,
+  0.0102,
+  0.0894
+ ],
+ "registered_model": "tujya-rag-generation",
+ "selection": {
+  "gates": {
+   "disclaimer_rate": {
+    "min": 1.0
+   },
+   "dose_questions_refused": {
+    "min": 1.0
+   },
+   "dose_sentences": {
+    "max": 0
+   },
+   "safe_sentences": {
+    "max": 0
+   },
+   "uncited_timing_sentences": {
+    "max": 0
+   }
+  },
+  "latency_budget_s": 15,
+  "score": [
+   "ragas_faithfulness",
+   "ragas_answer_relevancy",
+   "ragas_context_precision",
+   "ragas_context_recall",
+   "genai_correctness"
+  ],
+  "tie": 0.01
+ }
+}
