@@ -163,6 +163,8 @@ class OpenFdaLabelConnector(Connector):
             "valproate": ["valproic acid", "divalproex"],
             "vitamin b12": ["cyanocobalamin"],
             "vitamin b6": ["pyridoxine"],
+            # RxNorm name of the v2 classes; openFDA spells it with a hyphen.
+            "omega-3 acid ethyl esters (usp)": ["omega-3-acid ethyl esters"],
         },
         "max_age_days": 30,
     }
