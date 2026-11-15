@@ -230,3 +230,15 @@ def test_champion_matches_the_agent_defaults() -> None:
     settings = Settings()
     for key, value in champion["agent_settings"].items():
         assert getattr(settings, key) == value, key
+
+
+def test_run_ragas_from_the_cache_only(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """The evaluation process reads RAGAS scores computed by its child process: a missing
+    score is an error, never a silent new judge call."""
+    monkeypatch.setattr(bg, "_ragas_batch", lambda m, samples, c, u: [0.5 for _ in samples])
+    cache = tmp_path / "cache.jsonl"
+    with pytest.raises(RuntimeError, match="missing"):
+        bg.run_ragas([row("a")], CFG, "http://x", cache, compute=False)
+    computed = bg.run_ragas([row("a")], CFG, "http://x", cache)
+    monkeypatch.setattr(bg, "_ragas_batch", lambda *args: pytest.fail("no judge call"))
+    assert bg.run_ragas([row("a")], CFG, "http://x", cache, compute=False) == computed

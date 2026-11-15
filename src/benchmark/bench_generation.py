@@ -31,6 +31,8 @@ import os
 import random
 import re
 import statistics
+import subprocess
+import sys
 import time
 from collections.abc import Iterable
 from pathlib import Path
@@ -255,8 +257,11 @@ def run_ragas(
     cfg: dict[str, Any],
     base_url: str,
     cache_path: Path | None = None,
+    *,
+    compute: bool = True,
 ) -> dict[str, dict[str, float | None]]:
-    """RAGAS scores per question id and metric (None: not applicable or the judge failed)."""
+    """RAGAS scores per question id and metric (None: not applicable or the judge failed).
+    With `compute=False`, a score missing from the cache is an error."""
     cache_path = cache_path or CACHE
     judge = cfg["judge"]
     samples = {r["id"]: ragas_sample(r, int(cfg["ragas"]["contexts"])) for r in rows if answered(r)}
@@ -269,6 +274,8 @@ def run_ragas(
             for qid, s in samples.items()
             if needs_metric(metric, s) and cache_key(metric, s, judge) not in cache
         ]
+        if todo and not compute:
+            raise RuntimeError(f"{len(todo)} {metric} scores missing from {cache_path}")
         for start in range(0, len(todo), size):
             batch = todo[start : start + size]
             began = time.perf_counter()
@@ -459,7 +466,14 @@ def evaluate_config(llm: str, prompt: str, cfg: dict[str, Any], *, log: bool = T
         entries[row["id"]] = entry
     citation_seconds = time.perf_counter() - started
     print(f"citations judged in {citation_seconds:.0f} s", flush=True)
-    for qid, scores in run_ragas(rows, cfg, base_url).items():
+    # RAGAS runs in a child process and fills the cache; here every score comes from the cache.
+    # After real RAGAS calls, mlflow.genai.evaluate in the same process stopped responding
+    # twice (on the 3rd and the 43rd of 96 answers): the two never share a process now.
+    command = [sys.executable, "-m", "src.benchmark.bench_generation", "--ragas-only"]
+    subprocess.run(  # noqa: S603 (this module, with the configuration's own names)
+        [*command, "--llm", llm, "--prompt", prompt], check=True, cwd=ROOT
+    )
+    for qid, scores in run_ragas(rows, cfg, base_url, compute=False).items():
         entries[qid]["ragas"] = scores
     metrics = summarize(list(entries.values()))
     metrics["citation_judge_seconds"] = round(citation_seconds, 1)
@@ -738,6 +752,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--llm", help="the configuration's LLM (Ollama model)")
     parser.add_argument("--prompt", help="v1, v2, or best (the best prompt of this LLM)")
     parser.add_argument("--no-log", action="store_true", help="no MLflow run (trial)")
+    parser.add_argument("--ragas-only", action="store_true", help="fill the RAGAS cache only")
     parser.add_argument("--select", action="store_true", help="apply the selection rule")
     parser.add_argument("--register", action="store_true", help="select: register the winners")
     args = parser.parse_args(argv)
@@ -752,6 +767,11 @@ def main(argv: list[str] | None = None) -> None:
         served = str(cfg["configs"][0]["llm"])  # the prompt is compared on the served LLM
         prompt = best_prompt(all_results(), served, cfg["selection"])
         print(f"best prompt: {prompt}")
+    if args.ragas_only:
+        base_url = os.environ.get("TUJYA_OLLAMA_URL", "http://127.0.0.1:11434")
+        rows = [json.loads(line) for line in answers_path(args.llm, prompt).open(encoding="utf-8")]
+        run_ragas(rows, cfg, base_url)
+        return
     evaluate_config(args.llm, prompt, cfg, log=not args.no_log)
 
 
