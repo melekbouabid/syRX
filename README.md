@@ -153,6 +153,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | Doses chiffrées / « sûr » dans les réponses ; questions de dose refusées | 0 / 0 ; 2/2 |
 | RAGAS sur les 96 questions, réglage servi qwen2.5:3b + prompt v1 (étape 3.4, juge phi4-mini) : fidélité / pertinence / précision / rappel du contexte | 0,931 / 0,704 / 0,940 / 0,695 |
 | MLflow GenAI (même réglage) : Correctness / citation présente / aucune dose / avertissement | 0,536 / 100 % / 100 % / 100 % |
+| Même réglage rejoué sur le corpus des 380 classes (D126) : note RAGAS + Correctness / barrières de sécurité | 0,743 (0,761 sur v1, écart non significatif) / toutes passées |
 | Temps de réponse moyen (RTX 2050) | 4,7 s |
 
 Détails : [module 1](docs/module1/README.md#résultats),
