@@ -6,7 +6,7 @@
 //
 // Signs in, opens Documents and checks the index card (Qdrant, points), the three document
 // types, the filters by type and by active ingredient, and one document with its metadata and
-// chunks (SHA-256 shown). Then the Qdrant dashboard: the collection tujya_chunks and its
+// chunks (SHA-256 shown). Then the Qdrant dashboard: the collection tujya_chunks_v2 and its
 // points with their payload. Fails if a step does not show what it should.
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -17,7 +17,8 @@ const QDRANT = process.env.QDRANT ?? "http://localhost:6333";
 const OUT = resolve(process.env.OUT ?? "../docs/screenshots");
 const EMAIL = process.env.DEMO_EMAIL ?? "user@gmail.com";
 const PASSWORD = process.env.DEMO_PASSWORD ?? "user";
-const COLLECTION = "tujya_chunks";
+// The served collection (D126); the corpus of the 150 first classes stays in tujya_chunks.
+const COLLECTION = process.env.COLLECTION ?? "tujya_chunks_v2";
 
 function check(condition, message) {
   if (!condition) throw new Error(message);
