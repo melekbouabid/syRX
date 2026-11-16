@@ -69,10 +69,15 @@ Prérequis : Docker Desktop (GPU NVIDIA conseillé pour Ollama), les données DV
 modèles publiés.
 
 ```bash
-dvc pull                       # données (images C3PI, tables DDInter, corpus RAG), remote local
-# modèles ONNX dans models/ : python -m src.models.publish  (venv d'entraînement .venv-train)
-docker compose up -d --build   # toute l'application, depuis la racine du dépôt
+git clone https://github.com/melekbouabid/syRX.git && cd syRX
+dvc pull data/processed/pharma.dvc spark_rag gradcam_gallery data/processed/c3pi/drift/reference.json
+python -m src.models.publish                       # modèles ONNX du Model Registry -> models/
+python -m src.models.toxicity.train_tox21 publish  # modèle Tox21 (bonus) -> models/tox21
+docker compose up -d --build                       # toute l'application, en une commande
 ```
+
+Procédure vérifiée sur un clone neuf (photos de la galerie, remote DVC, ports à côté d'une autre
+pile) : [docs/infra.md](docs/infra.md#installation-depuis-un-clone-neuf-étape-41-2026-11-16).
 
 | Adresse | Contenu |
 |---|---|
