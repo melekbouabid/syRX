@@ -99,6 +99,7 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Workflows du guide : `ci-tests.yml` (flake8, black --check, ruff, mypy, ESLint, pytest de `src/` et `backend/`, build du frontend ; Vitest depuis l'étape 2.6) et `docker-build.yml` (images multi-stage backend et frontend + test de fumée, rien de publié) ; anciens `ci.yml` et `cd.yml` fusionnés (D87, `v2.1.0-ci`)
 - [ ] Supprimer les deux anciens paquets sur ghcr.io (manuel : pas de droit `delete:packages`, [docs/cd.md](cd.md))
 - [x] Usage strictement local : chaque port sur 127.0.0.1, vérifié avec netstat (D69, [docs/infra.md](infra.md))
+- [x] Étape 4.1 : installation vérifiée sur un clone neuf (`dvc pull` des données de l'application, modèles publiés depuis le Registry, `docker compose up -d --build` : tous les services sains, scan, boîtes, chat, documents, monitoring, toxicité), `dvc repro` à jour, graphe `dvc dag`, captures MLflow 32 à 39 ([infra.md](infra.md#installation-depuis-un-clone-neuf-étape-41-2026-11-16))
 - Pas de déploiement sur un serveur, par choix : le projet ne tourne que sur ce PC (D69)
 - [x] README mis à jour pour Tujya
 - [x] Rapport du module 1 (Vision & MLOps) : [rapport_module1_vision_mlops.pdf](module1/rapport_module1_vision_mlops.pdf)
