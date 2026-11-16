@@ -10,6 +10,8 @@ ingredients of both class lists; DDInter pairs (data/processed/pharma).
 1. Cleaning (Spark SQL): HTML entities and tags removed, spaces collapsed (paragraph breaks
    kept), texts shorter than `min_chars` dropped; label sections about doses are refused
    (docs/project_rules.md); retraction notices and abstracts outside English dropped.
+   Names of the class tables that are no medicine (`not_drugs`) are not ingredients here and
+   their PubMed queries are ignored.
 2. Deduplication: labels by (ingredient, section, text); articles by PMID, then by
    identical normalised abstract, then near-duplicates with MinHash LSH (pyspark.ml: word
    3-shingles, Jaccard distance under `near_duplicate`), keeping the smallest PMID.
@@ -141,14 +143,23 @@ def near_duplicate_pmids(articles: DataFrame, threshold: float, seed: int) -> Da
 
 
 def pmid_ingredients(
-    spark: SparkSession, hits: DataFrame, workspaces: tuple[Path, ...] = WORKSPACES
+    spark: SparkSession,
+    hits: DataFrame,
+    workspaces: tuple[Path, ...] = WORKSPACES,
+    not_drugs: tuple[str, ...] = (),
 ) -> DataFrame:
-    """PMID -> ingredients whose query returned it (query.json of each raw query folder)."""
+    """PMID -> ingredients whose query returned it (query.json of each raw query folder).
+
+    The queries of `not_drugs` (names in the class tables that are no medicine, such as the
+    "inert ingredients" of a pack's placebo tablets) are left out: their hits are about
+    something else (pesticide formulations)."""
     files = _existing([w / "raw" / "pubmed" for w in workspaces])
     queries = spark.read.option("multiLine", True).json([f"{f}/*/*/query.json" for f in files])
     queries = queries.where(F.col("kind") == "ingredient").select(
         "query_id", F.lower(F.col("drug_names")[0]).alias("ingredient")
     )
+    if not_drugs:
+        queries = queries.where(~F.col("ingredient").isin(*[n.lower() for n in not_drugs]))
     return (
         hits.join(queries.distinct(), "query_id")
         .groupBy("pmid")
@@ -190,9 +201,11 @@ def run(spark: SparkSession, params: dict[str, Any], *, out: Path = OUT) -> dict
     files = INGREDIENT_FILES
     if "ingredient_files" in p:
         files = tuple(ROOT / f for f in p["ingredient_files"])
-    names = ingredient_names(spark, files)
+    not_drugs = tuple(str(n).lower() for n in p.get("not_drugs", []))
+    names = [n for n in ingredient_names(spark, files) if n not in not_drugs]
     stats: dict[str, Any] = {
         "ingredients": len(names),
+        "not_drugs": list(not_drugs),
         "workspaces": [
             w.relative_to(ROOT).as_posix() if w.is_relative_to(ROOT) else str(w) for w in workspaces
         ],
@@ -208,7 +221,7 @@ def run(spark: SparkSession, params: dict[str, Any], *, out: Path = OUT) -> dict
     articles = read_union(spark, "interim/pubmed/articles.parquet", workspaces)
     hits = read_union(spark, "interim/pubmed/query_hits.parquet", workspaces)
     if articles is not None and hits is not None:
-        about = pmid_ingredients(spark, hits, workspaces)
+        about = pmid_ingredients(spark, hits, workspaces, not_drugs)
         cleaned = clean_articles(articles.join(about, "pmid"), min_chars).cache()
         near = near_duplicate_pmids(cleaned, float(p["near_duplicate"]), int(params["seed"]))
         near = near.cache()

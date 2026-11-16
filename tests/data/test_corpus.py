@@ -14,7 +14,12 @@ import respx
 from src.data.corpus import corpus
 from src.data.tujya_data import pipeline
 from src.data.tujya_data.config import Settings, SourceConfig
-from src.data.tujya_data.connectors.openfda import API, choose_label, label_sections
+from src.data.tujya_data.connectors.openfda import (
+    API,
+    OpenFdaLabelConnector,
+    choose_label,
+    label_sections,
+)
 from src.data.tujya_data.literature.queries import build_topic_query, read_ingredients
 
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
@@ -67,6 +72,16 @@ def test_choose_label_prefers_single_ingredient_prescription_then_sections_then_
     # Salts match the base ingredient: "CYCLOBENZAPRINE HYDROCHLORIDE" is about cyclobenzaprine.
     salt = label("salt", ["CYCLOBENZAPRINE HYDROCHLORIDE"])
     assert choose_label([salt], ["cyclobenzaprine"]) == salt
+    # An alias finds the label openFDA spells differently from RxNorm (class of v2).
+    omega = label("omega", ["OMEGA-3-ACID ETHYL ESTERS"])
+    name = "omega-3 acid ethyl esters (usp)"
+    assert choose_label([omega], [name]) is None
+    assert (
+        choose_label(
+            [omega], [name, *OpenFdaLabelConnector.default_options["search_aliases"][name]]
+        )
+        == omega
+    )
 
 
 def test_label_sections_never_include_dosage() -> None:

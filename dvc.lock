@@ -239,30 +239,43 @@ stages:
       md5: c95d50e0b58af134900dc7d81420654a.dir
       size: 22134557
       nfiles: 164
+    - path: data/rag_v2/interim
+      hash: md5
+      md5: be662520f59c9ae14a0982e86a448c81.dir
+      size: 3488468
+      nfiles: 4
+    - path: data/rag_v2/raw/pubmed
+      hash: md5
+      md5: cd56639a6d731c95a503167780365656.dir
+      size: 64776900
+      nfiles: 188
     - path: src/data/corpus/corpus.py
       hash: md5
       md5: 9d85a1cdf051850c775a51e602037eb3
       size: 11672
     - path: src/data/spark/rag_job.py
       hash: md5
-      md5: 586bc052ac2e4309e714c3ad555260e1
-      size: 11789
+      md5: 3408701905341333cdb30aaeabdbec11
+      size: 12455
     params:
       params.yaml:
         bigdata.rag:
           workspaces:
           - data/rag
+          - data/rag_v2
           ingredient_files:
           - data/processed/pharma/pill_ingredients.csv
+          not_drugs:
+          - inert ingredients
           min_chars: 80
           near_duplicate: 0.2
         bigdata.seed: 0
     outs:
     - path: data/processed/rag/corpus_v2
       hash: md5
-      md5: ea5f08db332668bd893402ab23629580.dir
-      size: 4211748
-      nfiles: 33
+      md5: 23845be55a2ad4a9623d1e58257bb384.dir
+      size: 10932905
+      nfiles: 51
   dataset_stats:
     cmd: python -m src.data.spark.log_stats
     deps:
@@ -297,9 +310,9 @@ stages:
       nfiles: 35
     - path: data/processed/rag/corpus_v2
       hash: md5
-      md5: ea5f08db332668bd893402ab23629580.dir
-      size: 4211748
-      nfiles: 33
+      md5: 23845be55a2ad4a9623d1e58257bb384.dir
+      size: 10932905
+      nfiles: 51
     - path: src/data/spark/log_stats.py
       hash: md5
       md5: 5f2eca50bc0383ba17243547e6d9f4dc
@@ -307,7 +320,7 @@ stages:
     outs:
     - path: data/processed/c3pi/bigdata/stats.json
       hash: md5
-      md5: 9c4a1be4f35552ab6feef0157dca7496
+      md5: 289ffc0c92efcc5a346a2a608a608502
       size: 1987
   train_detector:
     cmd: python -m src.models.train detect

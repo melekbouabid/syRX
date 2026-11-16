@@ -66,3 +66,12 @@ groups:
     - {embedding: "st:bge-m3-st", mode: hybrid, rewrite: true}
     - {embedding: "st:bge-m3-finetuned", mode: dense}
     - {embedding: "st:bge-m3-finetuned", mode: hybrid, rewrite: true}
+  # D126: the bge-m3 group again on the corpus of the 380 classes (Spark job `rag`, collection
+  # tujya_chunks_v2), to check that the champion setting holds on 3 times more chunks. Same
+  # questions; their expected chunks are matched in v2 by src/benchmark/rechunk.py `Relevance`.
+  corpus-v2:
+    - {embedding: "ollama:bge-m3", mode: dense, corpus: v2}
+    - {embedding: "ollama:bge-m3", mode: hybrid, corpus: v2}
+    - {embedding: "ollama:bge-m3", mode: bm25, corpus: v2}
+    - {embedding: "ollama:bge-m3", mode: dense, rewrite: true, corpus: v2}
+    - {embedding: "ollama:bge-m3", mode: hybrid, rewrite: true, corpus: v2}

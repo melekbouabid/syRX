@@ -1,0 +1,5 @@
+outs:
+- md5: fe623a14dd3e2330a6800ee304090f79
+  size: 1182
+  hash: md5
+  path: new_ingredients.csv

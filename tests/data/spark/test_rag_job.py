@@ -176,3 +176,13 @@ def test_job_reads_the_workspaces_listed_in_params(spark, params, workspaces):
     chunks = spark.read.parquet(str(workspaces / "corpus_v1_only" / "chunks"))
     abstract = chunks.where("doc_type = 'abstract'").first()
     assert list(abstract.ingredients) == ["warfarin"]  # only the v1 query found it
+
+
+def test_queries_of_names_that_are_no_medicine_are_ignored(spark, params, workspaces):
+    params["rag"]["not_drugs"] = ["Metformin"]
+    summary = rag_job.run(spark, params, out=workspaces / "corpus_no_metformin")
+    assert summary["ingredients"] == 1 and summary["not_drugs"] == ["metformin"]
+    chunks = spark.read.parquet(str(workspaces / "corpus_no_metformin" / "chunks"))
+    abstract = chunks.where("doc_type = 'abstract'").first()
+    assert list(abstract.ingredients) == ["warfarin"]  # the metformin query is ignored
+    assert summary["interaction_pairs"] == 0  # metformin is no ingredient any more

@@ -16,7 +16,11 @@ ingredients found in the question are a metadata filter (`names`), top 10 kept. 
 the questions that have expected chunks: Recall@k (k = 1, 3, 5, 10: at least one expected
 chunk in the top k), MRR@10, nDCG@10 (binary relevance) and Coverage@10, by language too.
 A corpus variant (`chunk` other than 1500/1) has other chunk ids: its relevant chunks are
-found by src/benchmark/rechunk.py `Relevance`.
+found by src/benchmark/rechunk.py `Relevance`. `corpus: v2` runs a configuration on the corpus
+of the 380 classes (Spark job `rag`, data/processed/rag/corpus_v2, collection tujya_chunks_v2,
+D126): the questions keep their expected chunks of v1, matched in v2 by the same `Relevance`
+rule (same document and section, shared text), since the Spark cleaning can cut a text a
+little differently.
 
 Time per question: the search (embedding of the query, Qdrant, reranker) is timed during the
 run; the rewrite is the median time the LLM took in `rewrites`; for a sentence-transformers
@@ -44,6 +48,7 @@ import pandas as pd
 import yaml
 
 from src.benchmark.rechunk import Relevance, load_variant
+from src.data.corpus import corpus
 
 ROOT = Path(__file__).resolve().parents[2]
 GRID = ROOT / "config" / "rag_grid.yaml"
@@ -56,6 +61,9 @@ CHAMPION = RESULTS / "champion.json"
 EXPERIMENT = "tujya-rag-retrieval"
 REGISTERED = "tujya-rag-retrieval"
 KS = (1, 3, 5, 10)
+# Qdrant collections of the two corpora (served by Ollama bge-m3 at the served chunking).
+COLLECTIONS = {"v1": "tujya_chunks", "v2": "tujya_chunks_v2"}
+CORPUS_V2 = ROOT / "data" / "processed" / "rag" / "corpus_v2" / "chunks"
 TOP_K = 10  # results kept per question (the metrics read at most the top 10)
 SERVED_CHUNK = "1500/1"
 
@@ -69,6 +77,7 @@ class Config:
     rerank: str = ""
     fetch_k: int = 0
     group: str = ""
+    corpus: str = "v1"  # v1 = 150 classes (steps 3.1-3.5), v2 = 380 classes (D126)
     extra: dict[str, Any] = field(default_factory=dict, compare=False, hash=False)
 
     @property
@@ -97,11 +106,15 @@ class Config:
         if self.rerank:
             short = self.rerank.split("/")[-1].lower().replace("ms-marco-", "")
             parts.append(f"rerank-{short}-f{self.fetch_k}")
+        if self.corpus != "v1":
+            parts.append(f"corpus-{self.corpus}")
         return "-".join(parts)
 
     @property
     def collection(self) -> str:
         """The served index for the served model and chunking, a bench collection otherwise."""
+        if self.corpus != "v1":
+            return COLLECTIONS[self.corpus]
         if self.backend == "ollama" and self.chunk == SERVED_CHUNK:
             return ""
         suffix = "" if self.chunk == SERVED_CHUNK else f"-c{self.max_chars}-o{self.overlap}"
@@ -123,6 +136,7 @@ class Config:
             "rrf_k": 60,
             "hybrid_candidates": 50,
             "group": self.group,
+            "corpus": self.corpus,
         }
 
 
@@ -133,6 +147,10 @@ def load_grid(path: Path = GRID) -> tuple[dict[str, Any], dict[str, list[Config]
         for group, items in raw["groups"].items()
     }
     for config in (c for items in groups.values() for c in items):
+        if config.corpus not in COLLECTIONS:
+            raise ValueError(f"{config.name}: unknown corpus {config.corpus!r}")
+        if config.corpus != "v1" and (config.backend != "ollama" or config.chunk != SERVED_CHUNK):
+            raise ValueError(f"{config.name}: corpus {config.corpus} has the served index only")
         if config.rerank and config.fetch_k < TOP_K:
             raise ValueError(
                 f"{config.name}: fetch_k {config.fetch_k} < {TOP_K}; the retriever reads "
@@ -210,6 +228,14 @@ class PrecomputedEmbedder:
         return out
 
 
+def load_corpus_v2(path: Path = CORPUS_V2) -> pd.DataFrame:
+    """The chunks of the Spark job `rag` (Parquet partitioned by doc_type), in the column order
+    and types of the v1 corpus."""
+    frame = pd.read_parquet(path)
+    frame["doc_type"] = frame["doc_type"].astype(str)
+    return frame[corpus.CHUNK_COLUMNS].sort_values("chunk_id", ignore_index=True)
+
+
 def rows_of(frame: pd.DataFrame) -> list[dict[str, Any]]:
     """Chunk rows as src/rag/index.py `read_chunks` gives them."""
     rows: list[dict[str, Any]] = frame.to_dict("records")
@@ -260,11 +286,15 @@ class Runtime:
             names = NameIndex(session.scalars(select(Ingredient.name)).all())
         return cls(settings, engine, names)
 
-    def corpus(self, chunk: str) -> pd.DataFrame:
-        if chunk not in self.corpora:
-            max_chars, overlap = (int(x) for x in chunk.split("/"))
-            self.corpora[chunk] = load_variant(max_chars, overlap)
-        return self.corpora[chunk]
+    def corpus(self, chunk: str, corpus: str = "v1") -> pd.DataFrame:
+        key = chunk if corpus == "v1" else f"{corpus}:{chunk}"
+        if key not in self.corpora:
+            if corpus == "v2":
+                self.corpora[key] = load_corpus_v2()
+            else:
+                max_chars, overlap = (int(x) for x in chunk.split("/"))
+                self.corpora[key] = load_variant(max_chars, overlap)
+        return self.corpora[key]
 
     def reranker(self, model: str) -> Any:
         from src.rag.rerank import CrossEncoderReranker
@@ -304,12 +334,12 @@ class Runtime:
             )
             embedder = PrecomputedEmbedder(VECTORS / f"{slug}.npz", texts)
             added_ms = float(embedder.meta["query_cpu_ms"])
-        collection = config.collection or s.qdrant_collection
+        # The served index of step 3.3 by name: the API's default collection moved to v2 (D126).
+        collection = config.collection or COLLECTIONS["v1"]
         store = QdrantStore.connect(s.qdrant_url, embedder.dim, collection, timeout=120)
         if config.collection:
-            done = await index_chunks(
-                store, embedder, rows_of(self.corpus(config.chunk)), sparse=sparse, log=print
-            )
+            rows = rows_of(self.corpus(config.chunk, config.corpus))
+            done = await index_chunks(store, embedder, rows, sparse=sparse, log=print)
             print(f"  index {collection}: {done}", flush=True)
         reranker = self.reranker(config.rerank) if config.rerank else None
         retriever = Retriever(store, embedder, sparse=sparse, reranker=reranker)
@@ -331,8 +361,10 @@ async def evaluate(
 
     retriever, added_ms = await runtime.retriever(config)
     relevance = None
-    if config.chunk != SERVED_CHUNK:
-        relevance = Relevance(runtime.corpus(SERVED_CHUNK), runtime.corpus(config.chunk))
+    if config.chunk != SERVED_CHUNK or config.corpus != "v1":
+        relevance = Relevance(
+            runtime.corpus(SERVED_CHUNK), runtime.corpus(config.chunk, config.corpus)
+        )
     rows, times = [], []
     for item in questions:
         found = runtime.names.find(item["question"])
@@ -383,8 +415,10 @@ def log_run(config: Config, summary: dict[str, float], rows: list[dict[str, Any]
         EXPERIMENT,
         config.name,
         seed=0,
-        dataset="rag-corpus-v1+rag-questions",
-        dataset_path="data/processed/rag/corpus",
+        dataset=f"rag-corpus-{config.corpus}+rag-questions",
+        dataset_path=(
+            "data/processed/rag/corpus" if config.corpus == "v1" else "data/processed/rag/corpus_v2"
+        ),
         params={**config.params(), "questions": len(rows)},
         tags={"benchmark": "retrieval", "plan_step": "3.3", "group": config.group},
     ) as run:
@@ -560,6 +594,8 @@ def choose(
     `rebuild_needs_significance`, it stays in the ranking only if `significant[name]` says
     its gain over the best served-chunking configuration is significant."""
     metric, budget = selection["metric"], float(selection["latency_budget_ms"])
+    corpus = selection.get("corpus", "v1")  # one corpus at a time: the scores are not comparable
+    results = {n: r for n, r in results.items() if r.get("corpus", "v1") == corpus}
     within = [n for n, r in results.items() if time_of(r) <= budget and not r.get("smoke")]
     if selection.get("servable_only"):
         within = [n for n in within if results[n].get("embedding_backend", "ollama") == "ollama"]
@@ -600,7 +636,8 @@ def significance(
 
 
 def cmd_select(selection: dict[str, Any], register: bool) -> None:
-    results = all_results()
+    corpus = selection.get("corpus", "v1")
+    results = {n: r for n, r in all_results().items() if r.get("corpus", "v1") == corpus}
     tested = significance(results, selection) if selection.get("rebuild_needs_significance") else {}
     ranked = choose(results, selection, {n: ci[1] > 0 for n, ci in tested.items()})
     best_any = max(results, key=lambda n: float(results[n][selection["metric"]]))
@@ -773,9 +810,11 @@ async def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--configs", default="", help="comma-separated configuration names")
     parser.add_argument("--no-mlflow", action="store_true")
     parser.add_argument("--register", action="store_true", help="select: register the winners")
+    parser.add_argument("--corpus", default="v1", choices=sorted(COLLECTIONS), help="select")
     args = parser.parse_args(argv)
     os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
     selection, groups = load_grid()
+    selection = {**selection, "corpus": args.corpus}
     if args.command == "list":
         for group, items in groups.items():
             for config in items:

@@ -16,8 +16,12 @@ The Spark job `rag` (src/data/spark/rag_job.py) then cleans, deduplicates and ch
   data/rag_v2/ingredients.csv (one row per class and ingredient) and
   data/rag_v2/class_ingredients.csv (`active_ingredients` per class, the input of the two
   connectors).
-- labels / pubmed: the openFDA and PubMed connectors with that ingredient file; PubMed keeps
-  up to 40 abstracts per ingredient (v1: 20).
+  It also writes data/rag_v2/new_ingredients.csv: the ingredients that no class of v1
+  (config/pill_classes_v1.csv) has, i.e. those without any document in the v1 corpus.
+- labels / pubmed: the openFDA and PubMed connectors with the new ingredients only (the
+  ingredients of v1 keep their label and abstracts of data/rag: no second version of a label,
+  and the expected chunks of the benchmarks stay the documents they were written on); PubMed
+  keeps up to 40 abstracts per ingredient (v1: 20).
 """
 
 from __future__ import annotations
@@ -25,6 +29,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import csv
+import json
 from collections import defaultdict
 from dataclasses import replace
 from pathlib import Path
@@ -33,15 +38,29 @@ from src.data.corpus import ingredients as ing
 from src.data.tujya_data import pipeline
 from src.data.tujya_data.config import Settings, load_settings
 from src.data.tujya_data.http.client import PoliteClient
+from src.data.tujya_data.literature.queries import read_ingredients
+from src.data.tujya_data.logging_utils import setup_logging
 
 ROOT = Path(__file__).resolve().parents[3]
 CONFIG = ROOT / "config" / "data_pipeline" / "config.yaml"
 CLASSES_V2 = ROOT / "config" / "splits" / "c3pi_v2" / "classes.csv"
 INGREDIENTS_V1 = ROOT / "data" / "processed" / "pharma" / "pill_ingredients.csv"
+CLASSES_V1 = ROOT / "config" / "pill_classes_v1.csv"
 WORKSPACE = "data/rag_v2"
 INGREDIENTS = ROOT / WORKSPACE / "ingredients.csv"
 CLASS_INGREDIENTS = ROOT / WORKSPACE / "class_ingredients.csv"
+NEW_INGREDIENTS = ROOT / WORKSPACE / "new_ingredients.csv"
 PUBMED_PER_INGREDIENT = 40
+# Names of the class tables that are no medicine (the placebo tablets of a pack): never searched
+# (PubMed returns pesticide studies for them); params.yaml bigdata.rag.not_drugs, same list.
+NOT_DRUGS = frozenset({"inert ingredients"})
+# PubMed terms for a name it does not know as written (RxNorm adds the pharmacopoeia).
+PUBMED_ALIASES = {
+    "omega-3 acid ethyl esters (usp)": [
+        "omega-3-acid ethyl esters",
+        "omega-3 fatty acid ethyl esters",
+    ]
+}
 OVERRIDES = [
     f"data_dir={WORKSPACE}",
     f"manifest_path={WORKSPACE}/manifest.json",
@@ -49,11 +68,12 @@ OVERRIDES = [
 SOURCE_OVERRIDES = {
     "openfda_label": [
         "sources.openfda_label.enabled=true",
-        f"sources.openfda_label.options.ingredients_file={WORKSPACE}/class_ingredients.csv",
+        f"sources.openfda_label.options.ingredients_file={WORKSPACE}/new_ingredients.csv",
     ],
     "pubmed": [
         "sources.pubmed.options.mode=ingredients",
-        f"sources.pubmed.options.ingredients_file={WORKSPACE}/class_ingredients.csv",
+        f"sources.pubmed.options.ingredients_file={WORKSPACE}/new_ingredients.csv",
+        f"sources.pubmed.options.ingredient_aliases={json.dumps(PUBMED_ALIASES)}",
         "sources.pubmed.options.max_queries=1000",
         f"sources.pubmed.options.max_records_per_query={PUBMED_PER_INGREDIENT}",
         f"sources.pubmed.options.batch_size={PUBMED_PER_INGREDIENT}",
@@ -107,6 +127,18 @@ def write_class_ingredients(rows: list[ing.IngredientRow], classes: list[dict[st
     return len(summary)
 
 
+def write_new_ingredients(rows: list[ing.IngredientRow], v1_names: set[str]) -> list[str]:
+    """The ingredients of the v2 classes that no v1 class has, one per row (`active_ingredients`,
+    the column the connectors read); the names of `NOT_DRUGS` are left out."""
+    known = {n.lower() for n in v1_names} | NOT_DRUGS
+    new = sorted({r.ingredient.lower() for r in rows} - known)
+    with NEW_INGREDIENTS.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(["active_ingredients"])
+        writer.writerows([name] for name in new)
+    return new
+
+
 async def run_ingredients(settings: Settings) -> None:
     classes = _read_csv(CLASSES_V2)
     v1 = ing.read_rows(INGREDIENTS_V1) if INGREDIENTS_V1.is_file() else []
@@ -118,9 +150,11 @@ async def run_ingredients(settings: Settings) -> None:
     ing.write_rows(rows, INGREDIENTS)
     mapped = write_class_ingredients(rows, classes)
     names = {r.ingredient for r in rows}
+    new = write_new_ingredients(rows, set(read_ingredients(CLASSES_V1)))
     print(
         f"{len(classes)} classes ({len(classes) - len(missing)} from v1, {len(missing)} mapped "
-        f"with RxNav): {mapped} with ingredients, {len(names)} distinct ingredients"
+        f"with RxNav): {mapped} with ingredients, {len(names)} distinct ingredients, "
+        f"{len(new)} not in v1"
     )
 
 
@@ -130,6 +164,12 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
     source = {"labels": "openfda_label", "pubmed": "pubmed"}.get(args.command, "")
     settings = load_settings(CONFIG, [*OVERRIDES, *SOURCE_OVERRIDES.get(source, [])])
+    # Same logging as `tujya-data`: the contact address and the API key are masked everywhere.
+    setup_logging(
+        settings.logging.level,
+        json_logs=settings.logging.json_logs,
+        secrets=settings.secrets.values_to_redact(),
+    )
     if args.command == "ingredients":
         asyncio.run(run_ingredients(settings))
         return

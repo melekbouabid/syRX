@@ -106,15 +106,17 @@ class Settings(BaseSettings):
     )
 
     # Module 2: RAG and agent (docs/module2/rag.md, agent.md). The chunk index
-    # lives in Qdrant (collection tujya_chunks, D113); `python -m src.rag.index` fills it
-    # from this file. "sql" keeps it in the pharma database instead (table rag_chunks,
-    # pgvector or SQLite), the store before Qdrant. Ollama serves both the LLM and the
-    # embeddings (docker compose `ollama`).
-    rag_chunks_file: Path = PROJECT_DIR / "data" / "processed" / "rag" / "corpus" / "chunks.parquet"
+    # lives in Qdrant (D113); `python -m src.rag.index` fills it from these chunks: the corpus
+    # of the 380 served classes (Spark job `rag`, collection tujya_chunks_v2, D126). The
+    # corpus of the 150 first classes (corpus/chunks.parquet, collection tujya_chunks) stays
+    # in Qdrant: TUJYA_QDRANT_COLLECTION=tujya_chunks serves it again. "sql" keeps the index
+    # in the pharma database instead (table rag_chunks, pgvector or SQLite), the store before
+    # Qdrant. Ollama serves both the LLM and the embeddings (docker compose `ollama`).
+    rag_chunks_file: Path = PROJECT_DIR / "data" / "processed" / "rag" / "corpus_v2" / "chunks"
     vector_store: Literal["qdrant", "sql"] = "qdrant"
     # docker compose `qdrant`; ":memory:" = the client's local in-memory mode (tests).
     qdrant_url: str = "http://127.0.0.1:6333"
-    qdrant_collection: str = "tujya_chunks"
+    qdrant_collection: str = "tujya_chunks_v2"
     # Shown on the Documents page; the browser opens it on the host.
     qdrant_dashboard_url: str = "http://127.0.0.1:6333/dashboard"
     ollama_url: str = "http://127.0.0.1:11434"
@@ -133,19 +135,21 @@ class Settings(BaseSettings):
     embedding_dim: int = 1024
     embedding_num_ctx: int = 2048  # chunks are at most ~400 tokens
     rag_top_k: int = 6
-    # Chosen on the benchmark (docs/module2/benchmark.md, D65; confirmed by the step 3.3
-    # grid, D123): dense + ingredient filter; hybrid loses on French questions (BM25 only
-    # matches English).
-    rag_search_mode: str = "dense"
+    # Chosen on the step 3.3 grid (docs/module2/benchmark_retrieval.md): dense on the corpus of
+    # the 150 first classes (D123); hybrid (dense + BM25, RRF) of the rewritten query on the
+    # corpus of the 380 classes, same rule (best MRR within 2 s), D126. The rewrite puts the
+    # question in English, which BM25 needs (it only matches English words).
+    rag_search_mode: str = "hybrid"
     # Step 3.2 (docs/module2/rag.md, D116-D118). BM25 sparse vectors in Qdrant (fastembed
     # `Qdrant/bm25`), cross-encoder reranking of `rag_fetch_k` candidates, query rewriting by
     # the LLM. fastembed models are downloaded once (Hugging Face, no account) into the cache.
     rag_sparse_model: str = "Qdrant/bm25"
-    # Step 3.3 (docs/module2/benchmark_retrieval.md, D123): the registered champion of
-    # `tujya-rag-retrieval` (src/benchmark/grid/champion.json, checked by the tests) is dense
-    # search of the rewritten query, without reranker: every cross-encoder costs 3 to 11 s per
-    # question on this laptop's CPU. When turned on, the reranker is the fastest one measured
-    # (ms-marco-MiniLM-L-6-v2 on 10 candidates: MRR 0.896 in hybrid mode, about 3.5 s).
+    # Step 3.3 (docs/module2/benchmark_retrieval.md, D123, D126): the registered champion of
+    # `tujya-rag-retrieval` (src/benchmark/grid/champion.json, checked by the tests) is hybrid
+    # search of the rewritten query on the corpus v2, without reranker: every cross-encoder
+    # costs 3 to 11 s per question on this laptop's CPU. When turned on, the reranker is the
+    # fastest one measured (ms-marco-MiniLM-L-6-v2 on 10 candidates: MRR 0.896 in hybrid
+    # mode, about 3.5 s).
     rag_rerank: bool = False
     rag_rerank_model: str = "Xenova/ms-marco-MiniLM-L-6-v2"
     rag_fetch_k: int = 10

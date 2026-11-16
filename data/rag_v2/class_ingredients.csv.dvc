@@ -1,0 +1,5 @@
+outs:
+- md5: c5a3fa689661a40b3a493435ee4f39bd
+  size: 11099
+  hash: md5
+  path: class_ingredients.csv

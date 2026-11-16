@@ -1739,3 +1739,42 @@ confirmés par l'utilisateur (test de non-régression). Rejeté : chercher sans 
 principe actif n'a pas de document (des notices d'autres médicaments seraient citées) ; collecter
 le corpus v2 maintenant (il faut une adresse de contact pour les API publiques, D90).
 Détails : [docs/module2/mcp.md](module2/mcp.md), [docs/module2/agent.md](module2/agent.md).
+
+## Corpus RAG v2 des 380 classes (2026-11-16)
+
+**D126. Le corpus RAG servi passe aux 380 classes (job Spark, collection Qdrant à part) ; la
+grille bge-m3 rejouée désigne l'hybride + réécriture comme champion.** La collecte de D90 attendait
+une adresse de contact dans `.env` : elle est faite avec les connecteurs polis (débit limité,
+reprises, cache, manifeste ; l'adresse est lue par le client, jamais écrite dans un journal ni un
+fichier). Périmètre : seulement les **93 principes actifs** des 380 classes qu'aucune classe de v1
+n'a (`data/rag_v2/new_ingredients.csv`) ; les 82 de v1 gardent leur notice et leurs 20 résumés de
+`data/rag`, pour ne pas avoir deux versions d'une même notice et pour que les chunks attendus des
+benchmarks restent les documents sur lesquels les questions ont été écrites. Résultat : 90 notices
+openFDA (pas de notice pour le fer carbonyle, la rosiglitazone et la ticlopidine ; un alias
+« omega-3-acid ethyl esters » pour le nom RxNorm suivi de « (usp) »), 3 413 résumés PubMed (au plus
+40 par principe actif, D90). « Inert ingredients » (les comprimés placebo d'une plaquette) n'est
+pas un médicament : ses 40 résumés parlaient de pesticides ; il n'est plus cherché et le job
+l'ignore (`bigdata.rag.not_drugs`). Le job Spark `rag` lit les deux espaces (`dvc repro
+spark_rag`) : **27 302 chunks, 13 660 documents** (171 notices, 4 878 résumés, 8 611 paires
+DDInter), 175 principes actifs sur 176. Index : nouvelle collection Qdrant **`tujya_chunks_v2`**
+(27 302 points en 1 169 s), puis bascule par réglage (`TUJYA_QDRANT_COLLECTION`,
+`TUJYA_RAG_CHUNKS_FILE`, montage compose) : l'index servi n'a jamais été vide ou à moitié rempli,
+et `tujya_chunks` (corpus v1) reste pour rejouer les mesures des étapes 3.1 à 3.5.
+Récupération (groupe `corpus-v2` de la grille, mêmes 85 questions, chunks attendus tous présents) :
+le champion de D123 tient (dense + réécriture, MRR 0,834 -> 0,831, bootstrap v2 − v1 -0,003
+[-0,008 ; 0,000]) mais la règle de D123, appliquée telle quelle au corpus servi, place devant
+l'hybride + réécriture (MRR 0,844, 394 ms ; +0,013 [-0,045 ; +0,074], non significatif). La règle
+n'est pas changée après coup (comme en D124) : champion **hybride + réécriture**
+(`tujya-rag-retrieval` v3), challenger dense (v4) ; les versions 1 et 2 passent `superseded`
+(tag `corpus` v1 / v2 sur chaque version) ; `TUJYA_RAG_SEARCH_MODE=hybrid` par défaut.
+Génération : seul le champion de D124 (qwen2.5:3b + prompt v1) est rejoué sur v2 avec la
+récupération servie (96 questions, même juge, même règle) : note 0,743 contre 0,761, -0,016 par
+question [-0,052 ; +0,018], non significatif ; toutes les barrières passent (0 dose, 0 « sûr »,
+avertissement 100 %, doses refusées 2/2) ; rappel du contexte 0,695 -> 0,724, pertinence 0,704 ->
+0,642. Le réglage de génération ne change pas ; le challenger et llama3.2:3b ne sont pas rejoués
+(~1 h 30 d'évaluation chacun).
+Rejeté : recollecter aussi les 82 principes actifs de v1 (seconde version des notices, chunks
+attendus déplacés) ; réindexer en place la collection servie (index partiel pendant ~20 min) ;
+garder dense + réécriture parce qu'il était déjà servi (ce serait changer la règle au vu des
+résultats). Détails : [docs/module2/rag.md](module2/rag.md),
+[docs/module2/benchmark_retrieval.md](module2/benchmark_retrieval.md#corpus-v2-380-classes-d126).

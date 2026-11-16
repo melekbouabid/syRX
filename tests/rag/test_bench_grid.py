@@ -157,6 +157,33 @@ def test_config_names_and_collections() -> None:
     )
     assert reranked.name == "bge-m3-hybrid-rerank-minilm-l-6-v2-f20"
     assert G.Config("st:multilingual-e5-base").collection == "tujya_bench_multilingual-e5-base"
+    on_v2 = G.Config("ollama:bge-m3", mode="dense", rewrite=True, corpus="v2")
+    assert on_v2.name == "bge-m3-dense-rewrite-corpus-v2"
+    assert on_v2.collection == "tujya_chunks_v2" and on_v2.params()["corpus"] == "v2"
+
+
+def test_the_corpus_v2_has_the_served_index_only(tmp_path: Path) -> None:
+    grid = tmp_path / "grid.yaml"
+    grid.write_text(
+        "selection: {metric: mrr}\ngroups:\n  g:\n    - {embedding: 'st:e5', corpus: v2}\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="served index only"):
+        G.load_grid(grid)
+    grid.write_text(grid.read_text(encoding="utf-8").replace("v2", "v3"), encoding="utf-8")
+    with pytest.raises(ValueError, match="unknown corpus"):
+        G.load_grid(grid)
+
+
+def test_selection_compares_the_configurations_of_one_corpus() -> None:
+    results = {
+        "v1-best": {"mrr": 0.9, "ms_per_question": 100},  # no `corpus`: recorded before D126
+        "v2-best": {"mrr": 0.8, "ms_per_question": 100, "corpus": "v2"},
+        "v2-next": {"mrr": 0.7, "ms_per_question": 100, "corpus": "v2"},
+    }
+    selection = {"metric": "mrr", "latency_budget_ms": 2000}
+    assert G.choose(results, selection) == ["v1-best"]
+    assert G.choose(results, {**selection, "corpus": "v2"}) == ["v2-best", "v2-next"]
 
 
 def test_the_grid_file_is_valid_and_names_are_unique() -> None:
@@ -164,7 +191,8 @@ def test_the_grid_file_is_valid_and_names_are_unique() -> None:
     names = [c.name for items in groups.values() for c in items]
     assert len(names) == len(set(names))
     assert selection["metric"] == "mrr" and selection["latency_budget_ms"] > 0
-    assert {"bge-m3", "rerankers", "chunking", "bge-m3-finetuned"} <= set(groups)
+    assert {"bge-m3", "rerankers", "chunking", "bge-m3-finetuned", "corpus-v2"} <= set(groups)
+    assert {c.corpus for c in groups["corpus-v2"]} == {"v2"}
     assert all(c.mode in ("dense", "hybrid", "bm25") for items in groups.values() for c in items)
     assert all(bool(c.rerank) == bool(c.fetch_k) for items in groups.values() for c in items)
 

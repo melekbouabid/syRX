@@ -113,9 +113,11 @@ stages:
   spark_rag:
     cmd: python -m src.data.spark.submit rag
     deps:
-      # The workspaces of params.yaml bigdata.rag (data/rag_v2 joins them once collected).
+      # The workspaces of params.yaml bigdata.rag.
       - data/rag/interim
       - data/rag/raw/pubmed
+      - data/rag_v2/interim
+      - data/rag_v2/raw/pubmed
       - data/processed/pharma
       - src/data/corpus/corpus.py
       - src/data/spark/rag_job.py

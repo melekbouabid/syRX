@@ -115,7 +115,10 @@ retriever lit `max(k, fetch_k)` candidats et la grille garde un top 10, ils rép
   0,889 de l'étape 3.2 venait d'un autre tirage des réécritures ; celles de la grille sont figées
   dans `queries.json`, versionné par DVC).
 
-### Choix du réglage de l'agent
+### Choix du réglage de l'agent (corpus v1, D123)
+
+Le choix ci-dessous a été fait sur le corpus des 150 premières classes ; depuis le corpus des
+380 classes, le réglage servi est celui de la section [Corpus v2](#corpus-v2-380-classes-d126).
 
 | Statut | Configuration | MRR | Recall@5 | Temps D96 | Registry |
 |---|---|---:|---:|---:|---|
@@ -137,6 +140,46 @@ reranker le plus rapide ajouterait 3,2 s (+70 %) pour +0,06 de MRR. Le reranker 
 option : `TUJYA_RAG_RERANK=true` utilise maintenant **ms-marco-MiniLM-L-6-v2 sur 10 candidats**
 (meilleur et 4 fois plus rapide que bge-reranker-base ici) ; sur une machine plus rapide ou avec
 un GPU libre, MiniLM-L12 sur 20 candidats est le meilleur mesuré.
+
+## Corpus v2 (380 classes, D126)
+
+Le corpus servi est maintenant celui des 380 classes du classifieur (job Spark `rag`,
+[big_data.md](../module1/big_data.md)) : **27 302 chunks** (13 660 documents, 175 principes
+actifs) contre 8 661 (82 principes actifs), dans la collection Qdrant `tujya_chunks_v2` ;
+`tujya_chunks` reste en place pour rejouer les mesures de v1. Le groupe `bge-m3` est rejoué sur
+v2 (groupe `corpus-v2` de [config/rag_grid.yaml](../../config/rag_grid.yaml), mêmes 85 questions,
+mêmes réécritures). Les chunks attendus des questions sont tous dans v2 avec le même identifiant
+(vérifié : 85 questions sur 85) ; la règle de `Relevance` (même document, même section, texte
+partagé) les apparie quand même, au cas où le nettoyage de Spark couperait un texte autrement.
+Les nouveaux documents (résumés et paires DDInter des nouveaux principes actifs, qui citent souvent
+ceux de v1) sont des distracteurs de plus pour les mêmes questions.
+
+| Configuration | R@1 | R@5 | R@10 | MRR | MRR v1 | nDCG@10 | Coverage@10 | Temps D96 | Run |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| bge-m3, dense | 0,776 | 0,894 | 0,953 | 0,831 | 0,832 | 0,777 | 0,807 | 88 ms | `91f056fa` |
+| bge-m3, hybride | 0,729 | 0,871 | 0,953 | 0,803 | 0,808 | 0,762 | 0,814 | 100 ms (run) | `6e473f31` |
+| bge-m3, BM25 | 0,482 | 0,753 | 0,765 | 0,583 | 0,611 | 0,583 | 0,664 | 10 ms (run) | `81765db7` |
+| bge-m3, dense + réécriture (champion de v1) | 0,765 | 0,941 | 0,988 | 0,831 | 0,834 | 0,771 | 0,797 | 397 ms | `1aeb957a` |
+| **bge-m3, hybride + réécriture** | **0,788** | 0,906 | 0,977 | **0,844** | 0,824 | 0,789 | 0,813 | 394 ms | `9c641b60` |
+
+- **Le champion de v1 tient** sur trois fois plus de chunks : dense + réécriture perd 0,003 de
+  MRR (bootstrap apparié v2 − v1 : -0,003, intervalle à 95 % de -0,008 à 0,000) et garde le
+  meilleur Recall@5 (0,941) et Recall@10 (0,988).
+- **Mais la règle de D123, appliquée telle quelle au corpus servi, désigne l'hybride + réécriture**
+  (MRR 0,844, 394 ms) : +0,013 de MRR sur dense + réécriture, **non significatif** (intervalle à
+  95 % de -0,045 à +0,074 ; Recall@5 -0,035, de -0,106 à +0,035). La règle, écrite avant les
+  résultats, ne demande une différence significative que pour changer de découpage : elle n'est
+  pas changée après coup (comme en D124 pour llama3.2:3b). Les deux réglages ont le même coût
+  (réécriture + une recherche Qdrant, ~0,4 s) ; BM25 s'appuie sur la requête réécrite en anglais.
+- **Champion** : hybride + réécriture (`tujya-rag-retrieval` **v3**, alias `champion`) ;
+  **challenger** : dense sans réécriture (**v4**, MRR 0,8314, 88 ms, devant dense + réécriture
+  à 0,8308). Les versions 1 et 2 (corpus v1) restent dans le Registry avec leurs tags.
+  `champion.json` et les valeurs par défaut de l'agent suivent : `TUJYA_RAG_SEARCH_MODE=hybrid`,
+  réécriture activée, sans reranker. Revenir au réglage précédent :
+  `TUJYA_RAG_SEARCH_MODE=dense` (et `TUJYA_QDRANT_COLLECTION=tujya_chunks` pour le corpus v1).
+- Non rejoués sur v2 : les embeddings sentence-transformers (non servables, il faudrait réencoder
+  27 302 chunks sur le GPU), les découpages et les rerankers (trop lents sur ce CPU, D123) et
+  le bge-m3 fine-tuné (non servi).
 
 ## bge-m3 fine-tuné (étape 3.5)
 
@@ -188,6 +231,10 @@ python -m src.benchmark.bench_grid latency --configs bge-m3-dense,bge-m3-dense-r
 python -m src.benchmark.bench_grid select           # champion / challenger (sans enregistrer)
 python -m src.benchmark.bench_grid select --register # versions + alias dans le Registry
 python -m src.benchmark.bench_grid table            # tableau ci-dessus
+# corpus v2 (D126) : index tujya_chunks_v2 (dvc pull data/processed/rag/corpus_v2), puis
+python -m src.benchmark.bench_grid run --group corpus-v2
+python -m src.benchmark.bench_grid latency --configs bge-m3-hybrid-rewrite-corpus-v2,bge-m3-dense-corpus-v2,bge-m3-dense-rewrite-corpus-v2
+python -m src.benchmark.bench_grid select --corpus v2 [--register]
 ```
 
 ### Ajouter un embedding (exemple : bge-m3 fine-tuné)
