@@ -158,6 +158,31 @@ Limites : un seul juge de 4 B (pas de juge humain), une seule exécution par con
 (génération à température 0,1), deux LLM seulement (une évaluation complète prend 1 h 30 à
 2 h 30 ici).
 
+## Champion rejoué sur le corpus des 380 classes (D126)
+
+Le corpus servi est passé aux 380 classes (27 302 chunks au lieu de 8 661) et la récupération
+servie à la recherche hybride de la requête réécrite ([benchmark_retrieval.md](benchmark_retrieval.md#corpus-v2-380-classes-d126)).
+Seul le champion (qwen2.5:3b + prompt v1) est rejoué, sur les mêmes 96 questions, avec le même
+juge et la même règle (`bench_answers --corpus v2`, `bench_generation --corpus v2` : réponses et
+notes à part, `qwen2.5-3b__v1__corpus-v2`) ; le challenger et llama3.2:3b ne le sont pas (environ
+1 h 30 d'évaluation chacun sur ce PC).
+
+| Corpus (récupération servie) | Note | Fidélité | Pertinence | Précision ctx | Rappel ctx | Correctness | Safety | Citations soutenues | Phrases citées | s / question (méd.) | Run |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| v1, 150 classes (dense + réécriture) | 0,761 | 0,931 | 0,704 | 0,940 | 0,695 | 0,536 | 0,833 | 0,951 | 0,741 | 4,9 | `dd31625f` |
+| **v2, 380 classes (hybride + réécriture)** | 0,743 | 0,912 | 0,642 | 0,923 | 0,724 | 0,512 | 0,874 | 0,936 | 0,814 | 4,9 | `83c87200` |
+
+n (v2) : fidélité 82, pertinence 93, précision 83, rappel 76, Correctness 82, Safety 95. Toutes
+les barrières passent encore : 0 dose, 0 « sûr », 0 conseil d'horaire non cité, avertissement sur
+100 % des réponses, 2 questions de dose sur 2 refusées (10 réponses réécrites par le nœud de
+sécurité). L'écart de note est **non significatif** : -0,016 par question (bootstrap apparié sur
+les 61 questions notées dans les deux runs, intervalle à 95 % [-0,052 ; +0,018]). Le rappel du
+contexte monte (0,695 -> 0,724) et la pertinence de la réponse baisse (0,704 -> 0,642) : avec trois
+fois plus de documents, des passages proches mais hors sujet entrent plus souvent dans les
+sources. Le réglage de génération ne change pas (pas de nouvelle version enregistrée : une seule
+configuration mesurée sur v2, rien à départager) ; les deux runs sont dans l'expérience
+`tujya-rag-generation` (paramètre `corpus`).
+
 ## Reproduire
 
 ```bash
@@ -171,6 +196,9 @@ python -m src.benchmark.bench_answers --llm qwen2.5:3b --prompt v1 --trace   # ~
 python -m src.benchmark.bench_generation --llm qwen2.5:3b --prompt v1        # ~1 h 30
 # ... les autres configurations de config/rag_generation.yaml, puis :
 python -m src.benchmark.bench_generation --select --register
+# corpus des 380 classes (D126) : mêmes commandes avec --corpus v2
+python -m src.benchmark.bench_answers --llm qwen2.5:3b --prompt v1 --corpus v2 --trace
+python -m src.benchmark.bench_generation --llm qwen2.5:3b --prompt v1 --corpus v2
 ```
 
 Les réponses (avec le texte des sources) restent dans `data/processed/rag/bench/generation/`
