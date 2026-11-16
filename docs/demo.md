@@ -138,7 +138,7 @@ et temps mesurés à cette occasion.
   source DDInter « Major » surlignée après le clic, les outils appelés (marqués « llm »
   quand le modèle les a choisis, « rule » quand le graphe les a ajoutés, par exemple
   `search_documents`).
-- **Dire** : « L'agent LangGraph choisit ses outils, cherche dans 8 661 passages de notices
+- **Dire** : « L'agent LangGraph choisit ses outils, cherche dans 27 302 passages de notices
   openFDA, de résumés PubMed et de DDInter, puis un nœud de sécurité vérifie chaque phrase
   avant affichage ; chaque phrase citée renvoie à sa source. »
 - Autre bonne question si le temps le permet : « What are the contraindications of

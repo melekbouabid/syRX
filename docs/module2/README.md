@@ -2,8 +2,9 @@
 
 Un agent **LangGraph** répond aux questions sur les comprimés identifiés, avec un **RAG**
 sur trois sources documentées (notices officielles openFDA, résumés PubMed, interactions
-DDInter) et des **citations numérotées** vérifiées. Le corpus (8 661 chunks pour 4 002
-documents, avec leurs métadonnées) est indexé dans **Qdrant** avec des embeddings **bge-m3**
+DDInter) et des **citations numérotées** vérifiées. Le corpus des 380 classes de comprimés
+(27 302 chunks pour 13 660 documents, avec leurs métadonnées, construit par un job Spark : D126)
+est indexé dans **Qdrant** avec des embeddings **bge-m3**
 (tableau de bord sur <http://localhost:6333/dashboard>, page « Documents » de l'application) ; le LLM local **qwen2.5:3b** tourne dans **Ollama**. L'agent appelle
 des **outils** (identifier, vérifier une interaction, notice d'un médicament, recherche
 documentaire), exposés aussi par un **serveur MCP**. Un **benchmark** de 88 questions
@@ -18,7 +19,7 @@ Rapport technique : [docs/module2/rapport_module2_ai_engineering.pdf](rapport_mo
 
 | Exigence | Où la trouver |
 |---|---|
-| RAG : gestion des documents | collecte (notices openFDA, résumés PubMed, paires DDInter) et découpage en chunks : [src/data/corpus/](../../src/data/corpus/) ([corpus.py](../../src/data/corpus/corpus.py), [\_\_main\_\_.py](../../src/data/corpus/__main__.py)) sur les connecteurs du [pipeline](../data_pipeline/README.md) ; corpus versionné par DVC (étape `rag_corpus` de [dvc.yaml](../../dvc.yaml)) ; indexation idempotente : [src/rag/index.py](../../src/rag/index.py) |
+| RAG : gestion des documents | collecte (notices openFDA, résumés PubMed, paires DDInter) et découpage en chunks : [src/data/corpus/](../../src/data/corpus/) ([corpus.py](../../src/data/corpus/corpus.py), [\_\_main\_\_.py](../../src/data/corpus/__main__.py)) sur les connecteurs du [pipeline](../data_pipeline/README.md) ; corpus versionné par DVC (étape `rag_corpus` de [dvc.yaml](../../dvc.yaml) pour les 150 premières classes, étape `spark_rag` et collecte [rag_sources.py](../../src/data/spark/rag_sources.py) pour les 380 classes servies, D126) ; indexation idempotente : [src/rag/index.py](../../src/rag/index.py) |
 | RAG : métadonnées | colonnes de chaque chunk (source, médicament, section, URL, date, licence, rétractation) : [src/data/corpus/corpus.py](../../src/data/corpus/corpus.py) ; payload Qdrant (toutes les métadonnées, `content_hash` SHA-256) et filtres : [src/rag/store.py](../../src/rag/store.py) ; [docs/module2/rag.md](rag.md) |
 | RAG : base vectorielle consultable | Qdrant (`docker compose` service `qdrant`, collection `tujya_chunks`, un point par chunk, index de payload sur les champs filtrés) : [src/rag/qdrant_store.py](../../src/rag/qdrant_store.py) ; catalogue des documents reconstruit depuis les chunks : [src/rag/documents.py](../../src/rag/documents.py) ; `GET /api/documents` (liste, filtres, facettes) et `GET /api/documents/{doc_id}` (métadonnées et chunks) : [backend/app/routers/documents.py](../../backend/app/routers/documents.py) ; page « Documents » : [frontend/src/pages/DocumentsPage.tsx](../../frontend/src/pages/DocumentsPage.tsx) ; [rag.md](rag.md#consulter-les-documents-indexés), captures [27](../screenshots/27-documents.jpg) à [29](../screenshots/29-qdrant-dashboard.jpg) (D113, D114) |
 | RAG : recherche | BM25 (vecteurs sparse `Qdrant/bm25` dans Qdrant), dense (bge-m3) et hybride RRF fait par Qdrant, reranker cross-encoder BAAI/bge-reranker-base ([src/rag/rerank.py](../../src/rag/rerank.py)), réécriture de requête par le LLM ([src/rag/rewrite.py](../../src/rag/rewrite.py)), filtres de métadonnées (principe actif, type, section, rétractation) ; [rag.md](rag.md#recherche-avancée-étape-32), mesures dans [benchmark.md](benchmark.md#recherche-avancée-étape-32) (D116-D118) : [src/rag/retrieval.py](../../src/rag/retrieval.py), [src/rag/embeddings.py](../../src/rag/embeddings.py), [src/rag/names.py](../../src/rag/names.py) |
@@ -95,7 +96,7 @@ dépend du pipeline, jamais l'inverse.
 
 ```bash
 # Tout est lancé par docker compose (racine) : rag-init télécharge les modèles Ollama et
-# indexe data/processed/rag/corpus dans Qdrant au premier démarrage
+# indexe data/processed/rag/corpus_v2 (collection tujya_chunks_v2) dans Qdrant au premier démarrage
 # (tableau de bord : http://localhost:6333/dashboard).
 docker compose up -d --build
 
@@ -110,7 +111,9 @@ python -m src.benchmark.bench_retrieval # benchmark de la récupération
 # Corpus (même venv), depuis la racine :
 python -m src.data.corpus labels     # notices openFDA
 python -m src.data.corpus pubmed     # résumés PubMed
-dvc repro rag_corpus                 # chunks (étape DVC)
+dvc repro rag_corpus                 # chunks des 150 premières classes (étape DVC)
+python -m src.data.spark.rag_sources labels   # nouvelles classes (aussi ingredients, pubmed)
+dvc repro spark_rag                  # corpus servi des 380 classes (job Spark, D126)
 
 # Tests du module (pgvector : TUJYA_TEST_PG_URL, sinon ces deux tests sont ignorés)
 .venv/Scripts/python -m pytest tests/data tests/rag tests/agent tests/mcp_server

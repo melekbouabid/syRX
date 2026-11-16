@@ -20,15 +20,17 @@ client MCP obtient exactement ce qu'obtient l'agent (D125).
 | `predict_toxicity` (bonus) | `molecules` (1 ou 2 noms de principes actifs ou SMILES) | pour chaque molécule, probabilité d'activité dans les 12 tests in vitro de Tox21, ROC-AUC de test par test, similarité avec le jeu d'entraînement ; « prédiction d'un modèle sur des tests in vitro, pas une évaluation clinique » ; jamais sur un mélange ([docs/bonus/toxicity.md](../bonus/toxicity.md)) |
 
 Les `instructions` du serveur donnent le catalogue réel, compté dans la base au démarrage
-(aujourd'hui **380 classes, 176 principes actifs, dont 82 avec des documents indexés**) et
+(aujourd'hui **380 classes, 176 principes actifs, dont 175 avec des documents indexés** depuis
+le corpus v2, D126 ; 82 avec le corpus v1) et
 rappellent les règles de sécurité (pas de dose, jamais « sûr », citer les sources,
 avertissement) ; c'est au modèle du client de les respecter dans ses réponses.
 
-**Couverture des documents.** Le corpus RAG servi est encore celui des 150 classes de v1 (D119) :
-94 des 176 principes actifs des 380 classes (par exemple l'acarbose, l'acétaminophène,
-l'amiodarone) ont les données de comprimé et les interactions DDInter, mais aucune notice ni aucun
-résumé indexé. `get_drug_info` et `search_documents` le disent (`not_indexed`, `coverage_note`)
-au lieu de renvoyer un résultat vide sans explication.
+**Couverture des documents.** Jusqu'au 15/11, le corpus RAG servi était celui des 150 classes
+de v1 (D119) : 94 des 176 principes actifs des 380 classes (par exemple l'acarbose,
+l'acétaminophène, l'amiodarone) n'avaient ni notice ni résumé indexé. Le corpus v2 (D126) en
+couvre 175 ; le dernier, « inert ingredients », désigne les comprimés placebo d'une plaquette.
+Pour un principe actif sans document, `get_drug_info` et `search_documents` le disent toujours
+(`not_indexed`, `coverage_note`) au lieu de renvoyer un résultat vide sans explication.
 
 ## Lancer le serveur en local
 

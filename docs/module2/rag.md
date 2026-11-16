@@ -27,6 +27,45 @@ reprises, cache HTTP, manifeste avec SHA-256 et provenance), dans leur propre do
 `data/rag/` avec leur propre manifeste `data/rag/manifest.json`, pour ne jamais se mêler aux
 fichiers du projet d'origine sous `data/raw`.
 
+## Corpus servi depuis le 2026-11-16 : v2, 380 classes (D126)
+
+Le classifieur servi reconnaît 380 classes (176 principes actifs, D119) ; le corpus décrit plus
+bas n'en couvrait que 82. Le corpus servi est maintenant le **corpus v2** construit par le job
+Spark `rag` ([big_data.md](../module1/big_data.md)) à partir de deux espaces de collecte : `data/rag`
+(les 82 principes actifs de v1, inchangés) et `data/rag_v2` (les **93 nouveaux principes
+actifs**, `python -m src.data.spark.rag_sources ingredients|labels|pubmed`, mêmes connecteurs
+polis, adresse de contact lue dans `.env`). Le nom « inert ingredients » (comprimés placebo d'une
+plaquette) n'est pas cherché : PubMed renvoie pour lui des études de pesticides
+(`bigdata.rag.not_drugs` dans params.yaml).
+
+| Type de document | Documents | Chunks | Corpus v1 (documents / chunks) |
+|---|---:|---:|---:|
+| `label` (openFDA) | 171 | 6 224 | 82 / 2 895 |
+| `abstract` (PubMed, au plus 20 par principe actif de v1, 40 pour les nouveaux) | 4 878 | 12 467 | 1 570 / 3 416 |
+| `interaction` (DDInter, paires entre les principes actifs des 380 classes) | 8 611 | 8 611 | 2 350 / 2 350 |
+| **Total** | **13 660** | **27 302** | 4 002 / 8 661 |
+
+175 des 176 principes actifs ont au moins un document ; 172 ont une notice (pas de notice
+openFDA pour le fer carbonyle, la rosiglitazone et la ticlopidine : résumés et paires DDInter
+seulement). Mêmes colonnes de métadonnées et même découpage (1 500 caractères, une phrase de
+recouvrement) que v1 ; Parquet partitionné par type de document
+(`data/processed/rag/corpus_v2/chunks`, étape DVC `spark_rag`). Collection Qdrant
+**`tujya_chunks_v2`** (27 302 points encodés en 1 169 s sur la RTX 2050 ; deuxième passage :
+0 encodé) ; la collection `tujya_chunks` du corpus v1 reste en place pour rejouer les mesures
+des étapes 3.1 à 3.5 (`TUJYA_QDRANT_COLLECTION=tujya_chunks`). La bascule est un réglage
+(`TUJYA_QDRANT_COLLECTION`, `TUJYA_RAG_CHUNKS_FILE`) : l'index servi n'a jamais été vide.
+Réglage de recherche choisi sur ce corpus : hybride + réécriture
+([benchmark_retrieval.md](benchmark_retrieval.md#corpus-v2-380-classes-d126)).
+
+```
+python -m src.data.spark.rag_sources ingredients   # .venv ; puis labels, pubmed
+dvc repro spark_rag                                # job Spark -> data/processed/rag/corpus_v2
+python -m src.rag.index                            # -> collection tujya_chunks_v2 (rag-init dans Docker)
+```
+
+Les sections suivantes décrivent la construction du corpus v1 (150 classes), dont v2 reprend les
+connecteurs, les règles et le découpage.
+
 ## Sources et volumes
 
 | Type de document | Source | Licence | Documents | Chunks |
@@ -270,12 +309,12 @@ Remarque du professeur : « la base vectorielle n'est pas accessible, on ne voit
 documents utilisés ». Trois façons de les voir (D114) :
 
 - **Tableau de bord de Qdrant** : <http://localhost:6333/dashboard> (service `docker compose`
-  `qdrant`), collection `tujya_chunks` : les points, leur payload complet et leur vecteur,
+  `qdrant`), collection `tujya_chunks_v2` (corpus servi ; `tujya_chunks` = corpus v1) : les points, leur payload complet et leur vecteur,
   recherche filtrée par payload (par exemple `doc_type:label`). Capture
   [29](../screenshots/29-qdrant-dashboard.jpg).
 - **Page « Documents » de l'application** (menu de l'utilisateur connecté,
   [`DocumentsPage.tsx`](../../frontend/src/pages/DocumentsPage.tsx)) : carte de l'index (Qdrant,
-  collection, 4 002 documents, 8 661 points, modèle d'embeddings, date d'indexation, champs
+  collection, 13 660 documents, 27 302 points avec le corpus v2, modèle d'embeddings, date d'indexation, champs
   indexés, lien vers le tableau de bord), liste paginée des documents avec leur type, source,
   principes actifs, date et nombre de chunks, filtres par mots du titre, principe actif (dont
   parle le document ou qu'il cite), type et source. Un clic ouvre le document : toutes ses
