@@ -124,7 +124,7 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 
 | Exigence | État | Où |
 |---|:---:|---|
-| RAG avec gestion des documents, métadonnées, citations, documentation | ✅ | [src/data/corpus/](src/data/corpus/), [src/rag/](src/rag/), [docs/module2/rag.md](docs/module2/rag.md) |
+| RAG avec gestion des documents, métadonnées, citations, documentation | ✅ | [src/data/corpus/](src/data/corpus/), [src/rag/](src/rag/), [docs/module2/rag.md](docs/module2/rag.md) ; corpus servi des 380 classes (27 302 chunks, 175 principes actifs, job Spark `rag`, D126) |
 | Recherche avancée : BM25 sparse et hybride dans Qdrant, reranker cross-encoder (bge-reranker-base), réécriture de requête, filtres de métadonnées, comparés dans le benchmark | ✅ | [src/rag/](src/rag/) (sparse.py, rerank.py, rewrite.py), [docs/module2/benchmark.md](docs/module2/benchmark.md#recherche-avancée-étape-32) (hybride + réécriture + reranker : Recall@5 0,965, MRR 0,889 ; D116-D118) |
 | Base vectorielle consultable : Qdrant (tableau de bord), page « Documents » et `GET /api/documents` (documents indexés, métadonnées, chunks) | ✅ | [src/rag/qdrant_store.py](src/rag/qdrant_store.py), [src/rag/documents.py](src/rag/documents.py), [backend/app/routers/documents.py](backend/app/routers/documents.py), [DocumentsPage.tsx](frontend/src/pages/DocumentsPage.tsx), [docs/module2/rag.md](docs/module2/rag.md#consulter-les-documents-indexés) (captures 27 à 29, D113-D114) |
 | Tool calling / MCP | ✅ | [src/agent/tools.py](src/agent/tools.py), [src/mcp_server/](src/mcp_server/) ; même boîte à outils pour le chat et le serveur MCP (récupération servie, classifieur à 380 classes), démonstration réelle : [docs/module2/mcp.md](docs/module2/mcp.md) (D125) |
@@ -147,7 +147,8 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 | RAG (88 questions FR/EN, MLflow `tujya-rag`) | Résultat |
 |---|---:|
 | Récupération dense bge-m3 + filtre : Recall@5 / MRR (83 questions ; identique sur Qdrant et pgvector) | 0,928 / 0,852 |
-| Récupération servie depuis l'étape 3.3, dense + réécriture (85 questions, `tujya-rag-retrieval` champion) : Recall@5 / MRR / temps | 0,941 / 0,834 / 389 ms |
+| Récupération de l'étape 3.3, dense + réécriture (85 questions, corpus des 150 premières classes) : Recall@5 / MRR / temps | 0,941 / 0,834 / 389 ms |
+| Récupération servie, hybride + réécriture sur le corpus des 380 classes (27 302 chunks, `tujya-rag-retrieval` champion, D126) : Recall@5 / MRR / temps | 0,906 / 0,844 / 394 ms |
 | Phrases citées soutenues par leur source (juge local) | 94,0 % |
 | Doses chiffrées / « sûr » dans les réponses ; questions de dose refusées | 0 / 0 ; 2/2 |
 | RAGAS sur les 96 questions, réglage servi qwen2.5:3b + prompt v1 (étape 3.4, juge phi4-mini) : fidélité / pertinence / précision / rappel du contexte | 0,931 / 0,704 / 0,940 / 0,695 |
@@ -181,7 +182,7 @@ docs/                     architecture, API, infra, CD, démo, décisions ; modu
 infra/                    MLflow, initialisation PostgreSQL, variante Ollama sans GPU
 tools/                    hooks Git du dépôt (secrets, messages de commit) et leurs tests
 docker-compose.yml        toute l'application en une commande
-dvc.yaml  dvc.lock        étapes DVC : prepare (module 1), rag_corpus (module 2)
+dvc.yaml  dvc.lock        étapes DVC : prepare (module 1), rag_corpus, spark_rag (module 2)
 pyproject.toml            paquet, dépendances, pytest et mypy ; requirements-dev.txt : venv unique .venv
 ruff.toml                 règles de lint communes à tout le code Python
 .github/workflows/        ci-tests.yml (lint, tests, messages de commit, build du site), docker-build.yml (images testées, non publiées)
