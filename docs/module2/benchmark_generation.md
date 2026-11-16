@@ -51,6 +51,13 @@ reste décrit dans [benchmark.md](benchmark.md).
 - **Évaluations** : le run de chaque configuration (paramètres, métriques RAGAS, sécurité,
   citations, GenAI ; artefacts : notes par question sans texte des sources, configuration).
 
+Captures (script [mlflow-genai-screenshots.mjs](../../frontend/scripts/mlflow-genai-screenshots.mjs)) :
+traces [32](../screenshots/32-mlflow-traces.jpg), évaluations
+[33](../screenshots/33-mlflow-evaluations.jpg), prompts [34](../screenshots/34-mlflow-prompts.jpg)
+et [35](../screenshots/35-mlflow-prompt-versions.jpg) (versions, alias `champion`), modèles
+enregistrés `tujya-rag-retrieval` [36](../screenshots/36-mlflow-rag-retrieval-model.jpg) et
+`tujya-rag-generation` [37](../screenshots/37-mlflow-rag-generation-model.jpg).
+
 ## Les deux prompts
 
 - **v1** : le prompt des étapes 3.1 à 3.3 (règles absolues, puis « 3 à 6 phrases courtes :

@@ -35,11 +35,14 @@ modèles fastembed de l'étape 3.2 (`Qdrant/bm25`, `BAAI/bge-reranker-base`), t�
 1. Les données sous `data/` (DVC, [dataset_c3pi.md](module1/dataset_c3pi.md),
    [interactions.md](module2/interactions.md)) : `dvc pull` depuis le
    remote par défaut (section « Remote DVC » plus bas) donne `data/processed/pharma/*.csv` (tables des
-   médicaments), `data/raw/c3pi/images/` (galerie de démonstration) et `data/processed/rag/corpus`
-   (index RAG).
+   médicaments), `data/raw/c3pi/images/` (galerie de démonstration ; ses 8 photos suffisent),
+   `data/processed/rag/corpus_v2` (corpus servi, D126), `data/processed/c3pi/gradcam` et
+   `data/processed/c3pi/drift/reference.json` (commandes exactes : « Installation depuis un clone
+   neuf » plus bas).
 2. Les modèles : `python -m src.models.publish` remplit
    `models/` depuis le Model Registry de MLflow (MLflow doit tourner :
-   `docker compose up -d mlflow` d'abord).
+   `docker compose up -d mlflow` d'abord) ; `python -m src.models.toxicity.train_tox21 publish`
+   ajoute le modèle Tox21 du bonus (`models/tox21`).
 
 Ces dossiers sont montés **en lecture seule** dans le backend (`/tujya/config`,
 `/tujya/data/...`, `/tujya/models` ; l'image garde la disposition du dépôt sous `/tujya`, donc
@@ -167,6 +170,59 @@ détecteur v1 / classifieur v2 ; `/api/interactions` fluconazole + citalopram : 
 (DDInter) ; galerie de démonstration de 8 photos. Le script Playwright
 (`BASE=http://localhost:8080 node scripts/screenshots.mjs`, depuis `frontend`) rejoue tout
 le parcours du navigateur sur les conteneurs.
+
+## Installation depuis un clone neuf (étape 4.1, 2026-11-16)
+
+Vérifiée sur un clone neuf de GitHub (`main`, dossier temporaire hors de la copie de travail,
+supprimé ensuite), à côté de la pile de développement : projet compose `tujia2rc`, ports décalés
+par les variables déjà prévues, tags d'images à part. Ce qu'il faut sur le PC : Docker Desktop
+(GPU NVIDIA pour Ollama), le venv d'entraînement pour DVC et `publish`, le serveur MLflow du
+projet (son Model Registry : les modèles servis), Internet au premier démarrage (modèles Ollama).
+
+```bash
+git clone https://github.com/melekbouabid/syRX.git && cd syRX
+# 1. données de l'application (DVC) : tables, corpus servi, Grad-CAM, référence de dérive,
+#    les 8 photos de la galerie (pas les 39,5 Go d'images C3PI)
+dvc pull data/processed/pharma.dvc spark_rag gradcam_gallery data/processed/c3pi/drift/reference.json
+dvc pull $(tail -n +2 config/demo_gallery.csv | cut -d, -f1 | sed 's|/images/|/|; s|^|data/raw/c3pi/images/|')
+# 2. modèles servis depuis le Model Registry (MLflow du projet sur :5000)
+MLFLOW_TRACKING_URI=http://127.0.0.1:5000 python -m src.models.publish            # .venv-train
+MLFLOW_TRACKING_URI=http://127.0.0.1:5000 python -m src.models.toxicity.train_tox21 publish   # .venv
+# 3. une commande
+docker compose up -d --build
+```
+
+À côté d'une autre pile : `POSTGRES_PORT=15432 MLFLOW_PORT=15000 BACKEND_PORT=18000
+WEB_PORT=18080 OLLAMA_PORT=21434 QDRANT_PORT=16333 BACKEND_IMAGE=tujia2rc-backend:local
+FRONTEND_IMAGE=tujia2rc-frontend:local docker compose -p tujia2rc up -d --build` (32 s avec le
+cache de construction). Résultat : postgres, mlflow, qdrant, ollama, backend et frontend sains,
+chacun sur `127.0.0.1` ; `pharma-init` charge 380 classes, 75 653 interactions ; `rag-init`
+télécharge bge-m3 et qwen2.5:3b (~25 min à ~2 Mo/s), puis encode les 27 302 chunks
+(1 059 s sur la RTX 2050 ; collection `tujya_chunks_v2`). Vérifié dans l'API et dans le navigateur (scripts Playwright de
+`frontend/scripts` avec `BASE=http://localhost:18080`) : `/health` (détecteur v9, classifieur
+v8), `/model/metadata`, `/predict` (photo de la galerie : citalopram 0,903), `/predict/visualize`
+(PNG annoté), Scanner (glisser-déposer, galerie, Grad-CAM, modèles champions, interactions, cas
+à confirmer, webcam), Swagger, boîtes (Panadol -> paracétamol par la marque, DCI imprimée, image
+hors sujet refusée), Monitoring (scénario « sombre » de `drift_demo` : dérive de la luminosité,
+du contraste, de la netteté et de la confiance du détecteur ; bandeau du Scanner), Toxicity,
+Documents (13 660 documents, 27 302 points, tableau de bord Qdrant), chat (fluconazole +
+citalopram : réponse en 5,2 s citant l'interaction DDInter « Major », nœud de sécurité actif).
+
+Deux écarts trouvés et traités :
+- **Remote DVC** : le remote partagé `localstore` ne contient que les données d'avant novembre
+  (aucun `dvc push` depuis : règle du projet, le remote est partagé avec l'ancienne copie). Les
+  données produites depuis (tables à 380 classes, corpus v2, Grad-CAM, dérive, `data/rag_v2`,
+  images v2) sont dans le cache DVC de la copie de travail. Pour le clone, un remote **local à la
+  copie** (`.dvc/config.local`, jamais commité) pointe vers ce cache, en lecture :
+  `dvc remote add --local devcache <copie de travail>/.dvc/cache` puis `dvc pull -r devcache
+  <cibles>`. Pour les 8 photos de la galerie, DVC 3.67 ne récupère que le manifeste du dossier
+  par ce chemin : leurs 8 objets ont été copiés dans le cache du clone, puis `dvc checkout`. Une
+  installation sur un autre PC demande un `dvc push` vers un remote dédié (décision du
+  propriétaire du dépôt).
+- **Modèle Tox21 (bonus)** : il était enregistré sur le serveur MLflow de la première copie du
+  projet (D83), pas sur celui-ci, donc `train_tox21 publish` échouait. Réentraîné par la commande
+  documentée (`train_tox21 train`, 78 s, données `data/raw/tox21` par DVC) : `tujya-tox21`
+  version 1, ROC-AUC de test moyen 0,7252 (la valeur documentée).
 
 ## Tables des médicaments
 

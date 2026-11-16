@@ -32,7 +32,8 @@ await page.getByRole("button", { name: /sign in/i }).click();
 await page.waitForURL(/\/(home|admin)/);
 await page.addStyleTag({ content: ".topbar { position: static !important; }" });
 
-await page.getByRole("link", { name: "Toxicity" }).click();
+// The menu link comes first (the home page links to the same page further down).
+await page.getByRole("link", { name: "Toxicity" }).first().click();
 await page.getByRole("heading", { name: /Toxicity/ }).waitFor();
 await page.getByLabel("Molecule 1").fill("warfarin");
 await page.getByLabel("Molecule 2 (optional)").fill("fluconazole");
