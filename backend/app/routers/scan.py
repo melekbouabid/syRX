@@ -16,9 +16,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
+from app.activity import record
 from app.boxes import BoxMatch, BoxReader, KindThresholds, OcrResult, decide_kind
 from app.config import Settings
-from app.deps import PharmaSession, SettingsDep, get_current_user
+from app.deps import CurrentUser, PharmaSession, SettingsDep, get_current_user
 from app.drift import DriftMonitor
 from app.inference import (
     InvalidImage,
@@ -28,6 +29,7 @@ from app.inference import (
     decode_image,
 )
 from app.medicines import DISCLAIMER, PharmaUnavailable, pill_infos, sources
+from app.models import Action
 from app.pharma import Ingredient
 from app.schemas import (
     BoxIngredient,
@@ -216,6 +218,7 @@ async def scan(
     request: Request,
     settings: SettingsDep,
     db: PharmaSession,
+    user: CurrentUser,
 ) -> ScanResult:
     """Detect every pill in the photo, then identify each one among the 150 C3PI classes;
     or read a medicine box and link its text to active ingredients.
@@ -243,4 +246,6 @@ async def scan(
     drift = getattr(request.app.state, "drift", None)
     result = await run_in_threadpool(_run, scanner, data, settings, db, get_boxes(request), drift)
     result.timings.server_ms = round((time.perf_counter() - started) * 1000, 1)
+    # What kind of photo and how many pills, never the photo or the pills (app/activity.py).
+    await record(request, user.id, Action.SCAN, kind=result.kind, pills=len(result.pills))
     return result

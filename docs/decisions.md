@@ -1778,3 +1778,37 @@ attendus déplacés) ; réindexer en place la collection servie (index partiel p
 garder dense + réécriture parce qu'il était déjà servi (ce serait changer la règle au vu des
 résultats). Détails : [docs/module2/rag.md](module2/rag.md),
 [docs/module2/benchmark_retrieval.md](module2/benchmark_retrieval.md#corpus-v2-380-classes-d126).
+
+**D127. Espace utilisateur et administration complétés : journal d'activité sans donnée de
+santé, rapports enregistrés et partageables, profil (photo, téléphone, signature).** Côté
+administration, chaque action d'un compte (connexions réussies, refusées ou bloquées, scan,
+vérification d'interactions, question au chat, toxicité, médicament enregistré, rapports,
+changements de profil) et chaque action d'un administrateur sur un compte est écrite dans la
+table `activity_events` avec l'heure, l'adresse IP (derrière nginx : la dernière entrée de
+`X-Forwarded-For`, la seule écrite par nginx) et le navigateur. Elle ne garde **que des
+comptes** (nombre de comprimés, de paires avec interaction, de jours de partage), jamais une
+photo, un nom de médicament ni le texte d'une question. Pages `/admin/activity` (filtres par
+groupe, action, période, compte, recherche ; export CSV) et `/admin/usage` (actions par jour en
+colonnes empilées, comptes actifs par jour, tableau équivalent, comptes les plus actifs) ; le
+tableau de bord ajoute scans, questions, rapports et connexions refusées de la semaine. Les
+événements de plus de 180 jours sont supprimés au démarrage (`TUJYA_ACTIVITY_RETENTION_DAYS`).
+Les exports CSV neutralisent les cellules qui commencent par `=`, `+`, `-` ou `@` (injection de
+formule dans un tableur) et sont eux-mêmes journalisés. Côté utilisateur : « Mes médicaments »
+(classes gardées d'une visite à l'autre, seul `class_id` est stocké) et des **rapports** : le
+serveur refait lui-même la vérification d'interactions à partir des `class_id` et des principes
+actifs (le navigateur n'envoie jamais un résultat), et une réponse du chat n'y entre qu'avec le
+**sceau HMAC** que l'API a mis sur elle (`ChatResult.seal`) : une réponse modifiée, par exemple
+pour dire qu'une association est sûre, est refusée (422). Un rapport se partage par un lien en
+lecture seule (`/shared#<jeton>`, 192 bits, seul le SHA-256 est stocké, 1 à 30 jours, un nouveau
+lien remplace l'ancien) ; le jeton reste dans le fragment de l'URL puis dans le corps d'un POST,
+donc jamais dans un journal de serveur. Profil : téléphone, photo (recadrée en 256 px et
+réencodée en JPEG) et signature (encre recadrée sur PNG transparent), toutes deux décodées puis
+réencodées par le serveur, donc sans métadonnées ; la signature n'est montrée qu'à son
+propriétaire et sur ses rapports, jamais aux administrateurs. Les nouvelles données vivent dans
+**des tables à part** (`profiles`, `activity_events`, `saved_medicines`, `reports`) : le projet
+crée ses tables avec `create_all`, sans migration, donc la table `users` ne change pas et une
+base existante gagne simplement les nouvelles tables au démarrage suivant. Pages d'information
+publiques (`/about`, `/privacy`, `/help`) et pied de page. Rejeté : enregistrer le contenu des
+questions pour les statistiques (donnée de santé) ; accepter dans un rapport un résultat
+d'interactions calculé par le navigateur ; ajouter des colonnes à `users` (base existante
+cassée sans migration) ; recréer la page des données de synergie (abandonnée, D85).

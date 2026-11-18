@@ -16,9 +16,12 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 
-from app.deps import get_current_user
+from app import reports
+from app.activity import record
+from app.deps import CurrentUser, get_current_user
 from app.medicines import DISCLAIMER, PharmaUnavailable
-from app.schemas import ChatIn, ChatResult, CitationOut, ToolCallOut
+from app.models import Action
+from app.schemas import ChatIn, ChatResult, CitationOut, CitationRef, ToolCallOut
 from src.agent.graph import AgentState, TujyaAgent
 from src.agent.runtime import AgentHolder
 from src.agent.safety import redact_doses
@@ -75,6 +78,13 @@ def to_result(state: AgentState, model: str, started: float) -> ChatResult:
     )
 
 
+def sealed(result: ChatResult, key: bytes) -> ChatResult:
+    """The result with its seal, so the user can add this exact answer to a report."""
+    refs = [CitationRef(n=c.n, title=c.title, url=c.url) for c in result.citations]
+    result.seal = reports.seal(key, result.question, result.answer, refs)
+    return result
+
+
 def unavailable(exc: Exception) -> HTTPException:
     return HTTPException(
         status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -95,7 +105,7 @@ def _event(name: str, data: Any) -> str:
         503: {"description": "Document index, LLM or medicine tables not available"},
     },
 )
-async def chat(payload: ChatIn, request: Request) -> Any:
+async def chat(payload: ChatIn, request: Request, user: CurrentUser) -> Any:
     """Answer a question about medicines from openFDA labels, PubMed and DDInter, with
     numbered citations. Never gives a dose, never calls a combination safe."""
     started = time.perf_counter()
@@ -103,19 +113,22 @@ async def chat(payload: ChatIn, request: Request) -> Any:
         holder, agent = get_agent(request)
     except (PharmaUnavailable, EmbeddingError, *STORE_ERRORS) as exc:
         raise unavailable(exc) from exc
+    key: bytes = request.app.state.report_key
+    # Counted, never the question itself (app/activity.py).
+    await record(request, user.id, Action.CHAT, stream=payload.stream, pills=len(payload.pills))
 
     if not payload.stream:
         try:
             state = await agent.run(payload.question, payload.pills)
         except (EmbeddingError, PharmaUnavailable, ConnectionError, *STORE_ERRORS) as exc:
             raise unavailable(exc) from exc
-        return to_result(state, holder.model_name, started)
+        return sealed(to_result(state, holder.model_name, started), key)
 
     async def events() -> AsyncIterator[str]:
         try:
             async for event in agent.stream(payload.question, payload.pills):
                 if event["type"] == "final":
-                    result = to_result(event["state"], holder.model_name, started)
+                    result = sealed(to_result(event["state"], holder.model_name, started), key)
                     yield _event("final", result.model_dump(mode="json"))
                 else:
                     yield _event(event["type"], event)

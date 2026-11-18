@@ -15,6 +15,11 @@ export interface User {
   is_active: boolean;
   created_at: string;
   last_login_at: string | null;
+  phone?: string | null;
+  /** Address of the profile photo, null when none. */
+  photo_url?: string | null;
+  /** Own account only: administrators never receive it. */
+  signature_url?: string | null;
 }
 
 export interface Page<T> {
@@ -31,6 +36,61 @@ export interface AdminStats {
   admins: number;
   signups_last_7_days: number;
   active_sessions: number;
+  scans_last_7_days: number;
+  questions_last_7_days: number;
+  reports_total: number;
+  failed_sign_ins_last_7_days: number;
+}
+
+// --- administration: activity log and daily usage ---------------------------------------------
+
+export type ActivityGroup = "access" | "security" | "usage" | "reports" | "account" | "admin";
+
+export interface ActivityEvent {
+  id: number;
+  created_at: string;
+  user_id: number;
+  user_name: string;
+  user_email: string;
+  action: string;
+  group: ActivityGroup;
+  target_id: number | null;
+  target_email: string | null;
+  details: Record<string, unknown>;
+  ip: string | null;
+  user_agent: string | null;
+}
+
+export interface ActivityPage extends Page<ActivityEvent> {
+  counts: Record<ActivityGroup, number>;
+}
+
+export interface ActivityFilters {
+  user_id?: number;
+  group?: ActivityGroup | "";
+  action?: string;
+  q?: string;
+  days?: number;
+  page?: number;
+  page_size?: number;
+}
+
+export interface UsageDay {
+  day: string;
+  sign_ins: number;
+  sign_ups: number;
+  scans: number;
+  interactions: number;
+  questions: number;
+  toxicity: number;
+  reports: number;
+  active_users: number;
+}
+
+export interface Usage {
+  days: UsageDay[];
+  totals: Record<string, number>;
+  top_users: { user_id: number; name: string; email: string; actions: number }[];
 }
 
 export interface UserFilters {
@@ -47,6 +107,72 @@ export interface NewUser {
   password: string;
   role: Role;
   is_active: boolean;
+}
+
+// --- my medicines and reports -----------------------------------------------------------------
+
+export interface SavedMedicine {
+  class_id: number;
+  name: string;
+  generic_name: string;
+  active_ingredients: string[];
+  found: boolean;
+  probability: number | null;
+  added_at: string;
+}
+
+export interface SavedMedicines {
+  items: SavedMedicine[];
+  limit: number;
+}
+
+export interface ChatExcerpt {
+  question: string;
+  answer: string;
+  citations: { n: number; title: string; url: string }[];
+}
+
+export interface ShareState {
+  active: boolean;
+  expires_at: string;
+  views: number;
+}
+
+export interface ReportSummary {
+  id: number;
+  created_at: string;
+  title: string;
+  pill_names: string[];
+  ingredients: string[];
+  highest_severity: Severity | null;
+  pairs_with_interaction: number;
+  chat_answers: number;
+  share: ShareState | null;
+}
+
+export interface ReportBody {
+  id: number;
+  created_at: string;
+  title: string;
+  pills: { class_id: number; name: string; generic_name: string; active_ingredients: string[] }[];
+  ingredients: string[];
+  interactions: InteractionsResult | null;
+  chat: ChatExcerpt[];
+  highest_severity: Severity | null;
+  author: string;
+  signature: string | null;
+  disclaimer: string;
+}
+
+export interface Report extends ReportBody {
+  share: ShareState | null;
+}
+
+export interface NewReport {
+  title: string;
+  pills: number[];
+  ingredients: string[];
+  chat: (ChatExcerpt & { seal: string })[];
 }
 
 export type UserChanges = Partial<Pick<User, "email" | "full_name" | "role" | "is_active">>;
@@ -262,6 +388,8 @@ export interface ChatResult {
   model: string;
   timings: Record<string, number>;
   disclaimer: string;
+  /** Server seal: needed to add this exact answer to a saved report. */
+  seal?: string;
 }
 
 /** One Server-Sent Event of POST /api/chat with `stream: true`. */
@@ -430,6 +558,8 @@ const FIELD_LABELS: Record<string, string> = {
   password: "Password",
   new_password: "New password",
   current_password: "Current password",
+  phone: "Phone",
+  title: "Title",
 };
 
 /** Turn a FastAPI error body into one readable sentence. */
@@ -537,8 +667,15 @@ export const api = {
   signUp: (account: { email: string; full_name: string; password: string }) =>
     request<User>("POST", "/auth/signup", { body: account, anonymous: true }),
   signOut: () => request<void>("POST", "/auth/logout", { anonymous: true }),
-  updateProfile: (full_name: string) =>
-    request<User>("PATCH", "/auth/me", { body: { full_name } }),
+  /** `phone` undefined keeps it, "" removes it. */
+  updateProfile: (full_name: string, phone?: string) =>
+    request<User>("PATCH", "/auth/me", { body: { full_name, phone } }),
+  setImage: (kind: "photo" | "signature", image: Blob, filename = "image.png") => {
+    const form = new FormData();
+    form.append("image", image, filename);
+    return request<User>("PUT", `/auth/me/${kind}`, { form });
+  },
+  deleteImage: (kind: "photo" | "signature") => request<User>("DELETE", `/auth/me/${kind}`),
   changePassword: (current_password: string, new_password: string) =>
     request<void>("POST", "/auth/me/password", { body: { current_password, new_password } }),
 
@@ -577,15 +714,53 @@ export const api = {
     return response.blob();
   },
 
+  my: {
+    medicines: (signal?: AbortSignal) =>
+      request<SavedMedicines>("GET", "/my/medicines", { signal }),
+    saveMedicine: (class_id: number, probability: number | null) =>
+      request<SavedMedicines>("POST", "/my/medicines", { body: { class_id, probability } }),
+    removeMedicine: (class_id: number) => request<void>("DELETE", `/my/medicines/${class_id}`),
+    clearMedicines: () => request<void>("DELETE", "/my/medicines"),
+    reports: (signal?: AbortSignal) =>
+      request<{ items: ReportSummary[]; limit: number }>("GET", "/my/reports", { signal }),
+    report: (id: number, signal?: AbortSignal) =>
+      request<Report>("GET", `/my/reports/${id}`, { signal }),
+    createReport: (report: NewReport) => request<Report>("POST", "/my/reports", { body: report }),
+    deleteReport: (id: number) => request<void>("DELETE", `/my/reports/${id}`),
+    share: (id: number, days: number) =>
+      request<{ token: string; share: ShareState }>("POST", `/my/reports/${id}/share`, {
+        body: { days },
+      }),
+    unshare: (id: number) => request<Report>("DELETE", `/my/reports/${id}/share`),
+  },
+  /** A report shared by link: no sign-in; the token is the part after # in /shared#… */
+  shared: (token: string, signal?: AbortSignal) =>
+    request<ReportBody>("POST", "/shared", { body: { token }, signal, anonymous: true }),
+
   admin: {
     stats: (signal?: AbortSignal) => request<AdminStats>("GET", "/admin/stats", { signal }),
     users: (filters: UserFilters, signal?: AbortSignal) =>
       request<Page<User>>("GET", "/admin/users", { query: { ...filters }, signal }),
+    user: (id: number, signal?: AbortSignal) =>
+      request<User>("GET", `/admin/users/${id}`, { signal }),
     createUser: (account: NewUser) => request<User>("POST", "/admin/users", { body: account }),
     updateUser: (id: number, changes: UserChanges) =>
       request<User>("PATCH", `/admin/users/${id}`, { body: changes }),
     resetPassword: (id: number, new_password: string) =>
       request<void>("POST", `/admin/users/${id}/password`, { body: { new_password } }),
     deleteUser: (id: number) => request<void>("DELETE", `/admin/users/${id}`),
+    activity: (filters: ActivityFilters, signal?: AbortSignal) =>
+      request<ActivityPage>("GET", "/admin/activity", { query: { ...filters }, signal }),
+    usage: (days: number, signal?: AbortSignal) =>
+      request<Usage>("GET", "/admin/usage", { query: { days }, signal }),
   },
 };
+
+/** Address of a CSV export (downloaded by the browser with the session cookie). */
+export function exportUrl(table: "users" | "activity", filters: ActivityFilters = {}): string {
+  const url = new URL(`/api/admin/export/${table}.csv`, window.location.origin);
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== "") url.searchParams.set(key, String(value));
+  }
+  return url.pathname + url.search;
+}

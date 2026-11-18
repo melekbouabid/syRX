@@ -169,6 +169,17 @@ class Settings(BaseSettings):
     session_hours: int = 12
     cookie_secure: bool = False  # set to true as soon as the site is served over HTTPS
 
+    # Activity log of the admin pages (app/activity.py): events older than this are deleted
+    # at start-up; 0 keeps everything.
+    activity_retention_days: int = 180
+    # Saved medicines and reports (app/routers/my.py).
+    max_saved_medicines: int = 50
+    max_reports_per_user: int = 200
+    report_share_max_days: int = 30
+    # Key of the seal put on each chat answer, checked when the answer is added to a report.
+    # Empty: a random key per run (answers from before a restart then need asking again).
+    report_seal_key: str = ""
+
     # Accounts created the first time the API starts on an empty database.
     admin_email: str = "admin@gmail.com"
     admin_password: str = DEFAULT_ADMIN_PASSWORD

@@ -117,8 +117,20 @@ export function Badge({ tone, children }: { tone: string; children: ReactNode })
 }
 
 /** Initials on one of four brand gradients; the same name always gets the same one. */
-export function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg" }) {
+export function Avatar({
+  name,
+  size = "md",
+  src = null,
+}: {
+  name: string;
+  size?: "sm" | "md" | "lg";
+  /** Profile photo; the initials are shown when there is none. */
+  src?: string | null;
+}) {
   const variant = [...name].reduce((sum, letter) => sum + letter.charCodeAt(0), 0) % 4;
+  if (src) {
+    return <img className={`avatar avatar-${size} avatar-photo`} src={src} alt="" loading="lazy" />;
+  }
   return (
     <span className={`avatar avatar-${size} avatar-v${variant}`} aria-hidden="true">
       {initials(name)}

@@ -16,6 +16,10 @@ démonstration (D46). Les quatre routes du guide du module 1 (`/health`, `/model
 | `GET /api/demo/images` | galerie de photos du split de test, jamais vues à l'entraînement par les modèles servis (lecture seule, D105) | [ci-dessous](#galerie-de-démo-et-grad-cam) |
 | `GET /api/demo/images/{id}/gradcam` | Grad-CAM précalculée d'une photo de la galerie (JPEG, 404 sinon, D104) | [ci-dessous](#galerie-de-démo-et-grad-cam) |
 | `/api/auth/*`, `/api/admin/*` | comptes, sessions, administration | [docs/app.md](app.md#comptes) |
+| `PUT/DELETE /api/auth/me/photo`, `PUT/DELETE /api/auth/me/signature`, `GET /api/users/{id}/photo\|signature` | photo de profil et signature, réencodées par le serveur (D127) | [docs/app.md](app.md#profil-mes-médicaments-et-rapports-d127) |
+| `GET /api/admin/activity`, `GET /api/admin/usage`, `GET /api/admin/export/{users,activity}.csv` | journal d'activité, usage par jour, exports CSV (administrateur, D127) | [docs/app.md](app.md#administration-d127) |
+| `/api/my/medicines`, `/api/my/reports` (`…/{id}/share`) | médicaments gardés et rapports de l'utilisateur, liens de partage (D127) | [docs/app.md](app.md#profil-mes-médicaments-et-rapports-d127) |
+| `POST /api/shared` | lire un rapport partagé, sans compte (jeton dans le corps) | [docs/app.md](app.md#profil-mes-médicaments-et-rapports-d127) |
 | `GET /health`, `GET /model/metadata`, `POST /predict`, `POST /predict/visualize` | endpoints du guide : état, métadonnées, prédiction JSON, image annotée (sans compte) | [ci-dessous](#endpoints-du-guide-du-module-1-sans-compte) |
 | `GET /monitoring/drift`, `POST /monitoring/drift/reset` | dérive des photos scannées contre la référence (sans compte ; remise à zéro : administrateur, étape 2.8) | [docs/module1/derive.md](module1/derive.md#api-et-interface) |
 

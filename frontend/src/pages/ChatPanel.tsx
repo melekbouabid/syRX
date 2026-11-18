@@ -135,7 +135,13 @@ function ToolCalls({ tools }: { tools: ChatToolCall[] }) {
   );
 }
 
-function TurnView({ turn }: { turn: Turn }) {
+interface KeepProps {
+  /** Answers chosen for the next saved report (Scanner page). */
+  kept?: ChatResult[];
+  onKeep?: (result: ChatResult) => void;
+}
+
+function TurnView({ turn, kept = [], onKeep }: { turn: Turn } & KeepProps) {
   const result = turn.result;
   const busy = !result && !turn.error;
   const action = result?.safety.action;
@@ -164,6 +170,17 @@ function TurnView({ turn }: { turn: Turn }) {
             <span className="muted">
               {result.model} · {Math.round((result.timings.total_ms ?? 0) / 100) / 10} s
             </span>
+            {onKeep && result.seal && (
+              <button
+                type="button"
+                className={`chip-btn ${kept.includes(result) ? "chip-btn-on" : ""}`}
+                aria-pressed={kept.includes(result)}
+                onClick={() => onKeep(result)}
+              >
+                <Icon name="bookmark" size={14} />{" "}
+                {kept.includes(result) ? "In the next report" : "Add to report"}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -173,7 +190,7 @@ function TurnView({ turn }: { turn: Turn }) {
   );
 }
 
-export default function ChatPanel({ pills }: { pills: ChatPill[] }) {
+export default function ChatPanel({ pills, kept, onKeep }: { pills: ChatPill[] } & KeepProps) {
   const [question, setQuestion] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
   const [busy, setBusy] = useState(false);
@@ -252,7 +269,7 @@ export default function ChatPanel({ pills }: { pills: ChatPill[] }) {
         ))}
       </div>
       {turns.map((turn) => (
-        <TurnView key={turn.id} turn={turn} />
+        <TurnView key={turn.id} turn={turn} kept={kept} onKeep={onKeep} />
       ))}
     </section>
   );
