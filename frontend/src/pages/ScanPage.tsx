@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState, type DragEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   api,
   errorMessage,
   type BoxReading,
+  type ChatResult,
+  type SavedMedicine,
   type DemoImage,
-  type InteractionPair,
   type InteractionsResult,
   type PillCandidate,
   type ScannedPill,
   type ScanResult,
-  type Severity,
-  type Source,
 } from "../services/api";
-import { Alert, Badge, Spinner, staggerIndex } from "../components";
+import { Alert, Badge, Modal, Spinner, staggerIndex, TextField } from "../components";
+import { Disclaimer, InteractionReport, SourceList } from "../components/interactions";
 import { useDebounced, useQuery } from "../hooks";
 import { Icon, type IconName } from "../components/icons";
 import { LatencyReadout, ModelCard, ProbBar, ProbabilityBars, ScanCanvas } from "../components/vision";
@@ -21,8 +21,6 @@ import { percent, startLiveLoop, type Latency } from "../lib/vision";
 import { showDriftBanner } from "../lib/drift";
 import ChatPanel from "./ChatPanel";
 
-// Safety texts are shown exactly as the project rules write them (docs/project_rules.md, D53).
-const DISCLAIMER = "Information uniquement, consultez un pharmacien ou un médecin.";
 const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp";
 const MAX_BYTES = 10 * 1024 * 1024;
 const LIVE_PAUSE_MS = 400; // between two live frames, after the previous answer arrived
@@ -156,34 +154,7 @@ function latencyOf(result: ScanResult, clientMs: number): Latency {
   };
 }
 
-function Disclaimer({ text = DISCLAIMER }: { text?: string }) {
-  return (
-    <p className="disclaimer">
-      <Icon name="shield" size={16} />
-      {text}
-    </p>
-  );
-}
 
-function SourceList({ sources }: { sources: Source[] }) {
-  if (sources.length === 0) return null;
-  return (
-    <div className="cited-sources">
-      <h4>Sources</h4>
-      <ul>
-        {sources.map((source) => (
-          <li key={source.name}>
-            <a href={source.url} target="_blank" rel="noreferrer">
-              {source.title}
-            </a>{" "}
-            <span className="muted">({source.license})</span>
-            {source.citation && <span className="cell-sub">{source.citation}</span>}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
 
 /** Drag and drop (or click) a photo; checked here before the API checks it again. */
 function UploadPanel({ onImage }: { onImage: OnImage }) {
@@ -656,87 +627,9 @@ function PillChoice({
   );
 }
 
-const SEVERITY_TONE: Record<Severity, string> = {
-  Major: "danger",
-  Moderate: "warn",
-  Minor: "info",
-  Unknown: "neutral",
-};
 
-const SEVERITY_TEXT: Record<Severity, string> = {
-  Major: "Major",
-  Moderate: "Moderate",
-  Minor: "Minor",
-  Unknown: "Unknown severity (DDInter lists the interaction without grading it)",
-};
 
-function PairCard({ pair, index }: { pair: InteractionPair; index: number }) {
-  const tone = pair.highest_severity ? SEVERITY_TONE[pair.highest_severity] : "none";
-  return (
-    <article className={`card pair-card pair-${tone}`} style={staggerIndex(index)}>
-      <header className="pair-head">
-        <h3>
-          {pair.item_a.label} <span className="muted">+</span> {pair.item_b.label}
-        </h3>
-        {pair.highest_severity && (
-          <Badge tone={SEVERITY_TONE[pair.highest_severity]}>{pair.highest_severity}</Badge>
-        )}
-      </header>
-      {pair.message && <p className="pair-message">{pair.message}</p>}
-      {pair.interactions.length > 0 && (
-        <ul className="interaction-list">
-          {pair.interactions.map((found) => (
-            <li key={`${found.ingredient_a}-${found.ingredient_b}`}>
-              <strong>
-                {found.ingredient_a} + {found.ingredient_b}
-              </strong>
-              : {SEVERITY_TEXT[found.severity]}. {found.description}{" "}
-              <a href={found.source.url} target="_blank" rel="noreferrer">
-                Source: {found.source.title}
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
-      {pair.shared_ingredients.length > 0 && (
-        <p className="pill-note">
-          <Icon name="alert" size={16} /> Same active ingredient in both:{" "}
-          {pair.shared_ingredients.join(", ")}.
-        </p>
-      )}
-    </article>
-  );
-}
 
-function InteractionReport({ report }: { report: InteractionsResult }) {
-  const counts = report.pairs.reduce<Record<string, number>>((total, pair) => {
-    const key = pair.highest_severity ?? "none";
-    total[key] = (total[key] ?? 0) + 1;
-    return total;
-  }, {});
-  return (
-    <section className="report" aria-live="polite">
-      <div className={`report-summary report-${report.highest_severity ? SEVERITY_TONE[report.highest_severity] : "none"}`}>
-        <p className="report-message">{report.message}</p>
-        <span className="badge-row">
-          {(["Major", "Moderate", "Minor", "Unknown"] as Severity[]).map(
-            (severity) =>
-              counts[severity] && (
-                <Badge key={severity} tone={SEVERITY_TONE[severity]}>
-                  {counts[severity]} {severity}
-                </Badge>
-              ),
-          )}
-        </span>
-      </div>
-      {report.pairs.map((pair, index) => (
-        <PairCard key={`${pair.item_a.label}|${pair.item_b.label}`} pair={pair} index={index} />
-      ))}
-      <SourceList sources={report.sources} />
-      <Disclaimer text={report.disclaimer} />
-    </section>
-  );
-}
 
 type View = "photo" | "gradcam";
 
@@ -848,6 +741,151 @@ function DriftBanner({ scans }: { scans: number }) {
   );
 }
 
+const MAX_KEPT_ANSWERS = 5;
+
+/** "My medicines": pill classes kept between visits, one click away from the check. */
+function SavedMedicinesCard({
+  saved,
+  error,
+  inCheck,
+  onAdd,
+  onRemove,
+}: {
+  saved: SavedMedicine[] | null;
+  error: string | null;
+  inCheck: (classId: number) => boolean;
+  onAdd: (medicine: SavedMedicine) => void;
+  onRemove: (classId: number) => void;
+}) {
+  return (
+    <section className="card my-pills" aria-label="My medicines">
+      <header className="pill-card-head">
+        <h2>
+          <Icon name="bookmark" size={18} /> My medicines
+        </h2>
+        <span className="muted">kept in your account · only you can see them</span>
+      </header>
+      {error && <Alert>{error}</Alert>}
+      {saved && saved.length === 0 && (
+        <p className="muted">
+          Save a confirmed pill (bookmark button in “My pills” below) to find it here next time.
+        </p>
+      )}
+      {saved && saved.length > 0 && (
+        <ul className="chip-list">
+          {saved.map((medicine) => (
+            <li key={medicine.class_id} className="chip">
+              <span>
+                <strong>{medicine.name}</strong>
+                <span className="cell-sub">
+                  {medicine.active_ingredients.join(" + ") || "no active ingredient known"}
+                </span>
+              </span>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                disabled={!medicine.found || inCheck(medicine.class_id)}
+                onClick={() => onAdd(medicine)}
+              >
+                {inCheck(medicine.class_id) ? "In the check" : "Add to check"}
+              </button>
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label={`Remove ${medicine.name} from my medicines`}
+                onClick={() => onRemove(medicine.class_id)}
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function SaveReportDialog({
+  pills,
+  ingredients,
+  answers,
+  defaultTitle,
+  onClose,
+}: {
+  pills: number[];
+  ingredients: string[];
+  answers: ChatResult[];
+  defaultTitle: string;
+  onClose: () => void;
+}) {
+  const navigate = useNavigate();
+  const [title, setTitle] = useState(defaultTitle);
+  const [chosen, setChosen] = useState<ChatResult[]>(answers);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+
+  const save = async () => {
+    setBusy(true);
+    setProblem(null);
+    try {
+      const report = await api.my.createReport({
+        title: title.trim(),
+        pills,
+        ingredients,
+        chat: chosen.map((answer) => ({
+          question: answer.question,
+          answer: answer.answer,
+          citations: answer.citations.map(({ n, title: t, url }) => ({ n, title: t, url })),
+          seal: answer.seal ?? "",
+        })),
+      });
+      navigate(`/reports/${report.id}`);
+    } catch (failure) {
+      setProblem(errorMessage(failure));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title="Save as report" onClose={onClose}>
+      <p className="muted">
+        The interactions are checked again and kept as they are today. You can print the report
+        or share a read-only link from “Reports”.
+      </p>
+      {problem && <Alert>{problem}</Alert>}
+      <TextField label="Title" value={title} onChange={setTitle} maxLength={120} />
+      {answers.length > 0 && (
+        <fieldset className="field">
+          <legend>Answers of the assistant to include</legend>
+          {answers.map((answer, index) => (
+            <label key={index} className="check-row">
+              <input
+                type="checkbox"
+                checked={chosen.includes(answer)}
+                onChange={(event) =>
+                  setChosen((current) =>
+                    event.target.checked ? [...current, answer] : current.filter((a) => a !== answer),
+                  )
+                }
+              />
+              {answer.question}
+            </label>
+          ))}
+        </fieldset>
+      )}
+      <div className="form-actions">
+        <button type="button" className="btn btn-ghost" onClick={onClose}>
+          Cancel
+        </button>
+        <button type="button" className="btn btn-primary" disabled={busy} onClick={save}>
+          {busy && <span className="btn-spinner" aria-hidden="true" />}
+          Save the report
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 export default function ScanPage() {
   const [mode, setMode] = useState<Mode>("upload");
   const [photo, setPhoto] = useState<Photo | null>(null);
@@ -860,6 +898,55 @@ export default function ScanPage() {
   const [checking, setChecking] = useState(false);
   const [scans, setScans] = useState(0);
   const resultRef = useRef<HTMLElement>(null);
+  const saved = useQuery((signal) => api.my.medicines(signal), []);
+  const [savedList, setSavedList] = useState<SavedMedicine[] | null>(null);
+  const [savedError, setSavedError] = useState<string | null>(null);
+  const [kept, setKept] = useState<ChatResult[]>([]);
+  const [saving, setSaving] = useState(false);
+  const mySaved = savedList ?? saved.data?.items ?? null;
+
+  const saveMedicine = async (item: { class_id: number | null; probability: number | null }) => {
+    if (item.class_id === null) return;
+    setSavedError(null);
+    try {
+      setSavedList((await api.my.saveMedicine(item.class_id, item.probability)).items);
+    } catch (failure) {
+      setSavedError(errorMessage(failure));
+    }
+  };
+
+  const removeSaved = async (classId: number) => {
+    setSavedError(null);
+    try {
+      await api.my.removeMedicine(classId);
+      setSavedList((mySaved ?? []).filter((m) => m.class_id !== classId));
+    } catch (failure) {
+      setSavedError(errorMessage(failure));
+    }
+  };
+
+  const addSaved = (medicine: SavedMedicine) => {
+    setMine((current) => [
+      ...current.filter((item) => item.key !== `saved#${medicine.class_id}`),
+      {
+        key: `saved#${medicine.class_id}`,
+        kind: "pill",
+        class_id: medicine.class_id,
+        name: medicine.name,
+        generic_name: medicine.generic_name,
+        active_ingredients: medicine.active_ingredients,
+        probability: null,
+      },
+    ]);
+    setReport(null);
+  };
+
+  const keep = (result: ChatResult) =>
+    setKept((current) =>
+      current.includes(result)
+        ? current.filter((r) => r !== result)
+        : [...current, result].slice(-MAX_KEPT_ANSWERS),
+    );
 
   // Release the previous photo's memory when it is replaced or the page is left.
   useEffect(() => () => {
@@ -1028,6 +1115,14 @@ export default function ScanPage() {
         </section>
       )}
 
+      <SavedMedicinesCard
+        saved={mySaved}
+        error={savedError ?? saved.error}
+        inCheck={(classId) => mine.some((item) => item.class_id === classId)}
+        onAdd={addSaved}
+        onRemove={(classId) => void removeSaved(classId)}
+      />
+
       <section className="card my-pills" aria-label="My pills">
         <header className="pill-card-head">
           <h2>My pills</h2>
@@ -1052,6 +1147,18 @@ export default function ScanPage() {
                     {item.probability !== null ? ` · ${percent(item.probability)}` : " · chosen by search"}
                   </span>
                 </span>
+                {item.class_id !== null && (
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    title="Keep in my medicines"
+                    aria-label={`Save ${item.name} in my medicines`}
+                    aria-pressed={mySaved?.some((m) => m.class_id === item.class_id) ?? false}
+                    onClick={() => void saveMedicine(item)}
+                  >
+                    <Icon name="bookmark" size={14} />
+                  </button>
+                )}
                 <button
                   type="button"
                   className="icon-btn"
@@ -1074,11 +1181,31 @@ export default function ScanPage() {
             {checking && <span className="btn-spinner" aria-hidden="true" />}
             Check interactions
           </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={checkable < 1 || checkable > 10}
+            onClick={() => setSaving(true)}
+            title="Save the check (and the answers you chose) to print or share it"
+          >
+            <Icon name="file" size={16} />
+            Save as report{kept.length ? ` (${kept.length} answer${kept.length === 1 ? "" : "s"})` : ""}
+          </button>
         </div>
         {report && <InteractionReport report={report} />}
       </section>
 
-      <ChatPanel pills={mine} />
+      <ChatPanel pills={mine} kept={kept} onKeep={keep} />
+
+      {saving && (
+        <SaveReportDialog
+          pills={classIds}
+          ingredients={boxIngredients}
+          answers={kept}
+          defaultTitle={mine.map((item) => item.name).slice(0, 3).join(" + ")}
+          onClose={() => setSaving(false)}
+        />
+      )}
     </>
   );
 }

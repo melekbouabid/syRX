@@ -38,6 +38,10 @@ def test_stats(admin: TestClient, user: TestClient) -> None:
         "admins": 1,
         "signups_last_7_days": 2,
         "active_sessions": 2,
+        "scans_last_7_days": 0,
+        "questions_last_7_days": 0,
+        "reports_total": 0,
+        "failed_sign_ins_last_7_days": 0,
     }
 
 

@@ -1,15 +1,20 @@
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { homePath, useAuth } from "./services/auth";
 import { Logo, Spinner } from "./components";
-import { AdminLayout, RequireAuth, UserLayout } from "./components/layouts";
+import { AdminLayout, InfoLayout, RequireAuth, UserLayout } from "./components/layouts";
+import Activity from "./pages/admin/Activity";
 import Dashboard from "./pages/admin/Dashboard";
+import Usage from "./pages/admin/Usage";
 import Users from "./pages/admin/Users";
 import AuthPage from "./pages/AuthPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import MonitoringPage from "./pages/MonitoringPage";
 import Home from "./pages/Home";
 import Intro from "./pages/Intro";
+import { AboutPage, HelpPage, PrivacyPage } from "./pages/InfoPages";
 import Profile from "./pages/Profile";
+import ReportsPage, { ReportPage } from "./pages/ReportsPage";
+import SharedReportPage from "./pages/SharedReportPage";
 import ScanPage from "./pages/ScanPage";
 import ToxicityPage from "./pages/ToxicityPage";
 
@@ -39,12 +44,21 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<AuthPage mode="signin" />} />
       <Route path="/signup" element={<AuthPage mode="signup" />} />
+      {/* Public: a report opened from its share link (/shared#token), and the info pages. */}
+      <Route path="/shared" element={<SharedReportPage />} />
+      <Route element={<InfoLayout />}>
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/help" element={<HelpPage />} />
+      </Route>
 
       {/* Any signed-in account */}
       <Route element={<RequireAuth />}>
         <Route element={<UserLayout />}>
           <Route path="/home" element={<Home />} />
           <Route path="/scan" element={<ScanPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/reports/:id" element={<ReportPage />} />
           <Route path="/toxicity" element={<ToxicityPage />} />
           <Route path="/documents" element={<DocumentsPage />} />
           <Route path="/monitoring" element={<MonitoringPage />} />
@@ -57,6 +71,8 @@ export default function App() {
         <Route element={<AdminLayout />}>
           <Route path="/admin" element={<Dashboard />} />
           <Route path="/admin/users" element={<Users />} />
+          <Route path="/admin/activity" element={<Activity />} />
+          <Route path="/admin/usage" element={<Usage />} />
           <Route path="/admin/account" element={<Profile />} />
         </Route>
       </Route>

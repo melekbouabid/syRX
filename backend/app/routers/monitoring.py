@@ -14,8 +14,10 @@ from typing import Any
 
 from fastapi import APIRouter, Request, status
 
-from app.deps import AdminUser
+from app.activity import add_event
+from app.deps import AdminUser, DbSession
 from app.drift import DriftMonitor
+from app.models import Action
 from app.schemas import DriftReport
 
 router = APIRouter(prefix="/monitoring", tags=["monitoring"])
@@ -40,5 +42,7 @@ def drift(request: Request) -> Any:
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Empty the window of scanned photos (administrator)",
 )
-def reset(request: Request, _: AdminUser) -> None:
+def reset(request: Request, admin: AdminUser, db: DbSession) -> None:
     monitor(request).reset()
+    add_event(db, admin.id, Action.DRIFT_RESET, request)
+    db.commit()

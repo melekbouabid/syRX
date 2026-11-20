@@ -126,11 +126,11 @@ Le premier démarrage crée deux comptes :
 
 | E-mail | Mot de passe | Arrive sur |
 |---|---|---|
-| `admin@gmail.com` | `admin` | `/admin` : tableau de bord et gestion des utilisateurs |
+| `admin@gmail.com` | `admin` | `/admin` : tableau de bord, utilisateurs, activité, usage |
 | `user@gmail.com` | `user` | `/home`, puis « Scanner » |
 
 **Changez le mot de passe administrateur avant que quiconque d'autre puisse joindre le
-serveur** (Admin, puis My account) : l'API affiche un avertissement à chaque démarrage tant
+serveur** (Admin, puis clic sur son nom en haut à droite) : l'API affiche un avertissement à chaque démarrage tant
 que ce n'est pas fait. Pour d'autres identifiants dès le départ, copier
 `backend/.env.example` vers `backend/.env`.
 
@@ -140,6 +140,38 @@ que ce n'est pas fait. Pour d'autres identifiants dès le départ, copier
   désactivation déconnecte immédiatement.
 - Le rôle est vérifié par l'API à chaque requête ; masquer une page dans le site n'est qu'un
   confort.
+
+## Administration (D127)
+
+| Page | Contenu |
+|---|---|
+| `/admin` | comptes (actifs, désactivés, sessions ouvertes), usage de la semaine (scans, questions, rapports, connexions refusées), dernière activité, derniers comptes |
+| `/admin/users` | gestion des comptes ; lien « Activity » par compte ; export CSV |
+| `/admin/activity` | journal : groupes (connexions, sécurité, usage, rapports, profil, administration) avec leurs nombres, action, période, recherche par nom, e-mail ou IP, filtre par compte (`?user=ID`) ; export CSV avec les mêmes filtres |
+| `/admin/usage` | 7 à 90 jours : totaux, actions par jour (colonnes empilées), comptes actifs par jour, vue tableau, comptes les plus actifs |
+
+Le journal ne contient que des nombres, jamais une photo, un médicament ou une question.
+Événements gardés 180 jours (`TUJYA_ACTIVITY_RETENTION_DAYS`, 0 = sans limite). Les couleurs
+des graphiques sont vérifiées pour le daltonisme en clair et en sombre (`.viz` dans
+`frontend/src/styles.css`) ; chaque valeur est aussi dans l'infobulle et la vue tableau.
+
+## Profil, mes médicaments et rapports (D127)
+
+- **Profil** (clic sur son nom en haut à droite) : nom, téléphone, photo, signature (dessinée
+  à la souris ou au doigt, ou scan importé). Photo et signature sont réencodées par le serveur ;
+  la signature n'est visible que par son propriétaire et sur ses rapports.
+- **Mes médicaments** (Scanner) : le signet d'un comprimé confirmé le garde dans le compte ;
+  « Add to check » le remet dans la vérification lors d'une visite suivante.
+- **Rapports** : « Save as report » dans le Scanner (1 à 10 éléments) ; le serveur refait la
+  vérification et la garde telle quelle. Les réponses du chat marquées « Add to report » y
+  sont jointes seulement si leur sceau est intact. `/reports` liste les rapports ; un rapport
+  s'imprime (ou s'enregistre en PDF) et se partage par un lien en lecture seule
+  `/shared#<jeton>`, valable 1 à 30 jours, révocable à tout moment.
+- **Pages publiques** : `/about`, `/privacy` (ce qui est gardé et qui le voit), `/help`.
+
+Réglages (`backend/.env`) : `TUJYA_MAX_SAVED_MEDICINES` (50), `TUJYA_MAX_REPORTS_PER_USER`
+(200), `TUJYA_REPORT_SHARE_MAX_DAYS` (30), `TUJYA_REPORT_SEAL_KEY` (vide : clé aléatoire à chaque
+démarrage, les réponses d'avant un redémarrage sont alors à redemander).
 
 ## Tests et vérifications
 

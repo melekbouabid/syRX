@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { api, errorMessage, type Role, type User } from "../../services/api";
+import { Link } from "react-router-dom";
+import { api, errorMessage, exportUrl, type Role, type User } from "../../services/api";
 import { useAuth } from "../../services/auth";
 import {
   Alert,
@@ -317,10 +318,16 @@ export default function Users() {
             </p>
           </div>
         </div>
-        <button type="button" className="btn btn-primary" onClick={() => setDialog({ kind: "create" })}>
-          <Icon name="plus" />
-          New user
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <a className="btn btn-ghost" href={exportUrl("users")} download>
+            <Icon name="download" />
+            Export CSV
+          </a>
+          <button type="button" className="btn btn-primary" onClick={() => setDialog({ kind: "create" })}>
+            <Icon name="plus" />
+            New user
+          </button>
+        </div>
       </header>
 
       <div className="toolbar">
@@ -386,12 +393,15 @@ export default function Users() {
                   <tr key={user.id} className="row-enter" style={staggerIndex(index)}>
                     <td>
                       <div className="cell-user">
-                        <Avatar name={user.full_name} size="sm" />
+                        <Avatar name={user.full_name} size="sm" src={user.photo_url} />
                         <div>
                           <span className="cell-title">
                             {user.full_name} {isSelf(user) && <Badge tone="neutral">You</Badge>}
                           </span>
-                          <span className="cell-sub">{user.email}</span>
+                          <span className="cell-sub">
+                            {user.email}
+                            {user.phone ? ` · ${user.phone}` : ""}
+                          </span>
                         </div>
                       </div>
                     </td>
@@ -407,6 +417,9 @@ export default function Users() {
                     <td>{formatDate(user.last_login_at, true)}</td>
                     <td className="num">
                       <div className="row-actions">
+                        <Link className="btn btn-ghost btn-sm" to={`/admin/activity?user=${user.id}`}>
+                          Activity
+                        </Link>
                         <button
                           type="button"
                           className="btn btn-ghost btn-sm"

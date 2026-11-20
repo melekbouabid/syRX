@@ -33,6 +33,11 @@ class UserOut(BaseModel):
     is_active: bool
     created_at: datetime
     last_login_at: datetime | None
+    phone: str | None = None
+    photo_url: str | None = Field(None, description="Profile photo, null when none")
+    signature_url: str | None = Field(
+        None, description="Signature (own account only; null for other users)"
+    )
 
 
 # --- sign in, sign up, own account ----------------------------------------------------------
@@ -50,8 +55,15 @@ class LoginIn(BaseModel):
     password: str = Field(max_length=128)
 
 
+Phone = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, max_length=32, pattern=r"^[0-9+()./\- ]*$"),
+]
+
+
 class ProfileUpdate(BaseModel):
     full_name: FullName
+    phone: Phone | None = Field(None, description="Empty string removes it; null keeps it")
 
 
 class PasswordChange(BaseModel):
@@ -95,6 +107,51 @@ class AdminStats(BaseModel):
     admins: int
     signups_last_7_days: int
     active_sessions: int
+    scans_last_7_days: int = 0
+    questions_last_7_days: int = 0
+    reports_total: int = 0
+    failed_sign_ins_last_7_days: int = 0
+
+
+class ActivityEventOut(BaseModel):
+    id: int
+    created_at: datetime
+    user_id: int
+    user_name: str
+    user_email: str
+    action: str
+    group: str = Field(description="access, security, usage, reports, account or admin")
+    target_id: int | None
+    target_email: str | None
+    details: dict[str, Any]
+    ip: str | None
+    user_agent: str | None
+
+
+class ActivityPage(BaseModel):
+    items: list[ActivityEventOut]
+    total: int
+    page: int
+    page_size: int
+    counts: dict[str, int] = Field(description="Events per group with the same filters")
+
+
+class UsageDay(BaseModel):
+    day: str = Field(description="YYYY-MM-DD, UTC")
+    sign_ins: int
+    sign_ups: int
+    scans: int
+    interactions: int
+    questions: int
+    toxicity: int
+    reports: int
+    active_users: int
+
+
+class UsageOut(BaseModel):
+    days: list[UsageDay]
+    totals: dict[str, int]
+    top_users: list[dict[str, Any]] = Field(description="Most active accounts in the period")
 
 
 # --- Tujya: pills, scan, interactions -------------------------------------------------------
@@ -342,6 +399,9 @@ class ChatResult(BaseModel):
     model: str
     timings: dict[str, float]
     disclaimer: str
+    seal: str = Field(
+        "", description="Server seal, required to add this answer to a report (app/reports.py)"
+    )
 
 
 # ---------------------------------------------------------------- toxicity (bonus)
@@ -572,3 +632,121 @@ class DriftReport(Strict):
     features: list[DriftFeature]
     thresholds: dict[str, float] = Field(description="params.yaml `drift`, from the reference")
     reference: dict[str, Any] = Field(description="Photos and served models of the reference")
+
+
+# ---------------------------------------------------------------- my medicines and reports
+
+
+class SavedMedicineIn(BaseModel):
+    class_id: ClassId
+    probability: float | None = Field(None, ge=0, le=1)
+
+
+class SavedMedicineOut(BaseModel):
+    class_id: int
+    name: str
+    generic_name: str
+    active_ingredients: list[str]
+    found: bool = Field(description="False when the class left the medicine tables")
+    probability: float | None
+    added_at: datetime
+
+
+class SavedMedicines(BaseModel):
+    items: list[SavedMedicineOut]
+    limit: int
+
+
+class CitationRef(BaseModel):
+    n: int
+    title: str = Field(max_length=500)
+    url: str = Field(max_length=1000)
+
+
+class ChatExcerpt(BaseModel):
+    question: str = Field(max_length=1000)
+    answer: str = Field(max_length=8000)
+    citations: list[CitationRef] = Field(default_factory=list, max_length=30)
+
+
+class SealedExcerpt(ChatExcerpt):
+    seal: str = Field(max_length=128, description="ChatResult.seal of this answer")
+
+
+class ReportCreate(BaseModel):
+    """What the report is about. The server checks the interactions itself."""
+
+    title: Annotated[str, StringConstraints(strip_whitespace=True, max_length=120)] = ""
+    pills: list[ClassId] = Field(default_factory=list, max_length=10)
+    ingredients: list[IngredientName] = Field(default_factory=list, max_length=10)
+    chat: list[SealedExcerpt] = Field(default_factory=list, max_length=5)
+
+    @model_validator(mode="after")
+    def _one_to_ten(self) -> ReportCreate:
+        count = len(self.pills) + len(self.ingredients)
+        if not 1 <= count <= 10:
+            raise ValueError("give between 1 and 10 pills and ingredients in total")
+        return self
+
+
+class ReportPill(BaseModel):
+    class_id: int
+    name: str
+    generic_name: str
+    active_ingredients: list[str]
+
+
+class ShareState(BaseModel):
+    active: bool
+    expires_at: datetime
+    views: int
+
+
+class ReportSummary(BaseModel):
+    id: int
+    created_at: datetime
+    title: str
+    pill_names: list[str]
+    ingredients: list[str]
+    highest_severity: str | None
+    pairs_with_interaction: int
+    chat_answers: int
+    share: ShareState | None
+
+
+class ReportPage(BaseModel):
+    items: list[ReportSummary]
+    limit: int
+
+
+class ReportBody(BaseModel):
+    id: int
+    created_at: datetime
+    title: str
+    pills: list[ReportPill]
+    ingredients: list[str] = Field(description="Ingredients typed by name")
+    interactions: InteractionsResult | None = Field(
+        description="Null with a single item: nothing to compare"
+    )
+    chat: list[ChatExcerpt]
+    highest_severity: str | None
+    author: str
+    signature: str | None = Field(description="Author's signature as a data: URL, if any")
+    disclaimer: str
+
+
+class ReportOut(ReportBody):
+    share: ShareState | None
+
+
+class ShareIn(BaseModel):
+    days: int = Field(7, ge=1, le=365, description="Capped by report_share_max_days")
+
+
+class ShareCreated(BaseModel):
+    token: str = Field(description="Shown once: the link is /shared#<token>")
+    share: ShareState
+
+
+class SharedIn(BaseModel):
+    token: str = Field(min_length=10, max_length=100)

@@ -12,7 +12,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
-from app.deps import get_current_user
+from app.activity import record
+from app.deps import CurrentUser, get_current_user
+from app.models import Action
 from app.pharma import Ingredient
 from app.schemas import ToxicityIn, ToxicityResult
 from src.models.toxicity.model import ToxHolder, ToxicityUnavailable, predict_molecules
@@ -36,7 +38,7 @@ def _name_resolver(request: Request) -> NameIndex | None:
 
 
 @router.post("/toxicity", response_model=ToxicityResult)
-async def toxicity(body: ToxicityIn, request: Request) -> ToxicityResult:
+async def toxicity(body: ToxicityIn, request: Request, user: CurrentUser) -> ToxicityResult:
     holder: ToxHolder = request.app.state.toxicity
     names = await run_in_threadpool(_name_resolver, request)
     resolve = names.lookup if names else None
@@ -44,4 +46,5 @@ async def toxicity(body: ToxicityIn, request: Request) -> ToxicityResult:
         result = await run_in_threadpool(predict_molecules, holder, body.molecules, resolve)
     except ToxicityUnavailable as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
+    await record(request, user.id, Action.TOXICITY, molecules=len(body.molecules))
     return ToxicityResult.model_validate(result)

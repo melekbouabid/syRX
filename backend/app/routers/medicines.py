@@ -7,11 +7,12 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
-from app.deps import PharmaSession, get_current_user
+from app.activity import record
+from app.deps import CurrentUser, PharmaSession, get_current_user
 from app.medicines import (
     DISCLAIMER,
     NO_KNOWN_INTERACTION,
@@ -23,6 +24,7 @@ from app.medicines import (
     search_pills,
     sources,
 )
+from app.models import Action
 from app.routers.scan import pharma_unavailable
 from app.schemas import (
     CheckedItem,
@@ -137,7 +139,9 @@ async def list_pills(
 
 
 @router.post("/interactions", response_model=InteractionsResult)
-async def check_interactions(payload: InteractionsIn, db: PharmaSession) -> InteractionsResult:
+async def check_interactions(
+    payload: InteractionsIn, request: Request, db: PharmaSession, user: CurrentUser
+) -> InteractionsResult:
     """Every pair among the pills and ingredients given, with DDInter's severity and source.
 
     A pair with nothing listed is reported as "aucune interaction connue dans cette base de
@@ -146,6 +150,16 @@ async def check_interactions(payload: InteractionsIn, db: PharmaSession) -> Inte
     """
 
     try:
-        return await run_in_threadpool(interactions_report, db, payload.pills, payload.ingredients)
+        result = await run_in_threadpool(
+            interactions_report, db, payload.pills, payload.ingredients
+        )
     except PharmaUnavailable as exc:
         raise pharma_unavailable() from exc
+    await record(
+        request,
+        user.id,
+        Action.INTERACTIONS,
+        items=len(result.items),
+        pairs_with_interaction=sum(1 for p in result.pairs if p.interactions),
+    )
+    return result

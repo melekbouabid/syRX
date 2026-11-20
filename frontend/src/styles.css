@@ -582,6 +582,7 @@ img.logo,
 
 input[type="text"],
 input[type="email"],
+input[type="tel"],
 input[type="password"],
 input[type="search"],
 input:not([type]),
@@ -2739,4 +2740,597 @@ a.cite:hover {
 
 .tox-notes p {
   margin: 0 0 8px;
+}
+
+/* ---------- admin activity and usage, profile, reports, info pages, footer ---------- */
+
+.avatar-photo {
+  object-fit: cover;
+  background: var(--surface-2);
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+}
+
+.icon-btn[aria-pressed="true"] {
+  color: var(--primary-text);
+  background: var(--primary-soft);
+}
+
+.chip-btn-on,
+.chip-btn[aria-selected="true"] {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-text);
+  font-weight: 600;
+}
+
+.chip-count {
+  margin-left: 6px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.link-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--primary-text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+.empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 36px 20px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.segmented button {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segmented button[aria-selected="true"] {
+  background: var(--surface);
+  color: var(--primary-text);
+  box-shadow: var(--shadow);
+}
+
+.stat-grid + .section-title,
+.stat-grid + .grid {
+  margin-top: 24px;
+}
+
+.event-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.event-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.event-list li > span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.latest-activity,
+.grid > .meter-card {
+  margin-top: 16px;
+}
+
+/* Charts (components/charts.tsx). Categorical slots validated for colour-blind readers on
+   both surfaces (dataviz validator: adjacent CVD ΔE ≥ 8.4, normal-vision ΔE ≥ 19.3). */
+.viz {
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --viz-grid: color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  .viz {
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+  }
+}
+
+.viz-card h2 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+}
+
+.viz-sub {
+  margin: 0 0 10px;
+  font-size: 0.86rem;
+}
+
+.viz-plot {
+  position: relative;
+  width: 100%;
+}
+
+.viz-plot svg {
+  display: block;
+  overflow: visible;
+}
+
+.viz-plot rect[tabindex]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.viz-axis line {
+  stroke: var(--viz-grid);
+  stroke-width: 1;
+}
+
+.viz-axis text {
+  fill: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.viz-baseline {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.viz-crosshair {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.viz-dot {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.viz-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.viz-legend li,
+.viz-tooltip-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.viz-legend i,
+.viz-tooltip-row i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.viz-tooltip {
+  position: absolute;
+  top: 8px;
+  z-index: 2;
+  display: grid;
+  gap: 2px;
+  min-width: 180px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  color: var(--text);
+  font-size: 0.82rem;
+  pointer-events: none;
+}
+
+.viz-tooltip-row b {
+  margin-left: auto;
+  padding-left: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.viz-empty {
+  padding: 60px 0;
+  text-align: center;
+}
+
+/* Profile: photo and signature */
+.photo-control {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+
+.signature-pad {
+  display: grid;
+  gap: 8px;
+}
+
+.signature-canvas {
+  width: 100%;
+  height: 160px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 12px;
+  background: #ffffff;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.signature-preview {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.signature-preview img {
+  max-width: 100%;
+  max-height: 120px;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-weight: 400;
+}
+
+fieldset.field {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+fieldset.field legend {
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+/* Reports */
+.report-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.report-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.report-item > div:first-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.report-item-title {
+  color: var(--heading);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.share-link {
+  display: flex;
+  gap: 8px;
+}
+
+.share-link input {
+  flex: 1;
+  min-width: 0;
+}
+
+.report-doc {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.report-doc-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+  padding-bottom: 18px;
+  border-bottom: 3px solid transparent;
+  border-image: var(--brand-line) 1;
+}
+
+.report-doc-title {
+  flex: 1;
+  min-width: 220px;
+}
+
+.report-doc-title h1 {
+  margin: 2px 0;
+  font-size: 1.5rem;
+}
+
+.report-doc-title p {
+  margin: 0;
+}
+
+.report-doc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.report-doc-section {
+  margin-top: 26px;
+}
+
+.report-doc-section h2 {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+}
+
+.report-table td {
+  vertical-align: top;
+}
+
+.report-chat {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.report-chat-q {
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+
+.report-chat-a p {
+  margin: 0 0 6px;
+}
+
+.report-citations {
+  margin: 8px 0 0;
+  padding-left: 22px;
+  font-size: 0.86rem;
+}
+
+.report-doc-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 30px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.report-signature {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 200px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.report-signature img {
+  max-width: 220px;
+  max-height: 80px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.report-signature-line {
+  width: 200px;
+  height: 48px;
+  border-bottom: 1px solid var(--border-strong);
+}
+
+/* Information pages */
+.info-page {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.info-body {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.info-section h2 {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+}
+
+.info-section ul,
+.info-section ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.info-section li + li {
+  margin-top: 8px;
+}
+
+.help-steps p {
+  margin: 2px 0 0;
+  color: var(--muted);
+}
+
+.info-section details {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.info-section summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.info-section details p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+/* Footer */
+.site-footer {
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.site-footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 18px 20px;
+  font-size: 0.86rem;
+}
+
+.site-footer nav {
+  display: flex;
+  gap: 18px;
+}
+
+.site-footer a {
+  color: var(--primary-text);
+  font-weight: 600;
+}
+
+/* Printing a report (Reports page or shared link): the document only, on white paper. */
+@media print {
+  .topbar,
+  .site-footer,
+  .no-print,
+  .alert {
+    display: none !important;
+  }
+
+  .page {
+    max-width: none;
+    padding: 0;
+  }
+
+  .report-doc {
+    max-width: none;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    color: #000000;
+    background: #ffffff;
+  }
+
+  .report-doc .card {
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .report-chat {
+    break-inside: avoid;
+  }
+}
+
+/* More pages in the top bars: links wrap instead of running under the account block. */
+.nav {
+  flex-wrap: wrap;
+}
+
+.topbar .nav-link {
+  gap: 6px;
+  padding: 8px 11px;
+}
+
+.topbar-inner {
+  gap: 8px 20px;
+}
+
+/* The account block of the top bar opens the profile (it replaced the "Profile" link). */
+.user-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 999px;
+  color: inherit;
+  transition: background-color 0.15s;
+}
+
+.user-link:hover {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.viz-card {
+  min-width: 0;
 }

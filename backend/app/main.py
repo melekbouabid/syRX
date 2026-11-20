@@ -10,12 +10,14 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.orm import sessionmaker
 
 from app.accounts import seed_accounts, warn_about_default_password
+from app.activity import prune
 from app.boxes import BoxReader, OcrHolder, RxNavClient
 from app.config import Settings
 from app.db import Base, make_engine
 from app.drift import DriftMonitor
 from app.inference import ScannerHolder
 from app.limits import BodySizeLimit
+from app.reports import signing_key
 from app.routers import (
     admin,
     auth,
@@ -24,8 +26,10 @@ from app.routers import (
     documents,
     medicines,
     monitoring,
+    my,
     scan,
     toxicity,
+    users,
     vision,
 )
 from src.agent.runtime import AgentHolder
@@ -52,6 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         with session_factory() as db:
             seed_accounts(db, settings)
             warn_about_default_password(db, settings)
+            prune(db, settings.activity_retention_days)
         yield
         engine.dispose()
         pharma_engine.dispose()
@@ -79,6 +84,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.session_factory = session_factory
     app.state.pharma_engine = pharma_engine
+    # Seal of the chat answers that a user may add to a report (app/reports.py).
+    app.state.report_key = signing_key(settings.report_seal_key)
     app.state.scanner = ScannerHolder(
         settings.models_dir,
         providers=settings.onnx_providers,
@@ -115,6 +122,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(chat.router)
     app.include_router(documents.router)
     app.include_router(toxicity.router)
+    app.include_router(my.router)
+    app.include_router(my.public_router)
+    app.include_router(users.router)
     # Endpoints of the course guide: /health, /model/metadata, /predict, /predict/visualize.
     app.include_router(vision.router)
     app.include_router(monitoring.router)

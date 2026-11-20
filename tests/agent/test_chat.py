@@ -254,3 +254,25 @@ def test_pill_ids_invented_by_the_planner_are_dropped(
     (check,) = [c for c in body["tool_calls"] if c["name"] == "check_interaction"]
     assert "pills" not in check["args"]
     assert {"warfarin", "losartan", "hydrochlorothiazide"} <= set(check["args"]["drugs"])
+
+
+def test_answer_is_sealed_for_reports(client: TestClient, llm: FakeChatModel) -> None:
+    """An answer goes into a report exactly as the agent gave it, never edited (D127)."""
+    llm.answer = "DDInter classe cette interaction comme majeure [1]."
+    body = ask(client, "La warfarine et le fluconazole interagissent-ils ?")
+    assert len(body["seal"]) == 64
+    excerpt = {
+        "question": body["question"],
+        "answer": body["answer"],
+        "citations": [
+            {"n": c["n"], "title": c["title"], "url": c["url"]} for c in body["citations"]
+        ],
+        "seal": body["seal"],
+    }
+    payload = {"ingredients": ["warfarin", "fluconazole"], "chat": [excerpt]}
+    saved = client.post("/api/my/reports", json=payload)
+    assert saved.status_code == 201, saved.text
+    assert saved.json()["chat"][0]["answer"] == body["answer"]
+
+    excerpt["answer"] = body["answer"].replace("majeure", "sans danger")
+    assert client.post("/api/my/reports", json=payload).status_code == 422
