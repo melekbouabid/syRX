@@ -3249,6 +3249,14 @@ fieldset.field legend {
   white-space: nowrap;
 }
 
+/* A pill name or an interaction pair is never cut: it goes on to a second line instead. */
+.float-card .fc-text strong {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
+}
+
 .fc-text .fc-sub {
   color: rgb(255 255 255 / 60%);
   font-size: 0.68rem;
@@ -3256,6 +3264,7 @@ fieldset.field legend {
 
 .fc-value {
   flex: none;
+  min-width: max-content; /* "86,3 %" stays on one line, the sign with its number */
   color: #b9de8a;
   white-space: nowrap;
   font-size: 0.95rem;

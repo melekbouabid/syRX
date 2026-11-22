@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import en from "../i18n/en";
 import fr from "../i18n/fr";
 import type { CatalogSummary, ShowcaseOut } from "../services/api";
-import { catalogFacts, FactList, FloatCardsView } from "./landing";
+import { catalogFacts, FactList, FloatCardsView, formatShare } from "./landing";
 import { LanguageButton, ThemeButton } from "./prefs";
 import { SceneFrame } from "./Scene3D";
 
@@ -64,6 +64,11 @@ describe("floating cards", () => {
     expect(html).toContain("fluconazole + warfarin");
     expect(html).toContain("tujya-pill-classifier v8");
     expect(html).not.toContain(en.common.example);
+  });
+
+  it("write the confidence the French way, the % sign bound to its number", () => {
+    expect(formatShare(0.8634, "fr")).toMatch(/^86,3[\u00a0\u202f]%$/); // no breaking space
+    expect(formatShare(0.8634, "en")).toBe("86.3%");
   });
 
   it("say “example” and show no figure when the API has no showcase", () => {
