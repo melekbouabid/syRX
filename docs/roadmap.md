@@ -107,6 +107,8 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Script de démonstration ([docs/demo.md](demo.md), répété sur les conteneurs) et questions du jury ([docs/questions_jury.md](questions_jury.md))
 - [ ] Vidéo de secours de la démonstration (à enregistrer à la main)
 - [x] Espace utilisateur et administration complétés (D127) : journal d'activité, usage par jour, exports CSV, profil (photo, téléphone, signature), mes médicaments, rapports imprimables et partageables, pages À propos / Confidentialité / Aide
+- [x] Nouvelle interface (D128) : anglais et français, thème clair et sombre, pages d'accueil et de connexion en 3D dont les chiffres viennent de l'API (`/api/catalog/*`), captures avant / après ([docs/screenshots/interface/](screenshots/interface/))
+- [ ] Seuil de confirmation réglable depuis l'interface (reporté)
 
 ## 8. Structure du dépôt (2026-10-29)
 - [x] Deux dossiers de premier niveau pour les modules notés, chacun avec un README qui relie chaque exigence à ses fichiers (D79 à D82)
