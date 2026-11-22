@@ -11,6 +11,26 @@
     />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <title>Tujya</title>
+    <script>
+      // Light or dark before the first paint (same rules as src/services/theme.ts), so a dark
+      // page never flashes white; and the language for screen readers (src/i18n/index.ts).
+      (function () {
+        var theme = null;
+        var lang = null;
+        try {
+          theme = localStorage.getItem("tujya-theme");
+          lang = localStorage.getItem("tujya-lang");
+        } catch (e) {}
+        if (theme !== "light" && theme !== "dark") {
+          theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+        if (lang !== "en" && lang !== "fr") {
+          lang = (navigator.language || "en").slice(0, 2).toLowerCase() === "fr" ? "fr" : "en";
+        }
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.lang = lang;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

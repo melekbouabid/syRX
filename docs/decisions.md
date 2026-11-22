@@ -1812,3 +1812,26 @@ publiques (`/about`, `/privacy`, `/help`) et pied de page. Rejeté : enregistrer
 questions pour les statistiques (donnée de santé) ; accepter dans un rapport un résultat
 d'interactions calculé par le navigateur ; ajouter des colonnes à `users` (base existante
 cassée sans migration) ; recréer la page des données de synergie (abandonnée, D85).
+
+**D128. Nouvelle interface : anglais et français, thème clair et sombre, page d'accueil 3D
+dont chaque chiffre vient de l'API.** Les textes de l'interface sont dans `frontend/src/i18n`
+(`en.ts`, `fr.ts`) ; la langue suit celle du navigateur jusqu'à ce qu'on en choisisse une, le
+thème suit celui du système jusqu'au premier clic, et les deux choix sont gardés dans le
+navigateur (dans un try/catch) et appliqués avant le premier affichage (`index.html`). Ce
+qu'écrit l'API (erreurs, réponses de l'agent, extraits de sources) est montré tel quel : seule
+l'interface est traduite. Les pages d'accueil et de connexion montrent une scène three.js
+(fichier à part, chargé après le premier affichage, remplacé par un emblème fixe quand le
+visiteur demande moins d'animations) et des cartes flottantes. **Aucun chiffre n'y est écrit
+à la main** : `GET /api/catalog/summary` compte classes, principes actifs et paires dans les
+tables de médicaments, et `GET /api/catalog/showcase` fait un vrai scan d'une photo de la
+galerie de démo (split de test, D105) avec les modèles servis ; sans modèles ou sans tables,
+les cartes sont marquées « exemple » et aucun chiffre n'est montré. Les deux routes sont
+publiques, en lecture seule, sans rien sur un compte, et gardées en mémoire (comptes dix
+minutes, scan une fois par version de modèle publiée), donc elles ne peuvent pas servir à
+charger le serveur. La carte d'interaction montre une **paire connue dont les deux principes
+actifs sont des comprimés du catalogue**, fluconazole + warfarine, avec la sévérité que donne
+DDInter (Major) : les photos de l'un des deux sont essayées en premier. Pour un autre
+comprimé, c'est l'interaction la plus sévère de son principe actif. Rejeté : des chiffres ou
+un exemple écrits dans le code (faux dès que les tables changent) ; la première interaction
+« Major » par ordre alphabétique (haloperidol + abarelix, un médicament hors catalogue, peu
+parlant). Reporté : le réglage du seuil de confirmation depuis l'interface.

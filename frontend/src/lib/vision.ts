@@ -1,6 +1,7 @@
 // Pure helpers of the vision part of the Scanner page (course guide, step 2.6): class
 // colours, box geometry on a canvas, latency figures and the live webcam loop. No React and
 // no DOM here, so src/lib/vision.test.ts checks them in Node (Vitest).
+import { messages } from "../i18n";
 
 /** A box with corners in 0-1 of the image width and height (`box_normalized` of the API). */
 export interface NormBox {
@@ -163,6 +164,7 @@ export function headlineMetrics(model: {
   metrics: Record<string, number>;
 }): Headline[] {
   const m = model.metrics;
+  const words = messages().vision.metrics;
   const out: Headline[] = [];
   const score = (label: string, key: string, asPercent: boolean) => {
     const value = m[key];
@@ -173,17 +175,17 @@ export function headlineMetrics(model: {
   if (model.task === "detect") {
     // Promotion metric of step 2.2 (D93), else the v1 test split, else validation.
     const found =
-      score("test mAP50-95", "test_v2_mAP50_95", false) ||
-      score("test mAP50-95", "test_mAP50_95", false);
-    if (!found) score("val mAP50-95", "val_mAP50_95", false);
-    if (!score("test mAP50", "test_v2_mAP50", false)) score("test mAP50", "test_mAP50", false);
+      score(words.testMap, "test_v2_mAP50_95", false) ||
+      score(words.testMap, "test_mAP50_95", false);
+    if (!found) score(words.valMap, "val_mAP50_95", false);
+    if (!score(words.testMap50, "test_v2_mAP50", false)) score(words.testMap50, "test_mAP50", false);
   } else {
     // Promotion metric of step 2.3 (comparison split of C3PI v2, D100), else the v1 test split.
-    if (!score("test top-1", "test_v2_top1", true)) score("test top-1", "test_top1", true);
-    if (!score("test top-5", "test_v2_top5", true)) score("test top-5", "test_top5", true);
+    if (!score(words.top1, "test_v2_top1", true)) score(words.top1, "test_top1", true);
+    if (!score(words.top5, "test_v2_top5", true)) score(words.top5, "test_top5", true);
   }
   if (m.onnx_cpu_latency_ms !== undefined) {
-    out.push({ label: "CPU latency", value: formatMs(m.onnx_cpu_latency_ms) });
+    out.push({ label: words.cpu, value: formatMs(m.onnx_cpu_latency_ms) });
   }
   return out;
 }

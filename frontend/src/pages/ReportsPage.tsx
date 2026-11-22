@@ -6,6 +6,7 @@ import { Icon } from "../components/icons";
 import { SEVERITY_TONE } from "../components/interactions";
 import { ReportDocument } from "../components/ReportDocument";
 import { useQuery } from "../hooks";
+import { useT } from "../i18n";
 
 const SHARE_DAYS = [1, 7, 30];
 
@@ -15,24 +16,23 @@ export function shareUrl(token: string): string {
 }
 
 function ShareBadge({ share }: { share: ShareState | null }) {
+  const t = useT();
   if (!share) return null;
-  if (!share.active) return <Badge tone="neutral">link ended</Badge>;
-  return (
-    <Badge tone="active">
-      shared until {formatDate(share.expires_at)} · {share.views} view{share.views === 1 ? "" : "s"}
-    </Badge>
-  );
+  if (!share.active) return <Badge tone="neutral">{t.reports.linkEnded}</Badge>;
+  return <Badge tone="active">{t.reports.sharedUntil(formatDate(share.expires_at), share.views)}</Badge>;
 }
 
 function SeverityBadge({ report }: { report: ReportSummary | Report }) {
+  const t = useT();
   return report.highest_severity ? (
-    <Badge tone={SEVERITY_TONE[report.highest_severity]}>{report.highest_severity}</Badge>
+    <Badge tone={SEVERITY_TONE[report.highest_severity]}>{t.severity[report.highest_severity]}</Badge>
   ) : (
-    <Badge tone="neutral">none known</Badge>
+    <Badge tone="neutral">{t.reports.noneKnown}</Badge>
   );
 }
 
 function DeleteDialog({ id, onClose, onDeleted }: { id: number; onClose: () => void; onDeleted: () => void }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const remove = async () => {
@@ -46,16 +46,16 @@ function DeleteDialog({ id, onClose, onDeleted }: { id: number; onClose: () => v
     }
   };
   return (
-    <Modal title="Delete this report?" onClose={onClose}>
-      <p>The report and its share link are deleted for good.</p>
+    <Modal title={t.reports.deleteTitle} onClose={onClose}>
+      <p>{t.reports.deleteText}</p>
       {problem && <Alert>{problem}</Alert>}
       <div className="form-actions">
         <button type="button" className="btn btn-ghost" onClick={onClose}>
-          Cancel
+          {t.common.cancel}
         </button>
         <button type="button" className="btn btn-danger" disabled={busy} onClick={remove}>
           {busy && <span className="btn-spinner" aria-hidden="true" />}
-          Delete
+          {t.common.delete}
         </button>
       </div>
     </Modal>
@@ -64,6 +64,8 @@ function DeleteDialog({ id, onClose, onDeleted }: { id: number; onClose: () => v
 
 /** The user's saved reports, newest first. */
 export default function ReportsPage() {
+  const t = useT();
+  const r = t.reports;
   const reports = useQuery((signal) => api.my.reports(signal), []);
   const [deleting, setDeleting] = useState<number | null>(null);
 
@@ -75,16 +77,13 @@ export default function ReportsPage() {
             <Icon name="file" size={24} />
           </span>
           <div>
-            <h1>My reports</h1>
-            <p className="muted">
-              Interaction checks you saved from the Scanner, kept as they were on that day. Print
-              them or share a read-only link with a pharmacist or a doctor.
-            </p>
+            <h1>{r.title}</h1>
+            <p className="muted">{r.lead}</p>
           </div>
         </div>
         <Link className="btn btn-primary" to="/scan">
           <Icon name="scan" />
-          New check
+          {r.newCheck}
         </Link>
       </header>
 
@@ -94,8 +93,10 @@ export default function ReportsPage() {
         <div className="card empty-state">
           <Icon name="file" size={28} />
           <p>
-            No report yet. In the <Link to="/scan">Scanner</Link>, check your medicines, then choose
-            <strong> Save as report</strong>.
+            {r.emptyBefore}
+            <Link to="/scan">{t.shell.nav.scan}</Link>
+            {r.emptyMiddle}
+            <strong>{r.emptySave}</strong>.
           </p>
         </div>
       )}
@@ -108,8 +109,8 @@ export default function ReportsPage() {
                   {report.title}
                 </Link>
                 <span className="cell-sub">
-                  {formatDate(report.created_at, true)} · {report.ingredients.join(", ") || "no ingredient"}
-                  {report.chat_answers ? ` · ${report.chat_answers} answer(s)` : ""}
+                  {formatDate(report.created_at, true)} · {report.ingredients.join(", ") || r.noIngredient}
+                  {report.chat_answers ? r.answers(report.chat_answers) : ""}
                 </span>
                 <span className="badge-row mt-2">
                   <SeverityBadge report={report} />
@@ -118,11 +119,11 @@ export default function ReportsPage() {
               </div>
               <div className="row-actions">
                 <Link className="btn btn-ghost btn-sm" to={`/reports/${report.id}`}>
-                  Open
+                  {r.open}
                 </Link>
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDeleting(report.id)}>
                   <Icon name="trash" size={16} />
-                  <span className="sr-only">Delete</span>
+                  <span className="sr-only">{t.common.delete}</span>
                 </button>
               </div>
             </li>
@@ -131,7 +132,7 @@ export default function ReportsPage() {
       )}
       {reports.data && (
         <p className="muted mt-3">
-          {reports.data.items.length} of {reports.data.limit} reports.
+          {r.count(reports.data.items.length, reports.data.limit)}
         </p>
       )}
       {deleting !== null && (
@@ -149,6 +150,8 @@ export default function ReportsPage() {
 }
 
 function ShareDialog({ report, onClose, onChange }: { report: Report; onClose: () => void; onChange: () => void }) {
+  const t = useT();
+  const r = t.reports;
   const [days, setDays] = useState(7);
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -189,30 +192,27 @@ function ShareDialog({ report, onClose, onChange }: { report: Report; onClose: (
   };
 
   return (
-    <Modal title="Share a read-only link" onClose={onClose}>
-      <p className="muted">
-        Anyone with the link can read this report, without an account, until it expires. A new
-        link replaces the previous one.
-      </p>
+    <Modal title={r.shareTitle} onClose={onClose}>
+      <p className="muted">{r.shareText}</p>
       {problem && <Alert>{problem}</Alert>}
       {link ? (
         <>
           <div className="share-link">
-            <input readOnly value={link} aria-label="Share link" onFocus={(e) => e.target.select()} />
+            <input readOnly value={link} aria-label={r.shareLink} onFocus={(e) => e.target.select()} />
             <button type="button" className="btn btn-primary btn-sm" onClick={copy}>
               <Icon name="link" size={16} />
-              {copied ? "Copied" : "Copy"}
+              {copied ? r.copied : r.copy}
             </button>
           </div>
-          <p className="hint">The link is shown only now: copy it before closing.</p>
+          <p className="hint">{r.onlyNow}</p>
         </>
       ) : (
         <div className="field">
-          <label htmlFor="share-days">Valid for</label>
+          <label htmlFor="share-days">{r.validFor}</label>
           <select id="share-days" value={days} onChange={(e) => setDays(Number(e.target.value))}>
             {SHARE_DAYS.map((d) => (
               <option key={d} value={d}>
-                {d} day{d === 1 ? "" : "s"}
+                {r.days(d)}
               </option>
             ))}
           </select>
@@ -221,18 +221,18 @@ function ShareDialog({ report, onClose, onChange }: { report: Report; onClose: (
       <div className="form-actions">
         {report.share?.active && (
           <button type="button" className="btn btn-ghost" disabled={busy} onClick={stop}>
-            Stop sharing
+            {r.stop}
           </button>
         )}
         {!link && (
           <button type="button" className="btn btn-primary" disabled={busy} onClick={create}>
             {busy && <span className="btn-spinner" aria-hidden="true" />}
-            Create the link
+            {r.create}
           </button>
         )}
         {link && (
           <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Done
+            {r.done}
           </button>
         )}
       </div>
@@ -242,6 +242,8 @@ function ShareDialog({ report, onClose, onChange }: { report: Report; onClose: (
 
 /** One saved report: read, print, share or delete it. */
 export function ReportPage() {
+  const t = useT();
+  const r = t.reports;
   const id = Number(useParams().id);
   const navigate = useNavigate();
   const report = useQuery((signal) => api.my.report(id, signal), [id]);
@@ -252,17 +254,17 @@ export function ReportPage() {
     return (
       <>
         <Alert>{report.error}</Alert>
-        <Link to="/reports">Back to my reports</Link>
+        <Link to="/reports">{r.back}</Link>
       </>
     );
   }
-  if (!report.data) return <Spinner label="Loading the report" />;
+  if (!report.data) return <Spinner label={r.loading} />;
 
   return (
     <>
       <p className="no-print mb-3">
         <Link to="/reports" className="link-btn">
-          ← My reports
+          {r.backShort}
         </Link>
       </p>
       <ReportDocument
@@ -273,15 +275,15 @@ export function ReportPage() {
             <span className="flex-1" />
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => window.print()}>
               <Icon name="printer" size={16} />
-              Print or save as PDF
+              {r.print}
             </button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSharing(true)}>
               <Icon name="share" size={16} />
-              Share
+              {r.share}
             </button>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDeleting(true)}>
               <Icon name="trash" size={16} />
-              Delete
+              {t.common.delete}
             </button>
           </>
         }

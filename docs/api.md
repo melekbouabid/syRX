@@ -15,6 +15,7 @@ démonstration (D46). Les quatre routes du guide du module 1 (`/health`, `/model
 | `POST /api/toxicity` | probabilités Tox21 d'une ou deux molécules (bonus) | [docs/bonus/toxicity.md](bonus/toxicity.md#où-il-est-utilisé) |
 | `GET /api/demo/images` | galerie de photos du split de test, jamais vues à l'entraînement par les modèles servis (lecture seule, D105) | [ci-dessous](#galerie-de-démo-et-grad-cam) |
 | `GET /api/demo/images/{id}/gradcam` | Grad-CAM précalculée d'une photo de la galerie (JPEG, 404 sinon, D104) | [ci-dessous](#galerie-de-démo-et-grad-cam) |
+| `GET /api/catalog/summary`, `GET /api/catalog/showcase` | chiffres du catalogue et vrai scan d'une photo de test pour les pages d'accueil et de connexion (sans compte, lecture seule, D128) | [ci-dessous](#catalogue-des-pages-publiques-d128) |
 | `/api/auth/*`, `/api/admin/*` | comptes, sessions, administration | [docs/app.md](app.md#comptes) |
 | `PUT/DELETE /api/auth/me/photo`, `PUT/DELETE /api/auth/me/signature`, `GET /api/users/{id}/photo\|signature` | photo de profil et signature, réencodées par le serveur (D127) | [docs/app.md](app.md#profil-mes-médicaments-et-rapports-d127) |
 | `GET /api/admin/activity`, `GET /api/admin/usage`, `GET /api/admin/export/{users,activity}.csv` | journal d'activité, usage par jour, exports CSV (administrateur, D127) | [docs/app.md](app.md#administration-d127) |
@@ -284,3 +285,18 @@ probabilités par comprimé), montées en lecture seule dans le conteneur `backe
 Tests : [`backend/tests/test_demo.py`](../backend/tests/test_demo.py) (règle des splits, 200 /
 404 de Grad-CAM, connexion requise) et
 [`tests/models/test_gradcam_gallery.py`](../tests/models/test_gradcam_gallery.py).
+
+## Catalogue des pages publiques (D128)
+
+Deux routes **sans compte**, en lecture seule, dans
+[`backend/app/routers/catalog.py`](../backend/app/routers/catalog.py). Elles ne renvoient rien
+sur un compte et sont gardées en mémoire : comptes recalculés au plus toutes les dix minutes,
+scan refait seulement quand une nouvelle version de modèle est publiée.
+
+| Route | Réponse |
+|---|---|
+| `GET /api/catalog/summary` | `counts` : `pills` (classes du classifieur), `ingredients`, `interaction_pairs` (paires DDInter), comptés dans les tables de médicaments, ou `null` si elles ne sont pas chargées ; `confirm_threshold` ; `disclaimer` |
+| `GET /api/catalog/showcase` | `showcase` : vrai scan d'une photo de la galerie de démo (split de test, D105) identifiée comme sa vraie classe au-dessus du seuil de confirmation : `photo_id`, `pill_name`, `active_ingredients`, `probability`, `model`, `model_version`, et `interaction` (paire, sévérité DDInter, source) ; `null` sans modèles, sans photos ou sans tables. Les photos de fluconazole ou de warfarine sont essayées en premier, et la paire montrée est alors fluconazole + warfarine (Major dans DDInter) ; pour un autre comprimé, l'interaction la plus sévère de son principe actif |
+
+Sans réponse (`counts` ou `showcase` à `null`), l'application ne montre aucun chiffre et
+marque ses cartes « exemple ».

@@ -2,10 +2,9 @@ import { useState, type FormEvent } from "react";
 import { api, errorMessage, type ToxicityResult, type ToxMolecule } from "../services/api";
 import { Alert, Badge, SubmitButton, TextField, staggerIndex } from "../components";
 import { Icon } from "../components/icons";
+import { useT } from "../i18n";
 
-// Bonus tool (docs/bonus/toxicity.md). Safety texts exactly as the project rules write them.
-const DISCLAIMER = "Information uniquement, consultez un pharmacien ou un médecin.";
-const WORDING = "prédiction d'un modèle sur des tests in vitro, pas une évaluation clinique";
+// Bonus tool (docs/bonus/toxicity.md). Safety texts in src/i18n (toxicity.wording, the notice).
 const EXAMPLES: [string, string][] = [
   ["warfarin", "fluconazole"],
   ["citalopram", ""],
@@ -18,34 +17,31 @@ function percent(value: number): string {
 
 /** One molecule, on its own: never anything about the combination. */
 function MoleculeCard({ molecule, index }: { molecule: ToxMolecule; index: number }) {
+  const t = useT();
+  const x = t.toxicity;
   return (
     <article className="card tox-card" style={staggerIndex(index)}>
       <header className="tox-card-head">
         <div>
           <h3>{molecule.ingredient ?? molecule.query}</h3>
-          <p className="cell-sub tox-smiles" title="Structure used by the model">
-            {molecule.resolved_as === "ingredient" ? "active ingredient · " : "SMILES · "}
+          <p className="cell-sub tox-smiles" title={x.structure}>
+            {molecule.resolved_as === "ingredient" ? x.ingredient : x.smiles}
             {molecule.smiles}
           </p>
         </div>
         {molecule.in_domain ? (
-          <Badge tone="neutral">
-            similarity to training molecules {molecule.max_similarity_to_training.toFixed(2)}
-          </Badge>
+          <Badge tone="neutral">{x.similarity(molecule.max_similarity_to_training.toFixed(2))}</Badge>
         ) : (
-          <Badge tone="warn">
-            far from the training molecules ({molecule.max_similarity_to_training.toFixed(2)}):
-            even less reliable
-          </Badge>
+          <Badge tone="warn">{x.far(molecule.max_similarity_to_training.toFixed(2))}</Badge>
         )}
       </header>
       <table className="tox-table">
         <thead>
           <tr>
-            <th scope="col">Tox21 in vitro assay</th>
-            <th scope="col">Probability of activity</th>
-            <th scope="col" title="How well the model separates actives on held-out scaffolds">
-              Model test ROC-AUC
+            <th scope="col">{x.assay}</th>
+            <th scope="col">{x.probability}</th>
+            <th scope="col" title={x.aucHint}>
+              {x.auc}
             </th>
           </tr>
         </thead>
@@ -57,14 +53,14 @@ function MoleculeCard({ molecule, index }: { molecule: ToxMolecule; index: numbe
                 <span className="cell-sub">{p.assay}</span>
               </td>
               <td>
-                <span className="prob" title="Model probability">
+                <span className="prob" title={x.modelProbability}>
                   <span className="prob-bar">
                     <span style={{ width: `${p.probability * 100}%` }} />
                   </span>
                   {percent(p.probability)}
                 </span>
               </td>
-              <td className="tox-auc">{p.test_roc_auc?.toFixed(2) ?? "n/a"}</td>
+              <td className="tox-auc">{p.test_roc_auc?.toFixed(2) ?? t.common.na}</td>
             </tr>
           ))}
         </tbody>
@@ -74,6 +70,8 @@ function MoleculeCard({ molecule, index }: { molecule: ToxMolecule; index: numbe
 }
 
 export default function ToxicityPage() {
+  const t = useT();
+  const x = t.toxicity;
   const [first, setFirst] = useState("warfarin");
   const [second, setSecond] = useState("");
   const [busy, setBusy] = useState(false);
@@ -104,41 +102,37 @@ export default function ToxicityPage() {
             <Icon name="flask" size={24} />
           </span>
           <div>
-            <h1>Toxicity (in vitro model)</h1>
-            <p className="muted">
-              Bonus: probability that a molecule is active in each of the 12 Tox21 in vitro
-              assays, from a model trained on public data. One or two molecules, each predicted
-              on its own.
-            </p>
+            <h1>{x.title}</h1>
+            <p className="muted">{x.lead}</p>
           </div>
         </div>
       </header>
 
       <p className="disclaimer tox-wording">
         <Icon name="alert" size={16} />
-        {WORDING.charAt(0).toUpperCase() + WORDING.slice(1)}. {DISCLAIMER}
+        {x.wording}. {t.common.disclaimer}
       </p>
 
-      <section className="card tox-form" aria-label="Molecules">
+      <section className="card tox-form" aria-label={x.molecules}>
         <form onSubmit={submit}>
           <div className="tox-fields">
             <TextField
-              label="Molecule 1"
+              label={x.molecule1}
               value={first}
               onChange={setFirst}
-              hint="Active ingredient name (e.g. warfarin, warfarine) or SMILES"
+              hint={x.molecule1Hint}
               required
             />
             <TextField
-              label="Molecule 2 (optional)"
+              label={x.molecule2}
               value={second}
               onChange={setSecond}
-              hint="Predicted separately: nothing is said about the combination"
+              hint={x.molecule2Hint}
             />
           </div>
           <div className="tox-actions">
-            <SubmitButton busy={busy}>Predict</SubmitButton>
-            <span className="muted">Examples:</span>
+            <SubmitButton busy={busy}>{x.predict}</SubmitButton>
+            <span className="muted">{x.examples}</span>
             {EXAMPLES.map(([a, b]) => (
               <button
                 type="button"
@@ -149,7 +143,7 @@ export default function ToxicityPage() {
                   setSecond(b);
                 }}
               >
-                {b ? `${a} / ${b}` : a.length > 20 ? "aspirin (SMILES)" : a}
+                {b ? `${a} / ${b}` : a.length > 20 ? x.aspirin : a}
               </button>
             ))}
           </div>
@@ -159,7 +153,7 @@ export default function ToxicityPage() {
       {problem && <Alert>{problem}</Alert>}
 
       {result && (
-        <section className="tox-results" aria-label="Predictions">
+        <section className="tox-results" aria-label={x.predictions}>
           {result.errors.map((e) => (
             <Alert key={e.query} kind="info">
               {e.query}: {e.error}
@@ -175,7 +169,7 @@ export default function ToxicityPage() {
             </p>
             {result.molecules.length > 1 && <p>{result.mixture_note}</p>}
             <p className="cell-sub">
-              Model {result.model.name} v{String(result.model.version)} · data:{" "}
+              {x.modelLine(result.model.name, String(result.model.version))}{" "}
               <a href={result.source.url} target="_blank" rel="noreferrer">
                 {result.source.title}
               </a>{" "}

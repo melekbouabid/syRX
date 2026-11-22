@@ -2,9 +2,11 @@ import { Fragment, useRef, useState, type FormEvent, type ReactNode } from "reac
 import { api, errorMessage, type ChatCitation, type ChatResult, type ChatToolCall } from "../services/api";
 import { Alert, Badge } from "../components";
 import { Icon } from "../components/icons";
+import { useT, type Messages } from "../i18n";
 
-// Shown exactly as the project rules write it (docs/project_rules.md, D53); always visible.
-const DISCLAIMER = "Information uniquement, consultez un pharmacien ou un médecin.";
+// The notice the agent appends to every answer (src/agent/safety.py, D53): removed from the
+// answer text because the panel always shows the notice once, in the interface language.
+const AGENT_DISCLAIMER = "Information uniquement, consultez un pharmacien ou un médecin.";
 
 export interface ChatPill {
   class_id: number | null; // null for a medicine box (its ingredients are used instead)
@@ -21,32 +23,12 @@ interface Turn {
   error: string | null;
 }
 
-const DOC_LABELS: Record<string, string> = {
-  label: "openFDA label",
-  abstract: "PubMed",
-  interaction: "DDInter",
-  brand: "Table des marques",
-};
-
-function suggestions(pills: ChatPill[]): string[] {
+/** Questions to start with, in the interface language (the agent answers in both). */
+function suggestions(pills: ChatPill[], t: Messages): string[] {
   const names = [...new Set(pills.flatMap((pill) => pill.active_ingredients))];
-  if (names.length >= 2) {
-    return [
-      `Le ${names[0]} et le ${names[1]} interagissent-ils ?`,
-      `What are the contraindications of ${names[0]}?`,
-      `Quels effets indésirables sont décrits pour le ${names[1]} ?`,
-    ];
-  }
-  if (names.length === 1) {
-    return [
-      `Quelles sont les contre-indications du ${names[0]} ?`,
-      `What is the mechanism of action of ${names[0]}?`,
-    ];
-  }
-  return [
-    "La warfarine interagit-elle avec le fluconazole ?",
-    "What are the contraindications of metformin?",
-  ];
+  if (names.length >= 2) return t.chat.suggestTwo(names[0], names[1]);
+  if (names.length === 1) return t.chat.suggestOne(names[0]);
+  return t.chat.suggestNone;
 }
 
 /** The answer text with each [n] turned into a link to its numbered source below. */
@@ -68,7 +50,7 @@ function AnswerText({ text, turn }: { text: string; turn: number }) {
           last = (match.index ?? 0) + match[0].length;
         }
         parts.push(line.slice(last));
-        if (line.trim() === DISCLAIMER) return null; // shown once, below every answer
+        if (line.trim() === AGENT_DISCLAIMER) return null; // shown once, above the answers
         return <p key={index}>{parts.map((part, i) => <Fragment key={i}>{part}</Fragment>)}</p>;
       })}
     </>
@@ -76,6 +58,7 @@ function AnswerText({ text, turn }: { text: string; turn: number }) {
 }
 
 function Citations({ citations, turn }: { citations: ChatCitation[]; turn: number }) {
+  const t = useT();
   if (citations.length === 0) return null;
   const cited = citations.filter((c) => c.cited);
   const others = citations.filter((c) => !c.cited);
@@ -87,14 +70,14 @@ function Citations({ citations, turn }: { citations: ChatCitation[]; turn: numbe
           {c.title}
         </a>
         <span className="cell-sub">
-          {DOC_LABELS[c.doc_type] ?? c.doc_type}
+          {t.chat.docLabels[c.doc_type] ?? c.doc_type}
           {c.section && c.section !== "interaction" && c.section !== "brand" ? ` · ${c.section.replaceAll("_", " ")}` : ""}
           {c.date ? ` · ${c.date}` : ""}
         </span>
         <span className="cell-sub">
           {c.source_name}
           {c.license ? ` · ${c.license}` : ""}
-          {c.rerank_score != null ? ` · reranker ${c.rerank_score.toFixed(2)}` : ""}
+          {c.rerank_score != null ? t.chat.reranker(c.rerank_score.toFixed(2)) : ""}
         </span>
         <p className="citation-snippet">{c.snippet}</p>
       </div>
@@ -102,11 +85,11 @@ function Citations({ citations, turn }: { citations: ChatCitation[]; turn: numbe
   );
   return (
     <div className="chat-sources">
-      <h3>Sources</h3>
+      <h3>{t.common.sources}</h3>
       <ol className="citation-list">{cited.map(item)}</ol>
       {others.length > 0 && (
         <details>
-          <summary>{others.length} other source(s) consulted, not cited</summary>
+          <summary>{t.chat.others(others.length)}</summary>
           <ol className="citation-list">{others.map(item)}</ol>
         </details>
       )}
@@ -115,17 +98,18 @@ function Citations({ citations, turn }: { citations: ChatCitation[]; turn: numbe
 }
 
 function ToolCalls({ tools }: { tools: ChatToolCall[] }) {
+  const t = useT();
   if (tools.length === 0) return null;
   return (
     <details className="chat-tools">
       <summary>
-        <Icon name="spark" size={14} /> {tools.length} tool call(s)
+        <Icon name="spark" size={14} /> {t.chat.tools(tools.length)}
       </summary>
       <ul>
         {tools.map((tool, index) => (
           <li key={index}>
             <code>{tool.name}</code>
-            <span className="muted"> ({tool.chosen_by === "llm" ? "chosen by the model" : "added by rule"})</span>
+            <span className="muted"> ({tool.chosen_by === "llm" ? t.chat.byModel : t.chat.byRule})</span>
             {" — "}
             {tool.ok ? tool.summary : <span className="error-text">{tool.summary}</span>}
           </li>
@@ -142,6 +126,7 @@ interface KeepProps {
 }
 
 function TurnView({ turn, kept = [], onKeep }: { turn: Turn } & KeepProps) {
+  const t = useT();
   const result = turn.result;
   const busy = !result && !turn.error;
   const action = result?.safety.action;
@@ -159,14 +144,14 @@ function TurnView({ turn, kept = [], onKeep }: { turn: Turn } & KeepProps) {
         ) : busy ? (
           <p className="muted chat-thinking">
             <span className="btn-spinner" aria-hidden="true" />
-            {turn.tools.length === 0 ? "Reading the question…" : "Searching the sources…"}
+            {turn.tools.length === 0 ? t.chat.reading : t.chat.searching}
           </p>
         ) : null}
         {turn.error && <Alert>{turn.error}</Alert>}
         {result && (
           <div className="chat-meta">
-            {action === "rewritten" && <Badge tone="warn">checked: sentence(s) removed</Badge>}
-            {action === "refused" && <Badge tone="info">answer refused by the safety check</Badge>}
+            {action === "rewritten" && <Badge tone="warn">{t.chat.rewritten}</Badge>}
+            {action === "refused" && <Badge tone="info">{t.chat.refused}</Badge>}
             <span className="muted">
               {result.model} · {Math.round((result.timings.total_ms ?? 0) / 100) / 10} s
             </span>
@@ -178,7 +163,7 @@ function TurnView({ turn, kept = [], onKeep }: { turn: Turn } & KeepProps) {
                 onClick={() => onKeep(result)}
               >
                 <Icon name="bookmark" size={14} />{" "}
-                {kept.includes(result) ? "In the next report" : "Add to report"}
+                {kept.includes(result) ? t.chat.inReport : t.chat.addToReport}
               </button>
             )}
           </div>
@@ -191,6 +176,7 @@ function TurnView({ turn, kept = [], onKeep }: { turn: Turn } & KeepProps) {
 }
 
 export default function ChatPanel({ pills, kept, onKeep }: { pills: ChatPill[] } & KeepProps) {
+  const t = useT();
   const [question, setQuestion] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
   const [busy, setBusy] = useState(false);
@@ -232,37 +218,40 @@ export default function ChatPanel({ pills, kept, onKeep }: { pills: ChatPill[] }
   };
 
   return (
-    <section className="card chat-panel" aria-label="Ask about your pills">
+    <section className="card chat-panel" aria-label={t.chat.title}>
       <header className="pill-card-head">
         <h2>
-          <Icon name="book" size={18} /> Ask about your pills
+          <Icon name="book" size={18} /> {t.chat.title}
         </h2>
         <span className="muted">
           {pills.length > 0
-            ? `about: ${[...new Set(pills.flatMap((p) => p.active_ingredients))].join(", ") || "no known ingredient"}`
-            : "answers from openFDA labels, PubMed and DDInter"}
+            ? t.chat.about(
+                [...new Set(pills.flatMap((p) => p.active_ingredients))].join(", ") ||
+                  t.chat.noIngredient,
+              )
+            : t.chat.fromSources}
         </span>
       </header>
       <p className="disclaimer chat-disclaimer">
         <Icon name="shield" size={16} />
-        {DISCLAIMER} Tujya ne donne jamais de dose et ne dit jamais qu'une association est « sûre ».
+        {t.common.disclaimer} {t.chat.rules}
       </p>
       <form className="chat-form" onSubmit={submit}>
         <input
           type="text"
           value={question}
           maxLength={1000}
-          placeholder="Une question sur ces médicaments… (français ou anglais)"
-          aria-label="Question"
+          placeholder={t.chat.placeholder}
+          aria-label={t.chat.question}
           onChange={(event) => setQuestion(event.target.value)}
         />
         <button type="submit" className="btn btn-primary" disabled={busy || question.trim().length < 2}>
           {busy && <span className="btn-spinner" aria-hidden="true" />}
-          Ask
+          {t.chat.ask}
         </button>
       </form>
       <div className="chat-suggestions">
-        {suggestions(pills).map((text) => (
+        {suggestions(pills, t).map((text) => (
           <button key={text} type="button" className="chip-btn" disabled={busy} onClick={() => void ask(text)}>
             {text}
           </button>

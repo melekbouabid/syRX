@@ -5,36 +5,44 @@ import { Alert, formatNumber, Skeleton, StatTile } from "../../components";
 import { useQuery } from "../../hooks";
 import { Icon, type IconName } from "../../components/icons";
 import { DailyLine, Legend, shortDay, StackedColumns, type Series } from "../../components/charts";
+import { useT, type Messages } from "../../i18n";
 
 const PERIODS = [7, 14, 30, 90];
 
 // Fixed order: a series keeps its colour whatever the period (styles.css, .viz).
-const SERIES: Series[] = [
-  { key: "scans", label: "Scans", color: "var(--series-1)" },
-  { key: "interactions", label: "Interaction checks", color: "var(--series-2)" },
-  { key: "questions", label: "Questions", color: "var(--series-3)" },
-  { key: "toxicity", label: "Toxicity", color: "var(--series-4)" },
-  { key: "reports", label: "Reports saved", color: "var(--series-5)" },
+const SERIES_KEYS: { key: string; color: string }[] = [
+  { key: "scans", color: "var(--series-1)" },
+  { key: "interactions", color: "var(--series-2)" },
+  { key: "questions", color: "var(--series-3)" },
+  { key: "toxicity", color: "var(--series-4)" },
+  { key: "reports", color: "var(--series-5)" },
 ];
 
-const TILES: { key: string; label: string; icon: IconName }[] = [
-  { key: "active_users", label: "Active accounts", icon: "users" },
-  { key: "sign_ins", label: "Sign-ins", icon: "check" },
-  { key: "scans", label: "Scans", icon: "scan" },
-  { key: "interactions", label: "Interaction checks", icon: "pill" },
-  { key: "questions", label: "Questions", icon: "book" },
-  { key: "reports", label: "Reports saved", icon: "file" },
+function seriesOf(t: Messages): Series[] {
+  return SERIES_KEYS.map((s) => ({ ...s, label: t.admin.usage.series[s.key] }));
+}
+
+const TILES: { key: string; icon: IconName }[] = [
+  { key: "active_users", icon: "users" },
+  { key: "sign_ins", icon: "check" },
+  { key: "scans", icon: "scan" },
+  { key: "interactions", icon: "pill" },
+  { key: "questions", icon: "book" },
+  { key: "reports", icon: "file" },
 ];
 
 function UsageTable({ days }: { days: UsageDay[] }) {
+  const t = useT();
+  const u = t.admin.usage;
+  const SERIES = seriesOf(t);
   return (
     <div className="table-wrap">
       <table className="table">
         <thead>
           <tr>
-            <th>Day</th>
-            <th className="num">Active accounts</th>
-            <th className="num">Sign-ins</th>
+            <th>{u.day}</th>
+            <th className="num">{u.series.active_users}</th>
+            <th className="num">{u.series.sign_ins}</th>
             {SERIES.map((s) => (
               <th key={s.key} className="num">
                 {s.label}
@@ -62,6 +70,9 @@ function UsageTable({ days }: { days: UsageDay[] }) {
 }
 
 export default function Usage() {
+  const t = useT();
+  const u = t.admin.usage;
+  const SERIES = seriesOf(t);
   const [days, setDays] = useState(30);
   const [view, setView] = useState<"chart" | "table">("chart");
   const usage = useQuery((signal) => api.admin.usage(days, signal), [days]);
@@ -76,16 +87,14 @@ export default function Usage() {
             <Icon name="chart" size={24} />
           </span>
           <div>
-            <h1>Usage</h1>
-            <p className="muted">
-              What Tujya is used for, day by day (UTC), counted from the activity log.
-            </p>
+            <h1>{u.title}</h1>
+            <p className="muted">{u.lead}</p>
           </div>
         </div>
       </header>
 
       <div className="toolbar">
-        <div className="segmented" role="tablist" aria-label="Period">
+        <div className="segmented" role="tablist" aria-label={u.period}>
           {PERIODS.map((period) => (
             <button
               key={period}
@@ -94,29 +103,29 @@ export default function Usage() {
               aria-selected={days === period}
               onClick={() => setDays(period)}
             >
-              {period} days
+              {u.days(period)}
             </button>
           ))}
         </div>
-        <div className="segmented" role="tablist" aria-label="View">
+        <div className="segmented" role="tablist" aria-label={u.view}>
           <button type="button" role="tab" aria-selected={view === "chart"} onClick={() => setView("chart")}>
-            Charts
+            {u.charts}
           </button>
           <button type="button" role="tab" aria-selected={view === "table"} onClick={() => setView("table")}>
-            Table
+            {u.table}
           </button>
         </div>
       </div>
 
       {usage.error && <Alert>{usage.error}</Alert>}
 
-      <section aria-label="Totals" className="stat-grid stat-grid-3">
+      <section aria-label={u.totals} className="stat-grid stat-grid-3">
         {TILES.map((tile) => (
           <StatTile
             key={tile.key}
             icon={tile.icon}
-            label={tile.label}
-            note={`in the last ${days} days`}
+            label={u.series[tile.key]}
+            note={u.inLast(days)}
             value={usage.data?.totals[tile.key]}
             loading={!usage.data && usage.loading}
           />
@@ -138,23 +147,23 @@ export default function Usage() {
       {usage.data && view === "chart" && (
         <div className="viz grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <section className="card viz-card">
-            <h2>Actions per day</h2>
+            <h2>{u.perDay}</h2>
             <Legend series={SERIES} />
             {empty ? (
-              <p className="muted viz-empty">No scan, check, question or report in this period yet.</p>
+              <p className="muted viz-empty">{u.empty}</p>
             ) : (
-              <StackedColumns rows={rows} series={SERIES} label={`Actions per day, last ${days} days`} />
+              <StackedColumns rows={rows} series={SERIES} label={u.perDayLabel(days)} />
             )}
           </section>
           <section className="card viz-card">
-            <h2>Active accounts per day</h2>
-            <p className="muted viz-sub">Accounts that signed in or used the app that day.</p>
+            <h2>{u.activePerDay}</h2>
+            <p className="muted viz-sub">{u.activeSub}</p>
             <DailyLine
               rows={rows}
               field="active_users"
-              name="active accounts"
+              name={u.activeName}
               color="var(--series-1)"
-              label={`Active accounts per day, last ${days} days`}
+              label={u.activeLabel(days)}
             />
           </section>
         </div>
@@ -162,17 +171,17 @@ export default function Usage() {
 
       {usage.data && (
         <>
-          <h2 className="section-title">Most active accounts</h2>
+          <h2 className="section-title">{u.top}</h2>
           {usage.data.top_users.length === 0 ? (
-            <p className="muted">No activity in this period.</p>
+            <p className="muted">{u.noActivity}</p>
           ) : (
             <div className="card table-card">
               <div className="table-wrap">
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Account</th>
-                      <th className="num">Actions</th>
+                      <th>{u.account}</th>
+                      <th className="num">{u.actions}</th>
                       <th className="num" />
                     </tr>
                   </thead>
@@ -186,7 +195,7 @@ export default function Usage() {
                         <td className="num">{formatNumber(top.actions)}</td>
                         <td className="num">
                           <Link className="btn btn-ghost btn-sm" to={`/admin/activity?user=${top.user_id}`}>
-                            Activity
+                            {u.activity}
                           </Link>
                         </td>
                       </tr>

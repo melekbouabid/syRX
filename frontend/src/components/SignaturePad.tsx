@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useT } from "../i18n";
 
 /**
  * Draw a signature with a mouse, a pen or a finger. The drawing is a transparent PNG; the
@@ -11,6 +12,7 @@ export function SignaturePad({
   onDone: (png: Blob) => void;
   busy: boolean;
 }) {
+  const t = useT();
   const canvas = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
   const last = useRef<{ x: number; y: number } | null>(null);
@@ -75,7 +77,7 @@ export function SignaturePad({
       <canvas
         ref={canvas}
         className="signature-canvas"
-        aria-label="Signature area: draw your signature here"
+        aria-label={t.signature.area}
         onPointerDown={start}
         onPointerMove={move}
         onPointerUp={stop}
@@ -84,11 +86,11 @@ export function SignaturePad({
       />
       <div className="form-actions">
         <button type="button" className="btn btn-ghost btn-sm" onClick={clear} disabled={empty || busy}>
-          Clear
+          {t.signature.clear}
         </button>
         <button type="button" className="btn btn-primary btn-sm" onClick={save} disabled={empty || busy}>
           {busy && <span className="btn-spinner" aria-hidden="true" />}
-          Save this signature
+          {t.signature.save}
         </button>
       </div>
     </div>

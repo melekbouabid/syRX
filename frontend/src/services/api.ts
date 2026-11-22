@@ -3,6 +3,7 @@
 // /model/metadata), which sit at the root; the session lives in an HttpOnly cookie, so there
 // is no token to store or attach here.
 
+import { messages } from "../i18n";
 import { timed } from "../lib/vision";
 
 export type Role = "admin" | "user";
@@ -325,6 +326,29 @@ export interface DemoImage {
   gradcam_url: string | null;
 }
 
+/** GET /api/catalog/summary: public figures and one real scan of a test photo (D128). */
+export interface CatalogSummary {
+  counts: { pills: number; ingredients: number; interaction_pairs: number } | null;
+  confirm_threshold: number;
+  disclaimer: string;
+}
+
+/** GET /api/catalog/showcase: the served models' top-1 on one C3PI test photo. */
+export interface Showcase {
+  photo_id: number;
+  pill_name: string;
+  active_ingredients: string[];
+  probability: number;
+  model: string;
+  model_version: number | null;
+  interaction: { ingredient_a: string; ingredient_b: string; severity: Severity; source: string } | null;
+}
+
+export interface ShowcaseOut {
+  showcase: Showcase | null;
+  confirm_threshold: number;
+}
+
 export interface DemoGallery {
   items: DemoImage[];
   note: string;
@@ -528,7 +552,7 @@ export interface DriftReport {
 }
 
 export function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Something went wrong.";
+  return error instanceof Error ? error.message : messages().api.failed;
 }
 
 // Called when a request made as a signed-in user comes back 401: the session has ended.
@@ -552,15 +576,6 @@ interface RequestOptions {
   root?: boolean;
 }
 
-const FIELD_LABELS: Record<string, string> = {
-  email: "Email",
-  full_name: "Name",
-  password: "Password",
-  new_password: "New password",
-  current_password: "Current password",
-  phone: "Phone",
-  title: "Title",
-};
 
 /** Turn a FastAPI error body into one readable sentence. */
 function describeFailure(status: number, data: unknown): string {
@@ -570,13 +585,13 @@ function describeFailure(status: number, data: unknown): string {
     return detail
       .map((issue: { loc?: unknown[]; msg?: string }) => {
         const field = String(issue.loc?.at(-1) ?? "");
-        const message = (issue.msg ?? "is invalid").replace(/^Value error, /, "");
-        return `${FIELD_LABELS[field] ?? field}: ${message}`;
+        const message = (issue.msg ?? messages().api.invalid).replace(/^Value error, /, "");
+        return `${messages().api.fields[field] ?? field}: ${message}`;
       })
       .join(" ");
   }
-  if (status >= 500) return "The server is not responding. Check that the API is running.";
-  return `Request failed (${status}).`;
+  if (status >= 500) return messages().api.serverDown;
+  return messages().api.requestFailed(status);
 }
 
 async function request<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
@@ -596,7 +611,7 @@ async function request<T>(method: string, path: string, options: RequestOptions 
     });
   } catch (error) {
     if (options.signal?.aborted) throw error;
-    throw new ApiError(0, "Cannot reach the server. Check that the API is running.");
+    throw new ApiError(0, messages().api.unreachable);
   }
 
   if (response.status === 204) return undefined as T;
@@ -629,7 +644,7 @@ async function chatStream(
     });
   } catch (error) {
     if (signal?.aborted) throw error;
-    throw new ApiError(0, "Cannot reach the server. Check that the API is running.");
+    throw new ApiError(0, messages().api.unreachable);
   }
   if (!response.ok || !response.body) {
     const data: unknown = await response.json().catch(() => null);
@@ -694,6 +709,12 @@ export const api = {
     request<PillList>("GET", "/pills", { query: { q, limit: 12 }, signal }),
   interactions: (pills: number[], ingredients: string[] = []) =>
     request<InteractionsResult>("POST", "/interactions", { body: { pills, ingredients } }),
+  /** Public: catalogue figures and one real scan of a demo photo, for the start page. */
+  catalogSummary: (signal?: AbortSignal) =>
+    request<CatalogSummary>("GET", "/catalog/summary", { signal, anonymous: true }),
+  /** Public: the served models' result on one demo photo (null when not available). */
+  catalogShowcase: (signal?: AbortSignal) =>
+    request<ShowcaseOut>("GET", "/catalog/showcase", { signal, anonymous: true }),
   demoImages: (signal?: AbortSignal) => request<DemoGallery>("GET", "/demo/images", { signal }),
   toxicity: (molecules: string[]) =>
     request<ToxicityResult>("POST", "/toxicity", { body: { molecules } }),
@@ -710,7 +731,7 @@ export const api = {
   /** A demo photo as a file, to send it to the scan like an upload. */
   demoImage: async (image: DemoImage): Promise<Blob> => {
     const response = await fetch(image.url, { credentials: "same-origin" });
-    if (!response.ok) throw new ApiError(response.status, "Cannot load this demo photo.");
+    if (!response.ok) throw new ApiError(response.status, messages().api.demoPhoto);
     return response.blob();
   },
 

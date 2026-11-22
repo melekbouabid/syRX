@@ -12,6 +12,7 @@ import {
 } from "../components";
 import { Icon } from "../components/icons";
 import { SignaturePad } from "../components/SignaturePad";
+import { useT } from "../i18n";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -19,6 +20,7 @@ type Notice = { kind: "success" | "error"; text: string } | null;
 
 function NameForm() {
   const { user, setUser } = useAuth();
+  const t = useT();
   const [fullName, setFullName] = useState(user?.full_name ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [notice, setNotice] = useState<Notice>(null);
@@ -30,7 +32,7 @@ function NameForm() {
     setNotice(null);
     try {
       setUser(await api.updateProfile(fullName, phone.trim()));
-      setNotice({ kind: "success", text: "Your details were updated." });
+      setNotice({ kind: "success", text: t.profile.detailsUpdated });
     } catch (failure) {
       setNotice({ kind: "error", text: errorMessage(failure) });
     } finally {
@@ -40,10 +42,10 @@ function NameForm() {
 
   return (
     <form className="card form" onSubmit={submit}>
-      <h2>Your details</h2>
+      <h2>{t.profile.yourDetails}</h2>
       {notice && <Alert kind={notice.kind}>{notice.text}</Alert>}
       <TextField
-        label="Full name"
+        label={t.common.fullName}
         value={fullName}
         onChange={setFullName}
         autoComplete="name"
@@ -51,28 +53,28 @@ function NameForm() {
         required
       />
       <TextField
-        label="Email"
+        label={t.common.email}
         value={user?.email ?? ""}
         onChange={() => undefined}
-        hint="Ask an administrator to change your email."
+        hint={t.profile.emailHint}
         disabled
       />
       <TextField
-        label="Phone (optional)"
+        label={t.profile.phone}
         type="tel"
         value={phone}
         onChange={setPhone}
         autoComplete="tel"
         maxLength={32}
         pattern="[0-9+()./\- ]*"
-        hint="Digits, spaces and + ( ) . - only. Visible to administrators."
+        hint={t.profile.phoneHint}
       />
       <div className="form-actions">
         <SubmitButton
           busy={busy}
           disabled={fullName.trim() === user?.full_name && phone.trim() === (user?.phone ?? "")}
         >
-          Save
+          {t.common.save}
         </SubmitButton>
       </div>
     </form>
@@ -80,6 +82,7 @@ function NameForm() {
 }
 
 function PasswordForm() {
+  const t = useT();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -89,7 +92,7 @@ function PasswordForm() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (next !== confirm) {
-      setNotice({ kind: "error", text: "The two new passwords do not match." });
+      setNotice({ kind: "error", text: t.profile.mismatch });
       return;
     }
     setBusy(true);
@@ -99,10 +102,7 @@ function PasswordForm() {
       setCurrent("");
       setNext("");
       setConfirm("");
-      setNotice({
-        kind: "success",
-        text: "Password changed. Your other devices have been signed out.",
-      });
+      setNotice({ kind: "success", text: t.profile.changed });
     } catch (failure) {
       setNotice({ kind: "error", text: errorMessage(failure) });
     } finally {
@@ -112,10 +112,10 @@ function PasswordForm() {
 
   return (
     <form className="card form" onSubmit={submit}>
-      <h2>Change password</h2>
+      <h2>{t.profile.changePassword}</h2>
       {notice && <Alert kind={notice.kind}>{notice.text}</Alert>}
       <TextField
-        label="Current password"
+        label={t.profile.current}
         type="password"
         value={current}
         onChange={setCurrent}
@@ -124,19 +124,19 @@ function PasswordForm() {
         required
       />
       <TextField
-        label="New password"
+        label={t.profile.newPassword}
         type="password"
         value={next}
         onChange={setNext}
         autoComplete="new-password"
         minLength={MIN_PASSWORD_LENGTH}
         maxLength={128}
-        hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}
+        hint={t.common.atLeast(MIN_PASSWORD_LENGTH)}
         required
       />
       <PasswordStrength password={next} minLength={MIN_PASSWORD_LENGTH} />
       <TextField
-        label="Confirm new password"
+        label={t.profile.confirmNew}
         type="password"
         value={confirm}
         onChange={setConfirm}
@@ -145,7 +145,7 @@ function PasswordForm() {
         required
       />
       <div className="form-actions">
-        <SubmitButton busy={busy}>Change password</SubmitButton>
+        <SubmitButton busy={busy}>{t.profile.changePassword}</SubmitButton>
       </div>
     </form>
   );
@@ -154,6 +154,7 @@ function PasswordForm() {
 /** The profile photo: chosen from a file, cropped to a square by the server. */
 function PhotoControl() {
   const { user, setUser } = useAuth();
+  const t = useT();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -184,7 +185,7 @@ function PhotoControl() {
         <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={choose} />
         <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => input.current?.click()}>
           <Icon name="camera" size={16} />
-          {user.photo_url ? "Change photo" : "Add a photo"}
+          {user.photo_url ? t.profile.changePhoto : t.profile.addPhoto}
         </button>
         {user.photo_url && (
           <button
@@ -193,7 +194,7 @@ function PhotoControl() {
             disabled={busy}
             onClick={() => void run(() => api.deleteImage("photo"))}
           >
-            Remove
+            {t.common.remove}
           </button>
         )}
       </div>
@@ -205,6 +206,7 @@ function PhotoControl() {
 /** The signature printed on the user's own reports. Never shown to administrators. */
 function SignatureCard() {
   const { user, setUser } = useAuth();
+  const t = useT();
   const input = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -228,38 +230,38 @@ function SignatureCard() {
   const upload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (file) void run(() => api.setImage("signature", file, file.name), "Signature saved.");
+    if (file) void run(() => api.setImage("signature", file, file.name), t.profile.signatureSaved);
   };
 
   return (
     <section className="card form">
       <h2>
-        <Icon name="pen" size={18} /> Signature
+        <Icon name="pen" size={18} /> {t.profile.signature}
       </h2>
-      <p className="muted">
-        Printed at the bottom of the reports you save and share. Only you can see it here.
-      </p>
+      <p className="muted">{t.profile.signatureText}</p>
       {notice && <Alert kind={notice.kind}>{notice.text}</Alert>}
       {user.signature_url && !editing && (
         <div className="signature-preview">
-          <img src={user.signature_url} alt="Your signature" />
+          <img src={user.signature_url} alt={t.profile.yourSignature} />
         </div>
       )}
       {(editing || !user.signature_url) && (
         <SignaturePad
           busy={busy}
-          onDone={(png) => void run(() => api.setImage("signature", png, "signature.png"), "Signature saved.")}
+          onDone={(png) =>
+            void run(() => api.setImage("signature", png, "signature.png"), t.profile.signatureSaved)
+          }
         />
       )}
       <div className="form-actions">
         <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={upload} />
         <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => input.current?.click()}>
           <Icon name="upload" size={16} />
-          Upload a scan
+          {t.profile.uploadScan}
         </button>
         {user.signature_url && !editing && (
           <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => setEditing(true)}>
-            Draw a new one
+            {t.profile.drawNew}
           </button>
         )}
         {user.signature_url && (
@@ -267,9 +269,9 @@ function SignatureCard() {
             type="button"
             className="btn btn-ghost btn-sm"
             disabled={busy}
-            onClick={() => void run(() => api.deleteImage("signature"), "Signature removed.")}
+            onClick={() => void run(() => api.deleteImage("signature"), t.profile.signatureRemoved)}
           >
-            Remove
+            {t.common.remove}
           </button>
         )}
       </div>
@@ -279,6 +281,7 @@ function SignatureCard() {
 
 export default function Profile() {
   const { user } = useAuth();
+  const t = useT();
   if (!user) return null;
 
   return (
@@ -289,9 +292,9 @@ export default function Profile() {
           <h1>{user.full_name}</h1>
           <p className="muted">{user.email}</p>
           <p className="profile-meta">
-            <Badge tone={user.role}>{user.role}</Badge>
-            <span className="muted">Member since {formatDate(user.created_at)}</span>
-            <span className="muted">Last sign-in {formatDate(user.last_login_at, true)}</span>
+            <Badge tone={user.role}>{t.common.roles[user.role] ?? user.role}</Badge>
+            <span className="muted">{t.profile.memberSince(formatDate(user.created_at))}</span>
+            <span className="muted">{t.profile.lastSignIn(formatDate(user.last_login_at, true))}</span>
             {user.phone && <span className="muted">{user.phone}</span>}
           </p>
         </div>

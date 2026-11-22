@@ -29,6 +29,11 @@ export default defineConfig(({ mode }) => {
         "/monitoring/drift": target,
       },
     },
+    // three.js (src/components/three/pillScene.ts, about 550 kB) is its own chunk, loaded only
+    // by the start and sign-in pages after their first paint (D128): not worth a warning.
+    build: {
+      chunkSizeWarningLimit: 600,
+    },
     preview: {
       host: "127.0.0.1",
       port: 4173,

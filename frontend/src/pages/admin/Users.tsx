@@ -17,6 +17,7 @@ import {
 } from "../../components";
 import { useDebounced, useQuery } from "../../hooks";
 import { Icon } from "../../components/icons";
+import { useT } from "../../i18n";
 
 const PAGE_SIZE = 10;
 const MIN_PASSWORD_LENGTH = 8;
@@ -44,6 +45,7 @@ interface PasswordInputProps {
 
 /** Shown in clear on request: the administrator has to pass the password on. */
 function PasswordInput({ label, value, onChange }: PasswordInputProps) {
+  const t = useT();
   const [visible, setVisible] = useState(false);
   return (
     <>
@@ -55,7 +57,7 @@ function PasswordInput({ label, value, onChange }: PasswordInputProps) {
         autoComplete="new-password"
         minLength={MIN_PASSWORD_LENGTH}
         maxLength={128}
-        hint={`At least ${MIN_PASSWORD_LENGTH} characters. Only a hash is stored: it cannot be shown again.`}
+        hint={t.admin.users.hint(MIN_PASSWORD_LENGTH)}
         required
       />
       <PasswordStrength password={value} minLength={MIN_PASSWORD_LENGTH} />
@@ -68,7 +70,7 @@ function PasswordInput({ label, value, onChange }: PasswordInputProps) {
             setVisible(true);
           }}
         >
-          Generate a strong one
+          {t.admin.users.generate}
         </button>
         <label className="check">
           <input
@@ -76,7 +78,7 @@ function PasswordInput({ label, value, onChange }: PasswordInputProps) {
             checked={visible}
             onChange={(event) => setVisible(event.target.checked)}
           />
-          Show
+          {t.admin.users.show}
         </label>
       </div>
     </>
@@ -91,10 +93,11 @@ interface DialogActionsProps {
 }
 
 function DialogActions({ onClose, busy, submitLabel, danger = false }: DialogActionsProps) {
+  const t = useT();
   return (
     <div className="form-actions">
       <button type="button" className="btn btn-secondary" onClick={onClose}>
-        Cancel
+        {t.common.cancel}
       </button>
       <SubmitButton busy={busy} className={danger ? "btn btn-danger" : "btn btn-primary"}>
         {submitLabel}
@@ -131,6 +134,8 @@ interface UserFormProps {
 }
 
 function UserFormDialog({ target, isSelf, onClose, onSaved }: UserFormProps) {
+  const t = useT();
+  const u = t.admin.users;
   const [fullName, setFullName] = useState(target?.full_name ?? "");
   const [email, setEmail] = useState(target?.email ?? "");
   const [password, setPassword] = useState("");
@@ -149,11 +154,11 @@ function UserFormDialog({ target, isSelf, onClose, onSaved }: UserFormProps) {
   });
 
   return (
-    <Modal title={target ? `Edit ${target.full_name}` : "New user"} onClose={onClose}>
+    <Modal title={target ? u.edit(target.full_name) : u.newUser} onClose={onClose}>
       <form className="form" onSubmit={submit}>
         {error && <Alert>{error}</Alert>}
         <TextField
-          label="Full name"
+          label={t.common.fullName}
           value={fullName}
           onChange={setFullName}
           maxLength={120}
@@ -161,24 +166,24 @@ function UserFormDialog({ target, isSelf, onClose, onSaved }: UserFormProps) {
           required
         />
         <TextField
-          label="Email"
+          label={t.common.email}
           type="email"
           value={email}
           onChange={setEmail}
           autoComplete="off"
           required
         />
-        {!target && <PasswordInput label="Password" value={password} onChange={setPassword} />}
+        {!target && <PasswordInput label={t.common.password} value={password} onChange={setPassword} />}
         <div className="field">
-          <label htmlFor="user-role">Role</label>
+          <label htmlFor="user-role">{u.role}</label>
           <select
             id="user-role"
             value={role}
             disabled={isSelf}
             onChange={(event) => setRole(event.target.value as Role)}
           >
-            <option value="user">User: the application only</option>
-            <option value="admin">Administrator: full control of accounts</option>
+            <option value="user">{u.roleUser}</option>
+            <option value="admin">{u.roleAdmin}</option>
           </select>
         </div>
         <label className="check">
@@ -188,18 +193,10 @@ function UserFormDialog({ target, isSelf, onClose, onSaved }: UserFormProps) {
             disabled={isSelf}
             onChange={(event) => setActive(event.target.checked)}
           />
-          Active (can sign in)
+          {u.activeCheck}
         </label>
-        {isSelf && (
-          <p className="hint">
-            You cannot change your own role or deactivate yourself. Ask another administrator.
-          </p>
-        )}
-        <DialogActions
-          onClose={onClose}
-          busy={busy}
-          submitLabel={target ? "Save changes" : "Create user"}
-        />
+        {isSelf && <p className="hint">{u.selfHint}</p>}
+        <DialogActions onClose={onClose} busy={busy} submitLabel={target ? u.saveChanges : u.create} />
       </form>
     </Modal>
   );
@@ -213,6 +210,7 @@ interface TargetDialogProps {
 }
 
 function PasswordDialog({ target, isSelf, onClose, onDone }: TargetDialogProps) {
+  const u = useT().admin.users;
   const [password, setPassword] = useState("");
   const { error, busy, submit } = useSubmit(async () => {
     await api.admin.resetPassword(target.id, password);
@@ -220,36 +218,32 @@ function PasswordDialog({ target, isSelf, onClose, onDone }: TargetDialogProps) 
   });
 
   return (
-    <Modal title={`Reset password of ${target.full_name}`} onClose={onClose}>
+    <Modal title={u.resetTitle(target.full_name)} onClose={onClose}>
       <form className="form" onSubmit={submit}>
         {error && <Alert>{error}</Alert>}
-        <p className="muted">
-          {isSelf
-            ? "Your other devices will be signed out. This one stays signed in."
-            : `${target.email} will be signed out everywhere and must use the new password.`}
-        </p>
-        <PasswordInput label="New password" value={password} onChange={setPassword} />
-        <DialogActions onClose={onClose} busy={busy} submitLabel="Set password" />
+        <p className="muted">{isSelf ? u.resetSelf : u.resetOther(target.email)}</p>
+        <PasswordInput label={u.newPassword} value={password} onChange={setPassword} />
+        <DialogActions onClose={onClose} busy={busy} submitLabel={u.setPassword} />
       </form>
     </Modal>
   );
 }
 
 function DeleteDialog({ target, onClose, onDone }: Omit<TargetDialogProps, "isSelf">) {
+  const u = useT().admin.users;
   const { error, busy, submit } = useSubmit(async () => {
     await api.admin.deleteUser(target.id);
     onDone();
   });
 
   return (
-    <Modal title="Delete this account?" onClose={onClose}>
+    <Modal title={u.deleteTitle} onClose={onClose}>
       <form className="form" onSubmit={submit}>
         {error && <Alert>{error}</Alert>}
         <p>
-          <strong>{target.full_name}</strong> ({target.email}) will be removed for good and
-          signed out. To block someone temporarily, deactivate the account instead.
+          <strong>{target.full_name}</strong> ({target.email}) {u.deleteText}
         </p>
-        <DialogActions onClose={onClose} busy={busy} submitLabel="Delete account" danger />
+        <DialogActions onClose={onClose} busy={busy} submitLabel={u.deleteAccount} danger />
       </form>
     </Modal>
   );
@@ -257,6 +251,9 @@ function DeleteDialog({ target, onClose, onDone }: Omit<TargetDialogProps, "isSe
 
 export default function Users() {
   const { user: me, setUser: setMe } = useAuth();
+  const t = useT();
+  const u = t.admin.users;
+  const cols = t.admin.dashboard.columns;
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<Role | "">("");
   const [status, setStatus] = useState<Status | "">("");
@@ -292,9 +289,7 @@ export default function Users() {
     try {
       await api.admin.updateUser(target.id, { is_active: !target.is_active });
       finish(
-        target.is_active
-          ? `${target.full_name} was deactivated and signed out.`
-          : `${target.full_name} can sign in again.`,
+        target.is_active ? u.wasDeactivated(target.full_name) : u.canSignIn(target.full_name),
       );
     } catch (failure) {
       setNotice({ kind: "error", text: errorMessage(failure) });
@@ -312,20 +307,18 @@ export default function Users() {
             <Icon name="users" size={24} />
           </span>
           <div>
-            <h1>Users</h1>
-            <p className="muted">
-              Create accounts, change roles, reset passwords, block or delete.
-            </p>
+            <h1>{u.title}</h1>
+            <p className="muted">{u.lead}</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <a className="btn btn-ghost" href={exportUrl("users")} download>
             <Icon name="download" />
-            Export CSV
+            {u.export}
           </a>
           <button type="button" className="btn btn-primary" onClick={() => setDialog({ kind: "create" })}>
             <Icon name="plus" />
-            New user
+            {u.newUser}
           </button>
         </div>
       </header>
@@ -335,8 +328,8 @@ export default function Users() {
           <Icon name="search" />
           <input
             type="search"
-            aria-label="Search by name or email"
-            placeholder="Search by name or email"
+            aria-label={u.search}
+            placeholder={u.search}
             value={search}
             onChange={(event) => {
               setSearch(event.target.value);
@@ -345,28 +338,28 @@ export default function Users() {
           />
         </label>
         <select
-          aria-label="Filter by role"
+          aria-label={u.byRole}
           value={role}
           onChange={(event) => {
             setRole(event.target.value as Role | "");
             setPage(1);
           }}
         >
-          <option value="">All roles</option>
-          <option value="admin">Administrators</option>
-          <option value="user">Users</option>
+          <option value="">{u.allRoles}</option>
+          <option value="admin">{u.admins}</option>
+          <option value="user">{u.usersOption}</option>
         </select>
         <select
-          aria-label="Filter by status"
+          aria-label={u.byStatus}
           value={status}
           onChange={(event) => {
             setStatus(event.target.value as Status | "");
             setPage(1);
           }}
         >
-          <option value="">Any status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Deactivated</option>
+          <option value="">{u.anyStatus}</option>
+          <option value="active">{t.common.active}</option>
+          <option value="inactive">{t.common.deactivated}</option>
         </select>
       </div>
 
@@ -380,12 +373,12 @@ export default function Users() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>User</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Created</th>
-                  <th>Last sign-in</th>
-                  <th className="num">Actions</th>
+                  <th>{cols.user}</th>
+                  <th>{cols.role}</th>
+                  <th>{cols.status}</th>
+                  <th>{cols.created}</th>
+                  <th>{cols.lastSignIn}</th>
+                  <th className="num">{cols.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -396,7 +389,7 @@ export default function Users() {
                         <Avatar name={user.full_name} size="sm" src={user.photo_url} />
                         <div>
                           <span className="cell-title">
-                            {user.full_name} {isSelf(user) && <Badge tone="neutral">You</Badge>}
+                            {user.full_name} {isSelf(user) && <Badge tone="neutral">{u.you}</Badge>}
                           </span>
                           <span className="cell-sub">
                             {user.email}
@@ -406,11 +399,11 @@ export default function Users() {
                       </div>
                     </td>
                     <td>
-                      <Badge tone={user.role}>{user.role}</Badge>
+                      <Badge tone={user.role}>{t.common.roles[user.role] ?? user.role}</Badge>
                     </td>
                     <td>
                       <Badge tone={user.is_active ? "active" : "inactive"}>
-                        {user.is_active ? "Active" : "Deactivated"}
+                        {user.is_active ? t.common.active : t.common.deactivated}
                       </Badge>
                     </td>
                     <td>{formatDate(user.created_at)}</td>
@@ -418,39 +411,39 @@ export default function Users() {
                     <td className="num">
                       <div className="row-actions">
                         <Link className="btn btn-ghost btn-sm" to={`/admin/activity?user=${user.id}`}>
-                          Activity
+                          {u.activity}
                         </Link>
                         <button
                           type="button"
                           className="btn btn-ghost btn-sm"
                           onClick={() => setDialog({ kind: "edit", user })}
                         >
-                          Edit
+                          {u.editButton}
                         </button>
                         <button
                           type="button"
                           className="btn btn-ghost btn-sm"
                           onClick={() => setDialog({ kind: "password", user })}
                         >
-                          Password
+                          {u.passwordButton}
                         </button>
                         <button
                           type="button"
                           className="btn btn-ghost btn-sm"
                           disabled={isSelf(user)}
-                          title={isSelf(user) ? "You cannot deactivate yourself" : undefined}
+                          title={isSelf(user) ? u.cannotDeactivate : undefined}
                           onClick={() => toggleActive(user)}
                         >
-                          {user.is_active ? "Deactivate" : "Activate"}
+                          {user.is_active ? u.deactivate : u.activate}
                         </button>
                         <button
                           type="button"
                           className="btn btn-ghost btn-sm btn-ghost-danger"
                           disabled={isSelf(user)}
-                          title={isSelf(user) ? "You cannot delete yourself" : undefined}
+                          title={isSelf(user) ? u.cannotDelete : undefined}
                           onClick={() => setDialog({ kind: "delete", user })}
                         >
-                          Delete
+                          {t.common.delete}
                         </button>
                       </div>
                     </td>
@@ -459,7 +452,7 @@ export default function Users() {
                 {users.data.items.length === 0 && (
                   <tr>
                     <td colSpan={6} className="empty">
-                      No account matches these filters.
+                      {u.none}
                     </td>
                   </tr>
                 )}
@@ -475,7 +468,7 @@ export default function Users() {
           target={null}
           isSelf={false}
           onClose={close}
-          onSaved={(saved) => finish(`${saved.full_name} was created.`)}
+          onSaved={(saved) => finish(u.created(saved.full_name))}
         />
       )}
       {dialog?.kind === "edit" && (
@@ -485,7 +478,7 @@ export default function Users() {
           onClose={close}
           onSaved={(saved) => {
             if (saved.id === me?.id) setMe(saved);
-            finish(`${saved.full_name} was updated.`);
+            finish(u.updated(saved.full_name));
           }}
         />
       )}
@@ -494,14 +487,14 @@ export default function Users() {
           target={dialog.user}
           isSelf={isSelf(dialog.user)}
           onClose={close}
-          onDone={() => finish(`The password of ${dialog.user.full_name} was changed.`)}
+          onDone={() => finish(u.passwordChanged(dialog.user.full_name))}
         />
       )}
       {dialog?.kind === "delete" && (
         <DeleteDialog
           target={dialog.user}
           onClose={close}
-          onDone={() => finish(`${dialog.user.full_name} was deleted.`)}
+          onDone={() => finish(u.deleted(dialog.user.full_name))}
         />
       )}
     </>
