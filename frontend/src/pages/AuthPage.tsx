@@ -3,15 +3,12 @@ import { Link, Navigate, useLocation } from "react-router-dom";
 import { errorMessage, type User } from "../services/api";
 import { homePath, useAuth } from "../services/auth";
 import { APP_NAME } from "../brand";
-import {
-  Alert,
-  Logo,
-  LogoMark,
-  PasswordStrength,
-  Spinner,
-  SubmitButton,
-  TextField,
-} from "../components";
+import { Alert, Logo, PasswordStrength, Spinner, SubmitButton, TextField } from "../components";
+import { Icon } from "../components/icons";
+import { FactList, FloatCards, parallax, useCatalogSummary } from "../components/landing";
+import { Preferences } from "../components/prefs";
+import { Scene3D } from "../components/Scene3D";
+import { useT } from "../i18n";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -26,6 +23,8 @@ function destination(user: User, from: unknown): string {
 export default function AuthPage({ mode }: { mode: "signin" | "signup" }) {
   const { user, ready, signIn, signUp } = useAuth();
   const location = useLocation();
+  const t = useT();
+  const summary = useCatalogSummary();
   const from = (location.state as { from?: unknown } | null)?.from;
 
   const [fullName, setFullName] = useState("");
@@ -44,14 +43,14 @@ export default function AuthPage({ mode }: { mode: "signin" | "signup" }) {
     setConfirm("");
   }, [mode]);
 
-  if (!ready) return <Spinner label="Checking your session" />;
+  if (!ready) return <Spinner label={t.common.checkingSession} />;
   // Also what moves the user on after a successful sign-in or sign-up.
   if (user) return <Navigate to={destination(user, from)} replace />;
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (signingUp && password !== confirm) {
-      setError("The two passwords do not match.");
+      setError(t.auth.mismatch);
       return;
     }
     setBusy(true);
@@ -70,48 +69,47 @@ export default function AuthPage({ mode }: { mode: "signin" | "signup" }) {
 
   return (
     <div className="auth">
-      <aside className="auth-aside">
-        <div className="orbs" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
-        <p className="eyebrow">Pill identification and interaction checks</p>
+      <aside className="auth-aside" onPointerMove={parallax}>
+        <span className="aurora aurora-1" aria-hidden="true" />
+        <span className="aurora aurora-2" aria-hidden="true" />
+        <span className="lp-grid-lines" aria-hidden="true" />
+        <p className="eyebrow">{t.auth.eyebrow}</p>
         <div className="auth-aside-body">
-          <div className="emblem-stage" aria-hidden="true">
-            <span className="emblem-ring" />
-            <span className="emblem-ring" />
-            <LogoMark size={150} className="emblem-float" />
+          <div className="auth-visual">
+            <Scene3D variant="compact" className="auth-scene" />
+            <FloatCards variant="auth" />
           </div>
-          <h1>Know which pills you have and whether they interact.</h1>
-          <p>
-            Identify pills from a photo, check their active ingredients against DDInter and ask
-            follow-up questions answered from openFDA labels and PubMed, with the sources cited.
-          </p>
+          <h1>
+            {t.auth.title1} <span className="text-gradient">{t.auth.title2}</span>
+          </h1>
+          <p>{t.auth.lead}</p>
+          <FactList summary={summary.data} loading={summary.loading} t={t} className="facts-auth" />
         </div>
-        <p className="auth-footnote">Information only: consult a pharmacist or doctor.</p>
+        <p className="auth-footnote" data-testid="disclaimer">
+          <Icon name="shield" size={15} />
+          {t.common.disclaimer}
+        </p>
       </aside>
 
       <main className="auth-main">
+        <Preferences className="auth-corner" />
         <div className="auth-column">
-          <Link to="/" className="auth-logo" title={`About ${APP_NAME}`}>
-            <Logo height={132} />
+          <Link to="/" className="auth-logo" title={t.auth.about(APP_NAME)}>
+            <Logo height={112} />
           </Link>
 
           <div className="auth-card">
-            <h2>{signingUp ? "Create your account" : "Welcome back"}</h2>
-            <p className="muted">
-              {signingUp ? "It takes less than a minute." : "Sign in to continue."}
-            </p>
+            <h2>{signingUp ? t.auth.titleSignUp : t.auth.titleSignIn}</h2>
+            <p className="muted">{signingUp ? t.auth.subSignUp : t.auth.subSignIn}</p>
 
-            <nav className="tabs" data-mode={mode} aria-label="Sign in or sign up">
+            <nav className="tabs" data-mode={mode} aria-label={t.auth.tabs}>
               <Link
                 to="/login"
                 state={location.state}
                 aria-current={signingUp ? undefined : "page"}
                 className={signingUp ? "tab" : "tab tab-active"}
               >
-                Sign in
+                {t.common.signIn}
               </Link>
               <Link
                 to="/signup"
@@ -119,7 +117,7 @@ export default function AuthPage({ mode }: { mode: "signin" | "signup" }) {
                 aria-current={signingUp ? "page" : undefined}
                 className={signingUp ? "tab tab-active" : "tab"}
               >
-                Sign up
+                {t.common.signUp}
               </Link>
             </nav>
 
@@ -128,7 +126,7 @@ export default function AuthPage({ mode }: { mode: "signin" | "signup" }) {
               {signingUp && (
                 <div className="field-enter">
                   <TextField
-                    label="Full name"
+                    label={t.common.fullName}
                     value={fullName}
                     onChange={setFullName}
                     autoComplete="name"
@@ -139,24 +137,24 @@ export default function AuthPage({ mode }: { mode: "signin" | "signup" }) {
                 </div>
               )}
               <TextField
-                label="Email"
+                label={t.common.email}
                 type="email"
                 value={email}
                 onChange={setEmail}
                 autoComplete={signingUp ? "email" : "username"}
-                placeholder="you@example.com"
+                placeholder={t.auth.emailPlaceholder}
                 required
                 autoFocus={!signingUp}
               />
               <TextField
-                label="Password"
+                label={t.common.password}
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={setPassword}
                 autoComplete={signingUp ? "new-password" : "current-password"}
                 minLength={signingUp ? MIN_PASSWORD_LENGTH : undefined}
                 maxLength={128}
-                hint={signingUp ? `At least ${MIN_PASSWORD_LENGTH} characters.` : undefined}
+                hint={signingUp ? t.common.atLeast(MIN_PASSWORD_LENGTH) : undefined}
                 required
               />
               {signingUp && (
@@ -164,7 +162,7 @@ export default function AuthPage({ mode }: { mode: "signin" | "signup" }) {
                   <PasswordStrength password={password} minLength={MIN_PASSWORD_LENGTH} />
                   <div className="field-enter">
                     <TextField
-                      label="Confirm password"
+                      label={t.auth.confirmPassword}
                       type={showPassword ? "text" : "password"}
                       value={confirm}
                       onChange={setConfirm}
@@ -181,17 +179,17 @@ export default function AuthPage({ mode }: { mode: "signin" | "signup" }) {
                   checked={showPassword}
                   onChange={(event) => setShowPassword(event.target.checked)}
                 />
-                Show password
+                {t.auth.showPassword}
               </label>
               <SubmitButton busy={busy} className="btn btn-primary btn-lg btn-block">
-                {signingUp ? "Create account" : "Sign in"}
+                {signingUp ? t.auth.createAccount : t.common.signIn}
               </SubmitButton>
             </form>
 
             <p className="auth-switch muted">
-              {signingUp ? "Already have an account? " : "New here? "}
+              {signingUp ? t.auth.haveAccount : t.auth.newHere}
               <Link to={signingUp ? "/login" : "/signup"} state={location.state}>
-                {signingUp ? "Sign in" : "Create an account"}
+                {signingUp ? t.common.signIn : t.auth.createAnAccount}
               </Link>
             </p>
           </div>

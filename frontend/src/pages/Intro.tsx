@@ -1,233 +1,180 @@
-import { useRef, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { APP_NAME } from "../brand";
 import { Logo, LogoMark } from "../components";
 import { Icon, type IconName } from "../components/icons";
-import { Reveal, useInView } from "../components/motion";
+import { FactList, FloatCards, parallax, useCatalogSummary } from "../components/landing";
+import { Reveal } from "../components/motion";
+import { Preferences } from "../components/prefs";
+import { Scene3D } from "../components/Scene3D";
+import { useT } from "../i18n";
 
-// The three things the app does, in the order a visit goes through them.
-const STEPS = [
-  {
-    name: "Scan",
-    text: "A photo or the webcam: each pill is detected, then identified among the known pills, with a confidence score.",
-  },
-  {
-    name: "Check",
-    text: "The active ingredients of every pair are looked up in DDInter: severity and explanation, as the source gives them.",
-  },
-  {
-    name: "Ask",
-    text: "An assistant answers follow-up questions from official drug labels, PubMed and DDInter, and cites each source.",
-  },
-];
+// Icons of the steps and the rules; their texts are in src/i18n, in the same order.
+const STEP_ICONS: IconName[] = ["camera", "shield", "book"];
+const RULE_ICONS: IconName[] = ["ban", "alert", "book", "eye"];
 
-// The safety rules of the project (docs/project_rules.md), as a visitor sees them.
-const RULES: { title: string; text: string; icon: IconName }[] = [
-  {
-    icon: "ban",
-    title: "Never a dose",
-    text: "Questions about how much to take are refused: that is for a pharmacist or doctor.",
-  },
-  {
-    icon: "alert",
-    title: "Never called safe",
-    text: "A pair missing from DDInter is reported as “no known interaction in this database”.",
-  },
-  {
-    icon: "book",
-    title: "Always a source",
-    text: "Every answer cites the label, article or database entry it comes from.",
-  },
-  {
-    icon: "eye",
-    title: "A suggestion, not a certainty",
-    text: "Each identified pill shows its confidence; when it is low, you confirm or pick from the top 5.",
-  },
-];
-
-const SOURCES = [
-  { name: "NLM C3PI", gives: "Pill photographs used to train and test the vision models" },
-  { name: "RxNorm (RxNav)", gives: "From a pill to its active ingredients" },
-  { name: "DDInter 2", gives: "Interactions between active ingredients, with their severity" },
-  { name: "openFDA drug labels", gives: "Official labels the assistant answers from" },
-  { name: "PubMed", gives: "Abstracts of articles on drug interactions" },
-  { name: "Tox21", gives: "In vitro toxicity data for the bonus model" },
-];
-
-// Confidence of the three best suggestions for one detected pill, in percent.
-// An illustration of the idea, not a real prediction.
-const FIGURE = [
-  { label: "Top 1 · 81%", width: 81, kind: "top" },
-  { label: "Top 2 · 12%", width: 12, kind: "other" },
-  { label: "Top 3 · 4%", width: 4, kind: "other" },
-];
-
-/** A bar that grows to `--w` once its card is on screen (see .figure-card in the CSS). */
-function barWidth(percent: number): CSSProperties {
-  return { "--w": `${percent}%` } as CSSProperties;
-}
-
-function ScanFigure() {
-  const ref = useRef<HTMLElement>(null);
-  const inView = useInView(ref);
-  return (
-    <figure
-      ref={ref}
-      className={inView ? "figure-card is-visible" : "figure-card"}
-      role="img"
-      aria-label="Illustration: for one detected pill, the best suggestion has a confidence of 81 percent, the next two 12 and 4 percent."
-    >
-      <p className="figure-title">How a scan reads</p>
-      <p className="figure-sub">The three best suggestions for one detected pill</p>
-      {FIGURE.map((row) => (
-        <div className="bar-row" key={row.label}>
-          <span>{row.label}</span>
-          <div className="bar-track">
-            <span className={`bar-fill bar-${row.kind}`} style={barWidth(row.width)} />
-          </div>
-        </div>
-      ))}
-      <figcaption>
-        <span>A suggestion, never a certainty: when the confidence is low, you confirm it.</span>
-        <span className="figure-note">An illustration of the idea, not a real prediction.</span>
-      </figcaption>
-    </figure>
-  );
-}
-
-/** The public start page: what the site is, shown before anyone signs in. */
+/** The public start page: what the site is, shown before anyone signs in. Always dark. */
 export default function Intro() {
+  const t = useT();
+  const summary = useCatalogSummary();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <div className="intro">
-      <header className="intro-bar">
-        <div className="intro-inner intro-bar-inner">
-          <Logo height={68} />
-          <nav className="intro-bar-actions" aria-label="Account">
-            <Link className="btn btn-ghost" to="/login">
-              Sign in
-            </Link>
-            <Link className="btn btn-primary" to="/signup">
-              Create account
-            </Link>
+    <div className="lp">
+      <header className={scrolled ? "lp-nav is-scrolled" : "lp-nav"}>
+        <div className="lp-inner lp-nav-inner">
+          <Link to="/" className="lp-brand" aria-label={APP_NAME}>
+            <Logo height={54} tone="dark" />
+          </Link>
+          <nav className="lp-links" aria-label={t.intro.sections}>
+            <a href="#how">{t.intro.linkHow}</a>
+            <a href="#safety">{t.intro.linkSafety}</a>
+            <a href="#sources">{t.intro.linkData}</a>
           </nav>
+          <div className="lp-nav-actions">
+            <Preferences className="prefs-glass" />
+            <Link className="btn btn-glass" to="/login">
+              {t.common.signIn}
+            </Link>
+            <Link className="btn btn-glow lp-hide-sm" to="/signup">
+              {t.intro.createAccount}
+            </Link>
+          </div>
         </div>
       </header>
 
       <main>
-        <section className="intro-hero">
-          <div className="orbs" aria-hidden="true">
-            <span />
-            <span />
-            <span />
+        <section className="lp-hero" onPointerMove={parallax}>
+          <div className="lp-hero-bg" aria-hidden="true">
+            <span className="aurora aurora-1" />
+            <span className="aurora aurora-2" />
+            <span className="lp-grid-lines" />
           </div>
-          <div className="intro-inner intro-hero-grid">
-            <div className="hero-copy">
-              <p className="eyebrow">Pill identification and interaction checks</p>
-              <h1>Know which pills you have and whether they interact.</h1>
-              <p className="intro-lead">
-                Take a photo of one or more pills. {APP_NAME} detects each one, suggests what it
-                is with a confidence score, checks its active ingredients for known interactions
-                and answers your questions, citing every source.
+          <Scene3D variant="hero" className="lp-scene" />
+          <FloatCards />
+          <div className="lp-inner lp-hero-inner">
+            <div className="lp-hero-copy">
+              <p className="lp-chip">
+                <span className="lp-chip-dot" />
+                {t.intro.chip}
               </p>
-              <div className="intro-cta">
-                <Link className="btn btn-light btn-lg" to="/signup">
-                  Create an account
+              <h1 className="lp-title">
+                <span className="line">{t.intro.title1}</span>
+                <span className="line text-gradient">{t.intro.title2}</span>
+              </h1>
+              <p className="lp-lead">{t.intro.lead(APP_NAME)}</p>
+              <div className="lp-cta">
+                <Link className="btn btn-glow btn-lg" to="/signup">
+                  {t.intro.startScanning}
                   <Icon name="arrow" />
                 </Link>
-                <Link className="btn btn-on-dark btn-lg" to="/login">
-                  I already have one
+                <Link className="btn btn-glass btn-lg" to="/login">
+                  {t.intro.haveOne}
                 </Link>
               </div>
-            </div>
-            <div className="hero-figure">
-              <ScanFigure />
-            </div>
-          </div>
-        </section>
-
-        <section className="intro-section">
-          <div className="intro-inner">
-            <Reveal>
-              <h2>How it works</h2>
-              <p className="intro-text">
-                Three steps, each built on public data, each answer traced back to where it
-                comes from.
+              <p className="lp-disclaimer" data-testid="disclaimer">
+                <Icon name="shield" size={15} />
+                {t.common.disclaimer}
               </p>
-            </Reveal>
-            <Reveal stagger className="intro-grid intro-grid-3">
-              {STEPS.map((step) => (
-                <div className="card step-card lift" key={step.name}>
-                  <h3>{step.name}</h3>
-                  <p className="muted">{step.text}</p>
-                </div>
-              ))}
-            </Reveal>
+            </div>
           </div>
         </section>
 
-        <section className="intro-section intro-section-alt">
-          <div className="intro-inner">
-            <Reveal>
-              <h2>Rules it always follows</h2>
+        <section className="lp-stats">
+          <div className="lp-inner">
+            <FactList summary={summary.data} loading={summary.loading} t={t} className="facts-lp" />
+          </div>
+        </section>
+
+        <section id="how" className="lp-section">
+          <div className="lp-inner">
+            <Reveal className="lp-head">
+              <h2>{t.intro.howTitle}</h2>
+              <p className="lp-sub">{t.intro.howSub}</p>
             </Reveal>
-            <Reveal stagger className="intro-grid intro-grid-4">
-              {RULES.map((rule) => (
-                <div className="feature" key={rule.title}>
-                  <span className="feature-icon" aria-hidden="true">
-                    <Icon name={rule.icon} size={22} />
+            <Reveal stagger className="lp-steps">
+              {t.intro.steps.map((step, index) => (
+                <article className="lp-step glass" key={step.title}>
+                  <span className="lp-step-num">0{index + 1}</span>
+                  <span className="lp-step-icon">
+                    <Icon name={STEP_ICONS[index]} size={22} />
                   </span>
-                  <h3>{rule.title}</h3>
-                  <p className="muted">{rule.text}</p>
+                  <h3>{step.title}</h3>
+                  <p>{step.text}</p>
+                </article>
+              ))}
+            </Reveal>
+          </div>
+        </section>
+
+        <section id="safety" className="lp-section">
+          <div className="lp-inner">
+            <Reveal className="lp-head">
+              <h2>{t.intro.rulesTitle}</h2>
+            </Reveal>
+            <Reveal stagger className="lp-rules">
+              {t.intro.rules.map((rule, index) => (
+                <div className="lp-rule glass" key={rule.title}>
+                  <span className="lp-rule-icon">
+                    <Icon name={RULE_ICONS[index]} size={20} />
+                  </span>
+                  <div>
+                    <h3>{rule.title}</h3>
+                    <p>{rule.text}</p>
+                  </div>
                 </div>
               ))}
             </Reveal>
             <Reveal>
-              <p className="intro-next">
-                <span className="badge badge-admin badge-neutral">Information only</span>{" "}
-                {APP_NAME} does not replace a pharmacist or doctor: consult one before changing
-                any treatment.
+              <p className="lp-note">
+                <span className="badge badge-neutral">{t.intro.informationOnly}</span>{" "}
+                {t.intro.notReplace(APP_NAME)}
               </p>
             </Reveal>
           </div>
         </section>
 
-        <section className="intro-section">
-          <div className="intro-inner">
-            <Reveal>
-              <h2>Where the data comes from</h2>
-              <p className="intro-text">
-                Only public sources, collected through their official APIs and files, each with
-                its licence. Nothing is invented: what the sources do not say is not said.
-              </p>
+        <section id="sources" className="lp-section">
+          <div className="lp-inner">
+            <Reveal className="lp-head">
+              <h2>{t.intro.dataTitle}</h2>
+              <p className="lp-sub">{t.intro.dataSub}</p>
             </Reveal>
-            <Reveal stagger className="source-list">
-              {SOURCES.map((source) => (
-                <div className="source lift" key={source.name}>
+            <Reveal stagger className="lp-sources">
+              {t.intro.sources.map((source) => (
+                <div className="lp-source glass" key={source.name}>
+                  <span className="lp-source-icon">
+                    <Icon name="book" size={18} />
+                  </span>
                   <strong>{source.name}</strong>
-                  <span className="muted">{source.gives}</span>
+                  <span>{source.gives}</span>
                 </div>
               ))}
             </Reveal>
           </div>
         </section>
 
-        <section className="intro-closing">
-          <Reveal className="intro-inner">
-            <div className="closing-card">
-              <div className="orbs" aria-hidden="true">
-                <span />
-                <span />
-              </div>
-              <LogoMark size={96} className="emblem-float" />
-              <h2>Ready to scan?</h2>
-              <p>An account takes less than a minute to create.</p>
-              <div className="intro-cta">
-                <Link className="btn btn-light btn-lg" to="/signup">
-                  Create an account
+        <section className="lp-section">
+          <Reveal className="lp-inner">
+            <div className="lp-final">
+              <span className="aurora aurora-1" aria-hidden="true" />
+              <LogoMark size={92} className="emblem-float" />
+              <h2>{t.intro.readyTitle}</h2>
+              <p>{t.intro.readyText}</p>
+              <div className="lp-cta lp-cta-center">
+                <Link className="btn btn-glow btn-lg" to="/signup">
+                  {t.intro.startScanning}
                   <Icon name="arrow" />
                 </Link>
-                <Link className="btn btn-on-dark btn-lg" to="/login">
-                  Sign in
+                <Link className="btn btn-glass btn-lg" to="/login">
+                  {t.common.signIn}
                 </Link>
               </div>
             </div>
@@ -235,10 +182,15 @@ export default function Intro() {
         </section>
       </main>
 
-      <footer className="intro-footer">
-        <div className="intro-inner intro-footer-inner">
+      <footer className="lp-footer">
+        <div className="lp-inner lp-footer-inner">
           <LogoMark size={28} />
-          <span>{APP_NAME}. Information only: consult a pharmacist or doctor.</span>
+          <span>{t.intro.footer(APP_NAME)}</span>
+          <nav aria-label={t.shell.information}>
+            <Link to="/about">{t.shell.about}</Link>
+            <Link to="/privacy">{t.shell.privacy}</Link>
+            <Link to="/help">{t.shell.help}</Link>
+          </nav>
         </div>
       </footer>
     </div>
