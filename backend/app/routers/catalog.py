@@ -6,8 +6,9 @@ Public, read only, and never anything about an account. Two routes:
   (pill classes the classifier knows, active ingredients, interaction pairs), so the start
   page never shows a figure typed by hand;
 - `showcase`: one real scan of a demo gallery photo (C3PI test split, never seen in
-  training: D105) with the served models, and the most severe interaction its active
-  ingredient has in DDInter.
+  training: D105) with the served models, and one DDInter interaction of its active
+  ingredient: the well-known pair SHOWCASE_PAIR when the pill is one of its two drugs,
+  else the most severe one.
   The floating cards of the start page show it; without it they are marked as an example.
 
 Both are kept in memory (counts for ten minutes, the scan per published model version), so
@@ -44,7 +45,12 @@ from app.schemas import (
 router = APIRouter(prefix="/api/catalog", tags=["catalog"])
 
 COUNTS_TTL = 600.0  # seconds
-SHOWCASE_PHOTOS = 8  # gallery photos tried, in list order, to find one identified correctly
+SHOWCASE_PHOTOS = 8  # gallery photos tried to find one identified correctly
+# A well-known pair whose two ingredients are both pill classes: the gallery photos of either
+# one are tried first, and the card shows this pair with the severity the tables give it
+# (DDInter 2.0: Major). Without it, the most severe interaction of the ingredient is shown,
+# which can be a drug that is not a pill of the catalogue.
+SHOWCASE_PAIR = ("fluconazole", "warfarin")
 
 
 @dataclass
@@ -118,6 +124,42 @@ def worst_interaction(db: Session, ingredient: str) -> ShowcaseInteraction | Non
     )
 
 
+def pair_interaction(db: Session, ingredient: str, partner: str) -> ShowcaseInteraction | None:
+    """The interaction of one given pair as the tables store it (most severe source row)."""
+    ids = {
+        i.name: i.id
+        for i in db.scalars(select(Ingredient).where(Ingredient.name.in_([ingredient, partner])))
+    }
+    if ingredient not in ids or partner not in ids:
+        return None
+    a, b = ids[ingredient], ids[partner]
+    rows = db.scalars(
+        select(Interaction).where(
+            or_(
+                (Interaction.ingredient_a_id == a) & (Interaction.ingredient_b_id == b),
+                (Interaction.ingredient_a_id == b) & (Interaction.ingredient_b_id == a),
+            )
+        )
+    ).all()
+    if not rows:
+        return None
+    best = min(rows, key=lambda r: SEVERITY_ORDER.get(r.severity, 9))
+    return ShowcaseInteraction(
+        ingredient_a=ingredient, ingredient_b=partner, severity=best.severity, source="DDInter"
+    )
+
+
+def showcase_interaction(db: Session, ingredients: list[str]) -> ShowcaseInteraction | None:
+    """SHOWCASE_PAIR when the pill holds one of its ingredients, else the most severe one."""
+    for ingredient in ingredients:
+        if ingredient in SHOWCASE_PAIR:
+            partner = SHOWCASE_PAIR[1] if ingredient == SHOWCASE_PAIR[0] else SHOWCASE_PAIR[0]
+            found = pair_interaction(db, ingredient, partner)
+            if found is not None:
+                return found
+    return worst_interaction(db, ingredients[0])
+
+
 def _has_ingredients(db: Session) -> bool:
     return db.scalar(select(PillIngredient.pill_id).limit(1)) is not None
 
@@ -133,12 +175,24 @@ def find_showcase(
     holder: ScannerHolder, photos: list[DemoPhoto], db: Session, settings: Settings
 ) -> CatalogShowcase | None:
     """The first gallery photo with one pill, identified as its true class above the
-    confirmation threshold; None when the models, the photos or the tables are missing."""
+    confirmation threshold; None when the models, the photos or the tables are missing.
+    Photos of a SHOWCASE_PAIR ingredient are tried first, the others in list order."""
     try:
         scanner = holder.get()
     except Exception:  # missing or unreadable model files: the cards say "example"
         return None
-    for index, photo in enumerate(photos[:SHOWCASE_PHOTOS]):
+    tried = list(enumerate(photos[:SHOWCASE_PHOTOS]))
+    try:
+        known = pill_infos(db, [photo.class_id for _, photo in tried])
+    except PharmaUnavailable:
+        return None
+
+    def in_pair(photo: DemoPhoto) -> bool:
+        info = known.get(photo.class_id)
+        return info is not None and any(i in SHOWCASE_PAIR for i in info.ingredients)
+
+    tried.sort(key=lambda item: not in_pair(item[1]))  # stable: list order otherwise
+    for index, photo in tried:
         image = decode_image(photo.file.read_bytes(), max_pixels=settings.scan_max_pixels)
         output = scanner.scan(image)
         if len(output.detections) != 1:
@@ -153,7 +207,7 @@ def find_showcase(
             return None
         if info is None or not info.ingredients:
             continue
-        interaction = worst_interaction(db, info.ingredients[0])
+        interaction = showcase_interaction(db, info.ingredients)
         classify = output.models.get("classify") or {}
         return CatalogShowcase(
             photo_id=index,

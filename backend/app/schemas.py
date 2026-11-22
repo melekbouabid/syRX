@@ -359,7 +359,8 @@ class CatalogShowcase(BaseModel):
     model: str
     model_version: int | None
     interaction: ShowcaseInteraction | None = Field(
-        description="Most severe interaction of the first active ingredient, as DDInter gives it"
+        description="A DDInter interaction of the pill's ingredient, with the severity DDInter "
+        "gives it: a well-known pair of two catalogue pills when possible, else the most severe"
     )
 
 

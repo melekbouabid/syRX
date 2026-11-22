@@ -64,6 +64,36 @@ def test_showcase_is_a_real_scan_of_a_gallery_photo(
     }
 
 
+def test_showcase_prefers_a_photo_of_the_well_known_pair(
+    anonymous: TestClient, gallery: FastAPI, pharma: str
+) -> None:
+    """A red photo (class 5, losartan + hydrochlorothiazide) comes first in the gallery and
+    is identified correctly too; the warfarin photo is shown, with fluconazole + warfarin."""
+    settings = gallery.state.settings
+    red = np.full((100, 200, 3), 255, dtype=np.uint8)
+    red[20:80, 120:170] = (0, 0, 255)  # BGR red
+    cv2.imwrite(str(settings.demo_images_dir / "Disc1" / "R.JPG"), red)
+    settings.demo_split_file.write_text(
+        SPLIT + "Disc1/images/R.JPG,5,C3PI_Test,1,y,test\n", encoding="utf-8"
+    )
+    settings.demo_holdout_file.write_text(
+        HOLDOUT + "Disc1/images/R.JPG,5,C3PI_Test,y,g2\n", encoding="utf-8"
+    )
+    settings.demo_gallery_file.write_text(
+        "path,class_id,why\nDisc1/images/R.JPG,5,major\nDisc1/images/G.JPG,7,major\n",
+        encoding="utf-8",
+    )
+    showcase = anonymous.get("/api/catalog/showcase").json()["showcase"]
+    assert showcase["photo_id"] == 1
+    assert showcase["pill_name"] == "WARFARIN 5MG"
+    assert showcase["interaction"] == {
+        "ingredient_a": "warfarin",
+        "ingredient_b": "fluconazole",
+        "severity": "Major",
+        "source": "DDInter",
+    }
+
+
 def test_no_showcase_below_the_confirmation_threshold(
     app: FastAPI, anonymous: TestClient, gallery: FastAPI, pharma: str
 ) -> None:
