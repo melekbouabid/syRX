@@ -21,6 +21,7 @@ from app.reports import signing_key
 from app.routers import (
     admin,
     auth,
+    catalog,
     chat,
     demo,
     documents,
@@ -119,6 +120,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(scan.router)
     app.include_router(medicines.router)
     app.include_router(demo.router)
+    app.include_router(catalog.router)
     app.include_router(chat.router)
     app.include_router(documents.router)
     app.include_router(toxicity.router)

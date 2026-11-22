@@ -338,6 +338,42 @@ class InteractionsResult(BaseModel):
     disclaimer: str
 
 
+class CatalogCounts(BaseModel):
+    pills: int = Field(description="Pill classes the classifier identifies (medicine tables)")
+    ingredients: int = Field(description="Active ingredients in the medicine tables")
+    interaction_pairs: int = Field(description="Ingredient pairs with an interaction (DDInter)")
+
+
+class ShowcaseInteraction(BaseModel):
+    ingredient_a: str
+    ingredient_b: str
+    severity: str
+    source: str
+
+
+class CatalogShowcase(BaseModel):
+    photo_id: int = Field(description="Position in the demo gallery (C3PI test split)")
+    pill_name: str
+    active_ingredients: list[str]
+    probability: float = Field(description="Top-1 probability given by the served classifier")
+    model: str
+    model_version: int | None
+    interaction: ShowcaseInteraction | None = Field(
+        description="Most severe interaction of the first active ingredient, as DDInter gives it"
+    )
+
+
+class CatalogSummary(BaseModel):
+    counts: CatalogCounts | None
+    confirm_threshold: float
+    disclaimer: str
+
+
+class ShowcaseOut(BaseModel):
+    showcase: CatalogShowcase | None
+    confirm_threshold: float
+
+
 class DemoImage(BaseModel):
     id: int
     class_id: int = Field(description="Class the photo shows (C3PI label), to compare with")
