@@ -13,6 +13,7 @@ import {
   staggerIndex,
 } from "../components";
 import { Icon } from "../components/icons";
+import { useT } from "../i18n";
 import {
   docTypeLabel,
   facetOptions,
@@ -25,15 +26,17 @@ import {
 const PAGE_SIZE = 25;
 
 function IndexCard({ index }: { index: IndexInfo }) {
+  const t = useT();
+  const w = t.documents.index;
   const facts: [string, string][] = [
-    ["Store", index.store === "qdrant" ? `Qdrant · ${index.collection}` : `${index.store} · ${index.collection}`],
-    ["Documents", formatNumber(index.documents)],
-    ["Chunks (points)", formatNumber(index.points)],
-    ["Embeddings", `${index.embedding_model} · ${index.dim} dimensions`],
-    ["Indexed", index.indexed_at ? formatDate(index.indexed_at, true) : "n/a"],
+    [w.store, index.store === "qdrant" ? `Qdrant · ${index.collection}` : `${index.store} · ${index.collection}`],
+    [w.documents, formatNumber(index.documents)],
+    [w.chunks, formatNumber(index.points)],
+    [w.embeddings, w.dimensions(index.embedding_model, index.dim)],
+    [w.indexed, index.indexed_at ? formatDate(index.indexed_at, true) : t.common.na],
   ];
   return (
-    <section className="card mb-4 p-4" aria-label="Vector index">
+    <section className="card mb-4 p-4" aria-label={w.label}>
       <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3 lg:grid-cols-5">
         {facts.map(([label, value]) => (
           <div key={label}>
@@ -43,10 +46,10 @@ function IndexCard({ index }: { index: IndexInfo }) {
         ))}
       </dl>
       <p className="cell-sub mt-3">
-        Filtered fields (payload indexes): {index.payload_indexes.join(", ") || "none"}.{" "}
+        {w.filtered(index.payload_indexes.join(", ") || t.common.none)}{" "}
         {index.dashboard_url && (
           <a href={index.dashboard_url} target="_blank" rel="noreferrer">
-            Open the Qdrant dashboard
+            {w.dashboard}
           </a>
         )}
       </p>
@@ -57,24 +60,26 @@ function IndexCard({ index }: { index: IndexInfo }) {
 function DocumentDialog({ docId, onClose }: { docId: string; onClose: () => void }) {
   const detail = useQuery((signal) => api.document(docId, signal), [docId]);
   const doc = detail.data;
+  const t = useT();
+  const w = t.documents.dialog;
   return (
-    <Modal title={doc?.title ?? "Document"} onClose={onClose}>
+    <Modal title={doc?.title ?? w.document} onClose={onClose}>
       {detail.error && <Alert>{detail.error}</Alert>}
-      {!doc && detail.loading && <Spinner label="Loading the document" />}
+      {!doc && detail.loading && <Spinner label={w.loading} />}
       {doc && (
         <div className="grid gap-4">
           <dl className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
             {(
               [
-                ["Identifier", doc.doc_id],
-                ["Type", docTypeLabel(doc.doc_type) + (doc.article_type ? ` · ${doc.article_type}` : "")],
-                ["Source", doc.source_name],
-                ["Date", formatDocDate(doc.date)],
-                ["Version", doc.version],
-                ["Language", doc.language],
-                ["Licence", doc.license],
-                ["About", doc.ingredients.join(", ") || "n/a"],
-                ["Also mentions", doc.mentioned_ingredients.join(", ") || "none"],
+                [w.identifier, doc.doc_id],
+                [w.type, docTypeLabel(doc.doc_type) + (doc.article_type ? ` · ${doc.article_type}` : "")],
+                [w.source, doc.source_name],
+                [w.date, formatDocDate(doc.date)],
+                [w.version, doc.version],
+                [w.language, doc.language],
+                [w.licence, doc.license],
+                [w.about, doc.ingredients.join(", ") || t.common.na],
+                [w.mentions, doc.mentioned_ingredients.join(", ") || t.common.none],
               ] as [string, string][]
             ).map(([label, value]) => (
               <div key={label}>
@@ -85,12 +90,10 @@ function DocumentDialog({ docId, onClose }: { docId: string; onClose: () => void
           </dl>
           <p>
             <a href={doc.url} target="_blank" rel="noreferrer">
-              Open the original source
+              {w.original}
             </a>
           </p>
-          <h3>
-            {doc.chunks.length} chunk{doc.chunks.length > 1 ? "s" : ""} in the index
-          </h3>
+          <h3>{w.chunks(doc.chunks.length)}</h3>
           <ol className="grid gap-3">
             {doc.chunks.map((chunk) => (
               <li key={chunk.chunk_id} className="card p-3">
@@ -104,8 +107,7 @@ function DocumentDialog({ docId, onClose }: { docId: string; onClose: () => void
           </ol>
           <p className="disclaimer">
             <Icon name="shield" size={16} />
-            Sentences with a dose are shown as […]. Information only, consult a pharmacist or a
-            doctor.
+            {w.doses} {t.common.disclaimer}
           </p>
         </div>
       )}
@@ -114,6 +116,7 @@ function DocumentDialog({ docId, onClose }: { docId: string; onClose: () => void
 }
 
 function DocumentRow({ doc, index, onOpen }: { doc: IndexedDocument; index: number; onOpen: () => void }) {
+  const t = useT();
   return (
     <tr className="row-enter" style={staggerIndex(index)}>
       <td>
@@ -128,7 +131,7 @@ function DocumentRow({ doc, index, onOpen }: { doc: IndexedDocument; index: numb
       </td>
       <td>
         <Badge tone={doc.doc_type === "label" ? "info" : "neutral"}>{docTypeLabel(doc.doc_type)}</Badge>
-        {doc.is_retracted && <Badge tone="danger">retracted</Badge>}
+        {doc.is_retracted && <Badge tone="danger">{t.documents.retracted}</Badge>}
       </td>
       <td>{doc.source_name}</td>
       <td>{doc.ingredients.join(", ")}</td>
@@ -139,6 +142,8 @@ function DocumentRow({ doc, index, onOpen }: { doc: IndexedDocument; index: numb
 }
 
 export default function DocumentsPage() {
+  const t = useT();
+  const d = t.documents;
   const [search, setSearch] = useState("");
   const [ingredientInput, setIngredientInput] = useState("");
   const [docType, setDocType] = useState("");
@@ -180,12 +185,8 @@ export default function DocumentsPage() {
             <Icon name="book" size={24} />
           </span>
           <div>
-            <h1>Documents</h1>
-            <p className="muted">
-              Every document the assistant searches and cites: openFDA drug labels, PubMed
-              abstracts and DDInter interaction pairs, with their metadata and chunks as stored in
-              the vector database.
-            </p>
+            <h1>{d.title}</h1>
+            <p className="muted">{d.lead}</p>
           </div>
         </div>
       </header>
@@ -197,8 +198,8 @@ export default function DocumentsPage() {
           <Icon name="search" />
           <input
             type="search"
-            aria-label="Search titles"
-            placeholder="Words of the title"
+            aria-label={d.searchTitles}
+            placeholder={d.titleWords}
             value={search}
             onChange={(event) => reset(() => setSearch(event.target.value))}
           />
@@ -207,18 +208,18 @@ export default function DocumentsPage() {
           <Icon name="pill" />
           <input
             type="search"
-            aria-label="Active ingredient"
-            placeholder="Active ingredient (e.g. warfarin)"
+            aria-label={d.ingredient}
+            placeholder={d.ingredientPlaceholder}
             value={ingredientInput}
             onChange={(event) => reset(() => setIngredientInput(event.target.value))}
           />
         </label>
         <select
-          aria-label="Filter by document type"
+          aria-label={d.byType}
           value={docType}
           onChange={(event) => reset(() => setDocType(event.target.value))}
         >
-          <option value="">All types</option>
+          <option value="">{d.allTypes}</option>
           {facetOptions(facets?.doc_type).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
@@ -226,11 +227,11 @@ export default function DocumentsPage() {
           ))}
         </select>
         <select
-          aria-label="Filter by source"
+          aria-label={d.bySource}
           value={source}
           onChange={(event) => reset(() => setSource(event.target.value))}
         >
-          <option value="">All sources</option>
+          <option value="">{d.allSources}</option>
           {Object.entries(facets?.source ?? {}).map(([value, count]) => (
             <option key={value} value={value}>
               {value} ({formatNumber(count)})
@@ -248,12 +249,12 @@ export default function DocumentsPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Document</th>
-                  <th>Type</th>
-                  <th>Source</th>
-                  <th>About</th>
-                  <th>Date</th>
-                  <th className="num">Chunks</th>
+                  <th>{d.columns.document}</th>
+                  <th>{d.columns.type}</th>
+                  <th>{d.columns.source}</th>
+                  <th>{d.columns.about}</th>
+                  <th>{d.columns.date}</th>
+                  <th className="num">{d.columns.chunks}</th>
                 </tr>
               </thead>
               <tbody>
@@ -263,7 +264,7 @@ export default function DocumentsPage() {
               </tbody>
             </table>
           </div>
-          {documents.data.total === 0 && <p className="muted p-4">No document matches these filters.</p>}
+          {documents.data.total === 0 && <p className="muted p-4">{d.none}</p>}
           <Pagination page={page} pageSize={PAGE_SIZE} total={documents.data.total} onPage={setPage} />
         </div>
       )}

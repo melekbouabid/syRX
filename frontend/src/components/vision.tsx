@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 import { api, type ModelMetadata, type ScannedPill } from "../services/api";
 import { useQuery } from "../hooks";
+import { useT } from "../i18n";
 import {
   classColour,
   containRect,
@@ -124,8 +125,9 @@ export function ProbabilityBars({
   candidates: { class_id: number; name: string; probability: number }[];
   limit?: number;
 }) {
+  const t = useT();
   return (
-    <ol className="m-0 grid list-none gap-1.5 p-0" aria-label="Most probable pills">
+    <ol className="m-0 grid list-none gap-1.5 p-0" aria-label={t.vision.mostProbable}>
       {candidates.slice(0, limit).map((candidate, rank) => (
         <li
           // By rank, so a live update animates the bar from its previous width.
@@ -169,27 +171,16 @@ function Figure({ label, value, hint }: { label: string; value: string; hint: st
 
 /** Client latency (measured in the browser) next to the server's own figures, in ms. */
 export function LatencyReadout({ latency }: { latency: Latency }) {
+  const t = useT();
   const transfer = transferMs(latency);
   return (
-    <div className="flex flex-wrap items-center gap-2 text-sm" aria-label="Latency">
-      <Figure
-        label="Client"
-        value={formatMs(latency.clientMs)}
-        hint="Measured in the browser: from sending the photo to having the answer"
-      />
-      <Figure
-        label="Server"
-        value={formatMs(latency.serverMs)}
-        hint="Returned by the API: the whole request on the server"
-      />
-      <Figure
-        label="Model"
-        value={formatMs(latency.inferenceMs)}
-        hint="ONNX Runtime only: detection plus identification"
-      />
+    <div className="flex flex-wrap items-center gap-2 text-sm" aria-label={t.vision.latency}>
+      <Figure label={t.vision.client} value={formatMs(latency.clientMs)} hint={t.vision.clientHint} />
+      <Figure label={t.vision.server} value={formatMs(latency.serverMs)} hint={t.vision.serverHint} />
+      <Figure label={t.vision.model} value={formatMs(latency.inferenceMs)} hint={t.vision.modelHint} />
       {transfer !== null && (
-        <span className="text-muted" title="Client minus server: upload, download, browser">
-          network and browser {formatMs(transfer)}
+        <span className="text-muted" title={t.vision.transferHint}>
+          {t.vision.transfer(formatMs(transfer))}
         </span>
       )}
     </div>
@@ -197,6 +188,7 @@ export function LatencyReadout({ latency }: { latency: Latency }) {
 }
 
 function ModelLine({ title, model }: { title: string; model: ModelMetadata }) {
+  const t = useT();
   return (
     <div className="grid gap-1.5 rounded-xl border border-line bg-surface p-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -218,12 +210,12 @@ function ModelLine({ title, model }: { title: string; model: ModelMetadata }) {
         {model.architecture}{" "}
         <span className="font-normal text-muted">
           · {model.name} v{model.version ?? "?"} · {model.precision.toUpperCase()} ·{" "}
-          {model.input_size} px · {model.num_classes} {model.num_classes === 1 ? "class" : "classes"}
+          {model.input_size} px · {model.num_classes} {t.vision.classes(model.num_classes)}
         </span>
       </div>
       <div className="flex flex-wrap gap-2">
         {headlineMetrics(model).map((metric) => (
-          <Figure key={metric.label} label={metric.label} value={metric.value} hint="MLflow Model Registry" />
+          <Figure key={metric.label} label={metric.label} value={metric.value} hint={t.vision.registry} />
         ))}
       </div>
     </div>
@@ -232,31 +224,33 @@ function ModelLine({ title, model }: { title: string; model: ModelMetadata }) {
 
 /** What the API serves, from GET /model/metadata (MLflow Model Registry, alias champion). */
 export function ModelCardView({ detector, classifier }: { detector: ModelMetadata; classifier: ModelMetadata }) {
+  const t = useT();
   return (
     <div className="grid gap-3 md:grid-cols-2">
-      <ModelLine title="Detector" model={detector} />
-      <ModelLine title="Classifier" model={classifier} />
+      <ModelLine title={t.vision.detector} model={detector} />
+      <ModelLine title={t.vision.classifier} model={classifier} />
     </div>
   );
 }
 
 export function ModelCard() {
   const metadata = useQuery((signal) => api.modelMetadata(signal), []);
+  const t = useT();
   return (
     <section
       className="card mb-5 grid gap-3"
-      aria-label="Models served"
+      aria-label={t.vision.modelsServed}
       data-testid="model-card"
     >
       <header className="flex flex-wrap items-center gap-2">
         <Icon name="spark" size={18} />
-        <h2 className="m-0 text-base">Models served (MLflow Registry)</h2>
-        <span className="text-sm text-muted">ONNX Runtime on the API, GET /model/metadata</span>
+        <h2 className="m-0 text-base">{t.vision.modelsTitle}</h2>
+        <span className="text-sm text-muted">{t.vision.modelsSub}</span>
       </header>
       {metadata.error && (
-        <p className="m-0 text-sm text-warn">The model metadata is not available: {metadata.error}</p>
+        <p className="m-0 text-sm text-warn">{t.vision.metadataError(metadata.error)}</p>
       )}
-      {!metadata.data && !metadata.error && <p className="m-0 text-sm text-muted">Loading the models…</p>}
+      {!metadata.data && !metadata.error && <p className="m-0 text-sm text-muted">{t.vision.loadingModels}</p>}
       {metadata.data && (
         <ModelCardView detector={metadata.data.detector} classifier={metadata.data.classifier} />
       )}

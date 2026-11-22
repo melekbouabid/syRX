@@ -14,23 +14,18 @@ import {
 import { useDebounced, useQuery } from "../../hooks";
 import { Icon } from "../../components/icons";
 import {
-  ACTION_OPTIONS,
   actionLabel,
+  actionOptions,
   browserName,
   eventDetail,
-  GROUP_LABEL,
   GROUP_TONE,
+  groupLabel,
   GROUPS,
 } from "../../lib/activity";
+import { useT } from "../../i18n";
 
 const PAGE_SIZE = 25;
-const PERIODS = [
-  { days: 1, label: "Last 24 hours" },
-  { days: 7, label: "Last 7 days" },
-  { days: 30, label: "Last 30 days" },
-  { days: 90, label: "Last 90 days" },
-  { days: 0, label: "All time" },
-];
+const PERIODS = [1, 7, 30, 90, 0]; // days; 0 = all time (labels in src/i18n)
 
 function isGroup(value: string | null): value is ActivityGroup {
   return GROUPS.some((g) => g.group === value);
@@ -38,6 +33,7 @@ function isGroup(value: string | null): value is ActivityGroup {
 
 /** The account the log is filtered on (?user=ID), with a way back to everyone. */
 function UserFilter({ userId, onClear }: { userId: number; onClear: () => void }) {
+  const a = useT().admin.activity;
   const account = useQuery((signal) => api.admin.user(userId, signal), [userId]);
   return (
     <div className="card mb-4 flex flex-wrap items-center gap-3 p-3">
@@ -47,23 +43,25 @@ function UserFilter({ userId, onClear }: { userId: number; onClear: () => void }
           <div className="min-w-0 flex-1">
             <span className="cell-title">{account.data.full_name}</span>
             <span className="cell-sub">
-              {account.data.email} · last sign-in {formatDate(account.data.last_login_at, true)}
+              {account.data.email} · {a.lastSignIn(formatDate(account.data.last_login_at, true))}
             </span>
           </div>
         </>
       ) : (
         <span className="muted flex-1">
-          {account.error ? `Account #${userId} (deleted)` : "Loading the account…"}
+          {account.error ? a.deletedAccount(userId) : a.loadingAccount}
         </span>
       )}
       <button type="button" className="btn btn-ghost btn-sm" onClick={onClear}>
-        Show everyone
+        {a.everyone}
       </button>
     </div>
   );
 }
 
 export default function Activity() {
+  const t = useT();
+  const a = t.admin.activity;
   const [params, setParams] = useSearchParams();
   const userParam = Number(params.get("user"));
   const userId = Number.isInteger(userParam) && userParam > 0 ? userParam : undefined;
@@ -98,22 +96,19 @@ export default function Activity() {
             <Icon name="activity" size={24} />
           </span>
           <div>
-            <h1>Activity</h1>
-            <p className="muted">
-              Who signed in, scanned, asked or changed an account, and when. Counts only: never a
-              photo, a medicine or the text of a question.
-            </p>
+            <h1>{a.title}</h1>
+            <p className="muted">{a.lead}</p>
           </div>
         </div>
         <a className="btn btn-ghost" href={exportUrl("activity", filters)} download>
           <Icon name="download" />
-          Export CSV
+          {t.admin.users.export}
         </a>
       </header>
 
       {userId !== undefined && <UserFilter userId={userId} onClear={() => setParam("user", null)} />}
 
-      <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Kind of event">
+      <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label={a.kind}>
         <button
           type="button"
           role="tab"
@@ -121,7 +116,7 @@ export default function Activity() {
           className={`chip-btn ${group === "" ? "chip-btn-on" : ""}`}
           onClick={() => setParam("group", null)}
         >
-          All {total !== null && <span className="chip-count">{formatNumber(total)}</span>}
+          {a.all} {total !== null && <span className="chip-count">{formatNumber(total)}</span>}
         </button>
         {GROUPS.map((item) => (
           <button
@@ -132,7 +127,7 @@ export default function Activity() {
             className={`chip-btn ${group === item.group ? "chip-btn-on" : ""}`}
             onClick={() => setParam("group", item.group)}
           >
-            {item.label}
+            {groupLabel(item.group)}
             {log.data && <span className="chip-count">{formatNumber(log.data.counts[item.group])}</span>}
           </button>
         ))}
@@ -143,8 +138,8 @@ export default function Activity() {
           <Icon name="search" />
           <input
             type="search"
-            aria-label="Search by name, email or IP address"
-            placeholder="Name, email or IP address"
+            aria-label={a.searchLabel}
+            placeholder={a.searchPlaceholder}
             value={search}
             onChange={(event) => {
               setSearch(event.target.value);
@@ -153,22 +148,22 @@ export default function Activity() {
           />
         </label>
         <select
-          aria-label="Action"
+          aria-label={a.action}
           value={action}
           onChange={(event) => {
             setAction(event.target.value);
             setPage(1);
           }}
         >
-          <option value="">Every action</option>
-          {ACTION_OPTIONS.map((option) => (
+          <option value="">{a.everyAction}</option>
+          {actionOptions().map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
           ))}
         </select>
         <select
-          aria-label="Period"
+          aria-label={a.period}
           value={days}
           onChange={(event) => {
             setDays(Number(event.target.value));
@@ -176,8 +171,8 @@ export default function Activity() {
           }}
         >
           {PERIODS.map((period) => (
-            <option key={period.days} value={period.days}>
-              {period.label}
+            <option key={period} value={period}>
+              {a.periods[period]}
             </option>
           ))}
         </select>
@@ -188,7 +183,7 @@ export default function Activity() {
       {log.data && log.data.items.length === 0 && (
         <div className="card empty-state">
           <Icon name="activity" size={28} />
-          <p>Nothing matches these filters.</p>
+          <p>{a.nothing}</p>
         </div>
       )}
       {log.data && log.data.items.length > 0 && (
@@ -197,10 +192,10 @@ export default function Activity() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>When</th>
-                  <th>Account</th>
-                  <th>What</th>
-                  <th>From</th>
+                  <th>{a.columns.when}</th>
+                  <th>{a.columns.account}</th>
+                  <th>{a.columns.what}</th>
+                  <th>{a.columns.from}</th>
                 </tr>
               </thead>
               <tbody>
@@ -211,7 +206,7 @@ export default function Activity() {
                       <button
                         type="button"
                         className="link-btn cell-title"
-                        title="Show only this account"
+                        title={a.onlyThis}
                         onClick={() => setParam("user", String(event.user_id))}
                       >
                         {event.user_name}
@@ -220,13 +215,13 @@ export default function Activity() {
                     </td>
                     <td>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Badge tone={GROUP_TONE[event.group]}>{GROUP_LABEL[event.group]}</Badge>
+                        <Badge tone={GROUP_TONE[event.group]}>{groupLabel(event.group)}</Badge>
                         <span>{actionLabel(event.action)}</span>
                       </div>
                       <span className="cell-sub">
                         {event.target_email && (
                           <>
-                            account <strong>{event.target_email}</strong>
+                            {a.account} <strong>{event.target_email}</strong>
                             {eventDetail(event) ? " · " : ""}
                           </>
                         )}

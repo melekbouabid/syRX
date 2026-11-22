@@ -4,6 +4,7 @@
 // on the page, so no value is told by colour alone.
 
 import { useEffect, useRef, useState, type RefObject } from "react";
+import { locale, messages } from "../i18n";
 import { formatNumber } from "./index";
 
 export interface Series {
@@ -49,7 +50,7 @@ export function niceTicks(max: number): number[] {
 }
 
 export function shortDay(iso: string): string {
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString(locale(), {
     day: "numeric",
     month: "short",
     timeZone: "UTC",
@@ -57,7 +58,7 @@ export function shortDay(iso: string): string {
 }
 
 function longDay(iso: string): string {
-  return new Date(`${iso}T00:00:00Z`).toLocaleDateString(undefined, {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString(locale(), {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -193,7 +194,7 @@ export function StackedColumns({ rows, series, label }: { rows: DayRow[]; series
                 onMouseEnter={() => setActive(i)}
                 onFocus={() => setActive(i)}
                 tabIndex={0}
-                aria-label={`${longDay(row.day)}: ${totals[i]} actions`}
+                aria-label={messages().charts.actions(longDay(row.day), totals[i])}
               />
             </g>
           );

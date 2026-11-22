@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useT } from "../i18n";
 import type { ReportBody } from "../services/api";
 import { Badge, formatDate, Logo } from "./index";
 import { Disclaimer, InteractionReport, SEVERITY_TONE } from "./interactions";
@@ -31,32 +32,31 @@ function AnswerText({ text }: { text: string }) {
  */
 export function ReportDocument({ report, actions }: { report: ReportBody; actions?: ReactNode }) {
   const severity = report.highest_severity;
+  const t = useT();
   return (
     <article className="report-doc">
       <header className="report-doc-head">
         <Logo height={44} />
         <div className="report-doc-title">
-          <p className="eyebrow">Interaction report</p>
+          <p className="eyebrow">{t.report.eyebrow}</p>
           <h1>{report.title}</h1>
-          <p className="muted">
-            Saved on {formatDate(report.created_at, true)} by {report.author}
-          </p>
+          <p className="muted">{t.report.savedOn(formatDate(report.created_at, true), report.author)}</p>
         </div>
         {severity ? (
-          <Badge tone={SEVERITY_TONE[severity]}>Highest: {severity}</Badge>
+          <Badge tone={SEVERITY_TONE[severity]}>{t.report.highest(t.severity[severity])}</Badge>
         ) : (
-          <Badge tone="neutral">{report.interactions ? "No known interaction" : "Single item"}</Badge>
+          <Badge tone="neutral">{report.interactions ? t.report.noKnown : t.report.single}</Badge>
         )}
       </header>
       {actions && <div className="report-doc-actions no-print">{actions}</div>}
 
       <section className="report-doc-section">
-        <h2>Medicines checked</h2>
+        <h2>{t.report.checked}</h2>
         <table className="table report-table">
           <thead>
             <tr>
-              <th>Medicine</th>
-              <th>Active ingredients</th>
+              <th>{t.report.medicine}</th>
+              <th>{t.report.ingredients}</th>
             </tr>
           </thead>
           <tbody>
@@ -66,14 +66,14 @@ export function ReportDocument({ report, actions }: { report: ReportBody; action
                   <span className="cell-title">{pill.name}</span>
                   {pill.generic_name && <span className="cell-sub">{pill.generic_name}</span>}
                 </td>
-                <td>{pill.active_ingredients.join(", ") || "none known in this database"}</td>
+                <td>{pill.active_ingredients.join(", ") || t.report.noneKnown}</td>
               </tr>
             ))}
             {report.ingredients.map((name) => (
               <tr key={name}>
                 <td>
                   <span className="cell-title">{name}</span>
-                  <span className="cell-sub">active ingredient (medicine box or typed)</span>
+                  <span className="cell-sub">{t.report.typed}</span>
                 </td>
                 <td>{name}</td>
               </tr>
@@ -83,17 +83,17 @@ export function ReportDocument({ report, actions }: { report: ReportBody; action
       </section>
 
       <section className="report-doc-section">
-        <h2>Interactions</h2>
+        <h2>{t.report.interactions}</h2>
         {report.interactions ? (
           <InteractionReport report={report.interactions} />
         ) : (
-          <p className="muted">Only one medicine: there is nothing to compare.</p>
+          <p className="muted">{t.report.onlyOne}</p>
         )}
       </section>
 
       {report.chat.length > 0 && (
         <section className="report-doc-section">
-          <h2>Questions to the assistant</h2>
+          <h2>{t.report.questions}</h2>
           {report.chat.map((excerpt, index) => (
             <div key={index} className="report-chat">
               <p className="report-chat-q">{excerpt.question}</p>
@@ -121,7 +121,7 @@ export function ReportDocument({ report, actions }: { report: ReportBody; action
         {report.interactions ? <span /> : <Disclaimer text={report.disclaimer} />}
         <div className="report-signature">
           {report.signature ? (
-            <img src={report.signature} alt={`Signature of ${report.author}`} />
+            <img src={report.signature} alt={t.report.signatureOf(report.author)} />
           ) : (
             <span className="report-signature-line" aria-hidden="true" />
           )}

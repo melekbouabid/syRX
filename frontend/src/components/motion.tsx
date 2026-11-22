@@ -2,8 +2,7 @@
 // their system for reduced motion, or when the browser cannot observe scrolling.
 
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-
-const numberFormat = new Intl.NumberFormat("en");
+import { locale, useLang } from "../i18n";
 
 export function usePrefersReducedMotion(): boolean {
   const query = "(prefers-reduced-motion: reduce)";
@@ -78,6 +77,8 @@ export function CountUp({ value, duration = 900 }: CountUpProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref);
   const reduced = usePrefersReducedMotion();
+  const { lang } = useLang();
+  const numberFormat = new Intl.NumberFormat(locale(lang));
   const [shown, setShown] = useState(reduced ? value : 0);
   const current = useRef(shown);
   current.current = shown;

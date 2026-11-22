@@ -4,7 +4,9 @@ import { Alert, Logo, Spinner } from "../components";
 import { Icon } from "../components/icons";
 import { ReportDocument } from "../components/ReportDocument";
 import { SiteFooter } from "../components/layouts";
+import { Preferences } from "../components/prefs";
 import { useQuery } from "../hooks";
+import { messages, useT } from "../i18n";
 
 /**
  * A report opened from its share link, /shared#<token>, without signing in. The token is
@@ -12,8 +14,9 @@ import { useQuery } from "../hooks";
  */
 export default function SharedReportPage() {
   const token = useLocation().hash.slice(1);
+  const t = useT();
   const report = useQuery(
-    (signal) => (token ? api.shared(token, signal) : Promise.reject(new Error("This link is incomplete."))),
+    (signal) => (token ? api.shared(token, signal) : Promise.reject(new Error(messages().shared.incomplete))),
     [token],
   );
 
@@ -24,12 +27,13 @@ export default function SharedReportPage() {
           <Link className="brand" to="/">
             <Logo />
           </Link>
-          <span className="muted">Shared report · read only</span>
+          <span className="muted">{t.shared.readOnly}</span>
           <div className="topbar-user">
+            <Preferences />
             {report.data && (
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => window.print()}>
                 <Icon name="printer" size={16} />
-                Print
+                {t.shared.print}
               </button>
             )}
           </div>
@@ -40,10 +44,10 @@ export default function SharedReportPage() {
           <div className="card empty-state">
             <Icon name="link" size={28} />
             <Alert>{report.error}</Alert>
-            <p className="muted">Ask the person who shared it for a new link.</p>
+            <p className="muted">{t.shared.askNew}</p>
           </div>
         )}
-        {!report.data && !report.error && <Spinner label="Opening the report" />}
+        {!report.data && !report.error && <Spinner label={t.shared.opening} />}
         {report.data && <ReportDocument report={report.data} />}
       </main>
       <SiteFooter />

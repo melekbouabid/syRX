@@ -19,6 +19,7 @@ import { Icon, type IconName } from "../components/icons";
 import { LatencyReadout, ModelCard, ProbBar, ProbabilityBars, ScanCanvas } from "../components/vision";
 import { percent, startLiveLoop, type Latency } from "../lib/vision";
 import { showDriftBanner } from "../lib/drift";
+import { messages, useT } from "../i18n";
 import ChatPanel from "./ChatPanel";
 
 const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp";
@@ -28,24 +29,12 @@ const LIVE_WIDTH = 960; // live frames are scaled down to this width before uplo
 
 type Mode = "upload" | "webcam" | "demo";
 
-const MODES: { mode: Mode; label: string; icon: IconName }[] = [
-  { mode: "upload", label: "Upload or drop a photo", icon: "upload" },
-  { mode: "demo", label: "Demo gallery", icon: "image" },
-  { mode: "webcam", label: "Webcam (live)", icon: "camera" },
+// Their labels are in src/i18n (scan.modes).
+const MODES: { mode: Mode; icon: IconName }[] = [
+  { mode: "upload", icon: "upload" },
+  { mode: "demo", icon: "image" },
+  { mode: "webcam", icon: "camera" },
 ];
-
-const WHY: Record<string, string> = {
-  major: "Major interactions",
-  confirm: "Needs confirmation",
-  "two-pills": "Two pills",
-  "no-ingredient": "No known ingredient",
-};
-
-const METHOD: Record<string, string> = {
-  brand: "brand table",
-  printed_name: "name printed on the box",
-  rxnav: "RxNorm (RxNav)",
-};
 
 /** A medicine box read by OCR (step 2.7): text read, brand, active ingredients, sources. */
 function BoxCard({
@@ -57,6 +46,8 @@ function BoxCard({
   added: boolean;
   onAdd: () => void;
 }) {
+  const t = useT();
+  const b = t.scan.box;
   return (
     <article className={`card pill-card${box.recognised ? "" : " pill-card-warn"}`} data-testid="box-card">
       <header className="pill-card-head">
@@ -64,38 +55,33 @@ function BoxCard({
           <Icon name="pill" size={16} />
         </span>
         <div>
-          <h3>{box.brand ?? (box.recognised ? "Medicine box" : "Box not recognised")}</h3>
-          <p className="muted">
-            Medicine box{box.brand_country ? ` · brand listed in ${box.brand_country}` : ""} ·
-            confidence {percent(box.confidence)}
-          </p>
+          <h3>{box.brand ?? (box.recognised ? b.medicineBox : b.notRecognised)}</h3>
+          <p className="muted">{b.meta(box.brand_country, percent(box.confidence))}</p>
         </div>
-        <Badge tone="warn">{box.recognised ? "Check the box" : "Not recognised"}</Badge>
+        <Badge tone="warn">{box.recognised ? b.check : b.notRecognisedBadge}</Badge>
       </header>
       <p className="pill-note">
-        <Icon name="alert" size={16} /> Read from the printed text, a suggestion only: compare it
-        with the box and its leaflet.
+        <Icon name="alert" size={16} /> {b.note}
       </p>
       {box.ingredients.length > 0 ? (
-        <ul className="m-0 grid list-none gap-2 p-0" aria-label="Active ingredients found">
+        <ul className="m-0 grid list-none gap-2 p-0" aria-label={b.found}>
           {box.ingredients.map((item) => (
             <li key={item.name} className="rounded-xl border border-line bg-surface-2 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="cell-title">{item.name}</span>
                 <span
                   className="flex w-32 flex-none items-center gap-2 text-[0.88rem] font-semibold tabular-nums"
-                  title="OCR confidence x similarity of the words"
+                  title={b.ocrHint}
                 >
                   <ProbBar value={item.confidence} />
                   {percent(item.confidence)}
                 </span>
               </div>
               <p className="cell-sub m-0">
-                Read: “{item.matched_text}” · from the {METHOD[item.method] ?? item.method}
-                {item.in_interaction_table ? "" : " · not in the interaction table"}
+                {b.read(item.matched_text, t.scan.method[item.method] ?? item.method, item.in_interaction_table)}
               </p>
               <p className="cell-sub m-0">
-                Source:{" "}
+                {b.source}{" "}
                 <a href={item.url} target="_blank" rel="noreferrer">
                   {item.source}
                 </a>{" "}
@@ -105,21 +91,19 @@ function BoxCard({
           ))}
         </ul>
       ) : (
-        <p className="muted m-0">
-          No brand and no active ingredient of this database was read: nothing is suggested.
-        </p>
+        <p className="muted m-0">{b.nothing}</p>
       )}
       <details className="text-sm">
-        <summary className="cursor-pointer font-semibold">Text read ({box.text.length} lines)</summary>
+        <summary className="cursor-pointer font-semibold">{b.textRead(box.text.length)}</summary>
         <p className="muted m-0 mt-2 whitespace-pre-line" data-testid="box-text">
-          {box.text.join("\n") || "no text"}
+          {box.text.join("\n") || b.noText}
         </p>
       </details>
-      <p className="muted m-0 text-xs">RxNav fallback: {box.rxnav}</p>
+      <p className="muted m-0 text-xs">{b.rxnav(box.rxnav)}</p>
       {box.recognised && (
         <div className="form-actions">
           <button type="button" className="btn btn-primary" disabled={added} onClick={onAdd}>
-            {added ? "Added to my pills" : "Add to my pills"}
+            {added ? t.scan.added : t.scan.add}
           </button>
         </div>
       )}
@@ -158,17 +142,18 @@ function latencyOf(result: ScanResult, clientMs: number): Latency {
 
 /** Drag and drop (or click) a photo; checked here before the API checks it again. */
 function UploadPanel({ onImage }: { onImage: OnImage }) {
+  const t = useT();
   const [dragging, setDragging] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
   const take = (file: File | undefined) => {
     if (!file) return;
     if (!ACCEPTED_TYPES.split(",").includes(file.type)) {
-      setProblem("Choose a JPEG, PNG or WebP image.");
+      setProblem(t.scan.upload.wrongType);
       return;
     }
     if (file.size > MAX_BYTES) {
-      setProblem("The image is larger than 10 MB.");
+      setProblem(t.scan.upload.tooLarge);
       return;
     }
     setProblem(null);
@@ -203,11 +188,9 @@ function UploadPanel({ onImage }: { onImage: OnImage }) {
           <Icon name="upload" size={32} />
         </span>
         <strong className="text-heading">
-          {dragging ? "Drop it: the pills are identified at once" : "Drag and drop a photo here, or click to choose one"}
+          {dragging ? t.scan.upload.drop : t.scan.upload.drag}
         </strong>
-        <span className="text-sm text-muted">
-          JPEG, PNG or WebP, up to 10 MB. One or several pills on a plain background.
-        </span>
+        <span className="text-sm text-muted">{t.scan.upload.hint}</span>
         <input
           type="file"
           accept={ACCEPTED_TYPES}
@@ -231,7 +214,7 @@ function grabFrame(video: HTMLVideoElement, maxWidth: number): Promise<Blob> {
   canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
   return new Promise((resolve, reject) =>
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("Cannot read the camera image."))),
+      (blob) => (blob ? resolve(blob) : reject(new Error(messages().scan.live.cameraImage))),
       "image/jpeg",
       0.9,
     ),
@@ -246,19 +229,17 @@ interface LiveFrame {
 
 /** The detected pills of the last live frame: top-5 bars, confidence, latency. */
 function LivePanel({ frame }: { frame: LiveFrame | null }) {
+  const t = useT();
   if (!frame) {
-    return <p className="m-0 text-sm text-muted">Waiting for the first answer of the API…</p>;
+    return <p className="m-0 text-sm text-muted">{t.scan.live.waiting}</p>;
   }
   const { result } = frame;
   return (
     <div className="grid content-start gap-3" aria-live="polite">
       <LatencyReadout latency={frame.latency} />
-      <p className="m-0 text-sm text-muted">
-        Frame {frame.count} · {result.pills.length} pill(s) · one request at a time, the next
-        frame after the answer
-      </p>
+      <p className="m-0 text-sm text-muted">{t.scan.live.frame(frame.count, result.pills.length)}</p>
       {result.pills.length === 0 && (
-        <p className="m-0 text-sm text-muted">{result.message ?? "No pill in view."}</p>
+        <p className="m-0 text-sm text-muted">{result.message ?? t.scan.live.noPill}</p>
       )}
       {result.pills.slice(0, 3).map((pill, index) => (
         <div key={index} className="grid gap-2 rounded-xl border border-line bg-surface p-3">
@@ -268,16 +249,13 @@ function LivePanel({ frame }: { frame: LiveFrame | null }) {
               {pill.candidates[0]?.name}
             </span>
             {pill.needs_confirmation ? (
-              <Badge tone="warn">Please confirm</Badge>
+              <Badge tone="warn">{t.scan.confirmBadge}</Badge>
             ) : (
-              <Badge tone="active">High confidence</Badge>
+              <Badge tone="active">{t.scan.highBadge}</Badge>
             )}
           </div>
           <ProbabilityBars candidates={pill.candidates} />
-          <span className="text-xs text-muted">
-            Detection confidence {percent(pill.detection_confidence)} · a suggestion, never a
-            certainty
-          </span>
+          <span className="text-xs text-muted">{t.scan.live.detection(percent(pill.detection_confidence))}</span>
         </div>
       ))}
     </div>
@@ -286,6 +264,8 @@ function LivePanel({ frame }: { frame: LiveFrame | null }) {
 
 /** Live camera: continuous inference with boxes and bars, and a capture button. */
 function WebcamPanel({ onImage }: { onImage: OnImage }) {
+  const t = useT();
+  const live_ = t.scan.live;
   const video = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -295,7 +275,7 @@ function WebcamPanel({ onImage }: { onImage: OnImage }) {
   const start = async () => {
     setProblem(null);
     if (!navigator.mediaDevices?.getUserMedia) {
-      setProblem("This browser cannot use a camera here (it needs HTTPS or localhost).");
+      setProblem(live_.noCamera);
       return;
     }
     try {
@@ -306,7 +286,7 @@ function WebcamPanel({ onImage }: { onImage: OnImage }) {
       setStream(media);
       setLive(true);
     } catch (failure) {
-      setProblem(`The camera is not available: ${errorMessage(failure)}`);
+      setProblem(live_.cameraUnavailable(errorMessage(failure)));
     }
   };
 
@@ -363,13 +343,10 @@ function WebcamPanel({ onImage }: { onImage: OnImage }) {
           <span className="text-primary">
             <Icon name="camera" size={32} />
           </span>
-          <strong className="text-heading">Use your camera</strong>
-          <span className="text-sm text-muted">
-            Each frame is identified continuously (about twice a second, one request at a time).
-            The browser asks for permission; nothing is recorded or stored.
-          </span>
+          <strong className="text-heading">{live_.useCamera}</strong>
+          <span className="text-sm text-muted">{live_.cameraHint}</span>
           <button type="button" className="btn btn-primary" onClick={start}>
-            Start the camera
+            {live_.start}
           </button>
         </div>
       ) : (
@@ -382,34 +359,34 @@ function WebcamPanel({ onImage }: { onImage: OnImage }) {
                   pills={frame.result.pills}
                   width={frame.result.image_width}
                   height={frame.result.image_height}
-                  label="Live predictions"
+                  label={live_.predictions}
                 />
               )}
               {live && (
                 <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-xs font-bold tracking-wide text-white">
                   <span className="size-2 animate-pulse rounded-full bg-red-500" aria-hidden="true" />
-                  LIVE
+                  {live_.badge}
                 </span>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <button type="button" className="btn btn-primary" onClick={capture}>
                 <Icon name="camera" size={16} />
-                Capture and identify
+                {live_.capture}
               </button>
               <label className="check">
                 <input type="checkbox" checked={live} onChange={(event) => setLive(event.target.checked)} />
-                Live predictions
+                {live_.predictions}
               </label>
               <button type="button" className="btn btn-ghost btn-sm" onClick={stop}>
-                Stop the camera
+                {live_.stop}
               </button>
             </div>
           </div>
           {live ? (
             <LivePanel frame={frame} />
           ) : (
-            <p className="m-0 text-sm text-muted">Live predictions are paused.</p>
+            <p className="m-0 text-sm text-muted">{live_.paused}</p>
           )}
         </div>
       )}
@@ -418,6 +395,7 @@ function WebcamPanel({ onImage }: { onImage: OnImage }) {
 }
 
 function DemoPanel({ onImage }: { onImage: OnImage }) {
+  const t = useT();
   const gallery = useQuery((signal) => api.demoImages(signal), []);
   const [loading, setLoading] = useState<number | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
@@ -435,15 +413,15 @@ function DemoPanel({ onImage }: { onImage: OnImage }) {
   };
 
   if (gallery.error) return <Alert>{gallery.error}</Alert>;
-  if (!gallery.data) return <Spinner label="Loading the demo photos" />;
+  if (!gallery.data) return <Spinner label={t.scan.demo.loading} />;
   if (gallery.data.items.length === 0) {
-    return <Alert kind="info">No demo photo is available on this server (C3PI images not mounted).</Alert>;
+    return <Alert kind="info">{t.scan.demo.none}</Alert>;
   }
   return (
     <>
       {problem && <Alert>{problem}</Alert>}
       <p className="mb-3 mt-0 text-sm text-muted">
-        {gallery.data.note} One click identifies a photo.
+        {gallery.data.note} {t.scan.demo.oneClick}
       </p>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3">
         {gallery.data.items.map((image, index) => (
@@ -459,7 +437,7 @@ function DemoPanel({ onImage }: { onImage: OnImage }) {
             <span className="relative block">
               <img
                 src={image.thumbnail_url}
-                alt={`C3PI test photo ${image.id + 1}`}
+                alt={t.scan.demo.alt(image.id + 1)}
                 loading="lazy"
                 className="block aspect-[4/3] w-full rounded-lg object-cover"
               />
@@ -470,8 +448,12 @@ function DemoPanel({ onImage }: { onImage: OnImage }) {
               )}
             </span>
             <span className="px-1 pb-0.5 text-[0.82rem] leading-snug">
-              {loading === image.id ? "Loading…" : `Shows: ${image.expected_name || `class ${image.class_id}`}`}
-              {WHY[image.why] && <span className="block text-xs text-muted">{WHY[image.why]}</span>}
+              {loading === image.id
+                ? t.scan.demo.loadingOne
+                : t.scan.demo.shows(image.expected_name || t.scan.demo.classN(image.class_id))}
+              {t.scan.why[image.why] && (
+                <span className="block text-xs text-muted">{t.scan.why[image.why]}</span>
+              )}
             </span>
           </button>
         ))}
@@ -482,6 +464,7 @@ function DemoPanel({ onImage }: { onImage: OnImage }) {
 
 /** Search the 150 classes by name, ingredient or imprint, to correct an identification. */
 function PillSearch({ onPick }: { onPick: (pill: PillCandidate) => void }) {
+  const t = useT();
   const [text, setText] = useState("");
   const q = useDebounced(text.trim());
   const found = useQuery(
@@ -494,8 +477,8 @@ function PillSearch({ onPick }: { onPick: (pill: PillCandidate) => void }) {
         <Icon name="search" />
         <input
           type="search"
-          placeholder="Not in the list? Search a name, ingredient or imprint"
-          aria-label="Search another pill"
+          placeholder={t.scan.search.placeholder}
+          aria-label={t.scan.search.label}
           value={text}
           onChange={(event) => setText(event.target.value)}
         />
@@ -515,14 +498,14 @@ function PillSearch({ onPick }: { onPick: (pill: PillCandidate) => void }) {
               >
                 <span className="cell-title">{pill.name}</span>
                 <span className="cell-sub">
-                  {[pill.imprint && `imprint ${pill.imprint}`, pill.color, pill.shape]
+                  {[pill.imprint && t.scan.search.imprint(pill.imprint), pill.color, pill.shape]
                     .filter(Boolean)
                     .join(" · ")}
                 </span>
               </button>
             </li>
           ))}
-          {found.data.items.length === 0 && <li className="muted">No pill matches “{q}”.</li>}
+          {found.data.items.length === 0 && <li className="muted">{t.scan.search.none(q)}</li>}
         </ul>
       )}
     </div>
@@ -541,6 +524,8 @@ function PillChoice({
   confirmed: boolean;
   onConfirm: (choice: PillCandidate) => void;
 }) {
+  const t = useT();
+  const c = t.scan.choice;
   const [choice, setChoice] = useState<PillCandidate>(pill.candidates[0]);
   const [picked, setPicked] = useState<PillCandidate | null>(null);
   const options = picked ? [picked, ...pill.candidates] : pill.candidates;
@@ -552,24 +537,22 @@ function PillChoice({
         <div>
           <h3>{pill.candidates[0].name}</h3>
           <p className="muted">
-            Most likely, {percent(pill.candidates[0].probability)} · detection{" "}
-            {percent(pill.detection_confidence)}
+            {c.mostLikely(percent(pill.candidates[0].probability), percent(pill.detection_confidence))}
           </p>
         </div>
         {pill.needs_confirmation ? (
-          <Badge tone="warn">Please confirm</Badge>
+          <Badge tone="warn">{t.scan.confirmBadge}</Badge>
         ) : (
-          <Badge tone="active">High confidence</Badge>
+          <Badge tone="active">{t.scan.highBadge}</Badge>
         )}
       </header>
       {pill.needs_confirmation && (
         <p className="pill-note">
-          <Icon name="alert" size={16} /> The model is not sure. Compare the photo with the
-          imprint and colour, pick the right pill below, or search for it.
+          <Icon name="alert" size={16} /> {c.notSure}
         </p>
       )}
       <fieldset className="candidates">
-        <legend className="sr-only">Possible pills for pill {index + 1}</legend>
+        <legend className="sr-only">{c.possible(index + 1)}</legend>
         {options.map((candidate) => {
           const searched = Number.isNaN(candidate.probability);
           return (
@@ -588,15 +571,15 @@ function PillChoice({
                 <span className="cell-sub">
                   {candidate.active_ingredients.length
                     ? candidate.active_ingredients.join(" + ")
-                    : "no active ingredient known in this database"}
+                    : c.noIngredient}
                 </span>
               </span>
               {searched ? (
-                <span className="muted">chosen by search</span>
+                <span className="muted">{c.bySearch}</span>
               ) : (
                 <span
                   className="flex w-32 flex-none items-center gap-2 text-[0.88rem] font-semibold tabular-nums"
-                  title="Model probability"
+                  title={c.probability}
                 >
                   <ProbBar value={candidate.probability} />
                   {percent(candidate.probability)}
@@ -620,7 +603,7 @@ function PillChoice({
           onClick={() => onConfirm(choice)}
         >
           <Icon name="check" size={16} />
-          {confirmed ? "Added to my pills" : "Confirm this pill"}
+          {confirmed ? t.scan.added : c.confirm}
         </button>
       </div>
     </article>
@@ -645,13 +628,15 @@ function ResultStage({
   scanning: boolean;
   latency: Latency | null;
 }) {
+  const t = useT();
+  const st = t.scan.stage;
   const [view, setView] = useState<View>("photo");
   const shown = view === "gradcam" && photo.gradcamUrl ? photo.gradcamUrl : photo.url;
 
   return (
     <div className="card sticky top-[84px] grid gap-3 p-3" data-testid="result-stage">
       {photo.gradcamUrl && (
-        <div className="flex gap-1 rounded-xl bg-surface-2 p-1" role="tablist" aria-label="Picture shown">
+        <div className="flex gap-1 rounded-xl bg-surface-2 p-1" role="tablist" aria-label={st.pictureShown}>
           {(["photo", "gradcam"] as View[]).map((item) => (
             <button
               key={item}
@@ -665,7 +650,7 @@ function ResultStage({
                   : "border-transparent bg-transparent text-muted hover:text-ink"
               }`}
             >
-              {item === "photo" ? "Photo and boxes" : "Grad-CAM"}
+              {item === "photo" ? st.photo : st.gradcam}
             </button>
           ))}
         </div>
@@ -673,11 +658,7 @@ function ResultStage({
       <div className="relative overflow-hidden rounded-xl bg-surface-2 leading-none">
         <img
           src={shown}
-          alt={
-            view === "gradcam"
-              ? `Grad-CAM of the classifier on ${photo.name}`
-              : `Photo sent for identification: ${photo.name}`
-          }
+          alt={view === "gradcam" ? st.gradcamAlt(photo.name) : st.photoAlt(photo.name)}
           className="block h-auto w-full"
         />
         {result && (
@@ -685,39 +666,36 @@ function ResultStage({
             pills={result.pills}
             width={result.image_width}
             height={result.image_height}
-            label="Detected pills"
+            label={st.detected}
           />
         )}
         {scanning && (
           <div className="absolute inset-0 grid place-items-center bg-surface/60" data-testid="scan-busy">
-            <Spinner label="Identifying the pills" />
+            <Spinner label={st.identifying} />
           </div>
         )}
       </div>
       {view === "gradcam" && photo.gradcamUrl && (
-        <p className="m-0 text-sm text-muted">
-          Grad-CAM of the served classifier for its top-1 class: red marks the parts of the crop
-          that weigh most in that class, blue the least. Computed offline with the PyTorch weights
-          of the same version (the API runs ONNX only). It explains the suggestion; it does not
-          make it more certain.
-        </p>
+        <p className="m-0 text-sm text-muted">{st.gradcamText}</p>
       )}
       {!photo.gradcamUrl && result && result.kind !== "box" && result.kind !== "unknown" && (
         <p className="m-0 text-sm text-muted" data-testid="gradcam-note">
-          Grad-CAM is available only for the demo gallery photos: it needs the PyTorch model,
-          so it is precomputed for them (the API runs ONNX models only).
+          {st.gradcamOnly}
         </p>
       )}
       {result && (
         <>
           <p className="m-0 text-sm text-muted" data-testid="scan-kind">
             {result.kind === "box"
-              ? `Medicine box: printed text read${
-                  result.timings.ocr_ms != null ? ` in ${Math.round(result.timings.ocr_ms)} ms` : ""
-                }, no pill class is given to a box`
+              ? st.boxKind(result.timings.ocr_ms != null ? `${Math.round(result.timings.ocr_ms)} ms` : "")
               : result.kind === "unknown"
-                ? "Neither a pill nor a medicine box: nothing is identified"
-                : `${result.pills.length} pill(s) found · ${result.image_width} × ${result.image_height} px · boxes coloured by class, dashed below ${percent(result.confirm_threshold)} (please confirm)`}
+                ? st.unknownKind
+                : st.pillKind(
+                    result.pills.length,
+                    result.image_width,
+                    result.image_height,
+                    percent(result.confirm_threshold),
+                  )}
           </p>
           {latency && <LatencyReadout latency={latency} />}
         </>
@@ -729,14 +707,14 @@ function ResultStage({
 /** Data drift alert (GET /monitoring/drift, step 2.8): shown only when the recent photos
  * really differ from the reference photos, re-checked after every scan. */
 function DriftBanner({ scans }: { scans: number }) {
+  const t = useT();
   const drift = useQuery((signal) => api.drift(signal), [scans]);
   const report = drift.data;
   if (!report || !showDriftBanner(report.status)) return null;
   return (
     <Alert>
-      Data drift: the recent photos differ from the reference photos ({report.drifted.join(", ")}).
-      Identification is less reliable; take the photo in good light, sharp, one pill on a plain
-      background. <Link to="/monitoring">See the monitoring page</Link>.
+      {t.scan.driftBanner(report.drifted.join(", "))}{" "}
+      <Link to="/monitoring">{t.scan.seeMonitoring}</Link>.
     </Alert>
   );
 }
@@ -757,20 +735,18 @@ function SavedMedicinesCard({
   onAdd: (medicine: SavedMedicine) => void;
   onRemove: (classId: number) => void;
 }) {
+  const t = useT();
+  const sv = t.scan.saved;
   return (
-    <section className="card my-pills" aria-label="My medicines">
+    <section className="card my-pills" aria-label={sv.title}>
       <header className="pill-card-head">
         <h2>
-          <Icon name="bookmark" size={18} /> My medicines
+          <Icon name="bookmark" size={18} /> {sv.title}
         </h2>
-        <span className="muted">kept in your account · only you can see them</span>
+        <span className="muted">{sv.kept}</span>
       </header>
       {error && <Alert>{error}</Alert>}
-      {saved && saved.length === 0 && (
-        <p className="muted">
-          Save a confirmed pill (bookmark button in “My pills” below) to find it here next time.
-        </p>
-      )}
+      {saved && saved.length === 0 && <p className="muted">{sv.empty}</p>}
       {saved && saved.length > 0 && (
         <ul className="chip-list">
           {saved.map((medicine) => (
@@ -778,7 +754,7 @@ function SavedMedicinesCard({
               <span>
                 <strong>{medicine.name}</strong>
                 <span className="cell-sub">
-                  {medicine.active_ingredients.join(" + ") || "no active ingredient known"}
+                  {medicine.active_ingredients.join(" + ") || sv.noIngredient}
                 </span>
               </span>
               <button
@@ -787,12 +763,12 @@ function SavedMedicinesCard({
                 disabled={!medicine.found || inCheck(medicine.class_id)}
                 onClick={() => onAdd(medicine)}
               >
-                {inCheck(medicine.class_id) ? "In the check" : "Add to check"}
+                {inCheck(medicine.class_id) ? sv.inCheck : sv.addToCheck}
               </button>
               <button
                 type="button"
                 className="icon-btn"
-                aria-label={`Remove ${medicine.name} from my medicines`}
+                aria-label={sv.remove(medicine.name)}
                 onClick={() => onRemove(medicine.class_id)}
               >
                 ×
@@ -819,6 +795,7 @@ function SaveReportDialog({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
+  const t = useT();
   const [title, setTitle] = useState(defaultTitle);
   const [chosen, setChosen] = useState<ChatResult[]>(answers);
   const [busy, setBusy] = useState(false);
@@ -847,16 +824,13 @@ function SaveReportDialog({
   };
 
   return (
-    <Modal title="Save as report" onClose={onClose}>
-      <p className="muted">
-        The interactions are checked again and kept as they are today. You can print the report
-        or share a read-only link from “Reports”.
-      </p>
+    <Modal title={t.scan.dialog.title} onClose={onClose}>
+      <p className="muted">{t.scan.dialog.text}</p>
       {problem && <Alert>{problem}</Alert>}
-      <TextField label="Title" value={title} onChange={setTitle} maxLength={120} />
+      <TextField label={t.scan.dialog.field} value={title} onChange={setTitle} maxLength={120} />
       {answers.length > 0 && (
         <fieldset className="field">
-          <legend>Answers of the assistant to include</legend>
+          <legend>{t.scan.dialog.answers}</legend>
           {answers.map((answer, index) => (
             <label key={index} className="check-row">
               <input
@@ -875,11 +849,11 @@ function SaveReportDialog({
       )}
       <div className="form-actions">
         <button type="button" className="btn btn-ghost" onClick={onClose}>
-          Cancel
+          {t.common.cancel}
         </button>
         <button type="button" className="btn btn-primary" disabled={busy} onClick={save}>
           {busy && <span className="btn-spinner" aria-hidden="true" />}
-          Save the report
+          {t.scan.dialog.save}
         </button>
       </div>
     </Modal>
@@ -887,6 +861,7 @@ function SaveReportDialog({
 }
 
 export default function ScanPage() {
+  const t = useT();
   const [mode, setMode] = useState<Mode>("upload");
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -1042,11 +1017,8 @@ export default function ScanPage() {
             <Icon name="scan" size={24} />
           </span>
           <div>
-            <h1>Scanner</h1>
-            <p className="muted">
-              Identify pills from a photo, confirm them, check their active ingredients for
-              interactions, then ask questions answered from cited sources.
-            </p>
+            <h1>{t.scan.title}</h1>
+            <p className="muted">{t.scan.lead}</p>
           </div>
         </div>
       </header>
@@ -1056,8 +1028,8 @@ export default function ScanPage() {
       <ModelCard />
       <DriftBanner scans={scans} />
 
-      <section className="card mb-5" aria-label="Photo">
-        <div className="mb-4 flex flex-wrap gap-1 rounded-xl bg-surface-2 p-1" role="tablist" aria-label="Photo source">
+      <section className="card mb-5" aria-label={t.scan.photo}>
+        <div className="mb-4 flex flex-wrap gap-1 rounded-xl bg-surface-2 p-1" role="tablist" aria-label={t.scan.photoSource}>
           {MODES.map((item) => (
             <button
               type="button"
@@ -1072,7 +1044,7 @@ export default function ScanPage() {
               onClick={() => setMode(item.mode)}
             >
               <Icon name={item.icon} size={16} />
-              {item.label}
+              {t.scan.modes[item.mode]}
             </button>
           ))}
         </div>
@@ -1087,7 +1059,7 @@ export default function ScanPage() {
         <section
           className="mb-5 grid items-start gap-5 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]"
           ref={resultRef}
-          aria-label="Result"
+          aria-label={t.scan.result}
           aria-busy={scanning}
           data-testid="scan-result"
         >
@@ -1123,19 +1095,15 @@ export default function ScanPage() {
         onRemove={(classId) => void removeSaved(classId)}
       />
 
-      <section className="card my-pills" aria-label="My pills">
+      <section className="card my-pills" aria-label={t.scan.mine.title}>
         <header className="pill-card-head">
-          <h2>My pills</h2>
+          <h2>{t.scan.mine.title}</h2>
           <span className="muted">
-            {mine.length} added · {classIds.length} different pill(s)
-            {boxIngredients.length ? ` · ${boxIngredients.length} ingredient(s) from boxes` : ""}
+            {t.scan.mine.counts(mine.length, classIds.length, boxIngredients.length)}
           </span>
         </header>
         {mine.length === 0 ? (
-          <p className="muted">
-            Confirmed pills appear here. Scan several photos to add more; with two or more you can
-            check their interactions.
-          </p>
+          <p className="muted">{t.scan.mine.empty}</p>
         ) : (
           <ul className="chip-list">
             {mine.map((item) => (
@@ -1143,16 +1111,16 @@ export default function ScanPage() {
                 <span>
                   <strong>{item.name}</strong>
                   <span className="cell-sub">
-                    {item.active_ingredients.join(" + ") || "no active ingredient known"}
-                    {item.probability !== null ? ` · ${percent(item.probability)}` : " · chosen by search"}
+                    {item.active_ingredients.join(" + ") || t.scan.saved.noIngredient}
+                    {item.probability !== null ? ` · ${percent(item.probability)}` : t.scan.mine.bySearch}
                   </span>
                 </span>
                 {item.class_id !== null && (
                   <button
                     type="button"
                     className="icon-btn"
-                    title="Keep in my medicines"
-                    aria-label={`Save ${item.name} in my medicines`}
+                    title={t.scan.mine.keep}
+                    aria-label={t.scan.mine.saveIn(item.name)}
                     aria-pressed={mySaved?.some((m) => m.class_id === item.class_id) ?? false}
                     onClick={() => void saveMedicine(item)}
                   >
@@ -1162,7 +1130,7 @@ export default function ScanPage() {
                 <button
                   type="button"
                   className="icon-btn"
-                  aria-label={`Remove ${item.name}`}
+                  aria-label={t.scan.mine.remove(item.name)}
                   onClick={() => remove(item.key)}
                 >
                   ×
@@ -1179,17 +1147,17 @@ export default function ScanPage() {
             onClick={check}
           >
             {checking && <span className="btn-spinner" aria-hidden="true" />}
-            Check interactions
+            {t.scan.mine.check}
           </button>
           <button
             type="button"
             className="btn btn-ghost"
             disabled={checkable < 1 || checkable > 10}
             onClick={() => setSaving(true)}
-            title="Save the check (and the answers you chose) to print or share it"
+            title={t.scan.mine.saveHint}
           >
             <Icon name="file" size={16} />
-            Save as report{kept.length ? ` (${kept.length} answer${kept.length === 1 ? "" : "s"})` : ""}
+            {t.scan.mine.saveReport(kept.length)}
           </button>
         </div>
         {report && <InteractionReport report={report} />}

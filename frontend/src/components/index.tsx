@@ -11,18 +11,19 @@ import logoDarkUrl from "../assets/logo-dark.png";
 import logoMarkUrl from "../assets/logo-mark.png";
 import logoUrl from "../assets/logo.png";
 import { APP_NAME } from "../brand";
+import { locale, messages, useT } from "../i18n";
+import { useTheme } from "../services/theme";
 import { Icon, type IconName } from "./icons";
 import { CountUp } from "./motion";
 
-const numberFormat = new Intl.NumberFormat("en");
-
+/** 40,508 in English, 40 508 in French: numbers follow the interface language. */
 export function formatNumber(value: number): string {
-  return numberFormat.format(value);
+  return new Intl.NumberFormat(locale()).format(value);
 }
 
 export function formatDate(iso: string | null, withTime = false): string {
-  if (!iso) return "Never";
-  return new Date(iso).toLocaleString(undefined, {
+  if (!iso) return messages().common.never;
+  return new Date(iso).toLocaleString(locale(), {
     dateStyle: "medium",
     timeStyle: withTime ? "short" : undefined,
   });
@@ -37,9 +38,10 @@ export function initials(name: string): string {
 /** "Good morning", "Good afternoon" or "Good evening", by the visitor's own clock. */
 export function greeting(now = new Date()): string {
   const hour = now.getHours();
-  if (hour >= 5 && hour < 12) return "Good morning";
-  if (hour >= 12 && hour < 18) return "Good afternoon";
-  return "Good evening";
+  const words = messages().common.greeting;
+  if (hour >= 5 && hour < 12) return words.morning;
+  if (hour >= 12 && hour < 18) return words.afternoon;
+  return words.evening;
 }
 
 const LOGO_RATIO = 490 / 240; // width / height of the logo files
@@ -56,14 +58,10 @@ interface LogoProps {
 
 /** The full logo: emblem and wordmark, transparent, sitting directly on the page. */
 export function Logo({ height = 64, tone = "auto" }: LogoProps) {
+  const { theme } = useTheme();
   const size = { height, width: Math.round(height * LOGO_RATIO) };
-  if (tone === "dark") return <img className="logo" src={logoDarkUrl} alt={APP_NAME} {...size} />;
-  return (
-    <picture className="logo">
-      <source srcSet={logoDarkUrl} media="(prefers-color-scheme: dark)" />
-      <img src={logoUrl} alt={APP_NAME} {...size} />
-    </picture>
-  );
+  const dark = tone === "dark" || theme === "dark";
+  return <img className="logo" src={dark ? logoDarkUrl : logoUrl} alt={APP_NAME} {...size} />;
 }
 
 /** The emblem alone, for decorative spots next to text that already names the site. */
@@ -73,11 +71,12 @@ export function LogoMark({ size = 28, className = "" }: { size?: number; classNa
   );
 }
 
-export function Spinner({ label = "Loading" }: { label?: string }) {
+export function Spinner({ label }: { label?: string }) {
+  const t = useT();
   return (
     <div className="spinner-wrap" role="status">
       <span className="spinner" aria-hidden="true" />
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{label ?? t.common.loading}</span>
     </div>
   );
 }
@@ -88,8 +87,9 @@ export function Skeleton({ width = "100%", height = "1em" }: { width?: string; h
 }
 
 export function TableSkeleton({ rows = 8 }: { rows?: number }) {
+  const t = useT();
   return (
-    <div className="card table-card" role="status" aria-label="Loading">
+    <div className="card table-card" role="status" aria-label={t.common.loading}>
       {Array.from({ length: rows }, (_, row) => (
         <div className="skeleton-row" key={row}>
           <Skeleton width="26%" />
@@ -162,8 +162,6 @@ export function StatTile({ icon, label, value, note, loading = false }: StatTile
   );
 }
 
-const STRENGTH_LABELS = ["Too short", "Weak", "Fair", "Good", "Strong"];
-
 /** A rough 0 to 4 guide from length and variety. It cannot know if a password is reused. */
 export function passwordScore(password: string, minLength: number): number {
   if (password.length < minLength) return 0;
@@ -176,6 +174,7 @@ export function passwordScore(password: string, minLength: number): number {
 }
 
 export function PasswordStrength({ password, minLength }: { password: string; minLength: number }) {
+  const t = useT();
   if (!password) return null;
   const score = passwordScore(password, minLength);
   return (
@@ -185,7 +184,7 @@ export function PasswordStrength({ password, minLength }: { password: string; mi
           <span key={step} className={step <= score ? "on" : undefined} />
         ))}
       </div>
-      <span role="status">{STRENGTH_LABELS[score]}</span>
+      <span role="status">{t.common.strength[score]}</span>
     </div>
   );
 }
@@ -225,10 +224,11 @@ interface SubmitButtonProps {
 
 /** A submit button that shows a spinner and blocks double clicks while its request runs. */
 export function SubmitButton({ busy, children, className = "btn btn-primary", disabled }: SubmitButtonProps) {
+  const t = useT();
   return (
     <button type="submit" className={className} disabled={busy || disabled}>
       {busy && <span className="btn-spinner" aria-hidden="true" />}
-      {busy ? "Please wait…" : children}
+      {busy ? t.common.pleaseWait : children}
     </button>
   );
 }
@@ -241,6 +241,7 @@ interface ModalProps {
 
 /** A native <dialog>: the browser handles Escape, focus trapping and the backdrop. */
 export function Modal({ title, onClose, children }: ModalProps) {
+  const t = useT();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -277,7 +278,7 @@ export function Modal({ title, onClose, children }: ModalProps) {
       <div className="modal-body">
         <header className="modal-header">
           <h2 id={titleId}>{title}</h2>
-          <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>
+          <button type="button" className="icon-btn" aria-label={t.common.close} onClick={onClose}>
             ×
           </button>
         </header>
@@ -295,13 +296,14 @@ interface PaginationProps {
 }
 
 export function Pagination({ page, pageSize, total, onPage }: PaginationProps) {
+  const t = useT();
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const first = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const last = Math.min(page * pageSize, total);
   return (
-    <nav className="pagination" aria-label="Pages">
+    <nav className="pagination" aria-label={t.common.pages}>
       <span className="muted">
-        {formatNumber(first)}–{formatNumber(last)} of {formatNumber(total)}
+        {t.common.range(formatNumber(first), formatNumber(last), formatNumber(total))}
       </span>
       <div className="pagination-buttons">
         <button
@@ -310,18 +312,16 @@ export function Pagination({ page, pageSize, total, onPage }: PaginationProps) {
           disabled={page <= 1}
           onClick={() => onPage(page - 1)}
         >
-          Previous
+          {t.common.previous}
         </button>
-        <span className="muted">
-          Page {formatNumber(page)} of {formatNumber(pages)}
-        </span>
+        <span className="muted">{t.common.pageOf(formatNumber(page), formatNumber(pages))}</span>
         <button
           type="button"
           className="btn btn-secondary btn-sm"
           disabled={page >= pages}
           onClick={() => onPage(page + 1)}
         >
-          Next
+          {t.common.next}
         </button>
       </div>
     </nav>

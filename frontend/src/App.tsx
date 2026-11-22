@@ -1,6 +1,7 @@
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { homePath, useAuth } from "./services/auth";
 import { Logo, Spinner } from "./components";
+import { useT } from "./i18n";
 import { AdminLayout, InfoLayout, RequireAuth, UserLayout } from "./components/layouts";
 import Activity from "./pages/admin/Activity";
 import Dashboard from "./pages/admin/Dashboard";
@@ -21,18 +22,20 @@ import ToxicityPage from "./pages/ToxicityPage";
 /** "/" shows the introduction to visitors and sends signed-in accounts to their own area. */
 function Landing() {
   const { user, ready } = useAuth();
-  if (!ready) return <Spinner label="Checking your session" />;
+  const t = useT();
+  if (!ready) return <Spinner label={t.common.checkingSession} />;
   return user ? <Navigate to={homePath(user)} replace /> : <Intro />;
 }
 
 function NotFound() {
+  const t = useT();
   return (
     <div className="not-found">
       <Logo height={72} />
-      <h1>Page not found</h1>
-      <p className="muted">There is nothing at this address.</p>
+      <h1>{t.notFound.title}</h1>
+      <p className="muted">{t.notFound.text}</p>
       <Link className="btn btn-primary" to="/">
-        Go to the start page
+        {t.notFound.back}
       </Link>
     </div>
   );
