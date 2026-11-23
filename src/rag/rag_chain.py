@@ -1,14 +1,6 @@
-"""The RAG chain (lab 12): search -> numbered sources -> prompt -> cited answer.
+"""The RAG chain: search -> numbered sources -> prompt -> cited answer.
 
-    hits = await retriever.search(question, ...)            # src/rag/retrieval.py
-    sources = number_sources([([hit_source(h) for h in hits], k)])
-    messages = answer_messages(system_prompt, question, sources)
-    answer = "".join([text async for text in stream_answer(llm, messages)])
-
-The answer cites its sources by number ([1], [2], ...); the citations are then checked by the
-safety rules of the agent (src/agent/safety.py `check_answer`). The agent (src/agent/graph.py)
-runs this chain as its nodes retrieve and answer, with its own sources (DDInter pairs, label
-excerpts, brands, toxicity) numbered in the same list.
+The agent (src/agent/graph.py) runs it as its retrieve and answer nodes.
 """
 
 from __future__ import annotations

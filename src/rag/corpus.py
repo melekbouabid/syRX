@@ -1,23 +1,6 @@
-"""Tujya data steps: `python -m src.rag.corpus [--set key=value] <command>`.
+"""Module 2 data steps: `python -m src.rag.corpus [--set key=value] <command>`.
 
-    ddinter        DDInter 2.0, all 14 ATC files, terms acknowledged for this academic
-                   project (CC BY-NC-SA 4.0); the shared pipeline config keeps it opt-in
-    classes        config/splits/c3pi_v2/classes.csv -> config/pill_classes.csv, the classes the
-                   API serves (the 380 classes of C3PI v2 with their v2 ids, D119); the
-                   ingredient columns are left empty for `ingredients`
-    ingredients    config/pill_classes.csv -> RxNav -> data/processed/pharma/pill_ingredients.csv,
-                   and the ingredient columns of config/pill_classes.csv
-    interactions   DDInter (run `tujya-data fetch --source ddinter` first) ->
-                   data/processed/pharma/interactions_between_classes.csv (both drugs are
-                   class ingredients), data/processed/pharma/interactions_with_any_drug.csv
-                   (at least one is)
-    labels         openFDA drug labels, one per class ingredient -> data/external/rag_v1
-                   (raw, interim)
-    pubmed         PubMed abstracts on interactions and adverse effects, up to 20 per
-                   ingredient -> data/external/rag_v1 (raw, interim)
-    corpus         labels + abstracts + DDInter pairs -> data/processed/rag/corpus/chunks.parquet
-
-Docs: docs/module2/interactions.md, docs/module2/rag.md.
+Commands: ddinter, classes, ingredients (RxNav), interactions, labels, pubmed, corpus.
 """
 
 from __future__ import annotations
@@ -40,8 +23,8 @@ from src.data.sources.http.client import PoliteClient
 from src.data.sources.provenance import read_parquet, write_parquet
 from src.rag import chunking
 
-# Tujya uses DDInter under its CC BY-NC-SA 4.0 terms (non-commercial student project, owner's
-# decision of 2026-10-27). The shared config.yaml keeps the connector opt-in.
+# DDInter is used under its CC BY-NC-SA 4.0 terms (non-commercial student project); the
+# shared config.yaml keeps the connector opt-in.
 DDINTER_OVERRIDES = [
     "sources.ddinter.enabled=true",
     "sources.ddinter.options.terms_acknowledged=true",
@@ -63,10 +46,8 @@ PUBMED_OVERRIDES = [
     "sources.pubmed.options.start_date=2000/01/01",
 ]
 CLASS_COLUMNS = ["rxcui", "active_ingredients", "ingredient_rxcuis", "ingredient_method"]
-# Module 2 corpus steps run through the data pipeline connectors (src/data/sources): its
-# configuration (rate limits, sources) is used when the steps run from the repository root,
-# as the DVC stage does; TUJYA_CONFIG or a config.yaml in the working
-# directory still wins.
+# The corpus steps use the data pipeline configuration; TUJYA_CONFIG or a config.yaml in the
+# working directory wins.
 PIPELINE_CONFIG = Path(__file__).resolve().parents[2] / "config" / "data_pipeline" / "config.yaml"
 
 
@@ -221,17 +202,8 @@ def main(argv: list[str] | None = None) -> None:
 
 
 # --- Active ingredients of the pill classes (RxNav) --------------------------------------------
-# Active ingredients of the Tujya pill classes, from RxNav (NLM RxNorm API).
-#
-# C3PI gives NDCs and a free-text generic name but no RxNorm code. For each package NDC of a
-# class: `ndcstatus` gives the RxCUI of the product (also for obsolete NDCs, through their
-# history), and `historystatus` of that RxCUI lists its ingredients. The base ingredient
-# (`baseName`, an RxNorm IN such as "levothyroxine") is kept, not the salt ("levothyroxine
-# sodium"), because interaction databases are keyed by the base. Strengths are never kept:
-# Tujya does not show doses.
-#
-# When no NDC resolves, the generic name is looked up with `approximateTerm` instead and the
-# row is marked `method=name`, so a person can check it.
+# NDC -> RxCUI (`ndcstatus`) -> base ingredients (`historystatus`), not salts, never strengths.
+# Without a resolved NDC the generic name is looked up (`approximateTerm`, `method=name`).
 
 RXNAV = "https://rxnav.nlm.nih.gov/REST"
 HOST = "rxnav.nlm.nih.gov"
@@ -370,18 +342,8 @@ def read_rows(path: Path) -> list[IngredientRow]:
 
 
 # --- DDInter interactions of the class ingredients ---------------------------------------------
-# DDInter interactions restricted to the ingredients of the Tujya pill classes.
-#
-# Input: the validated DDInter table written by `tujya-data fetch --source ddinter`
-# (`data/interim/ddinter/interactions.parquet`) and the ingredient names from RxNav. DDInter
-# names are matched to RxNorm ingredient names case-insensitively, after the aliases of
-# `config/ingredient_aliases.csv` (DDInter name -> RxNorm name, e.g. "Valproic acid" ->
-# "valproate") are applied.
-#
-# DDInter's bulk files give the two drugs and a severity level only, with no mechanism or
-# management text, so `description` states what DDInter says and nothing more. Each pair is
-# stored once, alphabetically ordered; when DDInter lists a pair twice with different levels,
-# the most severe level is kept and `conflict` is true.
+# DDInter names are matched to RxNorm names after config/ingredient_aliases.csv. Each pair is
+# stored once, sorted; a pair listed twice keeps its most severe level (`conflict` = true).
 
 DDINTER_URL = "https://ddinter2.scbdd.com/"
 DDINTER_CITATION = (

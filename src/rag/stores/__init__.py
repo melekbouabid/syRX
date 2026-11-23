@@ -1,5 +1,4 @@
-"""Opens the chunk store the settings name: Qdrant (default, D113) or the SQL table; the
-retriever with its BM25 sparse encoder and reranker is built by src/rag/retrieval.py."""
+"""Open the chunk store the settings name: Qdrant (default) or the SQL table."""
 
 from __future__ import annotations
 

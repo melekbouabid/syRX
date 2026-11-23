@@ -1,14 +1,6 @@
-"""Cross-encoder reranking of the retrieved candidates (step 3.2, remark 13, D117).
+"""Cross-encoder reranking of the retrieved candidates (BAAI/bge-reranker-base, ONNX via fastembed).
 
-Retrieval (dense, BM25 or hybrid) returns `fetch_k` candidates; a cross-encoder reads the
-question and each candidate together and gives a relevance score; the `top_n` best are
-kept. More precise than comparing two separately computed vectors, too slow to run on
-the whole corpus: hence the two stages.
-
-`CrossEncoderReranker`: BAAI/bge-reranker-base (XLM-RoBERTa base, multilingual, the model
-of the course's lab) in ONNX through fastembed, so the API needs no PyTorch. Downloaded
-once from Hugging Face (1.1 GB, no account) into `TUJYA_RAG_MODEL_CACHE_DIR`. Each
-candidate is read as title + text, like the embeddings.
+Retrieval returns `fetch_k` candidates; the cross-encoder keeps the `top_n` best.
 """
 
 from __future__ import annotations

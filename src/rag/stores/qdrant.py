@@ -1,19 +1,6 @@
-"""The chunk index in Qdrant: one point per chunk, its metadata as payload (D113).
+"""The chunk index in Qdrant: one point per chunk, its metadata as payload.
 
-docker compose runs the server (`qdrant`, http://127.0.0.1:6333, dashboard on /dashboard);
-the tests use the client's local in-memory mode (`QdrantClient(":memory:")`), same API.
-
-- Collection `tujya_chunks_v2` for the app (TUJYA_QDRANT_COLLECTION, D126; `tujya_chunks`,
-  the default here, holds the corpus of the 150 first classes); named vector `dense` (cosine, the
-  embedding model's dimension) and sparse vector `bm25` with the IDF modifier (step 3.2,
-  D116, src/rag/stores/sparse.py). Hybrid search = both lists fused by Qdrant (RRF, k = 60).
-- Point id: UUID v5 of the chunk id (Qdrant ids are integers or UUIDs); the chunk id stays
-  in the payload.
-- Payload: every metadata column of the chunk (source, document type, section, language,
-  date, ingredients, URL, licence...), `content_hash` (SHA-256 of text + metadata + model,
-  so an unchanged chunk is never embedded again) and `embedding_model`.
-- Payload indexes on the filtered fields, so filtered search stays exact and fast.
-- Index metadata (model, dim, chunks, indexed_at) in the collection's own `metadata`.
+Named vectors `dense` (cosine) and `bm25` (sparse, IDF modifier); hybrid search fuses both (RRF).
 """
 
 from __future__ import annotations
@@ -166,7 +153,7 @@ class QdrantStore:
         return {str(k): str(v) for k, v in metadata.items()}
 
     def has_sparse(self) -> bool:
-        """False for a collection made before step 3.2: `add_sparse` migrates it."""
+        """False for a collection without sparse vectors: `add_sparse` migrates it."""
         if not self.exists():
             return False
         params = self.client.get_collection(self.collection).config.params
