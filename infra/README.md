@@ -1,25 +1,25 @@
 # Infrastructure
 
-Fichiers de l'infrastructure locale lancée par [`docker-compose.yml`](../docker-compose.yml)
-à la racine du dépôt. La CI et la CD restent dans [`.github/workflows/`](../.github/workflows/)
-(emplacement imposé par GitHub Actions). Documentation complète :
-[docs/infra.md](../docs/infra.md) (services, ports, volumes, DVC) et
-[docs/cd.md](../docs/cd.md) (livraison continue sans publication).
+Files of the local services started by [docker-compose.yml](../docker-compose.yml) at the
+repository root. CI workflows stay in [.github/workflows/](../.github/workflows/) (where GitHub
+Actions expects them). Services, ports and flows: [docs/architecture.md](../docs/architecture.md).
 
-| Fichier | Rôle |
+| File | Role |
 |---|---|
-| [`infra/mlflow/Dockerfile`](mlflow/Dockerfile) | serveur MLflow 3.17.2 (tracking + Model Registry) avec le pilote PostgreSQL |
-| [`infra/postgres/init/01-init.sql`](postgres/init/01-init.sql) | exécuté une fois, sur un volume vide : extension pgvector et base `mlflow` |
-| [`infra/ollama/cpu.yml`](ollama/cpu.yml) | surcharge pour une machine sans GPU NVIDIA |
+| [mlflow/Dockerfile](mlflow/Dockerfile) | MLflow 3.17.2 server (tracking + Model Registry) with the PostgreSQL driver |
+| [postgres/init/01-init.sql](postgres/init/01-init.sql) | run once on an empty volume: pgvector extension and the `mlflow` database |
+| [ollama/cpu.yml](ollama/cpu.yml) | override for a machine without an NVIDIA GPU |
+| [ollama/judge.Modelfile](ollama/judge.Modelfile) | the local judge of the generation benchmark (phi4-mini, every layer on the GPU) |
+| [spark/Dockerfile](spark/Dockerfile), [spark/requirements.txt](spark/requirements.txt) | Spark image of the Big Data jobs (profile `spark`) |
 
-Les images de l'application sont construites depuis leur dossier : l'API depuis la racine
-(`backend/Dockerfile`, elle importe les paquets des modules) et le site depuis
-`frontend/`.
+The application images are built from their own folders: the API from the repository root
+(`backend/Dockerfile`, it imports the module packages) and the web app from `frontend/`.
 
 ```bash
-docker compose up -d --build                                              # tout, GPU pour Ollama
-docker compose -f docker-compose.yml -f infra/ollama/cpu.yml up -d # sans GPU
-docker compose down                                                       # garde les volumes
+docker compose up -d --build                                          # everything, GPU for Ollama
+docker compose -f docker-compose.yml -f infra/ollama/cpu.yml up -d    # without a GPU
+docker compose --profile spark up -d spark-master spark-worker        # Spark cluster
+docker compose down                                                   # keeps the volumes
 ```
 
-Tous les ports publiés sont liés à `127.0.0.1` : l'application ne tourne que sur ce PC.
+Every published port is bound to `127.0.0.1`: the application only runs on this machine.

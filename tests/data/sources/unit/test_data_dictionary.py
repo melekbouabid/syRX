@@ -1,4 +1,4 @@
-"""Every column the pipeline writes must be explained in docs/data_dictionary.md."""
+"""Every column the pipeline writes must be explained in docs/data.md."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from src.data.sources.manifest import ManifestEntry
 from src.data.sources.provenance import PROVENANCE_COLUMNS
 from tests.data.sources.unit.test_connectors_lookup import PUBMED_XML
 
-DICTIONARY = Path(__file__).resolve().parents[4] / "docs" / "data_pipeline" / "data_dictionary.md"
+DICTIONARY = Path(__file__).resolve().parents[4] / "docs" / "data.md"
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 TABLES = [
     "data/external/interim/ddinter/interactions.parquet",
@@ -90,7 +90,7 @@ async def outputs(settings: Settings, mock_http: respx.MockRouter, allow_robots:
 async def test_every_output_column_is_documented(outputs: Settings) -> None:
     sections = documented()
     for relative in TABLES:
-        assert relative in sections, f"no section for {relative} in data_dictionary.md"
+        assert relative in sections, f"no section for {relative} in docs/data.md"
         described = sections[relative] | set(PROVENANCE_COLUMNS)  # explained once, at the top
         actual = set(pd.read_parquet(outputs.resolve(relative)).columns)
         undocumented = actual - described

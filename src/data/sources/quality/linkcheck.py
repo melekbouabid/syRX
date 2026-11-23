@@ -1,4 +1,4 @@
-"""Link check of the data sources and generation of `docs/data_pipeline/sources.md`.
+"""Link check of the data sources and generation of `docs/data_sources.md`.
 
 Pages are requested only if robots.txt allows it; access walls are reported, not bypassed.
 """

@@ -36,7 +36,7 @@ def get_agent(request: Request) -> tuple[AgentHolder, TujyaAgent]:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             "The document index is empty. Run `python -m src.rag.init_qdrant` "
-            "(docs/module2/rag.md).",
+            "(docs/module2/README.md).",
         )
     return holder, agent
 
@@ -88,7 +88,7 @@ def unavailable(exc: Exception) -> HTTPException:
     return HTTPException(
         status.HTTP_503_SERVICE_UNAVAILABLE,
         f"The agent is not available ({type(exc).__name__}). Is the ollama service running? "
-        "See docs/infra.md.",
+        "See README.md.",
     )
 
 

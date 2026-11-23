@@ -1,6 +1,6 @@
 # Install once with:  pre-commit install --hook-type pre-commit --hook-type commit-msg
 # Check the whole repository:  pre-commit run --all-files
-# Conventions (branches, commit messages, tags): docs/git_workflow.md.
+# Conventions (branches, commit messages, tags): README.md#contributing.
 default_install_hook_types: [pre-commit, commit-msg]
 default_stages: [pre-commit]
 repos:

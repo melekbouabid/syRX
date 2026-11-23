@@ -1,126 +1,111 @@
 # Architecture
 
-Tujya est une seule application (`backend/` et `frontend/`) qui assemble le travail de deux
-modules notés séparément, dans l'arborescence imposée par le guide des modules (`src/`,
-`backend/`, `frontend/`, `data/raw`, `data/processed`, `notebooks/`). Ce document décrit les
-composants, les flux, les dépendances entre dossiers et les environnements. Choix détaillés :
-[docs/decisions.md](decisions.md) (D79 à D82, puis D86 pour l'organisation du dépôt).
+Tujya is one web application built from the work of two modules: a vision pipeline that
+identifies pills (module 1, MLOps) and a cited RAG agent that answers questions about them
+(module 2, AI engineering). Everything runs locally with Docker Compose; every published port
+is bound to `127.0.0.1`.
 
-## Vue d'ensemble
+## Services
 
 ```mermaid
-flowchart TB
-  NAV["Navigateur<br/>localhost:8080 (127.0.0.1)"] --> FE
-  subgraph APP["application web"]
-    FE["frontend/<br/>nginx + React"] -- "/api, /docs" --> BE["backend/app<br/>FastAPI asynchrone, Pydantic"]
-    SCAN["backend/app/inference.py<br/>ONNX Runtime"]
-  end
-  subgraph M1["src/ : Module 1"]
-    TR["src/data + src/models<br/>C3PI, YOLO11n + YOLO11s-cls"]
-  end
-  subgraph M2["src/ : Module 2"]
-    CORP["src/rag/corpus.py<br/>openFDA, PubMed, DDInter"]
-    RAG["src/rag<br/>BM25 + dense, filtres"]
-    AG["src/agent<br/>LangGraph, outils, sécurité"]
-    MCP["src/agent/mcp_server.py"]
-  end
-  BE --> SCAN
-  BE --> AG
-  MCP --> AG
-  AG --> SCAN
-  AG --> RAG
-  RAG --> PG[("PostgreSQL + pgvector")]
-  BE --> PG
-  AG --> OL["Ollama (GPU)<br/>qwen2.5:3b + bge-m3"]
-  DATA["data/ (DVC)"] --> TR
-  PIPE["src/data/sources<br/>collecte polie"] --> CORP
-  CORP --> DATA
-  DATA --> RAG
-  TR --> MLF["MLflow<br/>tracking + registre"]
-  MLF -- "publish (ONNX) -> models/" --> SCAN
+flowchart LR
+  user["Browser"] --> fe["frontend<br/>nginx + React<br/>:8080"]
+  fe -- "/api, /docs" --> be["backend<br/>FastAPI<br/>:8000"]
+  be --> onnx["ONNX Runtime<br/>detector + classifier<br/>(models/)"]
+  be --> pg[("postgres + pgvector<br/>:5432<br/>accounts, medicine tables")]
+  be --> qd[("qdrant<br/>:6333<br/>RAG chunks")]
+  be --> ol["ollama<br/>:11434<br/>qwen2.5:3b, bge-m3"]
+  mlf["mlflow<br/>:5000<br/>tracking + Model Registry"] -. "registry publish<br/>(ONNX files)" .-> onnx
+  init1["pharma-init<br/>(one-shot)"] --> pg
+  init2["rag-init<br/>(one-shot)"] --> qd
+  spark["spark-master / spark-worker<br/>:8090 / :8091<br/>(profile spark)"] -. "DVC stages" .-> data[("data/ (DVC)")]
+  data --> init1
+  data --> init2
 ```
 
-Version image (utilisée par les rapports) : [docs/assets/architecture.png](assets/architecture.png),
-source [docs/diagrams/architecture.mmd](diagrams/architecture.mmd).
+| Service | Image | Host address | Role |
+|---|---|---|---|
+| `frontend` | [frontend/Dockerfile](../frontend/Dockerfile) (Vite build, nginx) | http://localhost:8080 | web app; proxies `/api`, `/docs`, `/openapi.json` to the backend |
+| `backend` | [backend/Dockerfile](../backend/Dockerfile) | http://localhost:8000 (Swagger: `/docs`) | FastAPI: scan, interactions, chat, documents, accounts |
+| `postgres` | `pgvector/pgvector:pg16` | localhost:5432 | accounts, medicine tables, MLflow store |
+| `mlflow` | [infra/mlflow/Dockerfile](../infra/mlflow/Dockerfile) | http://localhost:5000 | experiment tracking, Model Registry, Prompt Registry |
+| `qdrant` | `qdrant/qdrant:v1.20.0` | http://localhost:6333/dashboard | vector index of the RAG (dense + BM25 sparse) |
+| `ollama` | `ollama/ollama:0.40.12` | http://localhost:11434 | local LLM and embeddings (GPU when available) |
+| `pharma-init` | backend image | none | reloads the medicine tables from `data/processed/pharma`, then exits |
+| `rag-init` | backend image | none | pulls the Ollama models and indexes the corpus in Qdrant, then exits |
+| `spark-master`, `spark-worker` | [infra/spark](../infra/spark/) | http://localhost:8090, :8091 (job UI :4040) | PySpark jobs, only with `--profile spark` |
 
-## Composants
+The project name (prefix of containers, volumes and images) comes from `COMPOSE_PROJECT_NAME`
+in `.env` ([.env.example](../.env.example)). `docker compose down` keeps the volumes.
 
-| Dossier | Rôle | Exécution |
+## Flow of a photo
+
+```mermaid
+sequenceDiagram
+  participant U as Browser
+  participant A as backend (POST /api/scan)
+  participant D as detector.onnx
+  participant C as classifier.onnx
+  participant O as OCR (RapidOCR)
+  participant P as medicine tables
+  U->>A: photo (multipart)
+  A->>A: decode, size limits, drift statistics (8 numbers, no image kept)
+  A->>D: letterboxed image
+  D-->>A: pill boxes
+  A->>C: one square crop per box
+  C-->>A: top-5 classes per pill
+  A->>O: printed text (medicine boxes)
+  A->>A: decide_kind: pill, box or refused
+  A->>P: active ingredients and sources of each class
+  A-->>U: pills with top-5, ingredients, needs_confirmation, timings
+```
+
+Code: [backend/app/routers/scan.py](../backend/app/routers/scan.py),
+[backend/app/inference.py](../backend/app/inference.py),
+[backend/app/boxes.py](../backend/app/boxes.py), [backend/app/drift.py](../backend/app/drift.py).
+With two or more pills, `POST /api/interactions` looks up every pair of ingredients in the
+DDInter tables. The course endpoints (`/predict`, `/predict/visualize`) run the same detector
+and classifier without accounts or medicine tables ([api.md](api.md)).
+
+## Flow of a question
+
+```mermaid
+flowchart LR
+  q["POST /api/chat"] --> u["understand<br/>drug names, language,<br/>dose question?"]
+  u -- "dose question" --> r["refused"]
+  u --> t["tools<br/>(qwen2.5:3b tool calling)"]
+  t --> s["search_documents<br/>query rewriting + hybrid search<br/>(Qdrant, bge-m3 + BM25)"]
+  t --> i["check_interaction<br/>(DDInter tables)"]
+  s --> a["answer<br/>numbered citations"]
+  i --> a
+  a --> sf["safety node<br/>no dose, never 'safe',<br/>citations, disclaimer"]
+  sf --> sse["Server-Sent Events<br/>sentence by sentence"]
+```
+
+Code: [src/agent/graph.py](../src/agent/graph.py), [src/agent/tools.py](../src/agent/tools.py),
+[src/rag/retrieval.py](../src/rag/retrieval.py), [src/agent/safety.py](../src/agent/safety.py).
+The same tools are exposed to any MCP client by [src/agent/mcp_server.py](../src/agent/mcp_server.py).
+
+## Code layout and environments
+
+| Folder | Role | Runs in |
 |---|---|---|
-| [backend/](../backend/) | API FastAPI : configuration, bases (comptes en SQLite ou PostgreSQL, médicaments et interactions dans PostgreSQL), comptes et sessions, administration, routes ; importe le code de `src/` | conteneur `backend` (et `pharma-init`, `rag-init`) |
-| [frontend/](../frontend/) | site React : Scanner (upload, webcam, boîtes, interactions), chat, Toxicity, admin | conteneur `frontend` (nginx) |
-| [src/data/](../src/data/) | sélection C3PI, téléchargement, étiquetage automatique, jeux YOLO (étape DVC `prepare`) | sur le PC (venv d'entraînement) |
-| [src/models/](../src/models/) | entraînement, évaluation, export ONNX, Model Registry, publication ; modèle Tox21 (bonus) | sur le PC (venv avec PyTorch, GPU) |
-| [backend/app/inference.py](../backend/app/inference.py) | chaîne de scan ONNX Runtime (détecteur, recadrage, classifieur) | dans l'API |
-| [src/rag/corpus.py](../src/rag/corpus.py) | principes actifs, interactions DDInter, notices openFDA, résumés PubMed, chunks | sur le PC (venv du projet), étape DVC `rag_corpus` |
-| [src/rag/](../src/rag/) | embeddings, stockage pgvector, recherche, indexation | dans l'API ; indexation par `rag-init` |
-| [src/agent/](../src/agent/) | graphe LangGraph, outils, règles de sécurité | dans l'API |
-| [src/agent/mcp_server.py](../src/agent/mcp_server.py) | les mêmes outils par MCP | processus séparé (stdio ou HTTP local) |
-| [src/evaluation/](../src/evaluation/) | questions, scripts, résultats | sur le PC |
-| [src/models/toxicity/](../src/models/toxicity/) | toxicité Tox21, bonus ([docs/bonus/](bonus/README.md)) : outil de l'agent, route, page | dans l'API ; entraînement sur le PC |
-| [src/data/sources/](../src/data/sources/) | pipeline de collecte ([docs/data_pipeline/](data_pipeline/README.md)) : client HTTP poli, connecteurs, manifeste | sur le PC (venv du projet) |
-| [tests/](../tests/), [backend/tests/](../backend/tests/) | tests du code de `src/` et de l'API | `pytest` à la racine et dans `backend/` |
-| [infra/](../infra/) | images et réglages des services MLflow, PostgreSQL, Ollama | Docker Compose |
+| [src/data](../src/data/) | C3PI download, auto-labels, datasets, Spark jobs, drift reference, polite data pipeline | `.venv` / `.venv-train`, Spark containers |
+| [src/models](../src/models/) | training, Kaggle runners, comparison, ONNX export, quantization, Registry | `.venv-train` (PyTorch), Kaggle GPU |
+| [src/rag](../src/rag/) | corpus, chunking, Qdrant index, retrieval, reranking, query rewriting | backend |
+| [src/agent](../src/agent/) | LangGraph agent, tools, safety rules, MCP server | backend |
+| [src/evaluation](../src/evaluation/) | retrieval and generation benchmarks | `.venv` |
+| [backend/app](../backend/app/) | FastAPI application | `backend` container |
+| [frontend](../frontend/) | React application | `frontend` container |
 
-## Flux principaux
+Two Python environments: `.venv` (API, `src/` except training, every test suite; installed
+from [requirements-dev.txt](../requirements-dev.txt)) and `.venv-train` (PyTorch, Ultralytics,
+DVC; [src/models/requirements-train.txt](../src/models/requirements-train.txt)). The backend
+image does not contain PyTorch: it serves ONNX models only.
 
-**Scan** (module 1). Le site envoie la photo à `POST /api/scan`. L'API la décode avec des
-limites de taille, le détecteur ONNX propose des boîtes, chaque comprimé est recadré comme à
-l'entraînement puis identifié par le classifieur ONNX. Les principes actifs de chaque classe
-viennent des tables PostgreSQL. Sous le seuil de confiance 0,85, le site demande une
-confirmation.
+## CI
 
-**Vérification** (commune). Avec au moins deux comprimés, `POST /api/interactions` cherche
-chaque paire de principes actifs dans les tables DDInter. La réponse donne la sévérité, la
-description et la source ; une paire absente reçoit « aucune interaction connue dans cette
-base de données », jamais « sûr ».
-
-**Question** (module 2). `POST /api/chat` lance le graphe LangGraph : compréhension, choix des
-outils (appel d'outils d'Ollama complété par des règles), récupération dense bge-m3 filtrée
-par principe actif, réponse avec citations numérotées, puis contrôle de sécurité (doses,
-« sûr », horaires non sourcés, citations, avertissement). La réponse arrive en flux SSE,
-phrase par phrase.
-
-**MLOps** (module 1). Les images C3PI et les jeux préparés sont versionnés par DVC (étape
-`prepare`). L'entraînement journalise dans MLflow et enregistre les modèles dans le Model
-Registry ; `publish` copie les versions enregistrées (ONNX) dans `models/`, monté en lecture
-seule dans l'API. La CI teste chaque paquet, la CD construit et teste les images sans les
-publier.
-
-## Dépendances entre dossiers
-
-- `backend/app` importe `src.rag`, `src.agent` et `src.models.toxicity` ; la chaîne de scan
-  est dans l'API (`app.inference`). Le code de `src/` importe le cœur de l'application
-  seulement pour ce qui est partagé : configuration (`app.config`), tables des médicaments (`app.pharma`,
-  `app.medicines`). Les outils de l'agent réutilisent les fonctions des routes de scan et
-  d'interactions, pour que l'API, l'agent et le serveur MCP donnent exactement la même
-  réponse.
-- `src.rag.corpus` dépend du pipeline (`src.data.sources`), jamais l'inverse.
-- L'entraînement (`src.data.prepare`, `src.models.train`, ...) tourne dans son propre venv
-  (PyTorch et Ultralytics) : l'API n'en importe rien, elle ne lit que les fichiers ONNX
-  publiés.
-
-`src` est un paquet Python importé depuis la racine du dépôt : l'installation éditable de
-[pyproject.toml](../pyproject.toml) met la racine et `backend/` sur le chemin du venv du
-projet ; l'image Docker fait de même avec `PYTHONPATH` et la même disposition sous `/tujya`.
-
-## Environnements Python
-
-| Venv (ignoré par git) | Pour | Installation |
-|---|---|---|
-| `.venv` | API, code de `src/` hors entraînement (RAG, agent, MCP, benchmark, corpus, pipeline), toutes les suites de tests, ruff, mypy | `uv venv .venv -p 3.12 && uv pip install -p .venv -r requirements-dev.txt` depuis la racine |
-| `.venv-train` | entraînement (PyTorch, Ultralytics), MLflow, DVC | `uv venv .venv-train -p 3.12 && uv pip install -p .venv-train -r src/models/requirements-train.txt` depuis la racine |
-
-## Conteneurs (docker-compose.yml)
-
-| Service | Image | Port (hôte, 127.0.0.1) |
-|---|---|---|
-| `postgres` | `pgvector/pgvector:pg16` | 5432 |
-| `mlflow` | [infra/mlflow](../infra/mlflow/Dockerfile) | 5000 |
-| `ollama` | `ollama/ollama:0.40.12` (GPU NVIDIA) | 11434 |
-| `pharma-init`, `rag-init` | image du backend, tâches ponctuelles | aucun |
-| `backend` | [backend/Dockerfile](../backend/Dockerfile) | 8000 |
-| `frontend` | [frontend/Dockerfile](../frontend/Dockerfile) | 8080 |
-
-Tout est lié à `127.0.0.1` : l'application ne tourne que sur ce PC. Détails, volumes et
-remote DVC : [docs/infra.md](infra.md).
+[.github/workflows/ci-tests.yml](../.github/workflows/ci-tests.yml) runs ruff, black, flake8,
+mypy, ESLint and every test suite. [.github/workflows/docker-build.yml](../.github/workflows/docker-build.yml)
+builds the multi-stage images and smoke-tests them; nothing is published, the app runs only on
+the owner's PC.

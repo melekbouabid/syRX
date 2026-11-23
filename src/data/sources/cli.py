@@ -114,7 +114,7 @@ def sources(
     ctx: typer.Context,
     check: Annotated[
         bool,
-        typer.Option("--check", help="Probe every link and rewrite docs/data_pipeline/sources.md."),
+        typer.Option("--check", help="Probe every link and rewrite docs/data_sources.md."),
     ] = False,
 ) -> None:
     """List the sources, their licence and state. With --check, test every link."""

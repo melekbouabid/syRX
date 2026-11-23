@@ -1,112 +1,140 @@
-# Module 1 : Industrialisation Vision & MLOps
+# Module 1: vision and MLOps
 
-Identification de comprimés sur photo, de l'image brute au service en production locale :
-un détecteur **YOLO11n** trouve chaque comprimé, un classifieur **YOLO11s-cls** entraîné par
-*transfer learning* l'identifie parmi **150 classes** du jeu public NLM C3PI. Les deux
-modèles sont suivis dans **MLflow** (tracking + Model Registry), exportés en **ONNX** et
-servis par **ONNX Runtime** dans l'API FastAPI, sans PyTorch ni Ultralytics à l'exécution.
-Données versionnées par **DVC**, application lancée par **Docker Compose**, tests et images
-vérifiés par **GitHub Actions**. Évaluation : soutenance pratique (démonstration en direct).
+Identify pills on a photo: a detector finds every pill, a classifier names each one among 380
+C3PI classes. The steps below go from raw images to the served API, in order. Results:
+[results.md](results.md). Commands run from the repository root; training ones use the training
+venv (`.venv-train`) and the MLflow server (`docker compose up -d mlflow`).
 
-Rapport technique : [docs/module1/rapport_module1_vision_mlops.pdf](rapport_module1_vision_mlops.pdf)
-(source [Markdown](rapport_module1_vision_mlops.md)). Vue d'ensemble du projet :
-[README principal](../../README.md).
+```mermaid
+flowchart LR
+  raw["C3PI images<br/>(DVC)"] --> spark["Spark jobs<br/>clean, split, augment"]
+  spark --> ds["YOLO datasets<br/>v2"]
+  ds --> kaggle["Kaggle GPU<br/>Optuna + training"]
+  kaggle --> mlf["MLflow<br/>runs + Registry"]
+  mlf --> champ["promote_if_better<br/>champion"]
+  champ --> opt["ONNX FP32/FP16/INT8"]
+  opt --> api["FastAPI<br/>ONNX Runtime"]
+  api --> drift["drift monitor"]
+```
 
-## Exigences du module et fichiers correspondants
+## 1. Data
 
-| Exigence | Où la trouver |
+| | |
 |---|---|
-| Détection des comprimés avec YOLOv8/v11 | [src/models/train.py](../../src/models/train.py) (tâche `detect`, YOLO11n) ; boîtes d'entraînement produites automatiquement par [src/data/autolabel.py](../../src/data/autolabel.py) et [prepare.py](../../src/data/prepare/v1.py) ; [docs/module1/vision.md](vision.md) |
-| Identification par *transfer learning* | [src/models/train.py](../../src/models/train.py) (tâche `classify`, YOLO11s-cls préentraîné) ; évaluation de bout en bout : [src/models/evaluate.py](../../src/models/evaluate.py) |
-| Données (C3PI, sous-ensemble, split) | [src/data/download.py](../../src/data/download.py), [download.py](../../src/data/download.py), [config/pill_classes.csv](../../config/pill_classes.csv), [config/splits/](../../config/splits/) ; [docs/module1/dataset_c3pi.md](dataset_c3pi.md) |
-| Plus de données et Big Data avec PySpark (demande du professeur) | jobs PySpark [src/data/spark/](../../src/data/spark/) (index, qualité, split sans fuite, augmentation des classes rares, ePillID, corpus RAG), cluster Spark ([docker-compose.yml](../../docker-compose.yml), [infra/spark/](../../infra/spark/)), étapes DVC `spark_*` et `dataset_stats` ([dvc.yaml](../../dvc.yaml), [params.yaml](../../params.yaml)), split v2 [config/splits/c3pi_v2/](../../config/splits/c3pi_v2/), statistiques dans MLflow (`tujya-data`), tests [tests/data/spark/](../../tests/data/spark/) ; data card : [big_data.md](big_data.md) |
-| Backend FastAPI asynchrone, schémas Pydantic, Swagger sur `/docs` | endpoints du guide `GET /health` (GPU, versions et alias MLflow chargés), `GET /model/metadata`, `POST /predict`, `POST /predict/visualize` (image annotée), erreurs 400 / 413 / 503 : [backend/app/routers/vision.py](../../backend/app/routers/vision.py), tests [backend/tests/test_api.py](../../backend/tests/test_api.py) (D97) ; `POST /api/scan` : [backend/app/routers/scan.py](../../backend/app/routers/scan.py) ; schémas : [backend/app/schemas.py](../../backend/app/schemas.py) ; Swagger : [backend/app/main.py](../../backend/app/main.py) ; [docs/api.md](../api.md) |
-| Export ONNX et inférence ONNX Runtime | export et vérification ONNX = PyTorch : [src/models/export_onnx.py](../../src/models/export_onnx.py) (étape DVC `export_onnx`) ; inférence servie : [backend/app/inference.py](../../backend/app/inference.py) ; contrôle sur le split de test : [src/models/predict.py](../../src/models/predict.py) |
-| Frontend React du guide — **fait (étape 2.6)** : Tailwind CSS, glisser-déposer, galerie d'exemples en 1 clic, webcam en inférence continue, barres de probabilité animées, boîtes colorées par classe sur canvas, latence client et serveur en ms, modèle champion (`GET /model/metadata`) | page [frontend/src/pages/ScanPage.tsx](../../frontend/src/pages/ScanPage.tsx), composants [frontend/src/components/vision.tsx](../../frontend/src/components/vision.tsx), logique [frontend/src/lib/vision.ts](../../frontend/src/lib/vision.ts), appels centralisés [frontend/src/services/api.ts](../../frontend/src/services/api.ts), thème [frontend/src/index.css](../../frontend/src/index.css) ; tests Vitest `*.test.ts(x)` ; galerie sans fuite [backend/app/gallery.py](../../backend/app/gallery.py) ; [docs/app.md](../app.md#page-scanner-guide-du-module-1-étape-26) ; captures [01](../screenshots/01-scanner.jpg) à [07](../screenshots/07-swagger.jpg), [18](../screenshots/18-drag-and-drop.jpg) à [21](../screenshots/21-champion-models.jpg) (D105 à D107) |
-| Grad-CAM — **fait (étape 2.6)** | [src/utils/gradcam.py](../../src/utils/gradcam.py) (tests [tests/utils/test_gradcam.py](../../tests/utils/test_gradcam.py), PyTorch), cartes de la galerie précalculées avec les poids du classifieur servi par [src/models/gradcam_gallery.py](../../src/models/gradcam_gallery.py) (étape DVC `gradcam_gallery`, sorties DVC), servies par `GET /api/demo/images/{id}/gradcam` ([backend/app/routers/demo.py](../../backend/app/routers/demo.py)) et affichées dans le Scanner ; capture [20](../screenshots/20-gradcam.jpg) ; [docs/api.md](../api.md#galerie-de-démo-et-grad-cam) (D104) |
-| Boîtes de médicaments (remarque 18) — **fait (étape 2.7)** : lecture du texte imprimé, table des marques sourcée, DCI imprimée, RxNav en secours, refus des photos ni comprimé ni boîte, comparaison RapidOCR / EasyOCR | service [backend/app/boxes.py](../../backend/app/boxes.py), `POST /api/scan` (`kind`, `box`) [backend/app/routers/scan.py](../../backend/app/routers/scan.py), tables [config/brand_aliases.csv](../../config/brand_aliases.csv) et [config/inn_aliases.csv](../../config/inn_aliases.csv), données et vérité terrain [src/data/medicine_boxes.py](../../src/data/medicine_boxes.py) (étape DVC `prepare_boxes`), comparaison [src/models/ocr/](../../src/models/ocr/) (MLflow `tujya-boxes`, Registry `tujya-box-ocr` : RapidOCR champion 0,767, EasyOCR challenger 0,480), outil `lookup_brand` de l'agent ; tests [backend/tests/test_boxes.py](../../backend/tests/test_boxes.py) ; [boites.md](boites.md) ; captures [22](../screenshots/22-box-brand.jpg) à [26](../screenshots/26-chat-brand.jpg) ; validation sur 11 vraies boîtes sous licence libre de Wikimedia Commons (`--set web`, 3 Panadol sur 3 -> paracétamol sourcé, 11 principes actifs justes sur 11, aucun faux) (D108 à D112, D115) |
-| Optimisation des poids : quantification FP16 / INT8 et ONNX Runtime | variantes [src/models/quantize.py](../../src/models/quantize.py) (FP16, INT8 statique QDQ calibré sur le val, INT8 dynamique), banc et Registry [src/models/optimize.py](../../src/models/optimize.py) (un run MLflow par variante, alias `served`), publication de la variante servie [src/models/registry.py](../../src/models/registry.py) + [registry.py](../../src/models/registry.py) ; tests [tests/models/test_quantize.py](../../tests/models/test_quantize.py), [test_optimize.py](../../tests/models/test_optimize.py), [test_registry.py](../../tests/models/test_registry.py) ; tableau FP32 / FP16 / INT8 : [optimisation_onnx.md](optimisation_onnx.md) (D95, D96) |
-| DVC (versionnement des données) | [dvc.yaml](../../dvc.yaml) (étapes `prepare`, `spark_*`, `dataset_stats`, et pour les modèles `train_detector`, `train_classifier`, `export_onnx`, `evaluate` : `dvc dag`), [params.yaml](../../params.yaml) (hyperparamètres `train`, règles de promotion `registry`), [dvc.lock](../../dvc.lock), [.dvc/config](../../.dvc/config), pointeurs `../data/**/*.dvc` ; [docs/infra.md](../infra.md#remote-dvc-depuis-le-2026-10-28) |
-| Comparaison de détecteurs et recherche d'hyperparamètres (remarques du professeur : autres modèles, hyperparamètres, branches) — **fait : YOLO11s champion, YOLOv10n challenger** | une branche `experiment/detector-<archi>` par modèle (YOLOv8n, YOLOv8s, YOLO11s, YOLOv10n, Faster R-CNN) ; code commun [src/models/detection/](../../src/models/detection/) (métriques COCO, latence ONNX CPU, Optuna, exécuteur, import MLflow parent + enfants trié par score, réévaluation du champion, latence de tous les modèles en tours entrelacés `compare_latency.py`, tableau et figure `compare.py`), jeu de détection v2 (étape DVC `prepare_detect_v2`, [src/data/prepare/detect_v2.py](../../src/data/prepare/detect_v2.py)), espaces de recherche `config/hpo/`, notebooks `notebooks/module1/kaggle/` ; tests [tests/models/detection/](../../tests/models/detection/) ; mode d'emploi et résultats : [kaggle_detecteurs.md](kaggle_detecteurs.md) (D93, D94, D98) |
-| Comparaison de classifieurs et recherche d'hyperparamètres (axe CNN / ViT : baseline contre modèles avancés, déséquilibre, augmentation, Grad-CAM) — **fait (étape 2.3)** : champion EfficientNetV2-S (top-1 0,909 sur le split de comparaison, 380 classes), challenger ResNet-50 ; tableau, figure, matrice de confusion et analyse dans [kaggle_classifieurs.md](kaggle_classifieurs.md) (D120) | une branche `experiment/classifier-<archi>` par modèle (baseline CNN maison, ResNet-50, EfficientNetV2-S, ConvNeXt-Tiny, ViT-B/16, YOLO11s-cls) ; architectures [src/models/architecture.py](../../src/models/architecture.py), Grad-CAM [src/utils/gradcam.py](../../src/utils/gradcam.py) ; code commun [src/models/classification/](../../src/models/classification/) (crops et prétraitement de l'API, top-1 / top-5 / F1 macro / matrice de confusion, Optuna, entraînement *transfer learning* puis *fine-tuning* sélectif, poids de classe ou *focal loss*, RandAugment / MixUp / CutMix sur le train, export ONNX avec la liste de classes, import MLflow avec garde-fou, réévaluation du champion v1, tableau et figure) ; jeu de crops v2 (étape DVC `prepare_classify_v2`, [src/data/prepare/classify_v2.py](../../src/data/prepare/classify_v2.py)) ; tests [tests/models/classification/](../../tests/models/classification/) ; mode d'emploi, budget GPU et réévaluation du champion : [kaggle_classifieurs.md](kaggle_classifieurs.md) (D99-D103) |
-| MLflow : tracking des expériences | expérience `tujya-vision` : [src/models/train.py](../../src/models/train.py), [evaluate.py](../../src/models/evaluate.py) ; chaque run via [src/utils/mlflow_utils.py](../../src/utils/mlflow_utils.py) (tags `git_commit`, `dvc_rev`, `dataset`, `seed` ; `requirements.txt` figé, `dvc.lock`, `params.yaml`) ; [mlflow.md](mlflow.md) ; serveur : [infra/mlflow/Dockerfile](../../infra/mlflow/Dockerfile) ; capture [12](../screenshots/12-mlflow-vision.jpg) |
-| MLflow : Model Registry | modèles `tujya-pill-detector` et `tujya-pill-classifier` (LoggedModel MLflow 3) enregistrés par [export_onnx.py](../../src/models/export_onnx.py), alias `champion` / `challenger` donnés par `promote_if_better` ([mlflow_utils.py](../../src/utils/mlflow_utils.py)), baseline v1 ré-enregistrée par [train.py](../../src/models/train.py) ; champions copiés vers `models/` pour l'API par [registry.py](../../src/models/registry.py) ; [mlflow.md](mlflow.md) ; captures [14](../screenshots/14-mlflow-registry.jpg), [15](../screenshots/15-mlflow-classifier.jpg) ; comparaison des candidats dans MLflow (coordonnées parallèles, métrique de choix) : détecteurs [38](../screenshots/38-mlflow-compare-detectors.jpg), classifieurs [39](../screenshots/39-mlflow-compare-classifiers.jpg) |
-| Suivi de la dérive des données (guide de mi-parcours) — **fait (étape 2.8)** | statistiques et tests KS + PSI : [backend/app/drift.py](../../backend/app/drift.py) ; `GET /monitoring/drift` : [backend/app/routers/monitoring.py](../../backend/app/routers/monitoring.py) ; référence (étape DVC `drift_reference`, run MLflow `tujya-monitoring`) : [src/data/drift_reference.py](../../src/data/drift_reference.py) ; démonstration : [src/data/drift_demo.py](../../src/data/drift_demo.py) ; page Monitoring et bandeau : [frontend/src/pages/MonitoringPage.tsx](../../frontend/src/pages/MonitoringPage.tsx) ; tests [backend/tests/test_drift.py](../../backend/tests/test_drift.py), [tests/data/test_drift.py](../../tests/data/test_drift.py) ; [derive.md](derive.md) (D122) |
-| Docker Compose | [docker-compose.yml](../../docker-compose.yml), [backend/Dockerfile](../../backend/Dockerfile), [frontend/Dockerfile](../../frontend/Dockerfile) (multi-stage), [infra/](../../infra/) ; [docs/infra.md](../infra.md) ; installation en une commande vérifiée sur un clone neuf ([infra.md](../infra.md#installation-depuis-un-clone-neuf-étape-41-2026-11-16)), graphe DVC : [dvc_dag.md](../diagrams/dvc_dag.md) |
-| Git avancé : branches, tags annotés, hooks pre-commit (secrets, messages de commit) | [docs/git_workflow.md](../git_workflow.md), [.pre-commit-config.yaml](../../.pre-commit-config.yaml), [tools/hooks/](../../tools/hooks/) et leurs tests [tools/tests/](../../tools/tests/test_hooks.py) |
-| GitHub Actions CI/CD | [.github/workflows/ci-tests.yml](../../.github/workflows/ci-tests.yml) (flake8, black, ruff, mypy, ESLint, pytest de `src/` et de `backend/`, Vitest et build du frontend), [.github/workflows/docker-build.yml](../../.github/workflows/docker-build.yml) (images multi-stage construites et testées, jamais publiées) ; [docs/cd.md](../cd.md) |
-| Tests | [tests/data/](../../tests/data/) et [backend/tests/](../../backend/tests/) : API de scan avec de petits modèles ONNX factices ([test_scan.py](../../backend/tests/test_scan.py), [fake_models.py](../../backend/tests/fake_models.py)), étiquetage automatique ([test_autolabel.py](../../tests/data/test_autolabel.py)), métadonnées C3PI ([test_download.py](../../tests/data/test_download.py)), MLflow et `promote_if_better` sur un serveur local temporaire ([tests/utils/](../../tests/utils/test_mlflow_utils.py)) |
-| Soutenance pratique (démonstration en direct) | script de démonstration : [docs/demo.md](../demo.md) ; questions probables : [docs/questions_jury.md](../questions_jury.md) |
+| Code | [src/data/download.py](../../src/data/download.py), [src/data/spark/](../../src/data/spark/), [src/data/autolabel.py](../../src/data/autolabel.py), [src/data/prepare/](../../src/data/prepare/) |
+| Command | `python -m src.data.download metadata` then `index`, `select`, `download`; `dvc repro spark_index spark_quality spark_split spark_augment`; `dvc repro prepare_detect_v2 prepare_classify_v2` |
+| Result | before/after table, cleaning and leakage check in [data.md](../data.md); MLflow experiment `tujya-data` |
 
-## Résultats
+C3PI v2: 380 classes, 16,789 images, split by shooting session with 0 leakage. Boxes come from
+classical computer vision, since C3PI has none.
 
-Mesurés sur le split de test de C3PI (photos jamais vues à l'entraînement), détails dans
-[docs/module1/vision.md](vision.md) et le rapport.
+## 2. Training on Kaggle with Optuna
 
-| Mesure | Résultat |
-|---|---:|
-| Détection (YOLO11n, 1 classe) : mAP50 / mAP50-95 | **0,972** / **0,861** |
-| Identification (YOLO11s-cls, 150 classes, crops de test) : top-1 / top-5 | **93,5 %** / **98,1 %** |
-| Bout en bout avec ONNX Runtime (600 photos de test) : comprimé trouvé / top-1 / top-5 | 98,5 % / **89,3 %** / 95,8 % |
-| Seuil de confirmation 0,85 (choisi sur la validation) : photos acceptées / justes parmi elles | 70,5 % / 99,3 % |
-| ONNX Runtime contre Ultralytics : même nombre de boîtes / IoU moyen | 40/40 photos / 0,9999 |
+| | |
+|---|---|
+| Code | [src/models/detection/runner.py](../../src/models/detection/runner.py), [src/models/classification/runner.py](../../src/models/classification/runner.py), search spaces in [config/hpo/](../../config/hpo/), notebooks in [notebooks/module1/kaggle/](../../notebooks/module1/kaggle/) |
+| Command | `python -m src.models.detection.package_kaggle` (private Kaggle dataset); `python -m src.models.detection.notebook <arch>` (notebook generator); run the notebook on Kaggle (GPU); same with `classification` |
+| Result | one export folder per model (`run.json`, weights, ONNX, trials) |
 
-Sous le seuil, l'application demande à l'utilisateur de confirmer ou de choisir dans le top-5 :
-l'identification reste une suggestion, jamais une certitude.
+Each notebook clones its experiment branch (`experiment/detector-<arch>`,
+`experiment/classifier-<arch>`), runs an Optuna study on the validation split, retrains the best
+trial, scores it on the test splits and exports ONNX. Locally, `TUJYA_SMOKE=1` runs the same
+notebook on a tiny subset.
 
-## Organisation
+## 3. Experiment tracking with MLflow
 
-Le module suit l'arborescence du guide (`src/data`, `src/models`, `backend/app`, `tests/`),
-partagée avec le module 2.
+| | |
+|---|---|
+| Code | [src/models/detection/import_kaggle.py](../../src/models/detection/import_kaggle.py), [src/models/classification/import_kaggle.py](../../src/models/classification/import_kaggle.py), [src/utils/mlflow_utils.py](../../src/utils/mlflow_utils.py) |
+| Command | `python -m src.models.detection.import_kaggle --no-latency <exports.zip>` (same for `classification`) |
+| Result | http://localhost:5000, experiment `tujya-vision`: one parent run per model, one child run per Optuna trial |
 
-```
-src/data/              préparation des données C3PI
-  download.py index des métadonnées, sélection des 150 classes, téléchargement vérifié
-  autolabel.py         boîtes automatiques (aucune annotation à la main)
-  prepare.py           jeux YOLO de détection et de classification (étape DVC `prepare`)
-src/models/            entraînement et évaluation (venv d'entraînement .venv-train, PyTorch)
-  train.py             YOLO11 detect / classify (params.yaml), test, run MLflow (étapes train_*)
-  export_onnx.py       export ONNX, contrôle, Model Registry, promote_if_better (étape export_onnx)
-  train.py modèles du 28/10 ré-enregistrés comme baseline (sans réentraînement)
-  evaluate.py          évaluation de bout en bout (détecteur -> crop -> classifieur, étape evaluate)
-  predict.py     même code que l'API, mesuré sur un split
-  registry.py           champions du Model Registry -> models/ (lu par l'API)
-  requirements-train.txt  ultralytics, mlflow, dvc, onnx
-src/utils/mlflow_utils.py  runs tracés, log_model, register, alias, promote_if_better
-backend/app/inference.py  chaîne de scan servie par l'API (ONNX Runtime, numpy, OpenCV)
-tests/data/            tests des données (C3PI, étiquetage automatique)
-tests/utils/           MLflow (runs tracés, Registry, promote_if_better)
-backend/tests/test_scan.py  API de scan avec de petits modèles ONNX factices
-docs/module1/          vision.md, dataset_c3pi.md, mlflow.md, rapport (md + pdf), diagrams/, assets/
-```
+Every run is tagged with `git_commit`, `dvc_rev`, `dataset` and `seed`, and stores
+`requirements.txt`, `dvc.lock` and `params.yaml`, so it can be traced to its code and data.
 
-## Commandes
+![MLflow runs](../screenshots/12-mlflow-vision.jpg)
 
-Depuis la racine du dépôt.
+## 4. Comparison
 
-```bash
-# Entraînement (venv dédié, GPU conseillé)
-uv venv .venv-train -p 3.12 && uv pip install -p .venv-train -r src/models/requirements-train.txt
-.venv-train/Scripts/python -m src.models.train classify      # hyperparamètres de params.yaml, MLflow tujya-vision
-.venv-train/Scripts/python -m src.models.export_onnx          # ONNX, Model Registry, promote_if_better
-.venv-train/Scripts/python -m src.models.registry publish              # champions du Model Registry -> models/ (lu par l'API)
+| | |
+|---|---|
+| Code | [src/models/detection/compare_latency.py](../../src/models/detection/compare_latency.py), [src/models/detection/compare.py](../../src/models/detection/compare.py), [src/models/classification/compare.py](../../src/models/classification/compare.py), [src/models/detection/metrics.py](../../src/models/detection/metrics.py) |
+| Command | `python -m src.models.detection.compare_latency` (and `--task classify`); `python -m src.models.detection.compare`; `python -m src.models.classification.compare` |
+| Result | tables of [results.md](results.md) (rewritten between their markers); MLflow compare view |
 
-# Pipeline des modèles (étapes d'entraînement gelées, D91)
-.venv-train/Scripts/python -m dvc dag
-.venv-train/Scripts/python -m dvc repro export_onnx evaluate
+All models are scored by the same metric code on the same comparison split, and timed
+together on the same CPU in interleaved rounds.
 
-# Jeux d'entraînement depuis les images DVC (venv d'entraînement)
-.venv-train/Scripts/python -m dvc repro prepare
+![MLflow comparison of the detectors](../screenshots/38-mlflow-compare-detectors.jpg)
 
-# Tests (venv du projet : .venv, voir docs/app.md)
-.venv/Scripts/python -m pytest tests/data
-.venv/Scripts/python -m pytest tests/utils
-cd backend && ../.venv/Scripts/python -m pytest tests/test_scan.py
+## 5. Champion selection
 
-# Chaîne de l'API sur le split de test (venv du projet, modèles publiés)
-.venv/Scripts/python -m src.models.predict --split test
-```
+| | |
+|---|---|
+| Code | [src/models/registry.py](../../src/models/registry.py) (`promote_if_better`), [src/models/classification/evaluate_champion.py](../../src/models/classification/evaluate_champion.py) |
+| Command | called by `import_kaggle`; the v1 champions are re-scored with `python -m src.models.detection.evaluate_champion` and `python -m src.models.classification.evaluate_champion` |
+| Result | Model Registry `tujya-pill-detector` (YOLO11s v9) and `tujya-pill-classifier` (EfficientNetV2-S v8), aliases `champion` / `challenger` |
 
-Les données sont sous `data/` à la racine : images et métadonnées C3PI dans
-`data/raw/c3pi/`, jeux préparés dans `data/processed/c3pi/`, versionnées par DVC et jamais par git ; les modèles servis sont dans `models/` (ignoré par
-git), remplis par `publish`.
+![Model Registry](../screenshots/14-mlflow-registry.jpg)
+
+## 6. ONNX export and quantization
+
+| | |
+|---|---|
+| Code | [src/models/export_onnx.py](../../src/models/export_onnx.py), [src/models/quantize.py](../../src/models/quantize.py), [src/models/optimize.py](../../src/models/optimize.py) |
+| Command | `python -m src.models.optimize` (FP16, INT8 static and dynamic, alias `served`); `python -m src.models.registry publish` (copies the served models into `models/`) |
+| Result | variants table of [results.md](results.md); `models/models.json` lists the served versions and their SHA-256 |
+
+ONNX outputs are checked against PyTorch before registration. FP32 stays served: no variant
+is both accurate enough and at least 5 % faster.
+
+## 7. API
+
+| | |
+|---|---|
+| Code | [backend/app/routers/vision.py](../../backend/app/routers/vision.py), [backend/app/inference.py](../../backend/app/inference.py), [backend/app/routers/scan.py](../../backend/app/routers/scan.py) |
+| Command | `docker compose up -d --build`, then http://localhost:8000/docs |
+| Result | `GET /health`, `GET /model/metadata`, `POST /predict`, `POST /predict/visualize` ([api.md](../api.md)); the web app at http://localhost:8080 |
+
+The API runs ONNX Runtime with numpy and OpenCV only (no PyTorch). Below 0.85 of top-1 the app
+asks the user to confirm the pill. Grad-CAM pictures of the demo gallery are precomputed offline
+([src/models/gradcam_gallery.py](../../src/models/gradcam_gallery.py), DVC stage
+`gradcam_gallery`).
+
+![Scan of a demo photo](../screenshots/03-demo-result.jpg)
+
+![Swagger](../screenshots/07-swagger.jpg)
+
+## 8. Data drift monitoring
+
+| | |
+|---|---|
+| Code | [backend/app/drift.py](../../backend/app/drift.py), [src/data/drift_reference.py](../../src/data/drift_reference.py), [src/data/drift_demo.py](../../src/data/drift_demo.py) |
+| Command | `dvc repro drift_reference`; `PYTHONPATH="backend;." python -m src.data.drift_demo --mlflow` |
+| Result | `GET /monitoring/drift`, the Monitoring page of the app, MLflow experiment `tujya-monitoring`; scenarios in [results.md](results.md#data-drift-monitor) |
+
+Each scanned photo adds eight numbers to a sliding window (never the image); the window is
+compared with the reference photos by a Kolmogorov-Smirnov test and the PSI.
+
+![Monitoring page](../screenshots/30-monitoring-drift.jpg)
+
+## 9. Medicine boxes and OCR
+
+| | |
+|---|---|
+| Code | [src/data/medicine_boxes.py](../../src/data/medicine_boxes.py), [src/models/ocr/](../../src/models/ocr/), [backend/app/boxes.py](../../backend/app/boxes.py) |
+| Command | `python -m src.data.medicine_boxes download`, `dvc repro prepare_boxes`, `python -m src.models.ocr.evaluate --engine rapidocr` (and `easyocr`) |
+| Result | OCR table of [results.md](results.md#medicine-boxes-ocr-engines); Registry `tujya-box-ocr` |
+
+The pill models only know C3PI pills, so a photo of a box is read instead: RapidOCR text,
+matched with the brand table and the INN names; a photo that is neither a pill nor a box is
+refused.
+
+![Box read by OCR](../screenshots/22-box-brand.jpg)
+
+## DVC pipeline
+
+`dvc repro` rebuilds what changed; `dvc dag` shows the stages: `prepare`, `spark_*`,
+`dataset_stats`, `prepare_detect_v2`, `prepare_classify_v2`, `prepare_boxes`, `train_detector`
+and `train_classifier` (frozen: the recorded baseline), `export_onnx`, `evaluate`,
+`gradcam_gallery`, `drift_reference`.

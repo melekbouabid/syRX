@@ -8,10 +8,10 @@
 # The project root is the repository root, two levels up (relative to this file, not to the
 # working directory): data/ and config/ are shared with the Tujya app and the two modules.
 # The pipeline's own records: the manifest next to this file, the source report in
-# docs/data_pipeline/.
+# docs/data_sources.md.
 project_root: ../..
 manifest_path: config/data_pipeline/manifest.json
-sources_doc_path: docs/data_pipeline/sources.md
+sources_doc_path: docs/data_sources.md
 
 # Everything the pipeline writes lives under this one folder: data/external/raw (downloaded
 # files), data/external/interim (validated tables), data/external/cache and data/external/state.
@@ -39,7 +39,7 @@ http:
     rate_with_key: 10.0
     hosts: [eutils.ncbi.nlm.nih.gov]
 
-  # Requests per second per host. See docs/sources.md for what each provider documents.
+  # Requests per second per host. See docs/data_sources.md for what each provider documents.
   hosts:
     www.ncbi.nlm.nih.gov: {rate: 2.0, burst: 1, max_concurrency: 1}     # NCBI documentation pages
     rxnav.nlm.nih.gov: {rate: 10.0, burst: 1, max_concurrency: 2}      # Tujya; NLM allows 20/s per IP

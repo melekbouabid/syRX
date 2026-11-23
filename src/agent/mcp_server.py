@@ -119,7 +119,7 @@ def default_toolbox(
     return holder.toolbox()
 
 
-# Strictly local (docs/infra.md): the HTTP transport only ever listens on the loopback.
+# Strictly local (README.md): the HTTP transport only ever listens on the loopback.
 LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
 
 

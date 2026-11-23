@@ -62,7 +62,7 @@ the final test set of the box OCR. Put one JPEG per box here and describe it in 
     .venv-train/Scripts/python -m dvc add data/raw/medicine_boxes/user_photos
     .venv-train/Scripts/python -m src.models.ocr.evaluate --set user --engine rapidocr
 
-(docs/module1/boites.md, section "Photos de l'utilisateur").
+(docs/module1/README.md).
 """
 
 

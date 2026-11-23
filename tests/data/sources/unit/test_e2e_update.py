@@ -135,7 +135,7 @@ def test_sources_check_records_every_status_and_writes_the_document(project: Pat
     assert result.exit_code == 0, result.output
     assert not blocked.called  # robots.txt disallows it, so it was not even probed
 
-    document = (project / "docs" / "data_pipeline" / "sources.md").read_text(encoding="utf-8")
+    document = (project / "docs" / "data_sources.md").read_text(encoding="utf-8")
     for _, link in all_links():
         assert f"]({link.url})" in document  # every link is listed...
     for _, _, url, _ in ENDPOINTS:

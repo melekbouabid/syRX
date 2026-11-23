@@ -138,6 +138,6 @@ jobs:
         run: |
           {
             echo "### tujya-${{ matrix.image }}"
-            echo "Built (multi-stage) and smoke-tested at $(git rev-parse --short HEAD). **Not pushed** (strictly local app, docs/cd.md)."
+            echo "Built (multi-stage) and smoke-tested at $(git rev-parse --short HEAD). **Not pushed** (strictly local app, docs/architecture.md#ci)."
             docker image ls tujya-${{ matrix.image }}:ci --format 'Size: {{.Size}}'
           } >> "$GITHUB_STEP_SUMMARY"

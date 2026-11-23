@@ -156,7 +156,7 @@ class UsageOut(BaseModel):
 
 # --- Tujya: pills, scan, interactions -------------------------------------------------------
 # Every answer about medicines carries its sources and the disclaimer (safety rules,
-# docs/project_rules.md).
+# docs/decisions.md).
 
 IngredientName = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=2, max_length=100)

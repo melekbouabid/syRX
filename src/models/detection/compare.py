@@ -15,9 +15,9 @@ from src.utils import mlflow_utils as mu
 from src.utils.console import console_utf8
 
 ROOT = mu.ROOT
-DOC = ROOT / "docs" / "module1" / "kaggle_detecteurs.md"
-FIGURE = ROOT / "docs" / "module1" / "assets" / "detecteurs_comparaison.png"
-BEGIN, END = "<!-- comparison:begin -->", "<!-- comparison:end -->"
+DOC = ROOT / "docs" / "module1" / "results.md"
+FIGURE = ROOT / "models" / "compare" / "detectors_comparison.png"
+BEGIN, END = "<!-- detectors:begin -->", "<!-- detectors:end -->"
 # Colours of the reference palette (validated pair, direct labels on every point).
 CANDIDATE, CHAMPION = "#2a78d6", "#eb6834"
 INK, MUTED, GRID = "#0b0b0b", "#898781", "#e1e0d9"
@@ -145,11 +145,11 @@ def markdown_table(rows: list[Row]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def replace_between_markers(text: str, table: str) -> str:
-    pattern = re.compile(re.escape(BEGIN) + ".*?" + re.escape(END), re.DOTALL)
+def replace_between_markers(text: str, table: str, begin: str = BEGIN, end: str = END) -> str:
+    pattern = re.compile(re.escape(begin) + ".*?" + re.escape(end), re.DOTALL)
     if not pattern.search(text):
-        raise ValueError(f"markers {BEGIN} / {END} not found")
-    return pattern.sub(lambda _: f"{BEGIN}\n{table}{END}", text)
+        raise ValueError(f"markers {begin} / {end} not found")
+    return pattern.sub(lambda _: f"{begin}\n{table}{end}", text)
 
 
 PANELS = (

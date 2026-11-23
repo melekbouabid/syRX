@@ -1,18 +1,14 @@
 # Notebooks
 
-Notebooks d'entraînement et d'exploration, rangés comme le demande le guide des modules.
-
-- `module1/kaggle/` : notebooks lancés sur Kaggle (GPU gratuit) pour comparer les détecteurs et les
-  classifieurs (étapes 2.2 et 2.3) et pour le fine-tuning du module 2 (étape 3.5). Ils
-  appellent le code de [src/](../src/) ; les résultats vont dans MLflow et les poids dans DVC,
-  jamais dans git.
-- Les notebooks sont commités **sans leurs sorties** (hook `nbstripout`,
+- `module1/kaggle/`: notebooks run on Kaggle (free GPU) to compare the detectors and the
+  classifiers. Each one is generated from one template and lives on its experiment branch
+  (`experiment/detector-<arch>`, `experiment/classifier-<arch>`); the champions' notebooks are
+  kept here. They call the code of [src/](../src/); results go to MLflow and weights to DVC,
+  never to git. Packages installed on Kaggle: [module1/kaggle/requirements.txt](module1/kaggle/requirements.txt).
+- Generate a notebook: `python -m src.models.detection.notebook <arch>` or
+  `python -m src.models.classification.notebook <arch>`; a test checks that the committed
+  notebooks are exactly the generated ones.
+- Notebooks are committed **without outputs** (`nbstripout` hook,
   [.pre-commit-config.yaml](../.pre-commit-config.yaml)).
-- Étape 2.2 (détecteurs) : un notebook par modèle, `module1/kaggle/detector_<archi>.ipynb`, sur sa
-  branche `experiment/detector-<archi>`, généré par `python -m src.models.detection.notebook`
-  (paquets installés sur Kaggle : [module1/kaggle/requirements.txt](module1/kaggle/requirements.txt)).
-  Mode d'emploi : [docs/module1/kaggle_detecteurs.md](../docs/module1/kaggle_detecteurs.md).
-- Étape 2.3 (classifieurs) : un notebook par modèle, `module1/kaggle/classifier_<archi>.ipynb`, sur sa
-  branche `experiment/classifier-<archi>`, généré par
-  `python -m src.models.classification.notebook`. Mode d'emploi, ordre de lancement et budget
-  GPU : [docs/module1/kaggle_classifieurs.md](../docs/module1/kaggle_classifieurs.md).
+
+Step-by-step guide: [docs/module1/README.md](../docs/module1/README.md).

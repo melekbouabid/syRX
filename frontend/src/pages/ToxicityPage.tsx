@@ -4,7 +4,7 @@ import { Alert, Badge, SubmitButton, TextField, staggerIndex } from "../componen
 import { Icon } from "../components/icons";
 import { useT } from "../i18n";
 
-// Bonus tool (docs/bonus/toxicity.md). Safety texts in src/i18n (toxicity.wording, the notice).
+// Bonus tool (docs/module2/README.md). Safety texts in src/i18n (toxicity.wording, the notice).
 const EXAMPLES: [string, string][] = [
   ["warfarin", "fluconazole"],
   ["citalopram", ""],

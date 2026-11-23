@@ -145,7 +145,7 @@ class ActivityEvent(Base):
     """One thing an account did, for the administrators' activity log.
 
     What happened and when, with counts only: never a photo, a pill or medicine name, or the
-    text of a question. Those are health data and stay with the user (docs/project_rules.md).
+    text of a question. Those are health data and stay with the user (docs/decisions.md).
     """
 
     __tablename__ = "activity_events"

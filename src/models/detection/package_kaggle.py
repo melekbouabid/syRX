@@ -33,7 +33,7 @@ Splits: by photo session, no leakage (train / val / test). `test_holdout.txt` li
 images used to compare the detectors (sessions the baseline never saw).
 
 Built by the Tujya project, https://github.com/melekbouabid/syRX (step 2.2,
-docs/module1/kaggle_detecteurs.md). Kept private: do not redistribute.
+docs/module1/README.md). Kept private: do not redistribute.
 """
 
 

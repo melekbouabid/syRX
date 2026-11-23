@@ -34,7 +34,7 @@ come from train images. `test_holdout.txt` lists the test crops used to compare 
 classifiers (sessions the previous model never saw).
 
 Built by the Tujya project, https://github.com/melekbouabid/syRX (step 2.3,
-docs/module1/kaggle_classifieurs.md). Kept private: do not redistribute.
+docs/module1/README.md). Kept private: do not redistribute.
 """
 
 

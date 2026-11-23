@@ -1,5 +1,5 @@
 // Interaction check results, shared by the Scanner and the saved reports (owner and shared
-// views). Safety texts are shown exactly as the project rules write them (docs/project_rules.md).
+// views). Safety texts are shown exactly as the project rules write them (docs/decisions.md).
 import { type InteractionPair, type InteractionsResult, type Severity, type Source } from "../services/api";
 import { useT } from "../i18n";
 import { Badge, staggerIndex } from "./index";

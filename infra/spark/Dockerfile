@@ -1,4 +1,4 @@
-# Spark for the Big Data jobs (src/data/spark, docs/module1/big_data.md): the official
+# Spark for the Big Data jobs (src/data/spark, docs/data.md): the official
 # apache/spark image (Spark 4.1.1, Java, Python 3 and PySpark 4.1.1) plus the few Python
 # packages the jobs import. No Java or winutils on the Windows host: the jobs run here.
 # docker-compose.yml starts it as a standalone cluster (one master, one worker, profile

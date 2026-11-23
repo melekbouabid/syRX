@@ -176,7 +176,7 @@ jobs:
       - run: pip install pytest
       - run: python -m pytest
       # The server-side half of the commit-msg hook: a local hook can be skipped with
-      # `git commit --no-verify`, this check cannot (docs/git_workflow.md).
+      # `git commit --no-verify`, this check cannot (README.md#contributing).
       - name: commit messages follow Conventional Commits
         env:
           BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}

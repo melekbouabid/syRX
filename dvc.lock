@@ -585,7 +585,7 @@ stages:
       size: 2416
     - path: backend/app/inference.py
       hash: md5
-      md5: f2b1c7914ff79a57dd80dd672edc58a0
+      md5: f6848d2a9bb5a90ee8c4307f4fb0459f
       size: 11196
     - path: config/demo_gallery.csv
       hash: md5
@@ -665,8 +665,8 @@ stages:
       nfiles: 720
     - path: src/data/medicine_boxes.py
       hash: md5
-      md5: 1afe3a3c8330b29306e83552a5abc737
-      size: 9444
+      md5: c1c535019ff0c01503e0f0600c752a44
+      size: 9409
     outs:
     - path: data/processed/medicine_boxes
       hash: md5
@@ -682,7 +682,7 @@ stages:
       size: 9493
     - path: backend/app/inference.py
       hash: md5
-      md5: f2b1c7914ff79a57dd80dd672edc58a0
+      md5: f6848d2a9bb5a90ee8c4307f4fb0459f
       size: 11196
     - path: data/processed/c3pi/datasets_v2/detect/index.csv
       hash: md5
