@@ -1,11 +1,6 @@
-// Drive the Toxicity page (bonus) and save a screenshot (docs/screenshots/16-toxicity.jpg).
-//
+// Drive the Toxicity page (one card per molecule, in vitro wording, no "safe" claim) and save
+// a screenshot to docs/screenshots/.
 //   BASE=http://localhost:8080 node scripts/toxicity-screenshots.mjs
-//
-// Signs in, predicts warfarin and fluconazole, and checks that each molecule has its own
-// card with the 12 Tox21 assays, that the in vitro wording and the disclaimer are shown,
-// and that nothing calls a molecule safe or non-toxic. Then a SMILES far from the training
-// molecules must get the "far from the training molecules" badge.
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";

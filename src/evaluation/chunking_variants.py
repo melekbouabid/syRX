@@ -1,27 +1,7 @@
-"""Chunking variants of the served RAG corpus, and relevance of their chunks (step 3.3).
+"""Chunking variants of the served RAG corpus, and which of their chunks are relevant.
 
-The served corpus (data/processed/rag/corpus/chunks.parquet, stage `rag_corpus`, frozen on the
-ingredients of the 150 first classes: D119) cuts label sections and abstract paragraphs into
-pieces of at most 1,500 characters that repeat one sentence (src/rag/chunking.py
-`split_text`). A variant cuts the same documents with another `max_chars` / `overlap`:
-
-- label sections: the same rows of
-  data/external/rag_v1/interim/openfda_label/label_sections.parquet as the served chunks,
-  through `chunking.label_chunks`;
-- abstracts: the same PubMed articles, each about the same ingredients as in the served corpus,
-  through `chunking.abstract_chunks`;
-- DDInter rows: one short chunk per pair, never split, copied as they are.
-
-`max_chars=1500, overlap=1` gives back the served corpus exactly (tested), so a variant
-changes the chunking and nothing else.
-
-The benchmark questions name their expected chunks by id (src/evaluation/questions.jsonl),
-ids of the served corpus. In a variant, a chunk is relevant to a question when it comes from
-the same document and section as an expected chunk and at least half of the smaller of the two
-is text they share (whole sentences: a smaller piece cut from the expected chunk, or a larger
-one that holds it; not a neighbour that only repeats the overlap sentence) (`Relevance`); for
-an interaction question it must also name the other ingredient (or be the DDInter row), which
-is the rule that chose the expected chunks (docs/module2/benchmark.md).
+`max_chars=1500, overlap=1` gives back the served corpus exactly; `Relevance` maps the
+benchmark's expected chunks to the chunks of a variant (same document and section, shared text).
 """
 
 from __future__ import annotations

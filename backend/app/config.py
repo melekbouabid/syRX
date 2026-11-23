@@ -1,22 +1,11 @@
-"""Settings of the web API.
-
-Every value can be overridden in `backend/.env` or the environment with the `TUJYA_`
-prefix, for example `TUJYA_ADMIN_PASSWORD=...`. The project's first prefix, `SYNERGYRX_`, is
-still read after it, so that existing `.env` files and shells keep working (decision D86).
-"""
+"""Settings of the web API, set in `backend/.env` or the environment with the `TUJYA_` prefix."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Literal
 
-from pydantic_settings import (
-    BaseSettings,
-    DotEnvSettingsSource,
-    EnvSettingsSource,
-    PydanticBaseSettingsSource,
-    SettingsConfigDict,
-)
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent  # backend/
 # The repository root (data/, config/, models/). The Docker image keeps the same layout under
@@ -25,38 +14,12 @@ PROJECT_DIR = BACKEND_DIR.parent
 
 DEFAULT_ADMIN_PASSWORD = "admin"  # noqa: S105  first-run default, meant to be changed
 ENV_PREFIX = "TUJYA_"
-# Fallback for the settings written before the rename (D86); TUJYA_ always wins.
-LEGACY_ENV_PREFIX = "SYNERGYRX_"
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=BACKEND_DIR / ".env", env_prefix=ENV_PREFIX, extra="ignore"
     )
-
-    @classmethod
-    def settings_customise_sources(
-        cls,
-        settings_cls: type[BaseSettings],
-        init_settings: PydanticBaseSettingsSource,
-        env_settings: PydanticBaseSettingsSource,
-        dotenv_settings: PydanticBaseSettingsSource,
-        file_secret_settings: PydanticBaseSettingsSource,
-    ) -> tuple[PydanticBaseSettingsSource, ...]:
-        """Arguments, then TUJYA_* (environment, .env), then the legacy SYNERGYRX_* names."""
-        env_file = getattr(dotenv_settings, "env_file", cls.model_config.get("env_file"))
-        legacy_env = EnvSettingsSource(settings_cls, env_prefix=LEGACY_ENV_PREFIX)
-        legacy_dotenv = DotEnvSettingsSource(
-            settings_cls, env_file=env_file, env_prefix=LEGACY_ENV_PREFIX
-        )
-        return (
-            init_settings,
-            env_settings,
-            dotenv_settings,
-            legacy_env,
-            legacy_dotenv,
-            file_secret_settings,
-        )
 
     database_url: str = f"sqlite:///{(BACKEND_DIR / 'app.db').as_posix()}"
     # Tujya medicine tables (pills, ingredients, interactions): PostgreSQL from
@@ -69,15 +32,14 @@ class Settings(BaseSettings):
     # "cpu" always works; "auto" uses CUDA first when the installed onnxruntime has it.
     onnx_providers: str = "cpu"
     onnx_threads: int = 0  # 0 = ONNX Runtime default (one per core)
-    # Below this top-1 probability the app asks the user to confirm the pill. Chosen on the
-    # validation photos: docs/module1/vision.md, "Confirmation threshold" (D47).
+    # Below this top-1 probability the app asks the user to confirm the pill (chosen on the
+    # validation photos).
     scan_confirm_threshold: float = 0.85
     scan_detection_confidence: float = 0.25
     scan_max_bytes: int = 10 * 1024 * 1024
     scan_max_pixels: int = 50_000_000
-    # Step 2.7, medicine boxes (app/boxes.py, docs/module1/boites.md, D108-D111): OCR of the
-    # printed text, brand table and printed INN, RxNav fallback. Below scan_pill_min_confidence
-    # (best pill detection) with little text the photo is refused as neither a pill nor a box.
+    # Medicine boxes (app/boxes.py). Below scan_pill_min_confidence with little text, the
+    # photo is refused as neither a pill nor a box.
     box_ocr_enabled: bool = True
     ocr_threads: int = 4
     brand_table_file: Path = PROJECT_DIR / "config" / "brand_aliases.csv"
@@ -88,30 +50,21 @@ class Settings(BaseSettings):
     rxnav_contact_email: str | None = None
     rxnav_url: str = "https://rxnav.nlm.nih.gov/REST"
     rxnav_timeout_seconds: float = 5.0
-    # C3PI test-split photos shown in the demo gallery (read-only); see app/routers/demo.py.
-    # A photo is served only if it is in the v2 test split (detector) and not in the v1
-    # train or val split (classifier): never seen in training by either served model (D105).
+    # Demo gallery (app/gallery.py): photos no served model saw in training.
     demo_images_dir: Path = PROJECT_DIR / "data" / "raw" / "c3pi" / "images"
     demo_split_file: Path = PROJECT_DIR / "config" / "splits" / "selected_images.csv"
     demo_holdout_file: Path = PROJECT_DIR / "config" / "splits" / "c3pi_v2" / "test.csv"
     demo_gallery_file: Path = PROJECT_DIR / "config" / "demo_gallery.csv"
-    # Grad-CAM pictures of the gallery photos, precomputed with the PyTorch weights of the
-    # served classifier (`python -m src.models.gradcam_gallery`, DVC stage, D104).
+    # Grad-CAM pictures of the gallery photos (DVC stage gradcam_gallery).
     demo_gradcam_dir: Path = PROJECT_DIR / "data" / "processed" / "c3pi" / "gradcam"
-    # Statistics of the reference photos (C3PI v2 val split, D122) for the data drift monitor
-    # (step 2.8, DVC stage drift_reference, docs/module1/derive.md); missing: GET
-    # /monitoring/drift says so.
+    # Reference statistics of the drift monitor (DVC stage drift_reference).
     drift_reference_file: Path = (
         PROJECT_DIR / "data" / "processed" / "c3pi" / "drift" / "reference.json"
     )
 
-    # Module 2: RAG and agent (docs/module2/rag.md, agent.md). The chunk index
-    # lives in Qdrant (D113); `python -m src.rag.init_qdrant` fills it from these chunks: the corpus
-    # of the 380 served classes (Spark job `rag`, collection tujya_chunks_v2, D126). The
-    # corpus of the 150 first classes (corpus/chunks.parquet, collection tujya_chunks) stays
-    # in Qdrant: TUJYA_QDRANT_COLLECTION=tujya_chunks serves it again. "sql" keeps the index
-    # in the pharma database instead (table rag_chunks, pgvector or SQLite), the store before
-    # Qdrant. Ollama serves both the LLM and the embeddings (docker compose `ollama`).
+    # Module 2: RAG and agent. `python -m src.rag.init_qdrant` indexes these chunks (380 classes)
+    # in Qdrant; collection tujya_chunks holds the 150-class corpus. "sql" keeps the index in
+    # the pharma database instead. Ollama serves the LLM and the embeddings.
     rag_chunks_file: Path = PROJECT_DIR / "data" / "processed" / "rag" / "corpus_v2" / "chunks"
     vector_store: Literal["qdrant", "sql"] = "qdrant"
     # docker compose `qdrant`; ":memory:" = the client's local in-memory mode (tests).
@@ -128,28 +81,19 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = 180.0
     # A small model can loop on itself; answers are 3-6 sentences, far below this.
     llm_max_tokens: int = 450
-    # Version of the answer prompt (src/agent/prompts.py), chosen on the generation benchmark
-    # of step 3.4 (docs/module2/benchmark_generation.md).
+    # Version of the answer prompt (src/agent/prompts.py), chosen on the generation benchmark.
     llm_prompt_version: str = "v1"
     embedding_model: str = "bge-m3"
     embedding_dim: int = 1024
     embedding_num_ctx: int = 2048  # chunks are at most ~400 tokens
     rag_top_k: int = 6
-    # Chosen on the step 3.3 grid (docs/module2/benchmark_retrieval.md): dense on the corpus of
-    # the 150 first classes (D123); hybrid (dense + BM25, RRF) of the rewritten query on the
-    # corpus of the 380 classes, same rule (best MRR within 2 s), D126. The rewrite puts the
-    # question in English, which BM25 needs (it only matches English words).
+    # Chosen on the retrieval grid (best MRR within 2 s): hybrid search of the rewritten
+    # English query, which BM25 needs.
     rag_search_mode: str = "hybrid"
-    # Step 3.2 (docs/module2/rag.md, D116-D118). BM25 sparse vectors in Qdrant (fastembed
-    # `Qdrant/bm25`), cross-encoder reranking of `rag_fetch_k` candidates, query rewriting by
-    # the LLM. fastembed models are downloaded once (Hugging Face, no account) into the cache.
+    # fastembed models (BM25, reranker) are downloaded once into rag_model_cache_dir.
     rag_sparse_model: str = "Qdrant/bm25"
-    # Step 3.3 (docs/module2/benchmark_retrieval.md, D123, D126): the registered champion of
-    # `tujya-rag-retrieval` (src/evaluation/results/grid/champion.json, checked by the tests) is
-    # hybrid search of the rewritten query on the corpus v2, without reranker: every cross-encoder
-    # costs 3 to 11 s per question on this laptop's CPU. When turned on, the reranker is the
-    # fastest one measured (ms-marco-MiniLM-L-6-v2 on 10 candidates: MRR 0.896 in hybrid
-    # mode, about 3.5 s).
+    # The retrieval champion (src/evaluation/results/grid/champion.json) has no reranker:
+    # a cross-encoder costs seconds per question on the CPU. When on, the fastest one is used.
     rag_rerank: bool = False
     rag_rerank_model: str = "Xenova/ms-marco-MiniLM-L-6-v2"
     rag_fetch_k: int = 10

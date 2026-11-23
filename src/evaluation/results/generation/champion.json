@@ -9,7 +9,7 @@
   "prompt_en": "prompts:/tujya-answer-en/2",
   "prompt_fr": "prompts:/tujya-answer-fr/2",
   "prompt_version": "v2",
-  "retrieval": "bge-m3 dense + ingredient filter + query rewriting (D123)",
+  "retrieval": "bge-m3 dense + ingredient filter + query rewriting",
   "score": 0.7076,
   "version": "2"
  },
@@ -19,7 +19,7 @@
   "prompt_en": "prompts:/tujya-answer-en/1",
   "prompt_fr": "prompts:/tujya-answer-fr/1",
   "prompt_version": "v1",
-  "retrieval": "bge-m3 dense + ingredient filter + query rewriting (D123)",
+  "retrieval": "bge-m3 dense + ingredient filter + query rewriting",
   "score": 0.7613,
   "version": "1"
  },

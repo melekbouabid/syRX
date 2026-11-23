@@ -1,8 +1,4 @@
-"""Console output of the command-line tools on Windows.
-
-Kept out of src/utils/mlflow_utils.py, a dependency of the DVC stages of the models: a change
-there would mark them as changed.
-"""
+"""Console output of the command-line tools on Windows (UTF-8)."""
 
 from __future__ import annotations
 

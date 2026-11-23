@@ -1,9 +1,6 @@
-"""The six classifier architectures (src/models/architecture.py): outputs, selective
-fine-tuning, frozen blocks.
+"""The six classifier architectures: outputs, selective fine-tuning, frozen blocks.
 
-Needs PyTorch and torchvision (CI job `vision`, CPU wheels; the job `src` skips this file).
-Networks are built without pretrained weights (no download); YOLO11s-cls also needs
-Ultralytics and is skipped without it.
+Needs PyTorch and torchvision (CI job `vision`); YOLO11s-cls is skipped without Ultralytics.
 """
 
 from __future__ import annotations

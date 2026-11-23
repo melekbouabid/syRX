@@ -1,4 +1,4 @@
-// Display helpers of the Monitoring page and the drift banner (GET /monitoring/drift, step 2.8).
+// Display helpers of the Monitoring page and the drift banner (GET /monitoring/drift).
 import { messages } from "../i18n";
 
 export type DriftStatus = "unavailable" | "insufficient" | "ok" | "warning" | "drift";

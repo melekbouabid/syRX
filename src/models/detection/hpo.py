@@ -1,31 +1,6 @@
-"""Hyperparameter search of a detector with Optuna (config/hpo/detector_<arch>.yaml).
+"""Optuna hyperparameter search of a detector, read from config/hpo/detector_<arch>.yaml.
 
-One YAML file per experiment branch describes the model and its search:
-
-    arch: yolov8n                  # name used in runs, tags and the Registry description
-    family: yolo                   # yolo (Ultralytics) | fasterrcnn (torchvision)
-    weights: yolov8n.pt            # pretrained weights (transfer learning)
-    branch: experiment/detector-yolov8n
-    seed: 0
-    search:                        # Optuna: each trial is a short training on a share of train
-      n_trials: 12
-      epochs: 10
-      fraction: 0.4                # share of the train images used by a trial
-      metric: val_mAP50_95         # maximised (validation split, never test)
-      sampler: tpe                 # tpe | random, seeded with `seed`
-      space:
-        lr0: {type: float, low: 1.0e-4, high: 1.0e-2, log: true}
-        optimizer: {type: categorical, choices: [SGD, AdamW]}
-        ...
-    fixed: {workers: 4}            # passed to every training as is
-    final: {epochs: 60, patience: 15}   # retraining of the best trial on the whole train set
-    smoke:                         # local check: tiny subset, few epochs, 2 trials
-      n_trials: 2
-      ...
-
-A float can depend on a categorical parameter: `{type: float, log: true, depends_on:
-optimizer, ranges: {SGD: [1.0e-3, 2.0e-2], AdamW: [1.0e-5, 1.0e-3]}}`. Optuna then sees one
-parameter per branch (`lr0_sgd`, `lr0_adamw`), and the training receives `lr0`.
+A float may depend on a categorical parameter (`depends_on`): one Optuna parameter per branch.
 """
 
 from __future__ import annotations

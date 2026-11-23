@@ -1,16 +1,6 @@
 """Ultralytics detectors (YOLOv8, YOLO11, YOLOv10): training, prediction and ONNX export.
 
-The same three functions exist for every family (`fasterrcnn` on its experiment branch), so
-src/models/detection/runner.py drives all of them the same way:
-
-- `train(hp, data_root, work, ...)` -> `TrainResult` (best weights, per-epoch history);
-- `predict(weights, images, imgsz)` -> one `ImagePrediction` per image (raw boxes and scores
-  at confidence 0.001, scored by src/models/detection/metrics.py);
-- `export_onnx(weights, imgsz, target)` -> ONNX file with a static 1x3xSxS input, the input
-  the API feeds (backend/app/inference.py).
-
-Ultralytics' own logger integrations (MLflow, W&B, ...) are switched off: the runner writes
-its export folder, imported into MLflow afterwards (src/models/detection/import_kaggle.py).
+Ultralytics' own logger integrations are off: results go to the export folder.
 """
 
 from __future__ import annotations

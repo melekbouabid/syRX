@@ -1,21 +1,6 @@
-"""Job `index`: the whole C3PI archive as one table, its statistics and the class selection.
+"""Spark job `index`: the whole C3PI archive as one table, its statistics and the class selection.
 
-Inputs (data/raw/c3pi/metadata, DVC):
-- ALLXML/PillProjectDisc{1..110}.xml, one <Image> element per file, read with Spark's XML
-  source (NDC, part, names, file name, size, SHA-1, image type, camera, background...);
-- directory_of_images.txt (`NDC11|part|path|type|name`, the archive's own index; its copy
-  directory_consumer_grade_images.txt has the same bytes), joined to check that both agree.
-
-Outputs (data/processed/c3pi/bigdata/index, DVC):
-- images/         Parquet partitioned by image_type, one row per image of every type
-- class_stats/    one row per pill product (NDC9 + part): files and bytes per image type
-- type_stats/     one row per image type and file type: files, bytes, products
-- classes/        candidate classes: products with at least `min_images` consumer photos
-- selection/      images of the candidates to download, with their role (consumer,
-                  reference, seg, challenge); `download_list.csv` is the same list as CSV
-- summary.json    counts and sizes (also read by the MLflow step)
-
-Docs: docs/module1/big_data.md, docs/module1/dataset_c3pi.md.
+Output: data/processed/c3pi/bigdata/index (images, class and type statistics, selection).
 """
 
 from __future__ import annotations
@@ -260,10 +245,8 @@ def build_selection(
 ) -> DataFrame:
     """Every image to download for the candidate classes, with its role.
 
-    - consumer: every consumer photo of the class (the photos of `select_classes`);
-    - reference: per package (NDC11) one small RxImage JPG, first in REFERENCE_JPG order;
-    - seg: up to `seg_per_class` segmented studio PNGs, a fixed pseudo-random set (by SHA-1);
-    - challenge: the MC_CHALLENGE_V1.0 images, all of them or only the candidates' ones.
+    Roles: consumer (all photos), reference (one RxImage JPG per NDC11), seg (up to
+    `seg_per_class` studio PNGs) and challenge.
     """
     keys = classes.select("class_key")
     in_class = keys.withColumn("in_class", F.lit(True))

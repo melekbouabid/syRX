@@ -1,8 +1,6 @@
-"""Link check and generation of `docs/data_pipeline/sources.md`.
+"""Link check of the data sources and generation of `docs/data_pipeline/sources.md`.
 
-`tujya-data sources --check` probes every URL from the project brief plus the data endpoint
-each connector really uses, then rewrites the document with the HTTP status it got. Pages
-are only requested if robots.txt allows it; access walls are reported, not worked around.
+Pages are requested only if robots.txt allows it; access walls are reported, not bypassed.
 """
 
 from __future__ import annotations
@@ -78,7 +76,7 @@ FINDINGS = """## What was found while building the connectors
 
 Measured on 2026-10-13 with the pipeline itself. The original synergy sources (DrugComb,
 TDC, O'Neil, NCI-ALMANAC, DepMap, GDSC, PubChem, ChEMBL, Europe PMC, PubTator, DrugBank,
-PubMed baseline) were removed later (decision D85); their findings are in the git history.
+PubMed baseline) were removed later; their findings are in the git history.
 
 - **DDInter**: licensed CC BY-NC-SA 4.0 (non-commercial, share-alike). Disabled, and it
   refuses to download until `terms_acknowledged: true` is set; the Tujya corpus step sets

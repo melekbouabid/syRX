@@ -1,13 +1,6 @@
-"""Tujya RAG corpus: openFDA label sections, PubMed abstracts and DDInter rows -> chunks.
+"""RAG corpus chunking: openFDA label sections, PubMed abstracts and DDInter rows -> chunks.
 
-- labels: one chunk per section, long sections split on sentence boundaries;
-- abstracts: one chunk per paragraph (structured abstracts have one per label, such as
-  "RESULTS: ..."), long paragraphs split the same way;
-- DDInter: one chunk per interacting pair between the class ingredients.
-
-Every chunk carries its metadata (`CHUNK_COLUMNS`, documented in
-docs/module2/rag.md). Dosage sections are refused here a second time, whatever
-the connector stored.
+Every chunk carries its metadata (`CHUNK_COLUMNS`); dosage sections are refused here again.
 """
 
 from __future__ import annotations
@@ -308,12 +301,8 @@ def fold(text: str) -> str:
 
 
 # --- Indexed documents rebuilt from their chunks (Documents page) ------------------------------
-# The indexed documents, rebuilt from their chunks: what the Documents page lists (D114).
-#
-# A document is a notice (openFDA label), an abstract (PubMed) or an interaction pair
-# (DDInter); the index stores its chunks, each with the document's metadata. The catalog
-# groups the chunks by `doc_id`, in chunk order, and filters the documents by type,
-# ingredient (about or mentioned), section, language, source and a text query.
+# The catalog groups the chunks by `doc_id`, in chunk order, and filters the documents by
+# type, ingredient, section, language, source and a text query.
 
 TYPE_ORDER = {"label": 0, "abstract": 1, "interaction": 2}
 

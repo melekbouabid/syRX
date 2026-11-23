@@ -1,26 +1,7 @@
-"""Medicine box photos of step 2.7: download, ground truth, out-of-distribution images.
+"""Medicine box photos: download, OCR ground truth and out-of-distribution images.
 
-    python -m src.data.medicine_boxes download      # Italian-OTC-medicines (Hugging Face)
-    python -m src.data.medicine_boxes off-topic     # training venv: scikit-image samples
-    python -m src.data.medicine_boxes prepare       # DVC stage prepare_boxes
-
-Data (docs/module1/boites.md, decision D108; all DVC, never git):
-
-- data/raw/medicine_boxes/italian_otc/   mennox/Italian-OTC-medicines at a fixed revision
-  (Apache-2.0, anonymous download): 718 photos of Italian OTC boxes + medicines.json
-  (commercial name, EAN, SmPC sections in Italian, "Principi attivi" among them);
-- data/raw/medicine_boxes/user_photos/   the owner's photos of boxes sold in Tunisia
-  (Panadol, Doliprane...): the final test set, waiting for the photos (README in the folder
-  says what to put there);
-- data/raw/off_topic/                    out-of-distribution photos: 16 scikit-image samples
-  (CC0 or public domain, one licence line each in licences.csv) and 3 generated images.
-
-`prepare` writes data/processed/medicine_boxes/eval.csv: one row per box photo with the
-ground truth the OCR engines are scored against, taken from the metadata, never from the
-photo: the brand (first word of the commercial name, empty for a generic named after its
-ingredient) and the active ingredients (the "Principi attivi" text matched with the
-interaction table's names and config/inn_aliases.csv, the brand table left out so that the
-brand route is not scored against itself).
+Run: `python -m src.data.medicine_boxes download | off-topic | prepare` (stage prepare_boxes).
+The ground truth (brand, active ingredients) comes from the metadata, never from the photo.
 """
 
 from __future__ import annotations
@@ -70,7 +51,7 @@ OFF_TOPIC = {
 
 USER_README = """\
 Photos of medicine boxes taken by the owner (Panadol, Doliprane, Efferalgan, Augmentin...),
-the final test set of step 2.7. Put one JPEG per box here and describe it in labels.csv:
+the final test set of the box OCR. Put one JPEG per box here and describe it in labels.csv:
 
     image,brand,ingredients
     panadol_1.jpg,Panadol,acetaminophen

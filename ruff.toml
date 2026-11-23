@@ -22,6 +22,6 @@ ignore = [
 "tests/data/sources/**" = ["S105", "S106", "S108", "ASYNC240"]
 # One-off generator of the benchmark spec: its long lines are question and reference texts.
 "src/evaluation/generate_questions.py" = ["E501"]
-# Kaggle notebooks (step 2.2) run fixed commands: git clone of the project, pip install of
+# Kaggle notebooks run fixed commands: git clone of the project, pip install of
 # its pinned packages (notebooks/module1/kaggle/requirements.txt).
 "notebooks/module1/kaggle/*.ipynb" = ["S603", "S607"]

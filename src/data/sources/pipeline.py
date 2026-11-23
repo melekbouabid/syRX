@@ -1,8 +1,6 @@
-"""Orchestration: what the CLI commands actually do.
+"""What the data pipeline CLI commands do: run the connectors stage by stage.
 
-`fetch` runs the connectors stage by stage (DDInter, then the literature sources: PubMed and
-openFDA labels). A failing source never stops the others: its state becomes "needs
-attention" and the run carries on.
+A failing source never stops the others; its state becomes "needs attention".
 """
 
 from __future__ import annotations

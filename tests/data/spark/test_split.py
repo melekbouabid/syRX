@@ -69,7 +69,7 @@ def _selection_rows():
         camera, _, date = session.partition("@")
         rows.append(
             {
-                "path": f"D1/images/{key}_{name}",
+                "path": f"disc1/images/{key}_{name}",
                 "class_key": key,
                 "role": role,
                 "in_class": in_class,
@@ -137,8 +137,8 @@ def result(spark, params, tmp_path):
     # The challenge image of X is near-identical to photo X_3 (session cam1).
     pairs = pd.DataFrame(
         {
-            "path_a": ["D1/images/X_3.JPG"],
-            "path_b": ["D1/images/X_ch.JPG"],
+            "path_a": ["disc1/images/X_3.JPG"],
+            "path_b": ["disc1/images/X_ch.JPG"],
             "class_a": ["X"],
             "class_b": ["X"],
             "bits": [1],
@@ -186,10 +186,10 @@ def test_no_leakage_and_every_split_present(result):
         assert set(consumer.loc[consumer["class_key"] == key, "split"]) == {"train", "val", "test"}
     # Sessions stay whole: the two photos of camera cam0 share their split.
     x = images.set_index("path")["split"]
-    assert x["D1/images/X_0.JPG"] == x["D1/images/X_1.JPG"]
+    assert x["disc1/images/X_0.JPG"] == x["disc1/images/X_1.JPG"]
     # Studio images stay in train; the challenge copy follows its photo.
-    assert x["D1/images/X_seg.PNG"] == x["D1/images/X_ref.JPG"] == "train"
-    assert x["D1/images/X_ch.JPG"] == x["D1/images/X_3.JPG"]
+    assert x["disc1/images/X_seg.PNG"] == x["disc1/images/X_ref.JPG"] == "train"
+    assert x["disc1/images/X_ch.JPG"] == x["disc1/images/X_3.JPG"]
     held = set()
     for name in ("val", "test"):
         with (splits / f"{name}.csv").open(encoding="utf-8") as handle:

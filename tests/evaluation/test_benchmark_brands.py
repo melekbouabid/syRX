@@ -1,5 +1,4 @@
-"""Scores of the brand benchmark (src/evaluation/benchmark_brands.py, step 2.7) and its
-questions."""
+"""Scores of the brand benchmark (src/evaluation/benchmark_brands.py) and its questions."""
 
 from __future__ import annotations
 

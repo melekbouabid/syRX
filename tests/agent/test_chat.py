@@ -141,8 +141,8 @@ def test_chat_route_in_openapi(chat_app: FastAPI, anonymous: TestClient) -> None
 def test_brand_in_the_question_gives_its_ingredient_and_source(
     client: TestClient, llm: FakeChatModel, chat_app: FastAPI, tmp_path: Path
 ) -> None:
-    # Step 2.7: a brand named in the question is linked to its ingredient by the brand
-    # table (here a one-row table: Diflucan is fluconazole), then checked like an INN.
+    # A brand named in the question is linked to its ingredient by the brand table (here
+    # Diflucan is fluconazole), then checked like an INN.
     table = tmp_path / "brands.csv"
     table.write_text(
         "brand,ingredients,printed_substances,country,source,reference,url\n"
@@ -240,8 +240,7 @@ def test_citations_carry_document_metadata(client: TestClient) -> None:
 def test_pill_ids_invented_by_the_planner_are_dropped(
     client: TestClient, llm: FakeChatModel
 ) -> None:
-    """Found on the real agent (step 3.6): qwen2.5:3b passed "pills": [123, 456] for a
-    question about one confirmed pill; check_interaction then reported other medicines."""
+    """The planner may pass pill ids the user never confirmed: they are dropped."""
     llm.tool_calls = [
         {"name": "check_interaction", "args": {"drugs": ["warfarin"], "pills": [9, 5, 999]}},
     ]
@@ -257,7 +256,7 @@ def test_pill_ids_invented_by_the_planner_are_dropped(
 
 
 def test_answer_is_sealed_for_reports(client: TestClient, llm: FakeChatModel) -> None:
-    """An answer goes into a report exactly as the agent gave it, never edited (D127)."""
+    """An answer goes into a report exactly as the agent gave it, never edited."""
     llm.answer = "DDInter classe cette interaction comme majeure [1]."
     body = ask(client, "La warfarine et le fluconazole interagissent-ils ?")
     assert len(body["seal"]) == 64

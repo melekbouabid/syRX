@@ -1,8 +1,6 @@
-"""Served variant of the champion (src/models/registry.py) and its publication (reg.py).
+"""Served variant of the champion (src/models/registry.py) and its publication.
 
-MLflow runs on a temporary SQLite store (never the project's server), as in
-tests/utils/test_mlflow_utils.py; the models are tiny ONNX graphs tagged like the FP16 / INT8
-variants of src/models/optimize.py.
+MLflow runs on a temporary SQLite store; the models are tiny tagged ONNX graphs.
 """
 
 from __future__ import annotations

@@ -383,7 +383,7 @@ class DemoImage(BaseModel):
     url: str
     thumbnail_url: str
     gradcam_url: str | None = Field(
-        None, description="Precomputed Grad-CAM of this photo (D104), null when not computed"
+        None, description="Precomputed Grad-CAM of this photo, null when not computed"
     )
 
 
@@ -413,7 +413,7 @@ class CitationOut(BaseModel):
     doc_id: str = Field("", description="Document in the index (Documents page)")
     license: str = ""
     rerank_score: float | None = Field(
-        None, description="Cross-encoder score when the search was reranked (D117)"
+        None, description="Cross-encoder score when the search was reranked"
     )
 
 
@@ -579,7 +579,7 @@ class PredictOut(Strict):
     disclaimer: str
 
 
-# ------------------------------------------------------------------ indexed documents (D114)
+# ------------------------------------------------------------------ indexed documents
 
 
 class IndexInfoOut(BaseModel):
@@ -637,7 +637,7 @@ class DocumentDetail(DocumentOut):
     chunks: list[DocumentChunkOut]
 
 
-# --- Data drift of the scanned photos (GET /monitoring/drift, step 2.8) ----------------------
+# --- Data drift of the scanned photos (GET /monitoring/drift) -------------------------------
 
 DriftStatus = Literal["unavailable", "insufficient", "ok", "warning", "drift"]
 

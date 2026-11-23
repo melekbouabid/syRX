@@ -1,8 +1,6 @@
-"""The activity log that administrators read (GET /api/admin/activity and /api/admin/usage).
+"""The activity log read by administrators (GET /api/admin/activity and /api/admin/usage).
 
-An event says who did what and when, from which address and browser, with a few counts. It
-never holds a photo, a pill or medicine name, or the text of a question: those are health
-data and stay with the user (docs/project_rules.md).
+An event says who did what and when; it never holds a photo, a medicine name or a question.
 """
 
 from __future__ import annotations
@@ -66,12 +64,7 @@ GROUP_OF: dict[str, str] = {
 
 
 def client_ip(request: Request) -> str | None:
-    """The browser's address.
-
-    Behind the nginx of docker compose it is the last X-Forwarded-For entry, the one nginx
-    added; anything before it was written by the browser and is not trusted. Without that
-    header (Vite dev proxy, tests) it is the direct client's address.
-    """
+    """The browser's address: the last X-Forwarded-For entry (added by nginx), else the client's."""
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
         return forwarded.split(",")[-1].strip()[:45] or None

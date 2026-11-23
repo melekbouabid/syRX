@@ -1,27 +1,7 @@
-"""Classifier architectures compared at step 2.3 (docs/module1/kaggle_classifieurs.md).
+"""Classifier architectures (baseline CNN, ResNet-50, EfficientNetV2-S, ConvNeXt-Tiny, ViT-B/16,
+YOLO11s-cls) behind one wrapper, `ClassifierNet`, with selective fine-tuning (`set_trainable`).
 
-One wrapper, `ClassifierNet`, for the six candidates, so the training loop, the selective
-fine-tuning, the ONNX export and Grad-CAM (src/utils/gradcam.py) are the same code for all:
-
-| name             | network                                    | pretrained weights      |
-|------------------|--------------------------------------------|-------------------------|
-| baseline-cnn     | `SmallCNN`, four convolution blocks (here) | none: trained from zero |
-| resnet50         | torchvision ResNet-50                      | ImageNet-1k (V2)        |
-| efficientnetv2s  | torchvision EfficientNetV2-S               | ImageNet-1k             |
-| convnext-tiny    | torchvision ConvNeXt-Tiny                  | ImageNet-1k             |
-| vit-b16          | torchvision ViT-B/16 (224 px)              | ImageNet-1k             |
-| yolo11s-cls      | Ultralytics YOLO11s-cls                    | ImageNet-1k             |
-
-The network receives RGB images in [0, 1] (what the API feeds, backend/app/inference.py
-`to_tensor`) and normalises them itself (ImageNet mean and standard deviation for the
-torchvision models, none for YOLO, which is trained on [0, 1]), so the exported ONNX model has
-the API's input. `export_module` adds the softmax: the ONNX output is the probabilities, like
-the Ultralytics export the API serves today.
-
-Transfer learning then selective fine-tuning: each network is described as an ordered list
-of backbone `blocks` (stem first) and a `head`. `set_trainable(net, k)` freezes everything but
-the head and the last `k` blocks (`k` >= number of blocks: the whole network); frozen blocks
-keep their batch-norm statistics (`train_mode`).
+Input is RGB in [0, 1]; each network normalises it itself, so the ONNX export takes the API's input.
 """
 
 from __future__ import annotations
@@ -39,12 +19,7 @@ NO_NORMALISATION = ((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))
 
 
 class SmallCNN(nn.Module):
-    """The baseline: a small convolutional network trained from scratch (no transfer).
-
-    Four blocks of two 3x3 convolutions (batch norm, ReLU) followed by a 2x2 max pooling,
-    channels `width`, 2x, 4x, 8x; global average pooling, dropout, linear classifier.
-    About 1.2 M parameters with width 32.
-    """
+    """The baseline: a small CNN trained from scratch (four conv blocks, about 1.2 M parameters)."""
 
     def __init__(self, num_classes: int, width: int = 32, dropout: float = 0.2) -> None:
         super().__init__()
@@ -77,12 +52,7 @@ class SmallCNN(nn.Module):
 
 
 class YoloLogits(nn.Module):
-    """An Ultralytics ClassificationModel that always returns logits.
-
-    Its Classify head returns logits in training mode but (probabilities, logits) in
-    evaluation mode; this wrapper keeps the logits, so the loss, the softmax of the export and
-    Grad-CAM see the same output in both modes.
-    """
+    """An Ultralytics ClassificationModel that always returns logits, in training and evaluation."""
 
     def __init__(self, model: nn.Module) -> None:
         super().__init__()
@@ -281,11 +251,9 @@ def check_size(arch: str, imgsz: int) -> None:
 
 
 def set_trainable(net: ClassifierNet, unfreeze: int) -> int:
-    """Train the head and the last `unfreeze` backbone blocks; returns trainable parameters.
+    """Train the head and the last `unfreeze` backbone blocks; returns the trainable parameters.
 
-    `unfreeze` = 0: the head only (transfer learning, the pretrained features are kept);
-    `unfreeze` >= the number of blocks: the whole network (every parameter, ViT's class token
-    and position embeddings included).
+    0 = the head only; >= the number of blocks = the whole network.
     """
     parts = net.parts()
     if unfreeze >= len(parts.blocks):

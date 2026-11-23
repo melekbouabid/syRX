@@ -144,9 +144,7 @@ async def check_interactions(
 ) -> InteractionsResult:
     """Every pair among the pills and ingredients given, with DDInter's severity and source.
 
-    A pair with nothing listed is reported as "aucune interaction connue dans cette base de
-    données": it is never called safe. Severity "Unknown" is an interaction whose level
-    DDInter does not grade. No dose or timing advice is given.
+    A pair with nothing listed is never called safe; "Unknown" is an ungraded interaction.
     """
 
     try:

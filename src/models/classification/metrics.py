@@ -1,18 +1,6 @@
-"""Classification metrics computed the same way for every model (and for the v1 champion).
+"""Classification metrics computed the same way for every model: top-1, top-5, macro F1.
 
-Every classifier of step 2.3 is scored by `evaluate` from its class probabilities (one row
-per crop, one column per v2 class), so no library-specific shortcut can favour one model:
-
-- `top1`, `top5`: share of crops whose true class is the first / among the first five;
-- `f1_macro`: F1 of every class, averaged with the same weight per class (the classes that
-  appear in the truth or in the predictions, as scikit-learn), the figure that is not
-  dominated by the classes with many crops;
-- `images`, `classes`: number of crops and of distinct true classes scored.
-
-`allowed` restricts the prediction to a subset of classes (the others can never be chosen):
-this is how a 380-class model and the 150-class v1 champion are compared on the same label
-space (`test_v2_v1c_*`, D100). The confusion matrix and the per-class table are written to the
-export folder (`confusion/`).
+`allowed` restricts the prediction to a subset of classes (same label space as the v1 champion).
 """
 
 from __future__ import annotations

@@ -1,42 +1,7 @@
-"""Score an OCR engine on medicine box photos, log it to MLflow, promote the best (step 2.7).
+"""Score an OCR engine on box, pill and off-topic photos, log it to MLflow, promote the best.
 
-    # training venv, MLflow server running (docker compose up -d mlflow), from the branch
-    # experiment/ocr-<engine> that holds config/ocr/<engine>.yaml
-    python -m src.models.ocr.evaluate --engine rapidocr
-    python -m src.models.ocr.evaluate --engine easyocr --smoke      # 20 photos, no Registry
-    python -m src.models.ocr.evaluate --engine rapidocr --set web   # free photos (Commons)
-    python -m src.models.ocr.evaluate --engine rapidocr --set user  # owner's photos (later)
-
-Three sets (docs/module1/boites.md, decisions D108-D111):
-
-- `box`: the 718 Italian OTC box photos (data/processed/medicine_boxes/eval.csv, stage
-  prepare_boxes). The ground truth comes from the metadata, not from the photo: brand
-  (first word of the commercial name) and active ingredients ("Principi attivi");
-- `pill`: 200 C3PI photos of the detector's comparison split (test_holdout.txt, D93),
-  never seen by the served models;
-- `off_topic`: 19 photos that are neither (data/raw/off_topic, CC0 / public domain).
-
-`--set web` replaces the Italian boxes by real box photos under a free licence from
-Wikimedia Commons (data/raw/medicine_boxes/web_commons, Panadol among them, D115) and
-`--set user` by the owner's photos; both read a labels.csv (image, brand, ingredients).
-
-Every photo goes through the API's own code (app.boxes: OCR, TextMatcher with the brand
-table and the INN aliases, decide_kind with the pill detector of models/); RxNav is off so
-that the score is reproducible offline. Metrics (all in [0, 1] except latency):
-
-- `ingredient_recall` (promotion metric): box photos with a known ingredient where at least
-  one true ingredient is found; `ingredient_full_recall`: all of them;
-- `ingredient_precision`: found ingredients that are true (micro), and
-  `wrong_ingredient_rate`: photos with at least one ingredient that is not on the box;
-- `brand_read_rate`: the brand is among the words read (photos with a brand);
-- `box_as_box_rate`, `box_as_pill_rate`, `pill_as_pill_rate`, `pill_as_box_rate`,
-  `off_topic_refused_rate` (no pill class and no ingredient): the out-of-distribution check;
-- `latency_ms_median`, `latency_ms_p95`: OCR of 30 box photos, 3 rounds with a pause in
-  between (the PC throttles under continuous load, D96).
-
-A run of the full sets logs the engine as a pyfunc LoggedModel (src/models/ocr/
-pyfunc_model.py), registers it in `tujya-box-ocr` and calls promote_if_better on
-`ingredient_recall` (params.yaml `compare.ocr`). `--smoke` never reaches the Registry (D94).
+Promotion metric: `ingredient_recall`. Run: `python -m src.models.ocr.evaluate --engine <name>
+[--set web|user] [--smoke]`.
 """
 
 from __future__ import annotations
@@ -150,7 +115,7 @@ def user_samples(folder: Path = USER_DIR) -> list[Sample]:
 
 
 def web_samples(folder: Path = WEB_DIR) -> list[Sample]:
-    """Real box photos under a free licence from Wikimedia Commons (D115)."""
+    """Real box photos under a free licence from Wikimedia Commons."""
     return labelled_samples(folder, "web")
 
 

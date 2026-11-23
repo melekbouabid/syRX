@@ -8,8 +8,7 @@ import { defineConfig } from "vitest/config";
 // drift report (/monitoring/drift; /monitoring itself is a page of the app) are forwarded to
 // FastAPI. Same origin means the session cookie just works and the API needs no
 // CORS setup. nginx.conf does the same in production.
-// Tailwind CSS v4 through its Vite plugin (src/index.css, docs/decisions.md D106); Vitest
-// runs the unit tests of src/**/*.test.ts(x) in Node, without a browser.
+// Tailwind CSS v4 through its Vite plugin; Vitest runs src/**/*.test.ts(x) in Node.
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, ".", "VITE_");
   const target = env.VITE_API_TARGET ?? "http://127.0.0.1:8000";
@@ -29,8 +28,8 @@ export default defineConfig(({ mode }) => {
         "/monitoring/drift": target,
       },
     },
-    // three.js (src/components/three/pillScene.ts, about 550 kB) is its own chunk, loaded only
-    // by the start and sign-in pages after their first paint (D128): not worth a warning.
+    // three.js (about 550 kB) is its own chunk, loaded only by the start and sign-in pages
+    // after their first paint: not worth a warning.
     build: {
       chunkSizeWarningLimit: 600,
     },

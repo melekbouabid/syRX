@@ -1,9 +1,7 @@
 """Tiny ONNX models with the same inputs, outputs and metadata as the Ultralytics exports.
 
-- Detector: input 1x3xSxS, output 1x5xN, always the boxes given (in letterbox pixels).
-- Classifier: input 1x3xCxC, output 1xK probabilities. The class is chosen by the dominant
-  colour of the crop: red -> index 0, green -> index 1, blue -> index 2 (the model sees RGB),
-  so a test can check that each box was cropped at the right place.
+The fake classifier picks the crop's dominant colour (red 0, green 1, blue 2), so a test can
+check that each box was cropped at the right place.
 """
 
 from __future__ import annotations

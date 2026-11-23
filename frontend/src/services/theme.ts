@@ -1,11 +1,8 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * Light or dark mode. Every colour of styles.css is keyed off `data-theme` on <html>. Until
- * someone presses the toggle the page follows the system setting; then the choice is kept in
- * this browser (localStorage, read and written inside try/catch: a private window or blocked
- * storage simply means the choice is not remembered). index.html applies the same rules
- * before the first paint, so a dark page never flashes white while the app loads.
+ * Light or dark mode (`data-theme` on <html>): the system setting until the toggle is pressed,
+ * then kept in localStorage when available. index.html applies it before the first paint.
  */
 export type Theme = "light" | "dark";
 

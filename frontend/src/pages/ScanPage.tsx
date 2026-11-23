@@ -36,7 +36,7 @@ const MODES: { mode: Mode; icon: IconName }[] = [
   { mode: "webcam", icon: "camera" },
 ];
 
-/** A medicine box read by OCR (step 2.7): text read, brand, active ingredients, sources. */
+/** A medicine box read by OCR: text read, brand, active ingredients, sources. */
 function BoxCard({
   box,
   added,
@@ -125,7 +125,7 @@ interface Confirmed {
 interface Photo {
   url: string; // object URL of exactly what was sent to the scan
   name: string;
-  gradcamUrl: string | null; // precomputed Grad-CAM, only for gallery photos (D104)
+  gradcamUrl: string | null; // precomputed Grad-CAM, only for gallery photos
 }
 
 type OnImage = (file: Blob, name: string, gradcamUrl?: string | null) => void;
@@ -704,7 +704,7 @@ function ResultStage({
   );
 }
 
-/** Data drift alert (GET /monitoring/drift, step 2.8): shown only when the recent photos
+/** Data drift alert (GET /monitoring/drift): shown only when the recent photos
  * really differ from the reference photos, re-checked after every scan. */
 function DriftBanner({ scans }: { scans: number }) {
   const t = useT();

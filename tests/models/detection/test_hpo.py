@@ -14,8 +14,7 @@ from src.models.detection import hpo
 ROOT = Path(__file__).resolve().parents[3]
 FAKE = Path(__file__).parent / "configs" / "detector_fake.yaml"
 CONFIGS = sorted((ROOT / "config" / "hpo").glob("detector_*.yaml"))
-# What step 2.2 asks every model's search to cover (PLAN: lr0, imgsz, batch, optimiser,
-# augmentation).
+# What every model's search must cover: lr0, imgsz, batch, optimiser, augmentation.
 REQUIRED_PARAMETERS = {"lr0", "imgsz", "batch", "optimizer"}
 AUGMENTATIONS = {"mosaic", "mixup", "hsv_h", "hsv_s", "hsv_v", "fliplr", "flipud"}
 

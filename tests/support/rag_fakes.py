@@ -1,8 +1,4 @@
-"""Offline stand-ins for the RAG tests: a scripted chat model and a tiny corpus.
-
-CI never runs Ollama or a real embedding model: `FakeEmbedder` (rag/init_qdrant.py)
-hashes words, and `FakeChatModel` returns scripted tool calls and answers.
-"""
+"""Offline stand-ins for the RAG tests: a scripted chat model and a tiny corpus."""
 
 from __future__ import annotations
 

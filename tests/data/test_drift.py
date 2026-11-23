@@ -1,9 +1,7 @@
-"""Reference statistics and demonstration of the data drift monitor (step 2.8):
-src/data/drift_reference.py and src/data/drift_demo.py.
+"""Reference statistics and demonstration of the data drift monitor.
 
-The last test runs the served models on real C3PI v2 photos: it needs the DVC data, the
-published models and the reference of `dvc repro drift_reference`, and is skipped without them
-(GitHub Actions has none of them)."""
+The last test needs the DVC data and the published models; it is skipped without them.
+"""
 
 from __future__ import annotations
 

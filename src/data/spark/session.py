@@ -22,9 +22,8 @@ SPLITS_V2 = ROOT / "config" / "splits" / "c3pi_v2"
 def spark_session(app: str, master: str | None = None) -> SparkSession:
     """A SparkSession named tujya-<app>.
 
-    The master comes from the argument, then TUJYA_SPARK_MASTER, then local[*]. The
-    executors get the repository root on their PYTHONPATH, so the functions of this package
-    that run inside UDFs import there too.
+    Master from the argument, then TUJYA_SPARK_MASTER, then local[*]; executors get the
+    repository root on their PYTHONPATH.
     """
     master = master or os.environ.get("TUJYA_SPARK_MASTER", "local[*]")
     builder = (

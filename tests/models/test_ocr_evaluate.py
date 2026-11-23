@@ -1,4 +1,4 @@
-"""Scores of the OCR comparison (src/models/ocr/evaluate.py, step 2.7), on made-up outcomes."""
+"""Scores of the OCR comparison (src/models/ocr/evaluate.py), on made-up outcomes."""
 
 from __future__ import annotations
 

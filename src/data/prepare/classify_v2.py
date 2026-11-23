@@ -1,42 +1,7 @@
-"""Build the classification dataset of C3PI v2 (DVC stage prepare_classify_v2, step 2.3).
+"""Build the classification dataset of C3PI v2 (DVC stage prepare_classify_v2).
 
-    python -m src.data.prepare classify-v2             # training venv (.venv-train) or .venv
-    python -m src.data.prepare classify-v2 --limit 20  # first 20 images of each split and role
-
-The classifiers of step 2.3 are trained and compared on C3PI v2 (380 classes, step 1.4,
-docs/module1/big_data.md), like the detectors of step 2.2 (decision D99 in
-docs/decisions.md). A classification sample is the square crop of one pill with a 20 % margin
-on each side, the crop the API feeds the classifier (backend/app/inference.py
-`square_crop`), so every image of the v2 split gives at most two crops (front and back of the
-same pill, as v1):
-
-- consumer photos (`C3PI_Test`): boxes of src/data/autolabel.py `detect_pills`, doubtful
-  photos left out (same rule as v1 and as the detection dataset);
-- RxNav reference images: `detect_reference` (ruler and banner removed first), as v1;
-- NLM challenge images (one pill on a plain background): `detect_pills`;
-- segmented studio images (16-bit RGBA PNG): the box of the opaque part of the alpha mask
-  above the NLM banner, the pill composited on a plain grey background;
-- the offline augmentation of the rare classes (stage spark_augment, generated from TRAIN
-  images only): `detect_pills`, largest box.
-
-Inputs: the v2 split (data/processed/c3pi/bigdata/split: split, session group, role of every
-image), the augmented images, the v1 lists (config/splits/selected_images.csv,
-config/pill_classes_v1.csv) and the class list of v2 (config/splits/c3pi_v2/classes.csv).
-Outputs, under data/processed/c3pi/datasets_v2/classify/ (DVC, never git):
-
-- <split>/<class_id:03d>/<name>_<k>.jpg  crops, CROP_SIZE px (folders = v2 class ids);
-- index.csv          one row per crop: file, split, class, session group, role, source
-                     image, box, `holdout` flag;
-- classes.csv        v2 class list with the v1 class id of the 150 classes v1 had
-                     (`v1_class_id`, how a 150-class model is scored on this split) and the
-                     number of crops per split;
-- test_holdout.txt   the comparison split (relative file names): test crops whose session
-                     holds no photo the v1 champion saw in train or val (same rule as the
-                     detection holdout of D93, src/data/prepare/detect_v2.py);
-- summary.json       counts per split and role, failures.
-
-No image is moved between splits: the v2 split is by session (D89), and the augmented images
-come from train sources only (stage spark_augment), so nothing of val or test leaks into train.
+One square crop per pill (20 % margin, as the API crops), split by shooting session, with a
+comparison holdout of test sessions the v1 champion never saw.
 """
 
 from __future__ import annotations
@@ -109,9 +74,7 @@ def read_unchanged(path: Path) -> np.ndarray:
 def segmented_pill(image: np.ndarray) -> tuple[np.ndarray, list[Box]]:
     """A segmented studio PNG (RGBA, 8 or 16 bits): the pill on grey and its box.
 
-    The NLM banner at the bottom is opaque on whole rows: the box is searched above it, as
-    the largest connected region of clearly opaque pixels (a faint alpha noise of 1 to 7
-    covers the rest of the frame).
+    The box is the largest opaque region above the NLM banner.
     """
     if image.dtype == np.uint16:
         image = (image >> 8).astype(np.uint8)

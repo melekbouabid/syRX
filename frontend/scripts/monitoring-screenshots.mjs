@@ -1,12 +1,6 @@
-// Drive the Monitoring page and the Scanner drift banner, save screenshots (docs/screenshots/30-31).
-//
-//   BASE=http://localhost:8080 node scripts/monitoring-screenshots.mjs   # the docker compose app
-//
-// Run it after a drift scenario was sent to the API (docs/module1/derive.md):
-//   python -m src.data.drift_demo --api http://127.0.0.1:8000 --only dark
-// Signs in, opens Monitoring and checks the drift status and the table of the eight
-// statistics, then opens the Scanner and checks the drift banner. Fails if a step does not
-// show what it should.
+// Drive the Monitoring page and the Scanner drift banner and save screenshots, after
+// `python -m src.data.drift_demo --api http://127.0.0.1:8000 --only dark`.
+//   BASE=http://localhost:8080 node scripts/monitoring-screenshots.mjs
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";

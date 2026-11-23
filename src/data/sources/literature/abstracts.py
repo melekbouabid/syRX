@@ -1,8 +1,4 @@
-"""PubMed XML parsing into the `articles` table of the PubMed connector.
-
-Flags article type, language and retraction status so downstream text mining can exclude
-reviews, non-English text or retracted work on purpose rather than by accident.
-"""
+"""Parse PubMed XML into the `articles` table, with article type, language and retraction flags."""
 
 from __future__ import annotations
 

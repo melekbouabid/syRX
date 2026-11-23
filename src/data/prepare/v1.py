@@ -1,18 +1,6 @@
-"""Build the training datasets from the downloaded C3PI subset.
+"""Build the v1 training datasets (autolabels, YOLO detection, classification crops).
 
-    python -m src.data.prepare v1            # labels + both datasets
-    python -m src.data.prepare v1 --sheet    # also a contact sheet of boxes to check by eye
-
-Input: the C3PI photos in data/raw/c3pi/images. Outputs (all under data/processed/c3pi/,
-tracked by DVC, never by git):
-- labels/autolabel.csv          one row per image: boxes, flags, split, class
-- datasets/detect/              YOLO detection dataset, one class "pill"; consumer photos
-                                without flags only; long side resized to 640 px
-- datasets/classify/            YOLO classification dataset: square crops around each box,
-                                224 px, folders <split>/<class_id:03d>/
-
-The split of every image comes from config/splits/selected_images.csv, so a photo and all
-its crops stay in one split.
+Run: `python -m src.data.prepare v1 [--sheet]`; outputs under data/processed/c3pi/ (DVC).
 """
 
 from __future__ import annotations

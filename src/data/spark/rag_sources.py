@@ -1,29 +1,7 @@
-"""Sources of the larger RAG corpus (module 2) for the classes of the C3PI dataset v2.
+"""Collect the RAG sources for the classes of the C3PI dataset v2 (data/external/rag_v2).
 
-    python -m src.data.spark.rag_sources ingredients   # v2 classes -> RxNav -> ingredients
-    python -m src.data.spark.rag_sources labels        # openFDA, one label per ingredient
-    python -m src.data.spark.rag_sources pubmed        # PubMed, up to 40 per ingredient
-
-Run from the repository root with the project venv (.venv): network access goes through the
-polite client of the data pipeline (src/data/sources: rate limits per host, retries,
-cache, manifest). Everything is written to its own workspace, data/external/rag_v2 (raw,
-interim, manifest.json, DVC), so the corpus of v1 (data/external/rag_v1, stage `rag_corpus`)
-is left as it is.
-The Spark job `rag` (src/data/spark/rag_job.py) then cleans, deduplicates and chunks both.
-
-- ingredients: the classes of config/splits/c3pi_v2/classes.csv. Classes already in v1 keep
-  their RxNav mapping (data/processed/pharma/pill_ingredients.csv); the new ones are mapped
-  like v1 (NDC -> RxCUI -> ingredients, src/rag/corpus.py). Writes
-  data/external/rag_v2/ingredients.csv (one row per class and ingredient) and
-  data/external/rag_v2/class_ingredients.csv (`active_ingredients` per class, the input of the two
-  connectors).
-  It also writes data/external/rag_v2/new_ingredients.csv: the ingredients that no class of v1
-  (config/pill_classes_v1.csv) has, i.e. those without any document in the v1 corpus.
-- labels / pubmed: the openFDA and PubMed connectors with the new ingredients only (the
-  ingredients of v1 keep their label and abstracts of data/external/rag_v1: no second version of
-  a label,
-  and the expected chunks of the benchmarks stay the documents they were written on); PubMed
-  keeps up to 40 abstracts per ingredient (v1: 20).
+Run: `python -m src.data.spark.rag_sources ingredients | labels | pubmed`.
+Only new ingredients are fetched; the v1 workspace is left as it is.
 """
 
 from __future__ import annotations

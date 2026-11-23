@@ -1,12 +1,7 @@
 """NLM C3PI pill images: metadata index, class selection, download and splits.
 
-C3PI publishes one XML file per image folder (`ALLXML/PillProjectDiscN.xml`) describing
-every image: NDC, part, generic and proprietary names, file name, size, SHA-1, image type
-and, for consumer photos, camera, lighting and background. This module turns those files
-into one flat table and builds the training subset from it. It only uses the standard
-library so that it runs (and is tested) without the training venv.
-
-Docs: docs/module1/dataset_c3pi.md. Licence: ODbL, research and development use only.
+Standard library only, so it runs and is tested without the training venv.
+Run: `python -m src.data.download <command>` (licence: ODbL, research use only).
 """
 
 from __future__ import annotations
@@ -197,11 +192,8 @@ def select_classes(
 ) -> tuple[list[PillClass], list[ImageRecord]]:
     """Pick the pills with the most consumer photos, within a download budget.
 
-    Photos taken with a camera in `exclude_cameras` are not eligible. Classes are ranked by
-    their number of eligible consumer JPGs (ties: class key). Each class gets at most
-    `max_images_per_class` photos (a seeded random sample, so busy classes do not
-    dominate) plus one small reference JPG per NDC11 when one exists. Classes are added in
-    rank order while the total size stays within `budget_bytes`.
+    Each class gets at most `max_images_per_class` photos (seeded sample) plus one reference JPG
+    per NDC11; classes are added in rank order while the size fits in `budget_bytes`.
     """
     by_class: dict[str, list[ImageRecord]] = defaultdict(list)
     seen: set[str] = set()
@@ -282,12 +274,9 @@ def read_classes(path: Path) -> list[dict[str, str]]:
 def split_images(
     records: list[ImageRecord], *, val: float, test: float, seed: int = 0
 ) -> dict[str, str]:
-    """Assign every selected image to train, val or test, per class.
+    """Assign every selected image to train, val or test, per class; returns {path: split}.
 
-    The split is by file (each photo is in exactly one split), stratified by class, and
-    files with the same SHA-1 always land together so a duplicated photo cannot leak from
-    train into test. Reference images are always in train: they are clean studio shots, not
-    photos the app will be asked about. Returns {path: split}.
+    Stratified by class; files with the same SHA-1 stay together and reference images go to train.
     """
     rng = random.Random(seed)
     groups: dict[str, dict[str, list[ImageRecord]]] = defaultdict(lambda: defaultdict(list))
@@ -399,11 +388,8 @@ def download(
 
 
 # --- Command line -------------------------------------------------------------------------
-# Command line for the C3PI subset: `python -m src.data.download <command>`.
-#
-# Run from the repository root with the training venv (.venv-train). Paths default to the
-# repository layout: metadata in data/raw/c3pi/metadata, images in data/raw/c3pi/images,
-# class list of v1 in config/pill_classes_v1.csv, split lists in config/splits/.
+# Paths default to the repository layout (data/raw/c3pi, config/pill_classes_v1.csv,
+# config/splits/).
 
 ROOT = Path(__file__).resolve().parents[2]  # repository root
 META = ROOT / "data" / "raw" / "c3pi" / "metadata"

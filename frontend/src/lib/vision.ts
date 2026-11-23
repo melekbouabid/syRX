@@ -1,6 +1,5 @@
-// Pure helpers of the vision part of the Scanner page (course guide, step 2.6): class
-// colours, box geometry on a canvas, latency figures and the live webcam loop. No React and
-// no DOM here, so src/lib/vision.test.ts checks them in Node (Vitest).
+// Pure helpers of the Scanner page: class colours, box geometry, latency figures and the
+// live webcam loop. No React and no DOM, so Vitest checks them in Node.
 import { messages } from "../i18n";
 
 /** A box with corners in 0-1 of the image width and height (`box_normalized` of the API). */
@@ -173,14 +172,14 @@ export function headlineMetrics(model: {
     return true;
   };
   if (model.task === "detect") {
-    // Promotion metric of step 2.2 (D93), else the v1 test split, else validation.
+    // Promotion metric (C3PI v2 comparison split), else the v1 test split, else validation.
     const found =
       score(words.testMap, "test_v2_mAP50_95", false) ||
       score(words.testMap, "test_mAP50_95", false);
     if (!found) score(words.valMap, "val_mAP50_95", false);
     if (!score(words.testMap50, "test_v2_mAP50", false)) score(words.testMap50, "test_mAP50", false);
   } else {
-    // Promotion metric of step 2.3 (comparison split of C3PI v2, D100), else the v1 test split.
+    // Promotion metric (C3PI v2 comparison split), else the v1 test split.
     if (!score(words.top1, "test_v2_top1", true)) score(words.top1, "test_top1", true);
     if (!score(words.top5, "test_v2_top5", true)) score(words.top5, "test_top5", true);
   }

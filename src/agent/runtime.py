@@ -1,9 +1,6 @@
-"""Builds the agent's pieces once per app: chunk store (Qdrant), retriever, LLM, toolbox,
-agent.
+"""Build the agent's pieces once per app: chunk store, retriever, LLM, toolbox and agent.
 
-Production: Ollama (`TUJYA_OLLAMA_URL`) serves the LLM (`TUJYA_LLM_MODEL`) and the
-embeddings (`TUJYA_EMBEDDING_MODEL`); the chunks are in Qdrant (`TUJYA_QDRANT_URL`).
-Tests replace `llm`, `embedder` and `store` with fakes.
+Ollama serves the LLM and the embeddings, Qdrant holds the chunks; tests pass fakes.
 """
 
 from __future__ import annotations
@@ -78,7 +75,7 @@ class AgentHolder:
             )
             store = self.store or open_store(self.settings, embedder.dim, self.pharma_engine)
             rewriter = None
-            if self.settings.rag_query_rewrite:  # D118: one more LLM call per search
+            if self.settings.rag_query_rewrite:  # one more LLM call per search
                 self.llm = self.llm or ollama_llm(self.settings)
                 rewriter = QueryRewriter(self.llm)
             self._toolbox = Toolbox(

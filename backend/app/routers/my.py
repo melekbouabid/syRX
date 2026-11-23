@@ -1,9 +1,6 @@
 """What a signed-in user keeps: "My medicines" and saved reports with their share links.
 
-Only the owner can read these; administrators never see them (the activity log only counts
-them). A shared report is read without signing in, through its secret link `/shared#<token>`:
-the token travels in the URL fragment and then in a POST body, so it never appears in a
-server or proxy log.
+A shared report is read through `/shared#<token>`: the token never appears in a server log.
 """
 
 from __future__ import annotations

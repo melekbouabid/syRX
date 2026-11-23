@@ -1,12 +1,6 @@
-// Ask the Tujya agent real questions from the Scanner page and save screenshots
-// (docs/screenshots/08-*.jpg ...). Needs the whole stack, Ollama included:
-//
+// Ask the agent real questions from the Scanner page (cited answer, then a refused dose
+// question) and save screenshots to docs/screenshots/. Needs the whole stack, Ollama included.
 //   BASE=http://localhost:8080 node scripts/chat-screenshots.mjs
-//
-// Signs in, confirms two demo pills (fluconazole and citalopram), asks a French question about
-// them in the chat panel, waits for the streamed answer and its numbered sources, opens a
-// citation and the tool calls; then asks a dose question, which must be refused. Fails if a
-// step does not show what it should.
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";

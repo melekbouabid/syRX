@@ -5,7 +5,7 @@ import { Icon } from "../components/icons";
 import { driftStatusLabel, driftTone, formatStat } from "../lib/drift";
 import { useT } from "../i18n";
 
-// Data drift of the scanned photos against the reference photos (GET /monitoring/drift, step 2.8).
+// Data drift of the scanned photos against the reference photos (GET /monitoring/drift).
 
 function Summary({ report }: { report: DriftReport }) {
   const m = useT().monitoring;

@@ -1,20 +1,6 @@
-"""Job `epillid`: what the ePillID benchmark shares with C3PI and with the classes of v2.
+"""Spark job `epillid`: overlap of the ePillID benchmark with C3PI and the v2 classes.
 
-ePillID (Usuyama et al., CVPR Workshops 2020, https://github.com/usuyama/ePillID-benchmark)
-is built from two NLM sources: the consumer photos and reference images of the NLM Pill
-Image Recognition Challenge (taken from C3PI) and the reference images of NIH Pillbox. It
-serves Tujya as the reference BENCHMARK (comparison with the literature), not as training
-data: its consumer images are crops of C3PI photos, so adding them would duplicate images
-we already have (and could put a copy of a test photo in train).
-
-Input: data/raw/epillid/ePillID_data/all_labels.csv (DVC), index/images (job `index`),
-config/splits/c3pi_v2/classes.csv (job `split`) and config/pill_classes_v1.csv (v1).
-Each ePillID row gets its NDC9 (labeler + product code, zero-padded) and its kind:
-`consumer` (fcn_mix_weight/dc_224), `challenge_reference` (fcn_mix_weight/dr_224) or
-`pillbox_reference` (segmented_nih_pills_224).
-
-Outputs (data/processed/c3pi/bigdata/epillid, DVC): images/ (ePillID rows with their
-match), classes/ (v2 classes with their ePillID images), summary.json.
+ePillID is used as a reference benchmark only: its images are crops of C3PI photos.
 """
 
 from __future__ import annotations

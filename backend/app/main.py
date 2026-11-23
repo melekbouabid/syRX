@@ -93,7 +93,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         threads=settings.onnx_threads,
         conf=settings.scan_detection_confidence,
     )
-    # Medicine boxes (step 2.7): OCR loaded on the first scan, brand and INN tables in config/.
+    # Medicine boxes: OCR loaded on the first scan, brand and INN tables in config/.
     app.state.boxes = BoxReader(
         OcrHolder(settings.ocr_threads, enabled=settings.box_ocr_enabled),
         settings.brand_table_file,
@@ -104,7 +104,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             timeout=settings.rxnav_timeout_seconds,
         ),
     )
-    # Data drift (step 2.8): statistics of the scanned photos in a sliding window, in memory.
+    # Data drift: statistics of the scanned photos in a sliding window, in memory.
     app.state.drift = DriftMonitor.from_file(settings.drift_reference_file)
     # Bonus: Tox21 toxicity model, loaded on first use (models/tox21, docs/bonus/toxicity.md).
     app.state.toxicity = ToxHolder(settings.tox_model_dir, settings.ingredient_smiles_file)

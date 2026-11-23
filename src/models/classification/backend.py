@@ -1,14 +1,6 @@
 """What a classifier backend returns, without importing PyTorch.
 
-A backend (src/models/classification/torch_backend.py; a fake one in the tests) is a module
-with five functions, called by src/models/classification/runner.py:
-
-- `train(hp, data_root, work, *, model, pretrained, epochs, name, seed, fraction=1.0,
-  patience=100, max_minutes=None, log=print) -> TrainResult`;
-- `predict(weights, files, imgsz) -> np.ndarray` (class probabilities, crops x classes);
-- `export_onnx(weights, imgsz, target, metadata) -> Path`;
-- `parameter_count(weights) -> int`;
-- `gradcam_pictures(weights, items, imgsz, out_dir, names) -> list[Path]`.
+A backend module provides train, predict, export_onnx, parameter_count and gradcam_pictures.
 """
 
 from __future__ import annotations

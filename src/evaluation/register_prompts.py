@@ -1,14 +1,6 @@
-"""Register the agent's prompts in the MLflow Prompt Registry (step 3.4).
+"""Register the agent's prompts in the MLflow Prompt Registry (a changed text is a new version).
 
-Each answer prompt version of src/agent/prompts.py becomes the version of the same number of
-`tujya-answer-fr` / `tujya-answer-en` (v1 -> version 1); the tool planner is
-`tujya-tool-planner`. The answer prompts are registered as chat templates: the system message
-of src/agent/prompts.py and the user message the agent builds ({{sources}}, {{question}}).
-Already registered versions are checked, not registered twice: a text that differs from the
-registry stops the script (a registered version is immutable; a new text is a new version).
-
-    # from the repository root, project venv (.venv) active, MLflow running
-    python -m src.evaluation.register_prompts
+Run: `python -m src.evaluation.register_prompts` (MLflow running).
 """
 
 from __future__ import annotations

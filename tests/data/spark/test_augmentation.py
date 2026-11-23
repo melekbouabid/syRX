@@ -50,9 +50,9 @@ def split_table(tmp_path):
     rows = []
 
     def add(class_id, key, name, split, role="consumer", exists=True):
-        path = f"D1/images/{key}_{name}"
+        path = f"disc1/images/{key}_{name}"
         if exists:
-            file = images / "D1" / f"{key}_{name}"
+            file = images / "disc1" / f"{key}_{name}"
             segmented(file) if name.endswith(".PNG") else photo(file, len(rows))
         rows.append(
             {"path": path, "class_id": class_id, "class_key": key, "role": role, "split": split}

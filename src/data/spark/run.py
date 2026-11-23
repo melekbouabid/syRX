@@ -1,8 +1,6 @@
 """Run one Big Data job in this Python process: `python -m src.data.spark.run <job>`.
 
-Needs pyspark and Java 17+ (the Spark image of docker-compose.yml has both; on the Windows
-host use `python -m src.data.spark.submit <job>`, which runs this file in the cluster).
-The master comes from --master, then TUJYA_SPARK_MASTER, then local[*].
+Needs pyspark and Java 17+; master from --master, then TUJYA_SPARK_MASTER, then local[*].
 """
 
 from __future__ import annotations

@@ -1,9 +1,6 @@
-"""Control for the citation judge: does it say "yes" to a source that cannot support the
-claim? Pairs cited answer sentences with the first source of another question (another
-drug) and counts the judge's "yes" (its false-positive rate). Logged to MLflow.
+"""Control of the citation judge: its "yes" rate on sources that cannot support the claim.
 
-    # from the repository root, project venv (.venv) active
-    python -m src.evaluation.judge_control [--judge gemma3:4b] [--n 40]
+Run: `python -m src.evaluation.judge_control [--judge gemma3:4b] [--n 40]` (logged to MLflow).
 """
 
 from __future__ import annotations

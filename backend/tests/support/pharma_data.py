@@ -1,8 +1,7 @@
-"""A tiny version of the medicine tables for the API tests (scan, pills, interactions).
+"""A tiny version of the medicine tables for the API tests.
 
-Classes 5, 7 and 9 match the fake classifier's colours in fake_models.py: red -> 5 (a
-losartan + hydrochlorothiazide combination), green -> 7 (warfarin), blue -> 9 (a
-multivitamin RxNav has no ingredient for). Class 11 is a second warfarin product.
+Classes 5, 7 and 9 match the fake classifier's colours (red, green, blue); class 11 is a
+second warfarin product.
 """
 
 from __future__ import annotations

@@ -1,21 +1,7 @@
 """Medicine boxes: read the printed text (OCR), then link it to active ingredients.
 
-Step 2.7 (docs/module1/boites.md, decisions D108-D112). The pill models only know C3PI
-pills, so a photo of a box (Panadol, Doliprane...) used to get a wrong pill name. A box is
-recognised from its text instead:
-
-1. OCR (RapidOCR: PP-OCR detection and recognition models in ONNX, run by ONNX Runtime
-   like the pill models, no PyTorch) gives the printed lines;
-2. the lines are matched with the brand table `config/brand_aliases.csv` (each row with its
-   source) and with the ingredient names of the interaction table plus
-   `config/inn_aliases.csv` (European boxes print the INN: "paracetamolo", "ibuprofène");
-3. when neither matches, RxNorm (RxNav `approximateTerm`, public API) is asked for the
-   largest printed words, only when a contact email is configured (polite client, same rule
-   as the data pipeline);
-4. nothing found: "boîte non reconnue", never a guess.
-
-`decide_kind` then says whether the photo shows a pill, a box or something else
-(out of distribution: the scanner refuses instead of naming a pill class).
+RapidOCR (ONNX) reads the lines, matched with the brand table and INN aliases, RxNav as a
+fallback; `decide_kind` says whether a photo shows a pill, a box or neither.
 """
 
 from __future__ import annotations
@@ -230,10 +216,9 @@ class OcrEngine(Protocol):
 
 
 class RapidOcrEngine:
-    """RapidOCR 3 (PP-OCRv4 mobile detection + recognition, ONNX Runtime, CPU).
+    """RapidOCR 3 (PP-OCRv4 mobile, ONNX Runtime, CPU).
 
-    `threads` caps ONNX Runtime's intra-op threads: with one thread per core the laptop of
-    the project throttles after a few images (D96), 4 threads keep ~0.5 s per box photo.
+    `threads` caps ONNX Runtime's threads: one per core makes the laptop throttle.
     """
 
     name = "rapidocr"
@@ -327,12 +312,7 @@ def _grams(line: OcrLine, max_words: int) -> Iterable[tuple[str, str]]:
 
 
 class Choices:
-    """Folded names grouped by (number of words, first two letters).
-
-    Fuzzy matching only compares names with as many words and the same beginning: spelling
-    variants keep it ("paracetamolo", "ibuprofène"), while "vitamina" is not "vitamin a"
-    and "aciclovir" is acyclovir, not famciclovir.
-    """
+    """Folded names grouped by (number of words, first two letters), for fuzzy matching."""
 
     def __init__(self, keys: Iterable[str]) -> None:
         self.keys = set(keys)
@@ -611,9 +591,8 @@ def decide_kind(
 ) -> Kind:
     """Pill, box, or neither (out of distribution: the scanner refuses).
 
-    Text that names a medicine wins over the pill detector (a box often shows pills), then
-    enough printed text means a box even if nothing is recognised ("boîte non reconnue"),
-    then a confident pill detection; anything else is refused.
+    Medicine text wins over the pill detector, then enough printed text means a box, then a
+    confident pill detection; anything else is refused.
     """
     if match is not None and (match.recognised or match.brand is not None):
         return "box"

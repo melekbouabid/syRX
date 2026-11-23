@@ -1,7 +1,6 @@
-"""Medicine boxes (step 2.7): text matching, kind of a photo, RxNav fallback, /api/scan.
+"""Medicine boxes: text matching, kind of a photo, RxNav fallback, /api/scan.
 
-The OCR engine is faked (lines given by the test), except in the last test, which reads a
-synthetic picture of printed text with the real RapidOCR when it is installed.
+The OCR is faked, except in the last test (real RapidOCR when installed).
 """
 
 from __future__ import annotations

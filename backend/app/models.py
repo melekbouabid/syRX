@@ -1,8 +1,6 @@
-"""Database tables: accounts, their sign-in sessions, their profile, the activity log that
-administrators read, and what each user keeps (saved medicines and reports).
+"""Database tables: accounts, sessions, profiles, the activity log, saved medicines and reports.
 
-The new tables never change `users`: the project creates its tables with `create_all` and has
-no migrations, so an existing `app.db` gains the new tables at the next start and keeps working.
+Tables are created with `create_all` (no migrations); new tables never change `users`.
 """
 
 from __future__ import annotations
@@ -187,11 +185,9 @@ class SavedMedicine(Base):
 
 
 class Report(Base):
-    """A saved interaction report, kept as it was on the day it was made.
+    """A saved interaction report, a snapshot built by the server when it was made.
 
-    `content` is a snapshot built by the server (pills, interaction check, sealed chat
-    answers), so a report never changes when the medicine tables do. A share link is stored
-    as the SHA-256 of its token, like a session cookie: the token is shown once, to the owner.
+    A share link is stored as the SHA-256 of its token; the token is shown once, to the owner.
     """
 
     __tablename__ = "reports"

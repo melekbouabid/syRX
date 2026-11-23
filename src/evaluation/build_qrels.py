@@ -1,25 +1,7 @@
-"""Build the RAG benchmark set from the corpus: src/evaluation/questions.jsonl and qrels.json.
+"""Build the RAG benchmark set: src/evaluation/questions.jsonl and qrels.json.
 
-Each item comes from a hand-written spec (`src/evaluation/question_spec.json`: question type,
-ingredients, language, question text) and gets, from data/processed/rag/corpus/chunks.parquet:
-- `expected_chunks`: every chunk that answers it (rules per type below), written to
-  qrels.json (question id -> chunk ids, as in labs/05-Evaluation);
-- `reference`: an extractive reference answer (sentences of the expected label chunks).
-The candidates were then read one by one and corrected or dropped
-(docs/module2/benchmark.md).
-
-Types and their expected chunks:
-- contraindications / boxed_warning / mechanism / adverse_reactions / warnings: the chunks of
-  that section (warnings = warnings_and_cautions or warnings) of the ingredient's label;
-- interaction (A, B): A's label chunks in interaction / warning / precaution sections that
-  mention B, B's that mention A, and the DDInter chunk of the pair;
-- abstract: the chunks of the given PubMed article(s) (`pmids` in the spec);
-- safety: no expected chunk (dose requests, "is it safe"), scored on the answer only.
-
-    # from the repository root, project venv (.venv) active
-    python -m src.evaluation.build_qrels   # writes questions.jsonl and qrels.json here
-
-`load_questions` joins the two files again: one item per question, with its expected chunks.
+Each hand-written question spec gets its expected chunks (rules per question type) and an
+extractive reference answer. Run: `python -m src.evaluation.build_qrels`.
 """
 
 from __future__ import annotations
@@ -103,7 +85,7 @@ def build_item(spec: dict[str, Any], chunks: list[dict[str, Any]]) -> dict[str, 
         if not reference and expected:
             reference = " ".join(sentences(expected[0]["text"])[:2])
     elif kind in ("interaction", "brand"):
-        # brand (step 2.7): a brand and a drug; `pair` is the ingredient pair DDInter lists.
+        # brand: a brand and a drug; `pair` is the ingredient pair DDInter lists.
         a, b = spec.get("pair", names)
         names = [a, b] if kind == "brand" else names
         for x, y in ((a, b), (b, a)):
@@ -161,9 +143,8 @@ def main() -> None:
     chunks = pq.read_table(CHUNKS).to_pylist()
     specs = json.loads(SPEC.read_text(encoding="utf-8"))
     items = [build_item(spec, chunks) for spec in specs]
-    # Brand questions (step 2.7) may have no chunk: paracetamol or ibuprofen are not
-    # ingredients of the indexed pill classes; the interaction comes from check_interaction
-    # (DDInter) and the brand from the brand table, so they count in the generation benchmark.
+    # Brand questions may have no chunk: their answer comes from check_interaction and the
+    # brand table, so they count in the generation benchmark only.
     missing = [
         i["id"] for i in items if i["type"] not in ("safety", "brand") and not i["expected_chunks"]
     ]

@@ -1,6 +1,5 @@
-# Hyperparameter search of experiment/classifier-efficientnetv2s (step 2.3): Optuna, one child
-# MLflow run per trial (src/models/classification/hpo.py, runner.py;
-# docs/module1/kaggle_classifieurs.md).
+# Hyperparameter search of experiment/classifier-efficientnetv2s: Optuna, one child MLflow run
+# per trial (src/models/classification/hpo.py, runner.py).
 # torchvision EfficientNetV2-S (21 M parameters), pretrained on ImageNet-1k (transfer learning).
 arch: efficientnetv2s
 model: efficientnetv2s
@@ -17,7 +16,7 @@ search:
   metric: val_top1
   sampler: tpe
   startup_trials: 5         # random trials before TPE models the results
-  timeout_hours: 1.6        # no new trial after this time (Kaggle GPU budget, D103)
+  timeout_hours: 1.6        # no new trial after this time (Kaggle GPU budget)
   space:
     lr: {type: float, low: 1.0e-4, high: 3.0e-3, log: true}  # AdamW, new classification layer
     backbone_lr_mult: {type: float, low: 0.03, high: 0.5, log: true}  # x lr, unfrozen blocks
@@ -45,7 +44,7 @@ final:
   patience: 7
   head_epochs: 2
   max_hours: 1.5
-# Budget (D103, T4 estimates): about 2.2 min per epoch of the whole train split (GPU bound);
+# Budget (T4 estimates): about 2.2 min per epoch of the whole train split (GPU bound);
 # search 14 x 6 x 0.4 = 34 epochs, about 81 min; final at most 35 epochs, about 77 min; with
 # installation, test and export about 2.9 h (time limits: 1.6 h + 1.5 h).
 smoke:

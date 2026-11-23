@@ -1,8 +1,6 @@
-"""Interleaved latency of the compared detectors (src/models/detection/compare_latency.py)
-and the MLflow query of the comparison table (src/models/detection/compare.py `collect`).
+"""Interleaved latency of the compared detectors and the MLflow query of the comparison table.
 
-Tiny ONNX detectors registered in a temporary SQLite MLflow store; the timing itself is the
-real one of src/models/optimize.py (fresh process per round) on a synthetic dataset.
+Tiny ONNX detectors in a temporary SQLite MLflow store; the timing code is the real one.
 """
 
 from __future__ import annotations

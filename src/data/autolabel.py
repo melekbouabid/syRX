@@ -1,23 +1,7 @@
-"""Automatic pill bounding boxes for C3PI consumer photos (classical computer vision).
+"""Automatic pill bounding boxes for C3PI photos, with classical computer vision.
 
-C3PI gives no boxes. Consumer photos show one or two pills (often the front and the back of
-the same product) on a fairly plain background, usually with vignetting and a shadow. The
-pills are found as the regions whose colour differs from the background:
-
-1. downscale to `work_size` pixels on the long side;
-2. background = a smooth quadratic surface per Lab channel, fitted robustly (pixels that
-   do not fit are dropped and the fit repeated), which absorbs vignetting and gradients;
-3. distance of every pixel to that surface, darker-and-grey differences (shadows) weighted
-   down, thresholded at several times the background noise;
-4. connected regions that touch the border (vignetting, table edges) are dropped, as are
-   regions much smaller than the largest one;
-5. coins (C3PI's size reference: grey with relief texture) are ignored; a region that is
-   not compact (a shadow crescent next to a pale pill) is refined with GrabCut, and flagged
-   when that fails;
-6. each kept region becomes a box, mapped back to full resolution.
-
-Each result carries flags so doubtful images can be left out of detection training and
-checked by eye (`python -m src.data.prepare v1 --sheet`).
+Fits the background per Lab channel, keeps the regions that differ from it, drops coins and
+border regions, and flags doubtful images so they can be left out of training.
 """
 
 from __future__ import annotations

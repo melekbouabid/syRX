@@ -2,7 +2,7 @@
 #   uv venv .venv-train -p 3.12 && uv pip install -p .venv-train -r src/models/requirements-train.txt
 # CPU PyTorch comes from PyPI. For the GPU (RTX 2050, driver CUDA 13.3), then replace it:
 #   uv pip install -p .venv-train torch==2.14.1 torchvision==0.29.1 --index-url https://download.pytorch.org/whl/cu130
-# (about 2 GB; this is what was used on 2026-10-28).
+# (about 2 GB).
 ultralytics==8.4.191
 mlflow==3.17.2
 dvc==3.67.1
@@ -10,12 +10,12 @@ onnx>=1.17
 onnxruntime>=1.20
 onnxslim>=0.1.50
 pytest>=8
-# Detector comparison (step 2.2): hyperparameter search, notebooks run locally in smoke mode.
+# Model comparison: hyperparameter search, notebooks run locally in smoke mode.
 optuna==5.0.0
 nbformat>=5.10
 nbclient>=0.10
 ipykernel>=6.29
-# Medicine boxes (step 2.7, src/models/ocr): the two OCR engines compared, fuzzy matching,
+# Medicine boxes (src/models/ocr): the two OCR engines compared, fuzzy matching,
 # scikit-image for the out-of-distribution samples (data/raw/off_topic).
 rapidocr==3.10.0
 easyocr==1.7.2

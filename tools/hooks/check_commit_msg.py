@@ -1,14 +1,7 @@
-"""Commit-msg hook: the first line of a commit message must follow Conventional Commits.
+"""Commit-msg hook: the first line must be `type(scope): description` (Conventional Commits).
 
-    python tools/hooks/check_commit_msg.py .git/COMMIT_EDITMSG   # Git passes the message file
-
-Accepted: `type: description` or `type(scope): description`, where
-- type is one of TYPES, in lower case (a `!` after it marks a breaking change);
-- scope is made of letters, digits, `_`, `-` or `/`;
-- description has at least 5 characters.
-Messages written by Git itself are accepted too: merge and revert commits, and the
-`fixup!` / `squash!` / `amend!` commits that `git rebase -i --autosquash` folds away.
-Branches, tags and the full convention: docs/git_workflow.md.
+Git's own merge, revert, fixup!, squash! and amend! messages are accepted too.
+Run: `python tools/hooks/check_commit_msg.py .git/COMMIT_EDITMSG`.
 """
 
 from __future__ import annotations

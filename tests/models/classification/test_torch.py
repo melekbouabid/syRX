@@ -1,8 +1,6 @@
-"""The PyTorch backend of the classifiers (src/models/classification/torch_backend.py):
-losses, augmentation of the train split only, a real training of the baseline, ONNX export
-and Grad-CAM pictures.
+"""The PyTorch backend of the classifiers: losses, augmentation, training, ONNX export, Grad-CAM.
 
-Needs PyTorch and torchvision (CI job `vision`, CPU wheels; the job `src` skips this file).
+Needs PyTorch and torchvision (CI job `vision`).
 """
 
 from __future__ import annotations

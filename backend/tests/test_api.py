@@ -1,7 +1,6 @@
 """Endpoints of the course guide: GET /health, GET /model/metadata, POST /predict(/visualize).
 
-Tiny fake ONNX models (tests/fake_models.py) stand in for the published ones; every success
-case and every error code (400 invalid image, 413 too large, 503 models not loaded).
+Fake ONNX models; every success case and every error code (400, 413, 503).
 """
 
 from __future__ import annotations

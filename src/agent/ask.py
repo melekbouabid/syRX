@@ -1,9 +1,6 @@
-"""Ask the Tujya agent one question from the command line (real index and Ollama).
+"""Ask the agent one question from the command line (real index and Ollama).
 
-# from the repository root, project venv (.venv) active
-python -m src.agent.ask "La warfarine interagit-elle avec le fluconazole ?"
-python -m src.agent.ask "Effets indésirables ?" --pills 9 120
-python -m src.agent.ask "Effets indésirables ?" --database-url postgresql+psycopg://...
+Run: `python -m src.agent.ask "Does warfarin interact with fluconazole?" [--pills 9 120]`.
 """
 
 from __future__ import annotations

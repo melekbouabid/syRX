@@ -1,33 +1,7 @@
-"""Optimise the two champions for CPU serving: FP32 / FP16 / INT8 ONNX variants (step 2.4).
+"""Optimise the two champions for CPU serving: FP32, FP16 and INT8 ONNX variants.
 
-    # training venv (.venv-train), MLflow server running, datasets of the DVC stages on disk
-    python -m src.models.optimize                     # both champions, register, alias served
-    python -m src.models.optimize --task classify     # one of them
-    python -m src.models.optimize --no-register       # measure only (runs, no Registry change)
-    python -m src.models.optimize --publish           # then copy the served variants to models/
-
-For the version holding the alias `champion` of each registered model:
-
-1. downloads its ONNX model (FP32, the export of the Registry) and builds the variants of
-   src/models/quantize.py: FP16, INT8 static (QDQ, calibrated on images of the validation
-   split, never the test split) and INT8 dynamic;
-2. scores every variant with the same code: the detector with src/models/detection/metrics.py
-   on the comparison split of step 2.2 (`test_holdout.txt` of C3PI v2, decoded like the API by
-   src/models/detection/latency.py `onnx_predict`), the classifier on the test crops of its
-   label space, preprocessed like the API: C3PI v1 (top-1 / top-5) for the 150-class model of
-   step 2.1, the comparison split of step 2.3 (`test_v2_*`) for a champion tagged
-   `label_space=c3pi-v2`; CPU latency (mean, p95) in a fresh process
-   (`isolated_latency`) on the same test images; file size;
-3. logs one MLflow run per variant (experiment tujya-vision, tag stage=optimize, provenance tags
-   of src/utils/mlflow_utils.py) and registers each FP16 / INT8 variant as a new version of
-   the same registered model, tagged `precision` and `variant_of`;
-4. picks the served variant (`choose_variant`, params.yaml `optimize`) and gives it the alias
-   `served` (src/models/registry.py): the alias `champion` stays on the FP32 model, so
-   promote_if_better keeps comparing FP32 candidates with an FP32 champion.
-
-Writes models/optimize.json (git-ignored) and prints the comparison table of
-docs/module1/optimisation_onnx.md. A new champion (step 2.2 or 2.3) only needs this command
-again, then `python -m src.models.registry publish`.
+Scores every variant with the same code, registers them and gives the alias `served` to the
+chosen one. Run: `python -m src.models.optimize [--task T] [--no-register] [--publish]`.
 """
 
 from __future__ import annotations
@@ -104,8 +78,8 @@ SPECS = {
         "test crops of C3PI v1",
     ),
 }
-# Step 2.3 (D99, D100): a champion trained on the 380 classes of C3PI v2 is scored on the
-# comparison split of its own dataset, with the promotion metric of the comparison.
+# A champion trained on the 380 classes of C3PI v2 is scored on the comparison split of its
+# own dataset, with the promotion metric of the comparison.
 CLASSIFY_V2 = TaskSpec(
     "classify",
     "classifier",
@@ -176,7 +150,7 @@ def calibration_tensors(task: str, model: Path, n: int, data: Path) -> list[np.n
 
 
 def score_detector(model: Path, data: Path) -> dict[str, float]:
-    """test_v2_* on the comparison split, decoded like the API (conf 0.001, as step 2.2)."""
+    """test_v2_* on the comparison split, decoded like the API (confidence 0.001)."""
     chosen = samples(data, "test", holdout_names(data))
     predictions = onnx_predict(model, [read_bgr(s.image) for s in chosen])
     return prefixed(evaluate(predictions, [s.truth() for s in chosen]), "test_v2")
@@ -200,8 +174,7 @@ def score_classifier(model: Path, data: Path) -> dict[str, float]:
 
 
 def score_classifier_v2(model: Path, data: Path) -> dict[str, float]:
-    """test_v2_* (comparison split), test_v2_all_* and test_v2_v1c_* of a 380-class model,
-    computed like the candidates of step 2.3 (output index = v2 class id)."""
+    """test_v2_*, test_v2_all_* and test_v2_v1c_* of a 380-class model (output index = v2 id)."""
     from src.data import dataset as D
     from src.models.classification.runner import split_scores
 
@@ -282,19 +255,14 @@ def measure_latency(
 ) -> dict[str, dict[str, float]]:
     """CPU latency of every variant, in interleaved short rounds separated by a pause.
 
-    A laptop CPU slows down under a sustained load (on the development PC YOLOv8n goes from
-    24 ms to 570 ms per image after about 100 back-to-back passes): one long measurement per
-    variant would compare the first variant on a cool CPU with the next ones on a throttled
-    CPU. Each round times every variant once (`latency_runs` passes, in a fresh process, at most
-    `latency_budget_s` seconds of load: src/models/detection/latency.py) after
-    `latency_cooldown_s` seconds of rest; the figures kept are the medians over the rounds.
-    `rounds_out`, when given, receives the figures of every round (to check for throttling).
+    A laptop CPU slows down under sustained load, so each round times every variant once and
+    the medians over the rounds are kept. `rounds_out` receives the figures of every round.
     """
     files = latency_files(task, data, int(settings.get("latency_images", 20)))
     rounds = max(1, int(settings.get("latency_rounds", 1)))
     cooldown = float(settings.get("latency_cooldown_s", 0))
     budget = float(settings.get("latency_budget_s", 0))
-    limits = {"budget_s": budget} if budget > 0 else {}  # no budget: the timing of D96
+    limits = {"budget_s": budget} if budget > 0 else {}  # no budget: unlimited timed passes
     measured: dict[str, list[dict[str, float]]] = {precision: [] for precision in paths}
     for _ in range(rounds):
         for precision, path in paths.items():
@@ -510,15 +478,15 @@ def optimise(
 
 def markdown_table(report: dict[str, Any]) -> str:
     lines = [
-        "| Modèle | Variante | Précision (métrique) | Écart vs FP32 | Latence moyenne (ms) "
-        "| Latence p95 (ms) | Taille (Mo) | Version Registry | Run MLflow |",
+        "| Model | Variant | Accuracy (metric) | Change vs FP32 | Mean latency (ms) "
+        "| p95 latency (ms) | Size (MB) | Registry version | MLflow run |",
         "|---|---|---:|---:|---:|---:|---:|---|---|",
     ]
     for entry in report.values():
         for precision, variant in entry["variants"].items():
             m = variant["metrics"]
             version = variant["version"] or entry["champion_version"]
-            served = " (servie)" if precision == entry["chosen"] else ""
+            served = " (served)" if precision == entry["chosen"] else ""
             lines.append(
                 f"| {entry['registered_model']} | {precision}{served} "
                 f"| {m[entry['metric']]:.4f} ({entry['metric']}) | {-m['accuracy_drop']:+.4f} "

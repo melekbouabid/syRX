@@ -4,7 +4,7 @@ import { Alert, Badge } from "../components";
 import { Icon } from "../components/icons";
 import { useT, type Messages } from "../i18n";
 
-// The notice the agent appends to every answer (src/agent/safety.py, D53): removed from the
+// The notice the agent appends to every answer (src/agent/safety.py): removed from the
 // answer text because the panel always shows the notice once, in the interface language.
 const AGENT_DISCLAIMER = "Information uniquement, consultez un pharmacien ou un médecin.";
 

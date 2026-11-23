@@ -1,9 +1,6 @@
-"""Synthetic crop datasets, tiny ONNX classifiers and a fake model family for the tests.
+"""Synthetic crop datasets, tiny ONNX classifiers and a fake model family (no PyTorch).
 
-Nothing here needs PyTorch: the fake family "trains" instantly and predicts the true class
-of a crop (its folder) except for a share of errors that depends on the learning rate, so an
-Optuna search has something to optimise and the whole runner -> export -> MLflow import chain
-runs in a few seconds.
+Its errors depend on the learning rate, so the Optuna search has something to optimise.
 """
 
 from __future__ import annotations

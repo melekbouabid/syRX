@@ -1,11 +1,6 @@
-"""Prediction with the API's own pipeline: image -> detection -> classification -> result.
+"""Prediction with the API's own pipeline: image -> detection -> classification -> JSON.
 
-    python -m src.models.predict photo.jpg [other.jpg ...]   # one JSON per image
-    python -m src.models.predict --split val                 # end-to-end check on C3PI photos
-
-One image: the ONNX models of models/ (TUJYA_MODELS_DIR) run through app.inference.PillScanner
-(detector, square crops, classifier), and the result is the JSON of the API's POST /predict
-(app.routers.vision.to_predict_out): boxes, top-5 classes with probabilities, timings.
+Run: `python -m src.models.predict photo.jpg ...` or `--split val|test` for an end-to-end check.
 """
 
 from __future__ import annotations
@@ -22,18 +17,8 @@ from app.inference import PillScanner, decode_image
 from app.routers.vision import to_predict_out
 
 # --- End-to-end check on the photos of a split ----------------------------------------------
-# End-to-end check of the API's own scan pipeline (scanner.py) on C3PI photos.
-#
-# From the repository root, with the project venv (.venv) active:
-#
-#     python -m src.models.predict --split val    # choose the threshold
-#     python -m src.models.predict --split test   # final numbers
-#
-# Same protocol as `src/models/evaluate.py` (all consumer photos of the split, the
-# most confident box is identified, no box counts as wrong), but with the code the API runs.
-# Prints top-1 / top-5 and, for candidate thresholds, the share of photos accepted without
-# confirmation and the top-1 accuracy among them. The models are read from TUJYA_MODELS_DIR
-# (default: models/ at the repository root).
+# Same protocol as src/models/evaluate.py, with the code the API runs: top-1 / top-5 and, per
+# candidate threshold, the share of photos accepted without confirmation and their accuracy.
 THRESHOLDS = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95]
 
 

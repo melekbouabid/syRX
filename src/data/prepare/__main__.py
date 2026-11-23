@@ -1,10 +1,6 @@
-"""Build one training dataset: `python -m src.data.prepare <dataset> [options]`.
+"""Build one training dataset: `python -m src.data.prepare <v1|detect-v2|classify-v2>`.
 
-    v1           C3PI v1: labels, detection and classification datasets (stage prepare, v1.py)
-    detect-v2    detection dataset of C3PI v2 (stage prepare_detect_v2, detect_v2.py)
-    classify-v2  classification dataset of C3PI v2 (stage prepare_classify_v2, classify_v2.py)
-
-The options are those of each module (`python -m src.data.prepare v1 --help`).
+Each dataset has its own module and options (`python -m src.data.prepare v1 --help`).
 """
 
 from __future__ import annotations

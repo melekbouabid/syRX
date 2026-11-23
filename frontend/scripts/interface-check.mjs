@@ -1,10 +1,6 @@
-// Checks of the interface step in a real browser, page by page, light and dark, English and
-// French: no page error, no horizontal scrolling at desktop and phone widths, readable
-// contrast of the colour tokens, the theme and language buttons remembered after a reload,
-// and no 3D animation when the visitor asks for reduced motion. Exit code 1 on any failure.
-//
-//   BASE=http://localhost:8080 node scripts/interface-check.mjs
-//   ADMIN_EMAIL=... ADMIN_PASSWORD=... (default: the first-start admin account)
+// Check every page in a real browser, light and dark, English and French: no page error, no
+// horizontal scroll, readable contrast, remembered theme and language, reduced motion.
+//   BASE=http://localhost:8080 [ADMIN_EMAIL=... ADMIN_PASSWORD=...] node scripts/interface-check.mjs
 import { chromium } from "playwright";
 
 const BASE = process.env.BASE ?? "http://localhost:5173";

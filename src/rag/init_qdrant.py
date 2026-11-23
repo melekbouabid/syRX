@@ -1,21 +1,7 @@
-"""Index the RAG corpus: data/processed/rag/corpus_v2/chunks (Parquet partitioned by
-document type, Spark job `rag`, 380 classes, D126) -> Qdrant collection tujya_chunks_v2 (or
-the SQL table rag_chunks with `--store sql`). The corpus of the 150 first classes
-(data/processed/rag/corpus/chunks.parquet, collection tujya_chunks) is indexed the same way
-with `--chunks` and TUJYA_QDRANT_COLLECTION.
+"""Index the RAG corpus (bge-m3 dense + BM25 sparse vectors) into Qdrant, or SQL (`--store sql`).
 
-Idempotent: each chunk keeps a SHA-256 hash of its text, metadata and embedding model, so a
-second run embeds nothing, a changed chunk is re-embedded, and a chunk gone from the corpus
-is deleted. Changing the embedding model (or its dimension) rebuilds the collection.
-In Qdrant each chunk also gets its BM25 sparse vector (`Qdrant/bm25`, step 3.2, D116); a
-collection made before that is migrated in place (points copied, nothing embedded again)
-and a new sparse encoder recomputes the sparse vectors only.
-
-    python -m src.rag.init_qdrant          # settings from TUJYA_* env
-    python -m src.rag.init_qdrant --pull   # also pull the Ollama models first
-    python -m src.rag.init_qdrant --store sql --database-url postgresql+psycopg://...
-    python -m src.rag.init_qdrant --copy-from-sql   # move the pgvector vectors to Qdrant,
-                                                    # no embedding
+Idempotent: a chunk is re-embedded only when its content hash changes.
+Run: `python -m src.rag.init_qdrant [--pull] [--chunks PATH] [--copy-from-sql]`.
 """
 
 from __future__ import annotations
@@ -135,12 +121,7 @@ def now() -> str:
 def copy_index(
     source: VectorStore, target: VectorStore, *, batch_size: int = 256
 ) -> dict[str, float]:
-    """Copy chunks, hashes and vectors from one store to another, without embedding anything.
-
-    Used once to move the pgvector index to Qdrant (D113): same vectors, so the benchmark
-    compares the stores and nothing else. A later `index_chunks` on the target finds every
-    hash unchanged.
-    """
+    """Copy chunks, hashes and vectors from one store to another, without embedding anything."""
     meta = source.get_meta()
     if not meta:
         raise ValueError("the source store has no index")
@@ -247,9 +228,7 @@ def main(argv: list[str] | None = None) -> None:
 
 
 # --- Text embeddings: bge-m3 served by Ollama, a deterministic fake in tests -------------------
-# Text embeddings: bge-m3 served by Ollama in production, a deterministic fake in tests.
-#
-# bge-m3 is multilingual (100+ languages), so a French question finds English label text.
+# bge-m3 is multilingual, so a French question finds English label text.
 
 
 class Embedder(Protocol):

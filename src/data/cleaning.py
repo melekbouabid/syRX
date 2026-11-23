@@ -1,26 +1,7 @@
-"""Job `quality`: check every downloaded image of the selection and list the rejected ones.
+"""Spark job `quality`: measure every selected image and list the rejected ones.
 
-Input: data/processed/c3pi/bigdata/index/selection (job `index`) and the images in
-data/raw/c3pi/images/<disc>/<file> (DVC). Each Spark task opens its images with Pillow
-(`inspect_image`, run through `mapInPandas`) and measures:
-
-- bytes, width, height, mode; corrupt when Pillow cannot decode the whole file;
-- brightness (mean grey level), contrast (standard deviation), sharpness (variance of the
-  Laplacian), all on a copy whose long side is 256 px;
-- a difference hash (dHash) of hash_size x hash_size bits, the perceptual hash used to find
-  near-identical photos.
-
-Reasons for rejection (one per image, first that applies): `missing`, `corrupt`,
-`too_small` (short side under min_side), `too_dark` / `too_bright` (consumer and challenge
-photos only: the segmented studio PNGs are mostly transparent), `duplicate_file` (same
-SHA-1 as an image kept), `duplicate_other_class` (perceptually identical to an image of
-another pill: the label is ambiguous; pairs of two studio shots do not count, see
-`near_duplicates`). Near-identical photos of the same pill are kept but
-recorded (`near_duplicates/`), so the split job puts them in the same split.
-
-Outputs (data/processed/c3pi/bigdata/quality, DVC): metrics/ (one row per image, Parquet),
-near_duplicates/ (pairs within a class), rejected.csv (path, class, type, reason),
-summary.json.
+Checks decoding, size, brightness and duplicates (SHA-1 and perceptual hash); writes the
+metrics, near-duplicate pairs and rejected.csv to data/processed/c3pi/bigdata/quality.
 """
 
 from __future__ import annotations
@@ -134,15 +115,8 @@ def _blocks(column: str, hash_size: int) -> list[F.Column]:
 def near_duplicates(table: DataFrame, max_bits: int, hash_size: int) -> DataFrame:
     """Pairs of images (a < b) whose hashes differ by at most `max_bits` bits.
 
-    Banding: with HASH_BLOCKS blocks and at most HASH_BLOCKS - 1 differing bits, two close
-    hashes share at least one identical block, so an equi-join on (block index, block value)
-    finds every candidate pair without comparing all pairs; the exact distance is then
-    computed on the candidates only.
-
-    Only pairs with at least one consumer photo count: studio shots (challenge, segmented,
-    reference) show a small pill on a plain background, so their hashes are close across
-    different pills (measured on the v2 selection: 1,468 such pairs, all studio-studio),
-    while a copy of a consumer photo is still found whatever its role.
+    Banding on hash blocks finds candidate pairs with an equi-join instead of comparing all
+    pairs. Only pairs with at least one consumer photo count (studio shots look alike).
     """
     if max_bits >= HASH_BLOCKS:
         raise ValueError(f"banding finds pairs up to {HASH_BLOCKS - 1} bits apart")

@@ -1,17 +1,6 @@
-"""Hybrid retrieval: BM25 (lexical) + embeddings (dense), fused by reciprocal rank fusion,
-then optionally reranked by a cross-encoder.
+"""Retrieval: BM25, dense (bge-m3) or hybrid (reciprocal rank fusion), optionally reranked.
 
-- BM25 (k1 = 1.2, b = 0.75) over title + text. In Qdrant (step 3.2, D116): sparse vectors
-  `Qdrant/bm25` with the IDF modifier (src/rag/stores/sparse.py). Otherwise (SQL store) in memory:
-  the corpus is ~10^4 chunks, so scoring every chunk takes a few milliseconds; tokens are
-  lower-cased, accents removed, English and French stop words dropped, plural "s" stripped.
-- Dense: cosine similarity of bge-m3 vectors, in Qdrant (D113), PostgreSQL (pgvector) or
-  numpy (SQLite, tests).
-- Hybrid: RRF, score = sum over the two lists of 1 / (60 + rank) (Cormack et al., 2009),
-  computed by Qdrant (prefetch of both lists, then fusion) or here for the SQL store.
-- Reranking (D117, src/rag/reranking.py): the first `fetch_k` results are scored by a
-  cross-encoder (BAAI/bge-reranker-base) and the best `k` are kept.
-Metadata filters (ingredient, document type, section, retracted) apply to all of them.
+Runs in Qdrant, or in SQL / numpy for the SQL store; metadata filters apply to every mode.
 """
 
 from __future__ import annotations
@@ -434,9 +423,6 @@ def retriever_holder(settings: Settings, store: VectorStore, embedder: Embedder)
 
 
 # --- Command line: search the index and time each mode -----------------------------------------
-# Search the RAG index from the command line and time each mode (real bge-m3 embeddings).
-#
-# # from the repository root, project venv (.venv) active
 # python -m src.rag.retrieval "fluconazole warfarin" --ingredient warfarin --k 5
 
 

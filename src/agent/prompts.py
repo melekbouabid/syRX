@@ -1,14 +1,7 @@
-"""The agent's prompts, versioned (step 3.4, docs/module2/benchmark_generation.md).
+"""The agent's prompts, versioned: the tool planner and the answer prompts ("v1", "v2").
 
-- `TOOLS_PROMPT`: the tool planner (one version).
-- `ANSWER_PROMPTS[version][language]`: the system prompt of the answer node. "v1" is the prompt
-  of steps 3.1 to 3.3; "v2" asks for the direct answer first and for one source fact per
-  sentence, close to the source's words. Both keep the same safety rules (docs/project_rules.md),
-  which src/agent/safety.py enforces after generation anyway.
-
-The same texts are registered in the MLflow Prompt Registry by
-`python -m src.evaluation.register_prompts` (names in `REGISTRY_NAMES`); the app reads them from
-this file, so it never needs the MLflow server to answer.
+The same texts are registered in the MLflow Prompt Registry (src/evaluation/register_prompts.py);
+the app reads them from this file.
 """
 
 from __future__ import annotations

@@ -49,7 +49,6 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("CONTACT_EMAIL", TEST_EMAIL)
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     monkeypatch.delenv("TUJYA_CONFIG", raising=False)
-    monkeypatch.delenv("SYNERGYRX_CONFIG", raising=False)  # legacy name (D86)
     return tmp_path
 
 
@@ -182,7 +181,7 @@ def test_working_folders_follow_the_data_dir(tmp_path: Path) -> None:
         store / "manual",
         store / "state",
     )
-    # Keys of earlier layouts are rejected, not ignored: the synergy outputs are gone (D85).
+    # Keys of earlier layouts are rejected, not ignored.
     for key in ("exports_dir=exports", "parquet_dir=out", "csv_dir=out"):
         with pytest.raises(ConfigError):
             load_settings(None, [key], project_root=tmp_path, environ={})

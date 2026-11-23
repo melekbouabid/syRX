@@ -1,12 +1,7 @@
-"""Optional query rewriting by the LLM before retrieval (step 3.2, D118).
+"""Optional query rewriting by the LLM before retrieval (`TUJYA_RAG_QUERY_REWRITE`).
 
-The corpus is in English (openFDA labels, PubMed abstracts, DDInter); half the questions
-are in French. The LLM rewrites the question as a short English search query that keeps
-every drug name; retrieval then runs on that query. The question itself is unchanged for
-the answer. Off by default (`TUJYA_RAG_QUERY_REWRITE`): one more LLM call per question; the
-benchmark measures what it brings (docs/module2/benchmark.md).
-
-Never trusted blindly: an empty or overlong rewrite, or an LLM error, keeps the question.
+The question becomes a short English query that keeps every drug name; an empty, overlong
+or failed rewrite keeps the question.
 """
 
 from __future__ import annotations
@@ -60,9 +55,6 @@ def clean(text: str) -> str:
 
 
 # --- Drug names of the question, in French or English ------------------------------------------
-# Find drug names in a question, in French or English, and map them to ingredient names.
-#
-# The ingredient table uses English RxNorm / DDInter names ("warfarin", "acetaminophen").
 # French INNs are mostly the English name plus an "e" ("warfarine", "metformine",
 # "ibuprofène"), which the matcher tries; a few common names differ and are listed below.
 

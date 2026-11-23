@@ -1,8 +1,4 @@
-"""The stored images of an account: its profile photo and its signature.
-
-A photo is shown to its owner and to administrators; a signature only to its owner (it is
-printed on the owner's reports, inside the report itself, never through this route).
-"""
+"""The stored images of an account: profile photo (owner and admins) and signature (owner only)."""
 
 from __future__ import annotations
 

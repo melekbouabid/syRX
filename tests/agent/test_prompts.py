@@ -1,5 +1,4 @@
-"""Versioned prompts of the agent (step 3.4): every version keeps the safety rules, the setting
-chooses the version, an unknown version is refused."""
+"""Versioned prompts: every version keeps the safety rules; an unknown version is refused."""
 
 from __future__ import annotations
 

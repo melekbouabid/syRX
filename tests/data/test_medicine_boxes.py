@@ -1,4 +1,4 @@
-"""Ground truth of the box photos (src/data/medicine_boxes.py, step 2.7), on a tiny fake set."""
+"""Ground truth of the box photos (src/data/medicine_boxes.py), on a tiny fake set."""
 
 from __future__ import annotations
 

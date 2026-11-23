@@ -1,15 +1,6 @@
-"""The chunk store interface, and its SQL implementation (the store before Qdrant, D113).
+"""The chunk store interface, and its SQL implementation (pgvector on PostgreSQL, numpy on SQLite).
 
-`VectorStore` is what indexing and retrieval need from a store: the app uses Qdrant
-(src/rag/stores/qdrant.py); `ChunkStore` keeps the chunks in a SQL table, used by the
-tests on SQLite and kept as the pgvector baseline of the benchmark.
-
-PostgreSQL (docker compose): `embedding` is a pgvector `vector(dim)` and the ingredient
-lists are `text[]`; dense search runs in SQL (`<=>`, cosine distance) with the metadata
-filters in the WHERE clause. Exact search on purpose: at ~10^4 chunks it takes a few
-milliseconds and its recall is exact; an HNSW index is only worth it from ~10^5 chunks
-(docs/module2/rag.md). SQLite (tests): the same columns as JSON, dense search
-in numpy.
+The SQL store serves the tests and the pgvector baseline of the retrieval benchmark.
 """
 
 from __future__ import annotations
@@ -154,8 +145,7 @@ class VectorStore(Protocol):
     def dense_search(self, vector: list[float], filters: Filters, k: int) -> list[str]: ...
 
     def has_sparse(self) -> bool:
-        """True when the store keeps BM25 sparse vectors (Qdrant, step 3.2); False: the
-        retriever runs BM25 in memory and fuses the lists itself."""
+        """True when the store keeps BM25 sparse vectors; otherwise BM25 runs in memory."""
         ...
 
     def add_sparse(self) -> int:

@@ -1,24 +1,7 @@
-"""Encode a corpus variant and the benchmark queries with a sentence-transformers model (step 3.3).
+"""Encode a corpus variant and the benchmark queries with a sentence-transformers model.
 
-The served embeddings (bge-m3) come from Ollama. The other models of the retrieval grid
-(multilingual-e5-base, all-MiniLM-L6-v2, and the bge-m3 fine-tuned on Kaggle in step 3.5, an
-export of sentence-transformers weights) have no Ollama build: this script encodes the chunks
-and every query of the benchmark once, on the GPU of the training venv, and writes them to
-`data/processed/rag/bench/vectors/<slug>.npz`. `retrieval_grid.py` (project venv) then loads the
-vectors into a Qdrant collection of their own and searches it exactly like the served index.
-
-    # training venv (torch, sentence-transformers); stop the Ollama models first (4 GB GPU)
-    .venv-train/Scripts/python -m src.evaluation.encode_sentence_transformers --model \
-        intfloat/multilingual-e5-base
-    .venv-train/Scripts/python -m src.evaluation.encode_sentence_transformers --model BAAI/bge-m3 \
-        --slug bge-m3-st
-    .venv-train/Scripts/python -m src.evaluation.encode_sentence_transformers \
-        --model runs/kaggle/finetune_bge-m3/model --slug bge-m3-finetuned
-
-Queries: the questions and their rewritten English queries (`queries.json`, written by
-`retrieval_grid.py --rewrites`). The latency of one query on the CPU (the API has no GPU) is
-measured here too, median of 3 interleaved passes over 20 questions (protocol of D96), and
-stored with the vectors.
+For the embeddings Ollama cannot serve (e5, MiniLM, fine-tuned bge-m3); writes
+data/processed/rag/bench/vectors/<slug>.npz with the CPU query latency (training venv).
 """
 
 from __future__ import annotations

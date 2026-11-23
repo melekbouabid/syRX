@@ -14,15 +14,15 @@ onnx>=1.17
 # (src/models/requirements-train.txt installs the full package).
 mlflow-skinny==3.17.2
 alembic>=1.13,<2
-# Generation benchmark of step 3.4 (src/evaluation/ragas_evaluation.py): RAGAS, pinned (its
+# Generation benchmark (src/evaluation/ragas_evaluation.py): RAGAS, pinned (its
 # metrics and prompts change between versions; the scores of docs/module2 are from 0.4.4).
 ragas==0.4.4
-# Detector comparison (step 2.2, src/models/detection): Optuna search spaces and the
+# Model comparison (src/models/detection, classification): Optuna search spaces and the
 # notebook generator are tested here (same Optuna version as the training venv and Kaggle).
 optuna==5.0.0
 nbformat>=5.10
-# Medicine box photos of step 2.7 (src/data/medicine_boxes.py): anonymous Hugging Face download.
-# Below 2.0: fastembed (step 3.2, backend/requirements.txt) needs huggingface_hub<2.
+# Medicine box photos (src/data/medicine_boxes.py): anonymous Hugging Face download.
+# Below 2.0: fastembed (backend/requirements.txt) needs huggingface_hub<2.
 huggingface_hub>=1.33,<2
 ruff>=0.5
 # The module guide's linters (.flake8, [tool.black] in pyproject.toml); black's stable

@@ -179,8 +179,8 @@ def test_sentence_filter_can_hold_back_more_sentences() -> None:
 
 
 def test_a_sentence_denying_a_found_interaction_is_removed() -> None:
-    # Step 2.7: the 3B model wrote that paracetamol is "not known to interfere" with
-    # warfarin while its own DDInter source listed a Moderate interaction.
+    # A 3B model wrote that paracetamol is "not known to interfere" with warfarin while its
+    # own DDInter source listed a Moderate interaction.
     denial = "Le paracétamol n'est pas connu pour interférer avec la warfarine [2]."
     fact = "La warfarine est un anticoagulant [1]."
     found = check_answer(f"{denial} {fact}", 2, interaction_found=True)

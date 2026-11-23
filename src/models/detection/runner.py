@@ -1,23 +1,7 @@
 """One detector experiment: Optuna search, retraining of the best trial, test, ONNX export.
 
-    python -m src.models.detection.runner --config config/hpo/detector_yolov8n.yaml \
-        --data data/processed/c3pi/datasets_v2/detect --out runs/detector-yolov8n
-    python -m src.models.detection.runner --config ... --smoke     # local check, tiny subset
-
-This is what each Kaggle notebook (notebooks/module1/kaggle/detector_<arch>.ipynb) runs on the GPU:
-
-1. Optuna study (seeded TPE sampler, config/hpo/detector_<arch>.yaml): each trial trains the
-   pretrained model for `search.epochs` epochs on `search.fraction` of the train images and is
-   scored on the validation split (`val_mAP50_95`, src/models/detection/metrics.py);
-2. the best trial's hyperparameters are retrained on the whole train set (`final.epochs`,
-   early stopping on validation);
-3. the retrained model is scored on the comparison split `test_holdout.txt` (metrics
-   `test_v2_*`, the promotion metric is `test_v2_mAP50_95`) and on the whole v2 test split
-   (`test_v2_all_*`), exported to ONNX and timed on the CPU.
-
-Nothing is logged to a server from Kaggle: everything goes into the export folder (`run.json`,
-weights, ONNX model, per-epoch histories, trials), which src/models/detection/import_kaggle.py
-turns into MLflow runs locally (one parent run, one child run per trial).
+What each Kaggle notebook runs; everything goes into an export folder for import_kaggle.
+Run: `python -m src.models.detection.runner --config <yaml> --data <dir> --out <dir>`.
 """
 
 from __future__ import annotations

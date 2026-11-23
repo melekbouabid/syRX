@@ -1,18 +1,6 @@
-"""Dataset statistics of the C3PI dataset v2, before / after, logged to MLflow.
+"""Statistics of the C3PI dataset v2 (before / after), as DVC metrics and one MLflow run.
 
-    python -m src.data.spark.log_stats            # training venv (.venv-train: mlflow, pandas)
-
-Reads the outputs of the Spark jobs (summaries, config/splits/c3pi_v2/classes.csv, the
-split table) and the v1 lists (config/pill_classes_v1.csv, config/splits/selected_images.csv),
-then:
-
-- writes data/processed/c3pi/bigdata/stats.json, the DVC metrics of the pipeline
-  (`dvc metrics show`), with the before / after table (classes, images, GB);
-- logs one MLflow run in the experiment `tujya-data` (server MLFLOW_TRACKING_URI, default
-  http://127.0.0.1:5000, `docker compose up -d mlflow`): the `bigdata` parameters, the
-  counts as metrics, the train / val / test tables as MLflow datasets (`mlflow.data`, with
-  their digest and source), the class distribution (CSV and chart), the job summaries,
-  params.yaml and dvc.lock, and the tags git_commit and dvc_rev.
+Run: `python -m src.data.spark.log_stats` (training venv); MLflow experiment `tujya-data`.
 """
 
 from __future__ import annotations

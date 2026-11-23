@@ -1,25 +1,6 @@
-"""Grad-CAM pictures of the demo gallery, precomputed with the served classifier (D104).
+"""Grad-CAM pictures of the demo gallery, precomputed with the served classifier's PyTorch weights.
 
-The API runs ONNX models only, without PyTorch (D97), so it cannot compute Grad-CAM, which
-needs the gradients of the PyTorch model. This script does it offline, in the training venv
-(PyTorch, Ultralytics), for the photos of the app's demo gallery (app/gallery.py):
-
-    PYTHONPATH="backend;." .venv-train/Scripts/python -m src.models.gradcam_gallery
-
-or through DVC (stage `gradcam_gallery` of dvc.yaml, output data/processed/c3pi/gradcam,
-never in git). For each photo it runs the served ONNX scan (app/inference.py: same boxes and
-same square crops as the API), then Grad-CAM (src/utils/gradcam.py) of the PyTorch weights of
-the same classifier version, for the top-1 class the API gives. The weights are found from the
-run id of models/models.json: a classifier of the step 2.3 comparison (export of
-src/models/classification in data/processed/models/classifiers/classifier-<arch>, DVC, matched
-through
-its import summary models/compare/classifier_<arch>.json; layer `ClassifierNet.parts().cam_layer`,
-D120) or the YOLO11s-cls of v1 (models/train/classifier, Ultralytics; the 1 x 1 convolution of
-the Classify head). The heat map of each pill is blended over its crop square in the photo,
-so the picture keeps the proportions of the photo and the scan boxes fit on it.
-
-Outputs: one JPEG per photo (name from `app.gallery.gradcam_name`) and gradcam.json (model,
-layer, per-pill class and probability from ONNX and from PyTorch, which must agree).
+The API serves ONNX only, so this runs offline (DVC stage gradcam_gallery, training venv).
 """
 
 from __future__ import annotations
@@ -133,10 +114,7 @@ def shrink(picture: np.ndarray, max_side: int = MAX_SIDE) -> np.ndarray:
 
 
 def export_weights(served: dict[str, Any], exports: Path, compare: Path) -> Path | None:
-    """best.pt of the step 2.3 export the served classifier comes from, None if it is not one.
-
-    The import summary of that export names its run and Registry version; an optimised
-    variant (step 2.4) is served under the version it was made from (`variant_of`)."""
+    """best.pt of the export the served classifier comes from, None if it is not one."""
     summary = compare / f"classifier_{served.get('arch')}.json"
     if not summary.is_file():
         return None
@@ -173,7 +151,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     from src.utils.gradcam import GradCAM
 
-    if exported is not None:  # step 2.3 classifier: logits out, softmax as in its ONNX export
+    if exported is not None:  # ClassifierNet: logits out, softmax as in its ONNX export
         from src.models.classification import torch_backend
 
         served, weights = dict(manifest["classify"]), exported

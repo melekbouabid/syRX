@@ -1,36 +1,6 @@
-"""Hyperparameter search of a classifier with Optuna (config/hpo/classifier_<arch>.yaml).
+"""Optuna hyperparameter search of a classifier, read from config/hpo/classifier_<arch>.yaml.
 
-One YAML file per experiment branch describes the model and its search, like the detectors
-(src/models/detection/hpo.py, whose parameter types and `suggest` are reused):
-
-    arch: resnet50                    # name of the runs, tags and Registry description
-    model: resnet50                   # src/models/architecture.py ARCHITECTURES key
-    family: torch                     # training code (src/models/classification/torch_backend)
-    pretrained: true                  # ImageNet weights (transfer learning); baseline: false
-    branch: experiment/classifier-resnet50
-    seed: 0
-    search:                           # each trial: a short training on a share of train
-      n_trials: 10
-      epochs: 6
-      fraction: 0.4                   # share of the train crops of every class
-      metric: val_top1                # maximised (validation split, never test)
-      sampler: tpe                    # tpe | random, seeded with `seed`
-      startup_trials: 4               # random trials before TPE models the results
-      timeout_hours: 1.5              # the search stops in time (Kaggle GPU budget)
-      space:
-        lr: {type: float, low: 1.0e-4, high: 3.0e-3, log: true}
-        unfreeze: {type: categorical, choices: [1, 2, 3, 5]}
-        ...
-    fixed: {batch: 64, workers: 4, head_epochs: 1}   # passed to every training as is
-    final: {epochs: 30, patience: 8, head_epochs: 2, max_hours: 1.5}
-    smoke: {n_trials: 2, epochs: 1, final_epochs: 1, images: {...}, fixed: {...}}
-
-Hyperparameters the training understands (torch_backend.train): lr, weight_decay,
-backbone_lr_mult, unfreeze (backbone blocks fine-tuned after the head-only epochs),
-head_epochs, imgsz, batch, randaugment (magnitude, 0 = off), randaugment_ops, mix_prob
-(share of the batches mixed by MixUp or CutMix), mixup_alpha, cutmix_alpha, imbalance (none |
-class_weights | focal), focal_gamma, class_weight_power, label_smoothing, workers, and the
-architecture options (baseline: width, dropout).
+Reuses the parameter types and `suggest` of src/models/detection/hpo.py.
 """
 
 from __future__ import annotations

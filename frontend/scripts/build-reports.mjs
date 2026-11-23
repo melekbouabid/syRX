@@ -1,13 +1,6 @@
-// Build the diagrams and the technical reports: Mermaid -> PNG, Markdown -> PDF.
-//
-//   cd frontend
-//   node scripts/build-reports.mjs            # all diagrams and reports
-//
-// No pandoc or LaTeX on this machine: Chromium (Playwright) renders everything. Mermaid and
-// marked are loaded from jsDelivr at pinned versions, so the build needs Internet access.
-// In each documentation folder (docs/, docs/module1/, docs/module2/):
-// diagrams/*.mmd -> assets/*.png, and rapport_*.md -> rapport_*.pdf (A4, page numbers).
-// Fails if a diagram does not render or an image of a report does not load.
+// Render the documentation diagrams (diagrams/*.mmd -> assets/*.png) and reports
+// (rapport_*.md -> PDF) with Chromium; Mermaid and marked come from jsDelivr (Internet needed).
+//   cd frontend && node scripts/build-reports.mjs
 import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";

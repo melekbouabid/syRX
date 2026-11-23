@@ -1,13 +1,7 @@
 """Submit a Big Data job to the Spark cluster of docker-compose.yml, from the host.
 
-    python -m src.data.spark.submit <job>          # index, quality, split, augment, epillid, rag
-
-Standard library only, so it runs from any venv (it is the command of the DVC stages).
-It starts the cluster if needed (`docker compose --profile spark up -d`), then runs
-`spark-submit` in the master container, where the driver lives; the executors run in the
-worker container. The repository is mounted on /opt/tujia in both, so the job reads and
-writes the same files as the host. While the job runs, its UI is on http://localhost:4040;
-the master UI (http://localhost:8090) keeps the list of finished applications.
+Run: `python -m src.data.spark.submit <job>` (standard library only; the DVC stage command).
+Spark UI on http://localhost:4040 while it runs, master UI on http://localhost:8090.
 """
 
 from __future__ import annotations

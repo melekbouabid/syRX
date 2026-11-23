@@ -1,5 +1,4 @@
-"""The search_documents tool with the step 3.2 options: reranking, query rewriting, sources
-with their metadata (fake reranker and LLM, SQL store of the test corpus)."""
+"""The search_documents tool: reranking, query rewriting and sources with their metadata."""
 
 from __future__ import annotations
 
@@ -40,7 +39,7 @@ def test_search_reranks_when_the_settings_ask(app: FastAPI, pharma: str) -> None
     assert len(result["results"]) == 2
     first = result["results"][0]
     assert first["rerank_score"] is not None and first["retrieval_rank"] >= 1
-    # Sources carry their metadata for the chat (step 3.2).
+    # Sources carry their metadata for the chat.
     for key in ("doc_id", "doc_type", "section", "source_name", "date", "version", "license"):
         assert key in first
     reranker = tools.retrievers.reranker

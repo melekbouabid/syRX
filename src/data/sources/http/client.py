@@ -1,9 +1,6 @@
 """The polite HTTP client every connector goes through.
 
-One request passes, in order: guardrails (declared host, https, no credentials), robots.txt
-(HTML and bulk files), the source's circuit breaker, the disk cache, the host's concurrency
-semaphore and token bucket, then the network with retries. Responses are size-limited and
-their content type is checked; an access wall is reported, never worked around.
+Guardrails, robots.txt, circuit breaker, disk cache, rate limits and retries, in that order.
 """
 
 from __future__ import annotations

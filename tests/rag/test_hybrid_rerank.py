@@ -1,8 +1,6 @@
-"""Step 3.2: BM25 sparse vectors and hybrid search in Qdrant, reranking, query rewriting.
+"""BM25 sparse vectors and hybrid search in Qdrant, reranking and query rewriting (fakes only).
 
-Fakes only (no download, no network): `TokenBM25` as the sparse encoder, a word-overlap
-reranker, the fake chat model. Runs on Qdrant's in-memory mode, and on a real server when
-TUJYA_TEST_QDRANT_URL is set (own collection, like test_rag_qdrant.py).
+Runs in Qdrant's in-memory mode, or on a real server when TUJYA_TEST_QDRANT_URL is set.
 """
 
 from __future__ import annotations
@@ -97,7 +95,7 @@ def test_old_collection_is_migrated_without_embedding(empty: QdrantStore) -> Non
 
     rows = [dict(r) for r in CORPUS]
     asyncio.run(index_chunks(empty, FakeEmbedder(DIM), rows))  # dense only
-    # A collection made before step 3.2: no sparse vector in its configuration.
+    # An older collection: no sparse vector in its configuration.
     meta = empty.get_meta()
     records = empty.client.scroll(empty.collection, limit=100, with_vectors=True)[0]
     empty.drop()

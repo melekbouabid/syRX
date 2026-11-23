@@ -1,17 +1,6 @@
-"""Build the Kaggle notebooks of step 2.3 (notebooks/module1/kaggle/classifier_<arch>.ipynb).
+"""Generate the Kaggle notebooks notebooks/module1/kaggle/classifier_<arch>.ipynb from one template.
 
-    python -m src.models.classification.notebook resnet50  # writes notebooks/module1/kaggle/...
-    python -m src.models.classification.notebook --all
-
-Same driver as the detectors' notebooks (src/models/detection/notebook.py): clone the
-experiment branch, install the pinned packages (notebooks/module1/kaggle/requirements.txt), find the
-private crop dataset, run src/models/classification/runner.py with
-config/hpo/classifier_<arch>.yaml, zip the export folder. Only the architecture changes, so
-they are generated from one template (a test checks that the committed notebooks are exactly
-the generated ones). Notebooks are committed without outputs (nbstripout).
-
-`TUJYA_SMOKE=1` in the environment runs the notebook in smoke mode (tiny subset, 2 trials,
-1 epoch), which is how it is checked locally before going to Kaggle.
+Run: `python -m src.models.classification.notebook <arch> | --all`; TUJYA_SMOKE=1 runs a tiny check.
 """
 
 from __future__ import annotations
@@ -28,8 +17,6 @@ REPO = "https://github.com/melekbouabid/syRX.git"
 DATASET = "tujya-c3pi-classify-v2"
 DATASET_NAME = "c3pi-v2-classify"  # `name` in the dataset's MANIFEST.json
 # Architecture -> (description, estimated duration on a Kaggle T4, recommended accelerator).
-# Estimates: docs/module1/kaggle_classifieurs.md (training throughput measured on the PC,
-# scaled to a T4 and capped by the data loading of the 4 Kaggle CPU cores, D103).
 ARCHS = {
     "baseline-cnn": (
         "Small CNN trained from scratch (4 convolution blocks, 1.3 M parameters), the baseline",

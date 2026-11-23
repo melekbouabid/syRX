@@ -111,7 +111,7 @@ def test_a_pair_is_stored_in_one_order_only(engine: Engine, inputs: Inputs) -> N
 
 
 def test_load_reads_the_v2_class_table(engine: Engine, tmp_path: Path, inputs: Inputs) -> None:
-    """The 380-class table (D119) has the counts of C3PI v2 instead of the v1 selection."""
+    """The 380-class table has the counts of C3PI v2 instead of the v1 selection."""
     v2 = tmp_path / "classes_v2.csv"
     v2.write_text(
         "class_id,class_key,ndc9,part,ndc11_list,name,generic_name,labeled_by,imprint,color,"

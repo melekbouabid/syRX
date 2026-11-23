@@ -1,28 +1,6 @@
-"""ONNX Runtime CPU latency of an exported detector (the metric `onnx_cpu_latency_ms`).
+"""ONNX Runtime CPU latency of an exported model, and `onnx_predict`, which decodes like the API.
 
-The API serves the models with ONNX Runtime on the CPU (backend/app/inference.py), so the
-comparison measures exactly that: one image per call, `CPUExecutionProvider`, after a few
-warm-up calls. The input is the real preprocessing of the API when images are given (letterbox
-to the model's square input, RGB, [0, 1]), otherwise random noise of the right shape.
-
-Latency depends on the machine: the notebooks log the Kaggle CPU figure
-(`kaggle_onnx_cpu_latency_ms`), and the import script measures every model again on the
-same local PC (`onnx_cpu_latency_ms`), which is the figure compared. Both are measured in a
-fresh Python process (`isolated_latency`): in the process that just ran PyTorch, its idle
-worker threads slow ONNX Runtime down by an order of magnitude (552 ms instead of 26 ms for
-YOLO11n on the development PC).
-
-Load budget: on the development laptop the latency jumps by an order of magnitude after about
-two seconds of continuous inference (YOLO11s: 59 ms per image for 36 passes, then about
-1,000 ms; Faster R-CNN: 400 ms for 4 passes, then 2,700 ms). `budget_s` caps the load of one
-measurement (warm-up included): warm-up stops after a third of the budget, the timed passes when
-the budget is spent (at least one). The API serves one image per request, far below that load,
-so the figure before the drop is the one that describes it (docs/decisions.md D98).
-
-`onnx_predict` decodes the exported model exactly as the API does (letterbox, output
-1 x (4 + classes) x N in cx cy w h, non-maximum suppression): the runner scores it on a few
-test images next to the PyTorch predictions (`parity_*` metrics), so a gap between the
-evaluated model and the served one shows up.
+Measured in a fresh process, one image per call, with an optional load budget (`budget_s`).
 """
 
 from __future__ import annotations
@@ -84,10 +62,7 @@ def onnx_cpu_latency(
 ) -> dict[str, float]:
     """Mean, median and 95th percentile latency (ms) of one forward pass on the CPU.
 
-    `images` (BGR) are cycled through; without them the input is random noise. `threads` = 0
-    lets ONNX Runtime choose (as the API does by default). `budget_s` > 0 caps the seconds of
-    inference of the whole call (module docstring): `onnx_cpu_runs` is then the number of
-    passes actually timed, at most `runs`.
+    `images` (BGR) are cycled through, else random noise; `budget_s` > 0 caps the seconds of load.
     """
     options = ort.SessionOptions()
     options.intra_op_num_threads = threads

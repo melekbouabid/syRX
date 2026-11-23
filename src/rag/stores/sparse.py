@@ -1,17 +1,7 @@
-"""Sparse (BM25) vectors stored in Qdrant next to the dense ones (step 3.2, D116).
+"""Sparse BM25 vectors stored in Qdrant next to the dense ones.
 
-Qdrant's BM25 is split in two: the encoder gives each term of a chunk its saturated term
-frequency, tf * (k1 + 1) / (tf + k1 * (1 - b + b * len / avg_len)), and the collection's
-sparse vector `bm25` has the IDF modifier, so Qdrant multiplies by the inverse document
-frequency it keeps up to date itself. A query term weighs 1: the score of a chunk is the
-BM25 sum over the query terms it contains.
-
-- `FastEmbedBM25`: the `Qdrant/bm25` model of fastembed (what LangChain's FastEmbedSparse
-  wraps, as in the course): English stop words and Snowball stemmer, terms hashed with
-  murmur3. Downloaded once from Hugging Face (a few kB, no account) into
-  `TUJYA_RAG_MODEL_CACHE_DIR`.
-- `TokenBM25`: the same formula on the tokenizer of the in-memory BM25 (src/rag/retrieval.py),
-  terms hashed with CRC-32; no download, used by the tests.
+`FastEmbedBM25` (fastembed `Qdrant/bm25`) in the app; `TokenBM25` (same formula, no download)
+in the tests.
 """
 
 from __future__ import annotations

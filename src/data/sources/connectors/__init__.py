@@ -8,8 +8,7 @@ from src.data.sources.connectors.ddinter import DDInterConnector
 from src.data.sources.connectors.openfda import OpenFdaLabelConnector
 from src.data.sources.connectors.pubmed import PubMedConnector
 
-# The sources the Tujya module 2 corpus uses (the original synergy sources were removed,
-# decision D85). Adding a source = writing one Connector subclass and listing it here.
+# The sources of the module 2 corpus. Adding a source = one Connector subclass listed here.
 _CONNECTORS: tuple[type[Connector], ...] = (
     DDInterConnector,
     PubMedConnector,

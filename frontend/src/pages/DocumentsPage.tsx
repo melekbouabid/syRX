@@ -22,7 +22,7 @@ import {
   shortHash,
 } from "../lib/documents";
 
-// The documents the assistant searches, as indexed in Qdrant (GET /api/documents, D114).
+// The documents the assistant searches, as indexed in Qdrant (GET /api/documents).
 const PAGE_SIZE = 25;
 
 function IndexCard({ index }: { index: IndexInfo }) {

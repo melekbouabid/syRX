@@ -3,7 +3,7 @@
 # code) and of the frontend (frontend/Dockerfile: `build` runs Vite, nginx serves the result),
 # then smoke-test each one: the container starts, becomes healthy and answers.
 # Nothing is published: the images stay in the runner's local Docker and disappear with it.
-# The app runs only on the owner's PC (docs/project_rules.md, D69, D70, D87; docs/cd.md).
+# The app runs only on the owner's PC: there is no deployment step.
 # The images contain code only (no data, no model, no secret).
 name: docker-build
 on:
@@ -65,7 +65,7 @@ jobs:
           file: ${{ matrix.file }}
           load: true
           push: false
-          tags: tujia2-${{ matrix.image }}:ci
+          tags: tujya-${{ matrix.image }}:ci
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,scope=${{ matrix.image }},mode=max
 
@@ -74,7 +74,7 @@ jobs:
         if: matrix.image == 'backend'
         run: |
           docker run -d --name app -p 127.0.0.1:8000:8000 \
-            -e TUJYA_DATABASE_URL=sqlite:////tmp/accounts.db tujia2-backend:ci
+            -e TUJYA_DATABASE_URL=sqlite:////tmp/accounts.db tujya-backend:ci
           for i in $(seq 1 30); do
             curl -fsS http://127.0.0.1:8000/api/health && break
             sleep 2
@@ -93,7 +93,7 @@ jobs:
       - name: Smoke test of the frontend image
         if: matrix.image == 'frontend'
         run: |
-          docker run -d --name app --add-host backend:127.0.0.1 -p 127.0.0.1:8080:80 tujia2-frontend:ci
+          docker run -d --name app --add-host backend:127.0.0.1 -p 127.0.0.1:8080:80 tujya-frontend:ci
           for i in $(seq 1 15); do
             curl -fsS -o /dev/null http://127.0.0.1:8080/ && break
             sleep 2
@@ -105,13 +105,13 @@ jobs:
       - name: Smoke test of the Spark image
         if: matrix.image == 'spark'
         run: |
-          docker run -d --name app -p 127.0.0.1:8090:8080 tujia2-spark:ci             /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master --host 0.0.0.0
+          docker run -d --name app -p 127.0.0.1:8090:8080 tujya-spark:ci             /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master --host 0.0.0.0
           for i in $(seq 1 30); do
             curl -fsS http://127.0.0.1:8090/json/ && break
             sleep 2
           done
           curl -fsS http://127.0.0.1:8090/json/ | grep -q '"status" : "ALIVE"'
-          docker run --rm tujia2-spark:ci python3 -c "
+          docker run --rm tujya-spark:ci python3 -c "
           from pyspark.sql import SparkSession
           spark = SparkSession.builder.master('local[1]').getOrCreate()
           assert spark.range(10).count() == 10
@@ -137,7 +137,7 @@ jobs:
       - name: Summary
         run: |
           {
-            echo "### tujia2-${{ matrix.image }}"
+            echo "### tujya-${{ matrix.image }}"
             echo "Built (multi-stage) and smoke-tested at $(git rev-parse --short HEAD). **Not pushed** (strictly local app, docs/cd.md)."
-            docker image ls tujia2-${{ matrix.image }}:ci --format 'Size: {{.Size}}'
+            docker image ls tujya-${{ matrix.image }}:ci --format 'Size: {{.Size}}'
           } >> "$GITHUB_STEP_SUMMARY"

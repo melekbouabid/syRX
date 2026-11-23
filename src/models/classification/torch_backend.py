@@ -1,31 +1,7 @@
 """Training, prediction, ONNX export and Grad-CAM of the classifiers (PyTorch).
 
-One training loop for the six architectures of src/models/architecture.py, driven by
-src/models/classification/runner.py (the same functions as the detectors' backends):
-
-- `train(hp, data_root, work, ...)` -> `TrainResult` (best weights on the validation top-1,
-  per-epoch history);
-- `predict(weights, files, imgsz)` -> class probabilities, one row per crop, with the API's
-  preprocessing (src/data/dataset.py `crop_tensor`);
-- `export_onnx(weights, imgsz, target, metadata)` -> ONNX file with the API's input
-  (1x3xSxS RGB in [0, 1]) and output (1xN probabilities), class list in the metadata;
-- `gradcam_pictures(...)` -> PNG pictures of Grad-CAM (src/utils/gradcam.py) on test crops.
-
-Training recipe (hyperparameters in config/hpo/classifier_<arch>.yaml, searched by Optuna):
-
-1. transfer learning: `head_epochs` epochs with the pretrained backbone frozen, only the new
-   classification layer learns (skipped by the baseline, trained from scratch);
-2. selective fine-tuning: the last `unfreeze` backbone blocks are unfrozen and trained with
-   the head, at `lr * backbone_lr_mult` (cosine decay, AdamW);
-3. class imbalance: `imbalance` = `class_weights` (weights (n_c / mean)^-power from the TRAIN
-   counts) or `focal` (focal loss, gamma `focal_gamma`, same weights), or `none`;
-4. augmentation of the TRAIN split only: random rotation (pills lie in any orientation),
-   random resized crop, RandAugment (`randaugment` magnitude, 0 = off), and MixUp or CutMix
-   on a share `mix_prob` of the batches; the validation and test crops only get the API's
-   resize (no leak of augmented or test data into the choice of the model);
-5. early stopping on the validation top-1 (`patience`), time limit `max_minutes`.
-
-Mirror flips are not used: a mirrored imprint never occurs on a real pill.
+Transfer learning, then selective fine-tuning, class weights or focal loss, and augmentation
+of the train split only. No mirror flips: a mirrored imprint never occurs on a real pill.
 """
 
 from __future__ import annotations
@@ -110,12 +86,9 @@ def smooth(targets: torch.Tensor, epsilon: float) -> torch.Tensor:
 
 
 def random_view(image: np.ndarray, size: int, rng: np.random.Generator | None = None) -> np.ndarray:
-    """A random rotation (any angle, grey corners) then a random resized crop (70 to 100 % of
-    the area, aspect ratio 0.85 to 1.18) of a BGR crop, size x size, in one cv2.warpAffine.
+    """A random rotation then a random resized crop of a BGR crop, size x size, in one warpAffine.
 
-    The same augmentation as torchvision RandomRotation(180) + RandomResizedCrop, about 25
-    times cheaper on the CPU (8.7 ms -> 0.3 ms per crop, D102): the Kaggle notebooks have 4
-    CPU cores to feed the GPU. A large downscale goes through INTER_AREA first (no aliasing).
+    Same effect as torchvision RandomRotation + RandomResizedCrop, much cheaper on the CPU.
     """
     draw = rng.random if rng is not None else np.random.random
     h, w = image.shape[:2]
@@ -351,8 +324,7 @@ def train(
         raise ValueError(f"no train or validation crops in {data_root}")
     batch, workers = int(hp.get("batch", 64)), int(hp.get("workers", 4))
     options = model_options(hp)
-    # Default memory format: channels_last made the backward pass of the batch-norm networks
-    # 10 to 13 times slower on the development GPU (torch 2.14, measured in D102).
+    # Default memory format: channels_last made the batch-norm backward pass much slower.
     net = A.build(model, num_classes, pretrained=pretrained, **options).to(where)
 
     transform = train_transform(

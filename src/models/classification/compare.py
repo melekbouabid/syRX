@@ -1,15 +1,6 @@
-"""Comparison table and figure of the classifiers of step 2.3, read from MLflow.
+"""Comparison table and figure of the classifiers, read from MLflow (experiment `tujya-vision`).
 
-    python -m src.models.classification.compare     # training venv, MLflow server running
-
-Reads the experiment `tujya-vision`: the parent runs of the candidates (tags `stage=compare`,
-`task=classify`) and the re-evaluation of the v1 champion (`stage=compare-eval`), smoke runs
-excluded. Latency, size and parameters are those logged by
-`python -m src.models.detection.compare_latency --task classify` (every model timed together,
-D96 / D98). Writes
-- docs/module1/assets/classifieurs_comparaison.png: top-1 on the comparison split against
-  the ONNX CPU latency and against the size of the ONNX file (champion highlighted);
-- the Markdown table between the markers of docs/module1/kaggle_classifieurs.md.
+Run: `python -m src.models.classification.compare` (training venv, MLflow server running).
 """
 
 from __future__ import annotations
@@ -90,7 +81,7 @@ def collect(
     version_by_run: dict[str, str] = {}
     for mv in client.search_model_versions(f"name='{model}'"):
         if "precision" in (mv.tags or {}):
-            continue  # FP16 / INT8 variants (step 2.4)
+            continue  # FP16 / INT8 variants
         status_by_run[mv.run_id] = (mv.tags or {}).get("status", "")
         version_by_run[mv.run_id] = str(mv.version)
     runs = client.search_runs(
@@ -124,9 +115,9 @@ def _fmt(value: float | None, digits: int = 4) -> str:
 
 def markdown_table(rows: list[Row]) -> str:
     lines = [
-        "| Modèle | top-1 val | top-1 test | top-5 test | F1 macro test | top-1 classes v1 "
-        "| top-1 test v2 complet | Latence ONNX CPU (ms) | Taille ONNX (Mo) | Paramètres (M) "
-        "| Version | Statut | Run MLflow |",
+        "| Model | top-1 val | top-1 test | top-5 test | macro F1 test | top-1 v1 classes "
+        "| top-1 full v2 test | ONNX CPU latency (ms) | ONNX size (MB) | Parameters (M) "
+        "| Version | Status | MLflow run |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|",
     ]
     for r in rows:
@@ -142,17 +133,13 @@ def markdown_table(rows: list[Row]) -> str:
 
 
 PANELS = (
-    ("latency_ms", "Latence ONNX Runtime CPU par crop (ms, échelle log)"),
-    ("size_mb", "Taille du fichier ONNX FP32 (Mo, échelle log)"),
+    ("latency_ms", "ONNX Runtime CPU latency per crop (ms, log scale)"),
+    ("size_mb", "FP32 ONNX file size (MB, log scale)"),
 )
 
 
 def label_offsets(points: list[tuple[float, float]]) -> list[float]:
-    """Vertical offset (points) of each label: neighbours on a log x axis are moved downwards.
-
-    Two points are neighbours when their x differ by less than a factor 2.2 and their y by
-    less than 0.05 (the three best classifiers of step 2.3 sit within 1.2 points of top-1).
-    """
+    """Vertical offset (points) of each label, so neighbours on a log x axis do not overlap."""
     offsets = [4.0] * len(points)
     order = sorted(range(len(points)), key=lambda i: -points[i][1])
     for rank, i in enumerate(order):
@@ -207,9 +194,9 @@ def plot(rows: list[Row], path: Path) -> Path:
             ax.spines[side].set_visible(False)
         ax.tick_params(colors=MUTED)
         ax.margins(x=0.25)
-    axes[0].set_ylabel("top-1, split de comparaison", color=MUTED)
+    axes[0].set_ylabel("top-1, comparison split", color=MUTED)
     fig.suptitle(
-        "Classifieurs de comprimés, C3PI v2 (étape 2.3) : précision, latence et taille",
+        "Pill classifiers, C3PI v2: accuracy, latency and size",
         color=INK,
         x=0.01,
         ha="left",

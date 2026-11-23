@@ -1,7 +1,6 @@
-"""Configuration: YAML file, CLI overrides and secrets from the environment.
+"""Data pipeline configuration: YAML file, CLI overrides and secrets from the environment.
 
-Secrets (NCBI key, contact email) are read from `.env` / the process environment only.
-They are never read from YAML, never serialised and never logged.
+Secrets (NCBI key, contact email) come from `.env` or the environment only, never logged.
 """
 
 from __future__ import annotations
@@ -16,8 +15,6 @@ from dotenv import dotenv_values
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
 CONFIG_ENV_VAR = "TUJYA_CONFIG"
-# Name before the rename (decision D86), still read when TUJYA_CONFIG is not set.
-LEGACY_CONFIG_ENV_VAR = "SYNERGYRX_CONFIG"
 DEFAULT_CONFIG_NAME = "config.yaml"
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -213,7 +210,7 @@ def find_config(explicit: Path | None = None) -> Path | None:
         if not explicit.is_file():
             raise ConfigError(f"config file not found: {explicit}")
         return explicit
-    if env_path := os.environ.get(CONFIG_ENV_VAR) or os.environ.get(LEGACY_CONFIG_ENV_VAR):
+    if env_path := os.environ.get(CONFIG_ENV_VAR):
         return find_config(Path(env_path))
     candidate = Path.cwd() / DEFAULT_CONFIG_NAME
     return candidate if candidate.is_file() else None

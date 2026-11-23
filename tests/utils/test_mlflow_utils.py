@@ -1,8 +1,4 @@
-"""MLflow helpers (src/utils/mlflow_utils.py) on a temporary local tracking store.
-
-The store is a SQLite database in a temporary folder (the backend MLflow recommends; the
-file store is in maintenance mode), never the project's server. Models are tiny ONNX graphs.
-"""
+"""MLflow helpers (src/utils/mlflow_utils.py) on a temporary SQLite tracking store."""
 
 from __future__ import annotations
 
@@ -252,7 +248,7 @@ def test_better_version_is_promoted_and_old_champion_becomes_challenger(
 
 
 def test_served_alias_does_not_keep_a_lost_status(tracking: SimpleNamespace) -> None:
-    # Step 2.3: the v1 classifier still held `served` (step 2.4) when it lost `challenger`.
+    # The v1 classifier still held `served` when it lost `challenger`.
     v1 = new_version(tracking, {"top1": 0.90})
     reg.promote_if_better(tracking.model, v1, "top1")
     tracking.client.set_registered_model_alias(tracking.model, "served", v1)
@@ -330,7 +326,7 @@ def test_missing_metric_raises(tracking: SimpleNamespace) -> None:
     assert reg.alias_version(tracking.model, reg.CHAMPION) is None
 
 
-# Scores of step 2.2 on the comparison split (test_v2_mAP50_95, docs/decisions.md D98).
+# Detector scores on the comparison split (test_v2_mAP50_95).
 STEP_2_2 = {"yolov8s": 0.8830, "yolov10n": 0.8860, "yolo11s": 0.8885, "fasterrcnn": 0.8218}
 
 
@@ -372,7 +368,7 @@ def test_sequential_promotion_depends_on_the_import_order(tracking: SimpleNamesp
 
 
 def test_ineligible_version_is_archived_whatever_its_score(tracking: SimpleNamespace) -> None:
-    # A guard checked by the caller failed (D100): never champion nor challenger.
+    # A guard checked by the caller failed: never champion nor challenger.
     v1 = new_version(tracking, {"top1": 0.40})
     reg.promote_if_better(tracking.model, v1, "top1")
     v2 = new_version(tracking, {"top1": 0.95})

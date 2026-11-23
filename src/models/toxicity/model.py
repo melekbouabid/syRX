@@ -1,19 +1,7 @@
 """Single-molecule toxicity: one LightGBM model per Tox21 assay on RDKit Morgan fingerprints.
 
-Bonus tool of the agent and the MCP server (docs/bonus/toxicity.md). The model predicts the
-probability that a molecule is *active* in each of the 12 Tox21 in vitro assays; it is
-"prédiction d'un modèle sur des tests in vitro, pas une évaluation clinique". Each molecule
-is predicted on its own: nothing is ever said about a mixture.
-
-Training: `python -m src.models.toxicity.train_tox21 train` (scaffold split, MLflow `tujya-tox`,
-registered model `tujya-tox21`); `python -m src.models.toxicity.train_tox21 publish` copies the
-registered bundle to `models/tox21/`, which this module loads on first use:
-
-    models/tox21/model.json        tasks, fingerprint settings, test ROC-AUC per task, version
-    models/tox21/<task>.txt        one LightGBM booster per task
-    models/tox21/train_fps.npy     packed training fingerprints (applicability domain)
-
-Ingredient names are resolved to structures with `config/ingredient_smiles.csv` (PubChem).
+Predicts in vitro assay activity, never a clinical judgement, and never for a mixture.
+Loads models/tox21/ (published by src/models/toxicity/train_tox21.py) on first use.
 """
 
 from __future__ import annotations

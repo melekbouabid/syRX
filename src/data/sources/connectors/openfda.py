@@ -1,12 +1,6 @@
-"""openFDA drug labels (SPL) for a list of active ingredients, one label per ingredient.
+"""openFDA drug labels (SPL): one label per active ingredient, chosen by `choose_label`.
 
-For each ingredient the connector asks openFDA for the most recent labels whose generic or
-substance name contains it, then keeps one (see `choose_label`): single-ingredient products
-first, prescription before OTC, then the label with the most of the indexed sections, then
-the most recent `effective_time`. The chosen label is stored as raw JSON with the list of
-candidates it was chosen from, so the choice can be audited and repeated.
-
-Dosage sections are never kept (`EXCLUDED_SECTIONS`): Tujya must not be able to quote a dose.
+Dosage sections are never kept (`EXCLUDED_SECTIONS`): the app must not quote a dose.
 """
 
 from __future__ import annotations

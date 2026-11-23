@@ -1,18 +1,6 @@
-"""Load the pill classes, ingredients and DDInter interactions into the pharma tables.
+"""Load pill classes, ingredients and DDInter interactions into the pharma tables (full refresh).
 
-    python -m app.pharma_loader                       # database from TUJYA_PHARMA_DATABASE_URL
-    python -m app.pharma_loader --database-url postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
-
-Inputs (built by the data steps, see docs/module2/interactions.md):
-- config/pill_classes.csv                                 one row per identification class
-- data/processed/pharma/pill_ingredients.csv             class -> ingredient (RxNav)
-- data/processed/pharma/interactions_with_any_drug.csv   DDInter pairs involving a class
-                                                         ingredient
-
-The load is a full refresh: the five tables are dropped and created again from the models
-in app/pharma.py (so a new column reaches an existing database), then filled in one
-transaction. Running it twice gives the same database. Nothing else lives in these tables:
-they are rebuilt from the CSV files above, which DVC versions.
+Run: `python -m app.pharma_loader [--database-url URL]` (default TUJYA_PHARMA_DATABASE_URL).
 """
 
 from __future__ import annotations
@@ -148,8 +136,8 @@ def load(engine: Engine, inputs: Inputs) -> LoadReport:
                 imprint=row.get("imprint", ""),
                 color=row.get("color", ""),
                 shape=row.get("shape", ""),
-                # v1 table: images selected for training; v2 table (D119): consumer photos
-                # and reference images of the class in C3PI v2.
+                # v1 table: images selected for training; v2 table: consumer photos and
+                # reference images of the class in C3PI v2.
                 n_images=_int(row.get("n_consumer_selected", row.get("n_consumer")))
                 + _int(row.get("n_reference_selected", row.get("n_reference"))),
                 source=sources["c3pi"],

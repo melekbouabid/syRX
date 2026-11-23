@@ -1,25 +1,7 @@
-"""Data drift of the scanned photos (step 2.8, docs/module1/derive.md).
+"""Data drift of the scanned photos against reference photos (C3PI v2 validation split).
 
-The models were trained on the photos of C3PI v2 (consumer-grade photos of one pill on a
-plain background). A scan that looks different (dark, blurred, a phone photo of another size,
-something that is not a pill) is scored with less certainty, and the confidence the app shows
-means less. This module compares the photos the API receives with reference photos of the same kind
-(the C3PI v2 validation split, never trained on: D122):
-
-- `image_stats` / `scan_stats`: eight numbers per photo, the same in the reference stage
-  (src/data/drift_reference.py) and in the API: brightness, contrast, sharpness, size, aspect
-  ratio, number of pills found, mean confidence of the detector and of the classifier;
-- `DriftMonitor`: a sliding window of the last `window` photos, in memory only. No image and
-  nothing about the user is kept, only these eight numbers; a restart empties the window;
-- `drift_report`: per statistic, two-sample Kolmogorov-Smirnov test (scipy) and Population
-  Stability Index (PSI, bins = deciles of the reference) against the reference sample;
-  thresholds from params.yaml `drift`, written into the reference file by the DVC stage.
-
-A statistic drifts when the KS p-value is below `ks_alpha` AND its PSI reaches `psi_drift`
-(with a few hundred photos a KS test flags differences too small to matter; the PSI says
-how large the shift is); it is in `warning` when the p-value is below `ks_alpha` and the PSI
-reaches only `psi_warning` (a PSI alone moves by about 0.05 between two samples of a few
-hundred photos of the same distribution).
+Eight statistics per photo in a sliding window (in memory, no image kept), compared with a
+Kolmogorov-Smirnov test and the PSI; thresholds from params.yaml `drift`.
 """
 
 from __future__ import annotations

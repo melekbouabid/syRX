@@ -1,11 +1,6 @@
-"""Tujya medicine tables: pills, active ingredients, their interactions, and the sources.
+"""Medicine tables: pills, active ingredients, interactions and sources (own database).
 
-These tables have their own declarative base and their own database (PostgreSQL from
-docker-compose.yml, or a SQLite file for development and tests), separate from the
-accounts database `app.db`.
-
-    pills ──< pill_ingredients >── ingredients ──< interactions >── ingredients
-       └────────────── sources ──────────────┘          (each row cites a source)
+pills ──< pill_ingredients >── ingredients ──< interactions >── ingredients
 """
 
 from __future__ import annotations

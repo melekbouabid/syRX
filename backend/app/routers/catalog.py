@@ -1,19 +1,7 @@
 """GET /api/catalog/summary and /showcase: what the public start and sign-in pages show.
 
-Public, read only, and never anything about an account. Two routes:
-
-- `summary`: the size of the catalogue, counted in the medicine tables loaded by `pharma_loader`
-  (pill classes the classifier knows, active ingredients, interaction pairs), so the start
-  page never shows a figure typed by hand;
-- `showcase`: one real scan of a demo gallery photo (C3PI test split, never seen in
-  training: D105) with the served models, and one DDInter interaction of its active
-  ingredient: the well-known pair SHOWCASE_PAIR when the pill is one of its two drugs,
-  else the most severe one.
-  The floating cards of the start page show it; without it they are marked as an example.
-
-Both are kept in memory (counts for ten minutes, the scan per published model version), so
-the route cannot be used to load the server: at most one inference per model version.
-Decision D128.
+Counts from the medicine tables and one real scan of a demo photo, cached in memory so
+the public routes cannot be used to load the server.
 """
 
 from __future__ import annotations
@@ -259,9 +247,7 @@ async def summary(request: Request, settings: SettingsDep, db: PharmaSession) ->
 async def showcase(request: Request, settings: SettingsDep, db: PharmaSession) -> ShowcaseOut:
     """One real scan of a C3PI test photo with the served models, for the start page cards.
 
-    `showcase` is null when the models, the demo photos or the medicine tables are missing;
-    the app then marks its cards as an example. Computed once per published model version
-    (the first call may take a few seconds while the models load).
+    Null when the models, the demo photos or the medicine tables are missing.
     """
     cache = _cache(request)
     holder: ScannerHolder = request.app.state.scanner

@@ -14,12 +14,12 @@ stages:
       nfiles: 20330
     - path: src/data/autolabel.py
       hash: md5
-      md5: 4940e21f0aec6436b46d78b3f5a4a529
-      size: 11307
+      md5: c8e4b46309e357ec34a195577c4ab0c9
+      size: 10286
     - path: src/data/prepare/v1.py
       hash: md5
-      md5: fd5c9d2422747ceeba2e239e51d2c95d
-      size: 7980
+      md5: b1b33e66cbd3156f8ddec0759cc4ed5b
+      size: 7277
     outs:
     - path: data/processed/c3pi/datasets
       hash: md5
@@ -72,12 +72,12 @@ stages:
       nfiles: 117
     - path: src/data/spark/index_job.py
       hash: md5
-      md5: 9804277a4838aa932e6f4422f6c38f0a
-      size: 14960
+      md5: d26051b4c085905a25ddeef4af2133fc
+      size: 13738
     - path: src/data/spark/session.py
       hash: md5
-      md5: 93ade7d0e973aca3d121d27cbac53fff
-      size: 2435
+      md5: 4574e9bf9fdf4045fbefc7fc04f4bce5
+      size: 2345
     params:
       params.yaml:
         bigdata.index:
@@ -106,8 +106,8 @@ stages:
       nfiles: 20330
     - path: src/data/cleaning.py
       hash: md5
-      md5: c615913693eb200cb725fd00bf3ceb19
-      size: 12010
+      md5: e87e833ebb738f430d40520661001c72
+      size: 10366
     params:
       params.yaml:
         bigdata.quality:
@@ -141,8 +141,8 @@ stages:
       nfiles: 146
     - path: src/data/split.py
       hash: md5
-      md5: 0137f2bf9ccbc82a777e7681f46f76ee
-      size: 11499
+      md5: 77bb36ae4e63468512dc85ff4498db28
+      size: 9695
     params:
       params.yaml:
         bigdata.index.min_images: 20
@@ -176,8 +176,8 @@ stages:
       nfiles: 20330
     - path: src/data/augmentation.py
       hash: md5
-      md5: 9771c619a8611660463c9dd903b2a174
-      size: 10605
+      md5: 18d27a0c5b107e87318efca59dee5d09
+      size: 9555
     params:
       params.yaml:
         bigdata.augment:
@@ -213,8 +213,8 @@ stages:
       nfiles: 33005
     - path: src/data/spark/epillid_job.py
       hash: md5
-      md5: 77b3bc0ff632604aecdf1ed2ee27937d
-      size: 5125
+      md5: 2c26157b844c3ac01ce87d2a4e8df795
+      size: 4146
     outs:
     - path: data/processed/c3pi/bigdata/epillid
       hash: md5
@@ -251,12 +251,12 @@ stages:
       nfiles: 3
     - path: src/data/spark/rag_job.py
       hash: md5
-      md5: d1e8de0dbc6c8fbd57bb82ca070cef6d
-      size: 12522
+      md5: d37cf234fa9cc80a3862922870abf042
+      size: 10880
     - path: src/rag/chunking.py
       hash: md5
-      md5: a718df904865f230738a74d37230ca0a
-      size: 16923
+      md5: 32a47a04b5cb6699f992ec739ed545f7
+      size: 16283
     params:
       params.yaml:
         bigdata.rag:
@@ -315,8 +315,8 @@ stages:
       nfiles: 51
     - path: src/data/spark/log_stats.py
       hash: md5
-      md5: 5f2eca50bc0383ba17243547e6d9f4dc
-      size: 10973
+      md5: 3f01821b5c7e60e53bba8d5f715f7403
+      size: 10210
     outs:
     - path: data/processed/c3pi/bigdata/stats.json
       hash: md5
@@ -431,12 +431,12 @@ stages:
       size: 343
     - path: src/models/export_onnx.py
       hash: md5
-      md5: 829276b1df7438f5218c11ab324c9fb0
-      size: 8391
+      md5: fc03a1be6b21443ebd595c3ed983e75c
+      size: 7364
     - path: src/utils/mlflow_utils.py
       hash: md5
-      md5: 6a135117a18242461d441271964259ce
-      size: 8258
+      md5: 0828eff5f73a996096aadea650e1a30e
+      size: 6889
     params:
       params.yaml:
         export:
@@ -480,12 +480,12 @@ stages:
       nfiles: 2
     - path: src/data/autolabel.py
       hash: md5
-      md5: 4940e21f0aec6436b46d78b3f5a4a529
-      size: 11307
+      md5: c8e4b46309e357ec34a195577c4ab0c9
+      size: 10286
     - path: src/models/evaluate.py
       hash: md5
-      md5: 5b930d78a02fd7d7e04ef46c97f6d384
-      size: 4718
+      md5: 667606735f062ff72ee9ac73a50073b0
+      size: 4051
     params:
       params.yaml:
         evaluate:
@@ -516,12 +516,12 @@ stages:
       nfiles: 20330
     - path: src/data/autolabel.py
       hash: md5
-      md5: 4940e21f0aec6436b46d78b3f5a4a529
-      size: 11307
+      md5: c8e4b46309e357ec34a195577c4ab0c9
+      size: 10286
     - path: src/data/prepare/detect_v2.py
       hash: md5
-      md5: df7d77efb3d610e0b1a56a3cefe2c742
-      size: 8416
+      md5: eb40cab2478a76ee23baf3142c9e3842
+      size: 6617
     outs:
     - path: data/processed/c3pi/datasets_v2/detect
       hash: md5
@@ -560,16 +560,16 @@ stages:
       nfiles: 20330
     - path: src/data/autolabel.py
       hash: md5
-      md5: 4940e21f0aec6436b46d78b3f5a4a529
-      size: 11307
+      md5: c8e4b46309e357ec34a195577c4ab0c9
+      size: 10286
     - path: src/data/prepare/classify_v2.py
       hash: md5
-      md5: cb5177b85c526193ee87ebf7816a7558
-      size: 14257
+      md5: 5b64c3bdb9f3b5e1d5176d1190916f0c
+      size: 11708
     - path: src/data/prepare/detect_v2.py
       hash: md5
-      md5: df7d77efb3d610e0b1a56a3cefe2c742
-      size: 8416
+      md5: eb40cab2478a76ee23baf3142c9e3842
+      size: 6617
     outs:
     - path: data/processed/c3pi/datasets_v2/classify
       hash: md5
@@ -581,12 +581,12 @@ stages:
     deps:
     - path: backend/app/gallery.py
       hash: md5
-      md5: 75fdee8200cc39bd086a8267c6f23e11
-      size: 2803
+      md5: ff1f5c027f789f7d8367a7eb80d7b382
+      size: 2416
     - path: backend/app/inference.py
       hash: md5
-      md5: bf6f210820e9e9bee96425a2abddada0
-      size: 11941
+      md5: f2b1c7914ff79a57dd80dd672edc58a0
+      size: 11196
     - path: config/demo_gallery.csv
       hash: md5
       md5: e243fe024a2e2234bf98fc617776eb92
@@ -627,12 +627,12 @@ stages:
       size: 321
     - path: src/models/gradcam_gallery.py
       hash: md5
-      md5: 70f4d23f7857ea96eccdba9fdbb6eaad
-      size: 11928
+      md5: 4307cbc88cc66b05f180dd9ea66fc1ac
+      size: 10392
     - path: src/utils/gradcam.py
       hash: md5
-      md5: 7dde8c0d8d8a39cd1512fe7c8bc921a9
-      size: 5196
+      md5: 8f72c9f230816001c81c5ad58d9b2c2f
+      size: 4018
     outs:
     - path: data/processed/c3pi/gradcam
       hash: md5
@@ -644,8 +644,8 @@ stages:
     deps:
     - path: backend/app/boxes.py
       hash: md5
-      md5: 41c22c4bef23c6b6a162aa54adba76d9
-      size: 22648
+      md5: 8c5c329bcca4179ac2b62053b29900dc
+      size: 21346
     - path: config/brand_aliases.csv
       hash: md5
       md5: 75cbf74c2651943ace56395f7e308137
@@ -665,8 +665,8 @@ stages:
       nfiles: 720
     - path: src/data/medicine_boxes.py
       hash: md5
-      md5: 4d8e3eef4321151ac0cedfb2c34b8907
-      size: 10713
+      md5: 1afe3a3c8330b29306e83552a5abc737
+      size: 9444
     outs:
     - path: data/processed/medicine_boxes
       hash: md5
@@ -678,12 +678,12 @@ stages:
     deps:
     - path: backend/app/drift.py
       hash: md5
-      md5: ec5bfae06b375d721d632d0a155e5c0c
-      size: 10870
+      md5: 4775f7b5e5cc1b56f458610f76da11da
+      size: 9493
     - path: backend/app/inference.py
       hash: md5
-      md5: bf6f210820e9e9bee96425a2abddada0
-      size: 11941
+      md5: f2b1c7914ff79a57dd80dd672edc58a0
+      size: 11196
     - path: data/processed/c3pi/datasets_v2/detect/index.csv
       hash: md5
       md5: 54be74bd56cc53c3a78059a86efde107
@@ -707,8 +707,8 @@ stages:
       size: 3084
     - path: src/data/drift_reference.py
       hash: md5
-      md5: cd8094349a148e37e1eae3fe7c9d808d
-      size: 8150
+      md5: 6bd06dc8a297328c870c941d00c405ce
+      size: 6880
     params:
       params.yaml:
         drift:

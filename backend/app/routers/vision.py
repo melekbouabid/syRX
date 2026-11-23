@@ -1,12 +1,7 @@
 """Endpoints of the course guide: GET /health, GET /model/metadata, POST /predict(/visualize).
 
-The model alone, as the guide asks: no account and no medicine database (decision D97).
-The app's own route, POST /api/scan (routers/scan.py), adds the medicine names, the sources
-and the confirmation rule on top of the same ONNX Runtime scan (app/inference.py).
-
-Errors: 400 when the upload is not a readable image, 413 when it is too large, 503 when the
-models are not loaded (no `models/detector.onnx` / `classifier.onnx`: `python -m
-src.models.registry publish`).
+The model alone (no account, no medicine database). Errors: 400 unreadable image,
+413 too large, 503 models not loaded.
 """
 
 from __future__ import annotations
@@ -171,9 +166,7 @@ def model_metadata(
 async def metadata(request: Request) -> MetadataOut:
     """Name, architecture, Registry version and aliases, validation and test metrics, classes.
 
-    The metrics are those of the published version in the MLflow Model Registry (models.json,
-    written by `python -m src.models.registry publish`); an FP16 / INT8 variant shows its own test
-    scores and latency next to the validation scores of the champion it comes from.
+    Metrics of the published version (models.json); a FP16 / INT8 variant shows its own scores.
     """
     scanner = await run_in_threadpool(loaded_scanner, request)
     names = _metadata(scanner.detector).get("names") or {0: "pill"}
@@ -277,9 +270,7 @@ UploadImage = Annotated[UploadFile, File(description="JPEG, PNG or WebP photo of
 async def predict(image: UploadImage, request: Request, settings: SettingsDep) -> PredictOut:
     """Detect every pill, then give the top-5 classes of each one with their probabilities.
 
-    Boxes in pixels of the uploaded image and normalised (0-1); server latency in
-    `timings` (`inference_ms`: ONNX Runtime only, `server_ms`: the whole request). An
-    identification is a suggestion, never a certainty: read the probabilities.
+    Boxes in pixels and normalised (0-1); `timings` gives inference and whole-request latency.
     """
     started = time.perf_counter()
     _, output, scanner = await predict_upload(image, request, settings)

@@ -1,29 +1,8 @@
-"""Generation benchmark, step 2: score the answers of benchmark_generation.py (step 3.4, D124).
+"""Generation benchmark, part 2: score the answers (safety, citations, RAGAS, MLflow GenAI).
 
-For one configuration (LLM + answer prompt version, config/rag_generation.yaml):
-1. Safety (all questions): no dose sentence, no "safe"/"sûr", disclaimer at the end, dose
-   questions refused, no uncited timing advice; plus what the safety node removed.
-2. Citations (all answered questions): for every answer sentence citing [n], the local judge
-   says whether source n supports it.
-3. RAGAS 0.4.4 on every answered question: faithfulness, answer relevancy (bge-m3
-   embeddings), and, when the question has a reference, context precision and context recall.
-   Scores are cached by input (data/processed/rag/bench/generation/ragas_cache.jsonl): a run
-   stopped halfway resumes, and identical inputs are not judged twice.
-4. MLflow 3 GenAI: `mlflow.genai.evaluate` with the built-in judges Correctness and Safety and
-   three project scorers (citation present, no dose, disclaimer present), in the same run.
-One MLflow run per configuration in the experiment `tujya-rag-generation`; aggregates in
-src/evaluation/results/generation/<config>.json, per-question scores (no source text) in
-src/evaluation/results/generation/<config>.jsonl. `--select` applies the rule of the
-configuration file and `--register` registers the champion and challenger (registered model
-`tujya-rag-generation`, prompt aliases in the Prompt Registry).
-
-    # from the repository root, project venv (.venv) active; Ollama and MLflow running
-    python -m src.evaluation.ragas_evaluation --llm qwen2.5:3b --prompt v1
-    python -m src.evaluation.ragas_evaluation --select [--register]
-    # the champion again on the corpus of the 380 classes (D126): answers with
-    # `benchmark_generation --corpus v2`, then
-    python -m src.evaluation.ragas_evaluation --llm qwen2.5:3b --prompt v1 --corpus v2
-    python -m src.evaluation.ragas_evaluation --select --corpus v2   # compared per corpus
+One MLflow run per configuration (experiment `tujya-rag-generation`); `--select` picks the
+champion and `--register` registers it.
+Run: `python -m src.evaluation.ragas_evaluation --llm M --prompt v1`.
 """
 
 from __future__ import annotations
@@ -60,8 +39,7 @@ CONFIG = ROOT / "config" / "rag_generation.yaml"
 RESULTS = ROOT / "src" / "evaluation" / "results" / "generation"
 CHAMPION = RESULTS / "champion.json"
 CACHE = ROOT / "data" / "processed" / "rag" / "bench" / "generation" / "ragas_cache.jsonl"
-# The answers of the first generation benchmark (88 questions, 28/10), still read by
-# judge_control.py.
+# The answers of the first generation benchmark, read by judge_control.py.
 ANSWERS = ROOT / "data" / "processed" / "rag" / "bench" / "answers.jsonl"
 REGISTERED = "tujya-rag-generation"
 RAGAS_VERSION = "0.4.4"
@@ -644,7 +622,7 @@ def best_prompt(results: dict[str, dict[str, Any]], llm: str, selection: dict[st
 
 def cmd_select(cfg: dict[str, Any], register: bool, corpus: str = "v1") -> None:
     selection = cfg["selection"]
-    # One corpus at a time (D126): the scores of two corpora are not comparable.
+    # One corpus at a time: the scores of two corpora are not comparable.
     results = {n: r for n, r in all_results().items() if r["params"].get("corpus", "v1") == corpus}
     for name, record in results.items():
         metrics = record["metrics"]

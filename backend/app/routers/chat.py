@@ -1,9 +1,7 @@
-"""POST /api/chat: a question about medicines, answered by the Tujya agent with citations.
+"""POST /api/chat: a question about medicines, answered by the agent with citations.
 
-`stream: false` returns one JSON `ChatResult`. `stream: true` returns Server-Sent Events:
-`tool` (each tool call, as it happens), `token` (answer text, sentence by sentence, after
-the sentence-level safety filter), then `final` (the checked `ChatResult`, which is the
-authoritative answer) or `error`. Sign-in required.
+`stream: true` returns Server-Sent Events: `tool`, `token`, then `final` or `error`.
+Sign-in required.
 """
 
 from __future__ import annotations

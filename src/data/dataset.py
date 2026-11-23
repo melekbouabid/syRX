@@ -1,15 +1,7 @@
-"""The crop dataset of stage prepare_classify_v2 (src/data/prepare/classify_v2.py).
+"""The crop dataset of stage prepare_classify_v2 and how models are scored on it.
 
-Layout (also the private Kaggle dataset of package_kaggle):
-
-    <root>/<split>/<class_id:03d>/<name>.jpg      square crops (256 px)
-    <root>/index.csv          file, split, class_id, group_id, role, source, box, holdout
-    <root>/classes.csv        class_id, class_key, name, generic_name, in_v1, v1_class_id, ...
-    <root>/test_holdout.txt   comparison split: test crops of sessions the v1 champion never saw
-
-The output index of every model is the v2 class id (0..379, folders `000`..`379`). The
-evaluation preprocessing is the API's (backend/app/inference.py): the crop resized to the
-model's square input with INTER_AREA, BGR -> RGB, float in [0, 1].
+Layout: <root>/<split>/<class_id:03d>/<name>.jpg, index.csv, classes.csv, test_holdout.txt.
+Class ids are the v2 ids (0..379); preprocessing is the API's (backend/app/inference.py).
 """
 
 from __future__ import annotations
