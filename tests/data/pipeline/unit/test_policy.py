@@ -12,7 +12,7 @@ import pytest
 from src.data.sources.connectors import REGISTRY, all_links, allowed_hosts
 from src.data.sources.quality.linkcheck import ENDPOINTS
 
-SRC = Path(__file__).resolve().parents[4] / "src" / "data" / "tujya_data"
+SRC = Path(__file__).resolve().parents[4] / "src" / "data" / "sources"
 CONNECTOR_FILES = sorted((SRC / "connectors").glob("*.py"))
 # The module 2 corpus steps run on this pipeline and follow the same network policy.
 CORPUS = Path(__file__).resolve().parents[4] / "src" / "data" / "corpus"

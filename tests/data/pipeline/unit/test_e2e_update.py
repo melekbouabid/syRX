@@ -78,21 +78,25 @@ def test_update_fetches_every_enabled_source_and_a_second_run_is_free(project: P
         assert len(router.calls) == calls_after_first
 
     for relative in (
-        "data/interim/ddinter/interactions.parquet", "data/interim/pubmed/articles.parquet",
-        "data/interim/pubmed/query_hits.parquet", "data/interim/pubmed/query_log.jsonl",
-        "data/state/connectors.json", "config/data_pipeline/manifest.json",
+        "data/external/interim/ddinter/interactions.parquet",
+        "data/external/interim/pubmed/articles.parquet",
+        "data/external/interim/pubmed/query_hits.parquet",
+        "data/external/interim/pubmed/query_log.jsonl",
+        "data/external/state/connectors.json", "config/data_pipeline/manifest.json",
     ):  # fmt: skip
         assert (project / relative).is_file(), relative
     # Everything collected is under data/: nothing is left at the project root.
     assert {p.name for p in project.iterdir()} == {"config", "data"}
 
-    interactions = pd.read_parquet(project / "data/interim/ddinter/interactions.parquet")
+    interactions = pd.read_parquet(project / "data/external/interim/ddinter/interactions.parquet")
     assert set(interactions["level"]) == {"Moderate", "Major"}
-    articles = pd.read_parquet(project / "data/interim/pubmed/articles.parquet").set_index("pmid")
+    articles = pd.read_parquet(project / "data/external/interim/pubmed/articles.parquet").set_index(
+        "pmid"
+    )
     assert set(articles.index) == {"111", "222"} and bool(articles.loc["222", "is_retracted"])
 
     summary = runner.invoke(app, ["summary"])
-    assert "data/interim/pubmed/articles.parquet" in summary.output
+    assert "data/external/interim/pubmed/articles.parquet" in summary.output
     manifest_file = project / "config" / "data_pipeline" / "manifest.json"
     manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
     layers = {entry["layer"] for entry in manifest["files"].values()}
@@ -111,7 +115,7 @@ def test_update_exits_non_zero_when_a_source_needs_attention(project: Path) -> N
     assert result.exit_code == 1
     assert "Needs attention" in result.output and "pubmed" in result.output
     # The other sources still ran.
-    assert (project / "data/interim/ddinter/interactions.parquet").is_file()
+    assert (project / "data/external/interim/ddinter/interactions.parquet").is_file()
 
 
 def test_sources_check_records_every_status_and_writes_the_document(project: Path) -> None:
@@ -151,5 +155,7 @@ def test_sources_check_records_every_status_and_writes_the_document(project: Pat
     assert "| 200 |" in rows["https://ddinter2.scbdd.com/"]
     assert "CC-BY-NC-SA-4.0" in rows["https://ddinter2.scbdd.com/"]  # licence and terms too
     assert "## Links that need attention" in document and "## Rate limits" in document
-    status = json.loads((project / "data/state/link_status.json").read_text(encoding="utf-8"))
+    status = json.loads(
+        (project / "data/external/state/link_status.json").read_text(encoding="utf-8")
+    )
     assert len(status["links"]) == len(all_links()) + len(ENDPOINTS)

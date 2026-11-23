@@ -11,7 +11,8 @@ never in git). For each photo it runs the served ONNX scan (app/inference.py: sa
 same square crops as the API), then Grad-CAM (src/utils/gradcam.py) of the PyTorch weights of
 the same classifier version, for the top-1 class the API gives. The weights are found from the
 run id of models/models.json: a classifier of the step 2.3 comparison (export of
-src/models/classification in data/models/classifiers/classifier-<arch>, DVC, matched through
+src/models/classification in data/processed/models/classifiers/classifier-<arch>, DVC, matched
+through
 its import summary models/compare/classifier_<arch>.json; layer `ClassifierNet.parts().cam_layer`,
 D120) or the YOLO11s-cls of v1 (models/train/classifier, Ultralytics; the 1 x 1 convolution of
 the Classify head). The heat map of each pill is blended over its crop square in the photo,
@@ -54,7 +55,7 @@ DEFAULTS = {
     "images": ROOT / "data" / "raw" / "c3pi" / "images",
     "models": ROOT / "models",
     "weights": ROOT / "models" / "train" / "classifier",
-    "exports": ROOT / "data" / "models" / "classifiers",
+    "exports": ROOT / "data" / "processed" / "models" / "classifiers",
     "compare": ROOT / "models" / "compare",
     "out": ROOT / "data" / "processed" / "c3pi" / "gradcam",
 }

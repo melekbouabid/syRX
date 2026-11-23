@@ -13,9 +13,9 @@ project_root: ../..
 manifest_path: config/data_pipeline/manifest.json
 sources_doc_path: docs/data_pipeline/sources.md
 
-# Everything the pipeline writes lives under this one folder: data/raw (downloaded files),
-# data/interim (validated tables), data/cache and data/state.
-data_dir: data
+# Everything the pipeline writes lives under this one folder: data/external/raw (downloaded
+# files), data/external/interim (validated tables), data/external/cache and data/external/state.
+data_dir: data/external
 
 http:
   product: tujya-data

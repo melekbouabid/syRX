@@ -109,7 +109,9 @@ def test_cli_fetch_runs_a_source_and_reports_failures_with_exit_code(project: Pa
     assert validate.exit_code == 0, validate.output
     assert "matches manifest" in validate.output and "0 invalid" in validate.output
     # Tampering with a raw file is caught by `validate`.
-    raw = next((project / "data" / "raw" / "ddinter").rglob("ddinter_downloads_code_A.csv"))
+    raw = next(
+        (project / "data" / "external" / "raw" / "ddinter").rglob("ddinter_downloads_code_A.csv")
+    )
     raw.write_bytes(b"changed")
     assert runner.invoke(app, ["validate", "--source", "ddinter"]).exit_code == 1
 
@@ -127,9 +129,9 @@ def test_cli_offline_commands_on_collected_data(project: Path) -> None:
         fetch_ddinter(router)
     summary = runner.invoke(app, ["summary"])
     assert summary.exit_code == 0, summary.output
-    assert "data/interim/ddinter/interactions.parquet" in summary.output
+    assert "data/external/interim/ddinter/interactions.parquet" in summary.output
     payload = json.loads(runner.invoke(app, ["summary", "--json"]).output)
-    assert payload["outputs"] == {"data/interim/ddinter/interactions.parquet": 1}
+    assert payload["outputs"] == {"data/external/interim/ddinter/interactions.parquet": 1}
     assert {row["source"] for row in payload["sources"]} == {"ddinter", "pubmed", "openfda_label"}
     sources = runner.invoke(app, ["sources"])
     assert sources.exit_code == 0 and "openfda_label" in sources.output
@@ -167,7 +169,7 @@ def test_collected_files_stay_under_the_data_folder(project: Path) -> None:
     entries = Manifest(load_settings(project / "config" / "data_pipeline" / "config.yaml")).entries
     assert entries and not [p for p in entries if not p.startswith("data/")]
     assert {entry.layer for entry in entries.values()} == {"raw", "interim"}
-    interactions = pd.read_parquet(project / "data/interim/ddinter/interactions.parquet")
+    interactions = pd.read_parquet(project / "data/external/interim/ddinter/interactions.parquet")
     assert list(interactions["drug_a_name"]) == ["Abacavir"]
 
 

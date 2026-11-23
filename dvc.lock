@@ -42,12 +42,12 @@ stages:
       hash: md5
       md5: 6051d52004ad0d914547068491a20339
       size: 19017
-    - path: data/rag/interim
+    - path: data/external/rag_v1/interim
       hash: md5
       md5: 0419ea6313c8ca6eba822de3bd8c76be.dir
       size: 1858114
       nfiles: 4
-    - path: data/rag/raw/pubmed
+    - path: data/external/rag_v1/raw/pubmed
       hash: md5
       md5: c95d50e0b58af134900dc7d81420654a.dir
       size: 22134557
@@ -229,22 +229,22 @@ stages:
       md5: a684fe60d324e212b38b3a7a71922375.dir
       size: 20080598
       nfiles: 3
-    - path: data/rag/interim
+    - path: data/external/rag_v1/interim
       hash: md5
       md5: 0419ea6313c8ca6eba822de3bd8c76be.dir
       size: 1858114
       nfiles: 4
-    - path: data/rag/raw/pubmed
+    - path: data/external/rag_v1/raw/pubmed
       hash: md5
       md5: c95d50e0b58af134900dc7d81420654a.dir
       size: 22134557
       nfiles: 164
-    - path: data/rag_v2/interim
+    - path: data/external/rag_v2/interim
       hash: md5
       md5: be662520f59c9ae14a0982e86a448c81.dir
       size: 3488468
       nfiles: 4
-    - path: data/rag_v2/raw/pubmed
+    - path: data/external/rag_v2/raw/pubmed
       hash: md5
       md5: cd56639a6d731c95a503167780365656.dir
       size: 64776900
@@ -261,8 +261,8 @@ stages:
       params.yaml:
         bigdata.rag:
           workspaces:
-          - data/rag
-          - data/rag_v2
+          - data/external/rag_v1
+          - data/external/rag_v2
           ingredient_files:
           - data/processed/pharma/pill_ingredients.csv
           not_drugs:

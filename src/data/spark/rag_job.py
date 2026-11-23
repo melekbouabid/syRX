@@ -1,8 +1,8 @@
 """Job `rag`: the RAG corpus of module 2 at a larger scale, cleaned, deduplicated, chunked.
 
 Inputs (DVC): the collection workspaces listed in params.yaml (`bigdata.rag.workspaces`):
-data/rag (v1: 150 classes, 20 abstracts per ingredient) and, once collected, data/rag_v2
-(classes of the C3PI dataset v2, 40 abstracts per ingredient,
+data/external/rag_v1 (v1: 150 classes, 20 abstracts per ingredient) and, once collected,
+data/external/rag_v2 (classes of the C3PI dataset v2, 40 abstracts per ingredient,
 `python -m src.data.spark.rag_sources`): openFDA label sections, PubMed articles, query hits
 and the queries (raw/pubmed/*/*/query.json, which ingredient each query is about); the
 ingredients of both class lists; DDInter pairs (data/processed/pharma).
@@ -38,10 +38,10 @@ from pyspark.sql import types as T
 from src.data.corpus import corpus
 from src.data.spark.session import ROOT, write_json
 
-WORKSPACES = (ROOT / "data" / "rag", ROOT / "data" / "rag_v2")
+WORKSPACES = (ROOT / "data" / "external" / "rag_v1", ROOT / "data" / "external" / "rag_v2")
 INGREDIENT_FILES = (
     ROOT / "data" / "processed" / "pharma" / "pill_ingredients.csv",
-    ROOT / "data" / "rag_v2" / "ingredients.csv",
+    ROOT / "data" / "external" / "rag_v2" / "ingredients.csv",
 )
 PAIRS = ROOT / "data" / "processed" / "pharma" / "interactions_with_any_drug.csv"
 OUT = ROOT / "data" / "processed" / "rag" / "corpus_v2"

@@ -11,9 +11,10 @@
                    data/processed/pharma/interactions_between_classes.csv (both drugs are
                    class ingredients), data/processed/pharma/interactions_with_any_drug.csv
                    (at least one is)
-    labels         openFDA drug labels, one per class ingredient -> data/rag (raw, interim)
+    labels         openFDA drug labels, one per class ingredient -> data/external/rag_v1
+                   (raw, interim)
     pubmed         PubMed abstracts on interactions and adverse effects, up to 20 per
-                   ingredient -> data/rag (raw, interim)
+                   ingredient -> data/external/rag_v1 (raw, interim)
     corpus         labels + abstracts + DDInter pairs -> data/processed/rag/corpus/chunks.parquet
 
 Docs: docs/module2/interactions.md, docs/module2/rag.md.
@@ -50,7 +51,10 @@ DDINTER_OVERRIDES = [
 ]
 # The RAG sources run through the normal connectors, in their own data folder and manifest,
 # so they never mix with the original project's PubMed records under data/raw/pubmed.
-RAG_OVERRIDES = ["data_dir=data/rag", "manifest_path=data/rag/manifest.json"]
+RAG_OVERRIDES = [
+    "data_dir=data/external/rag_v1",
+    "manifest_path=data/external/rag_v1/manifest.json",
+]
 LABEL_OVERRIDES = ["sources.openfda_label.enabled=true"]
 PUBMED_OVERRIDES = [
     "sources.pubmed.options.mode=ingredients",
@@ -80,7 +84,7 @@ def _paths(settings: Settings) -> dict[str, Path]:
         "between": out / "interactions_between_classes.csv",
         "any": out / "interactions_with_any_drug.csv",
         # Collection workspace of the RAG sources (raw downloads, interim tables, manifest).
-        "rag": root / "data" / "rag",
+        "rag": root / "data" / "external" / "rag_v1",
         "corpus": root / "data" / "processed" / "rag" / "corpus",
     }
 

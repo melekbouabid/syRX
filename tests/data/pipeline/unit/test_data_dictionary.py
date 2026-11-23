@@ -19,10 +19,10 @@ from tests.data.pipeline.unit.test_connectors_lookup import PUBMED_XML
 DICTIONARY = Path(__file__).resolve().parents[4] / "docs" / "data_pipeline" / "data_dictionary.md"
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 TABLES = [
-    "data/interim/ddinter/interactions.parquet",
-    "data/interim/pubmed/articles.parquet",
-    "data/interim/pubmed/query_hits.parquet",
-    "data/interim/openfda_label/label_sections.parquet",
+    "data/external/interim/ddinter/interactions.parquet",
+    "data/external/interim/pubmed/articles.parquet",
+    "data/external/interim/pubmed/query_hits.parquet",
+    "data/external/interim/openfda_label/label_sections.parquet",
 ]
 
 

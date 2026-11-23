@@ -3,9 +3,9 @@
 One section per output table, one row per column. `tests/unit/test_data_dictionary.py` fails
 if a column is produced that is not described here, or described but no longer produced.
 
-The pipeline writes under the one `data/` folder: `data/raw` (downloaded files, as
-received), `data/interim/<source>/` (the validated tables below), `data/cache` and
-`data/state`. Rows that fail their schema are in `<table>.rejects.parquet` next to each
+The pipeline writes under the one `data/external/` folder: `data/external/raw` (downloaded
+files, as received), `data/external/interim/<source>/` (the validated tables below),
+`data/external/cache` and `data/external/state`. Rows that fail their schema are in `<table>.rejects.parquet` next to each
 table. Only `manifest.json`, the index of all those files, sits beside the folder. The module
 2 corpus (`python -m src.data.corpus`) reads these tables; the original project's
 processed tables (`data/parquet`, `csv`, `json`, `reports`) were removed with the synergy
@@ -25,7 +25,7 @@ Conventions used in every table:
 
 - **Missing values** are nulls, never zeros or empty strings.
 
-## data/interim/ddinter/interactions.parquet
+## data/external/interim/ddinter/interactions.parquet
 
 One row per interacting pair of drugs and severity level, across the DDInter category files.
 
@@ -37,7 +37,7 @@ One row per interacting pair of drugs and severity level, across the DDInter cat
 | `drug_a_source_id` | string | DDInter id of the first drug (`DDInter1`) |
 | `drug_b_source_id` | string | DDInter id of the second drug |
 
-## data/interim/pubmed/articles.parquet
+## data/external/interim/pubmed/articles.parquet
 
 One row per article (distinct PMID).
 
@@ -60,7 +60,7 @@ One row per article (distinct PMID).
 | `has_expression_of_concern` | bool | An expression of concern has been published |
 | `has_abstract` | bool | `abstract` is not null |
 
-## data/interim/pubmed/query_hits.parquet
+## data/external/interim/pubmed/query_hits.parquet
 
 Which query found which article. `query_log.jsonl`, next to it, lists every query sent.
 
@@ -71,7 +71,7 @@ Which query found which article. `query_log.jsonl`, next to it, lists every quer
 | `kind` | string | `ingredient` (one active ingredient of `config/pill_classes.csv`) |
 | `pair_key` | string | Always null for ingredient queries; kept so older query logs read the same |
 
-## data/interim/openfda_label/label_sections.parquet
+## data/external/interim/openfda_label/label_sections.parquet
 
 One row per kept section of the one label chosen for each active ingredient. Dosage and
 overdosage sections are never stored.

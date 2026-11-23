@@ -5,8 +5,9 @@ ingredients of the 150 first classes: D119) cuts label sections and abstract par
 pieces of at most 1,500 characters that repeat one sentence (src/data/corpus/corpus.py
 `split_text`). A variant cuts the same documents with another `max_chars` / `overlap`:
 
-- label sections: the same rows of data/rag/interim/openfda_label/label_sections.parquet as the
-  served chunks, through `corpus.label_chunks`;
+- label sections: the same rows of
+  data/external/rag_v1/interim/openfda_label/label_sections.parquet as the served chunks,
+  through `corpus.label_chunks`;
 - abstracts: the same PubMed articles, each about the same ingredients as in the served corpus,
   through `corpus.abstract_chunks`;
 - DDInter rows: one short chunk per pair, never split, copied as they are.
@@ -38,8 +39,10 @@ from src.data.corpus import corpus
 
 ROOT = Path(__file__).resolve().parents[2]
 CHUNKS = ROOT / "data" / "processed" / "rag" / "corpus" / "chunks.parquet"
-LABELS = ROOT / "data" / "rag" / "interim" / "openfda_label" / "label_sections.parquet"
-ARTICLES = ROOT / "data" / "rag" / "interim" / "pubmed" / "articles.parquet"
+LABELS = (
+    ROOT / "data" / "external" / "rag_v1" / "interim" / "openfda_label" / "label_sections.parquet"
+)
+ARTICLES = ROOT / "data" / "external" / "rag_v1" / "interim" / "pubmed" / "articles.parquet"
 MIN_SENTENCE = 20  # shorter "sentences" (list bullets, headings) do not make two chunks overlap
 MIN_SHARE = 0.5  # share of the smaller chunk's text the two must have in common
 _SENTENCE = re.compile(r"(?<=[.!?;])\s+")

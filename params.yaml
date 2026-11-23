@@ -34,10 +34,11 @@ bigdata:
     size: 512              # long side of the generated JPEGs
   rag:
     # Collection workspaces read by the job, and the ingredient list of their classes:
-    # data/rag (v1 classes) and data/rag_v2 (the 94 ingredients of the v2 classes that v1
+    # data/external/rag_v1 (v1 classes) and data/external/rag_v2 (the 94 ingredients of the v2
+    # classes that v1
     # lacks, `python -m src.data.spark.rag_sources`, D126); data/processed/pharma lists the
     # 176 ingredients of the 380 served classes (D119).
-    workspaces: [data/rag, data/rag_v2]
+    workspaces: [data/external/rag_v1, data/external/rag_v2]
     ingredient_files: [data/processed/pharma/pill_ingredients.csv]
     # Names of the class tables that are no medicine (placebo tablets of a pack): no ingredient
     # here, their PubMed queries ignored (src/data/spark/rag_sources.py NOT_DRUGS, same list).
