@@ -1,7 +1,7 @@
 """The chunk store interface, and its SQL implementation (the store before Qdrant, D113).
 
 `VectorStore` is what indexing and retrieval need from a store: the app uses Qdrant
-(src/rag/qdrant_store.py); `ChunkStore` keeps the chunks in a SQL table, used by the
+(src/rag/stores/qdrant.py); `ChunkStore` keeps the chunks in a SQL table, used by the
 tests on SQLite and kept as the pgvector baseline of the benchmark.
 
 PostgreSQL (docker compose): `embedding` is a pgvector `vector(dim)` and the ingredient
@@ -42,7 +42,7 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.engine import Connection, Engine
 
 if TYPE_CHECKING:
-    from src.rag.sparse import SparseVector
+    from src.rag.stores.sparse import SparseVector
 
 TABLE = "rag_chunks"
 META_TABLE = "rag_index_meta"

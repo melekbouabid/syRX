@@ -9,7 +9,7 @@ from src.agent.safety import (
     is_dose_question,
     sentence_problems,
 )
-from src.rag.names import NameIndex
+from src.rag.query_rewriting import NameIndex
 
 
 def test_names_in_french_and_english() -> None:
@@ -109,7 +109,7 @@ def test_attribution_by_meaning_cites_the_closest_source_only_when_clear() -> No
     import asyncio
 
     from src.agent.safety import attribute_by_meaning
-    from src.rag.embeddings import FakeEmbedder
+    from src.rag.init_qdrant import FakeEmbedder
 
     sources = [
         "Warfarin label: bleeding risk and prothrombin time monitoring with azole antifungals.",

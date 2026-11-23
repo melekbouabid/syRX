@@ -15,7 +15,7 @@ ingredients of both class lists; DDInter pairs (data/processed/pharma).
 2. Deduplication: labels by (ingredient, section, text); articles by PMID, then by
    identical normalised abstract, then near-duplicates with MinHash LSH (pyspark.ml: word
    3-shingles, Jaccard distance under `near_duplicate`), keeping the smallest PMID.
-3. Chunking: the functions of the v1 corpus (src/data/corpus/corpus.py: same splitter, same
+3. Chunking: the functions of the v1 corpus (src/rag/chunking.py: same splitter, same
    metadata columns) run on every partition (`mapInPandas`).
 
 Outputs: data/processed/rag/corpus_v2/chunks (Parquet partitioned by doc_type) and
@@ -35,8 +35,8 @@ from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
 
-from src.data.corpus import corpus
 from src.data.spark.session import ROOT, write_json
+from src.rag import chunking
 
 WORKSPACES = (ROOT / "data" / "external" / "rag_v1", ROOT / "data" / "external" / "rag_v2")
 INGREDIENT_FILES = (
@@ -52,9 +52,9 @@ _TYPES: dict[str, T.DataType] = {
     "is_retracted": T.BooleanType(),
 }
 CHUNK_SCHEMA = T.StructType(
-    [T.StructField(name, _TYPES.get(name, T.StringType())) for name in corpus.CHUNK_COLUMNS]
+    [T.StructField(name, _TYPES.get(name, T.StringType())) for name in chunking.CHUNK_COLUMNS]
 )
-FORBIDDEN = corpus.FORBIDDEN_SECTION.pattern
+FORBIDDEN = chunking.FORBIDDEN_SECTION.pattern
 
 
 def clean_text(column: str, keep_newlines: bool = False) -> F.Column:
@@ -174,18 +174,18 @@ def ingredient_names(spark: SparkSession, files: tuple[Path, ...] = INGREDIENT_F
 
 
 def _chunker(kind: str, names: list[str]) -> Any:
-    """Per-partition chunking with the v1 functions (chunks of at most corpus.MAX_CHARS)."""
+    """Per-partition chunking with the v1 functions (chunks of at most chunking.MAX_CHARS)."""
 
     def batches(frames: Iterator[pd.DataFrame]) -> Iterator[pd.DataFrame]:
         for frame in frames:
             if kind == "label":
-                rows = corpus.label_chunks(frame, set(names))
+                rows = chunking.label_chunks(frame, set(names))
             elif kind == "abstract":
                 about = dict(zip(frame["pmid"], frame["about"].map(list), strict=True))
-                rows = corpus.abstract_chunks(frame, about, set(names))
+                rows = chunking.abstract_chunks(frame, about, set(names))
             else:
-                rows = corpus.interaction_chunks(frame, "")
-            out = pd.DataFrame(rows, columns=corpus.CHUNK_COLUMNS)
+                rows = chunking.interaction_chunks(frame, "")
+            out = pd.DataFrame(rows, columns=chunking.CHUNK_COLUMNS)
             out["chunk_index"] = out["chunk_index"].astype("int32")
             yield out
 
@@ -260,7 +260,7 @@ def run(spark: SparkSession, params: dict[str, Any], *, out: Path = OUT) -> dict
         documents=chunks.select("doc_id").distinct().count(),
         by_type=by_type,
         ingredients_covered=covered,
-        max_chars=corpus.MAX_CHARS,
+        max_chars=chunking.MAX_CHARS,
         mean_chars=round(chunks.agg(F.avg(F.length("text"))).first()[0] or 0.0, 1),
     )
     v1 = ROOT / "data" / "processed" / "rag" / "corpus" / "summary.json"

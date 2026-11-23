@@ -106,7 +106,7 @@ class Settings(BaseSettings):
     )
 
     # Module 2: RAG and agent (docs/module2/rag.md, agent.md). The chunk index
-    # lives in Qdrant (D113); `python -m src.rag.index` fills it from these chunks: the corpus
+    # lives in Qdrant (D113); `python -m src.rag.init_qdrant` fills it from these chunks: the corpus
     # of the 380 served classes (Spark job `rag`, collection tujya_chunks_v2, D126). The
     # corpus of the 150 first classes (corpus/chunks.parquet, collection tujya_chunks) stays
     # in Qdrant: TUJYA_QDRANT_COLLECTION=tujya_chunks serves it again. "sql" keeps the index

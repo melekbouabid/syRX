@@ -1,6 +1,6 @@
 """Offline stand-ins for the RAG tests: a scripted chat model and a tiny corpus.
 
-CI never runs Ollama or a real embedding model: `FakeEmbedder` (rag/embeddings.py)
+CI never runs Ollama or a real embedding model: `FakeEmbedder` (rag/init_qdrant.py)
 hashes words, and `FakeChatModel` returns scripted tool calls and answers.
 """
 
@@ -16,9 +16,8 @@ from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResu
 from pydantic import Field
 
 from app.db import make_engine
-from src.rag.embeddings import FakeEmbedder
-from src.rag.index import index_chunks
-from src.rag.store import ChunkStore
+from src.rag.init_qdrant import FakeEmbedder, index_chunks
+from src.rag.stores.base import ChunkStore
 
 DIM = 64
 

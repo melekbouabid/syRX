@@ -15,7 +15,7 @@ import pytest
 
 from src.benchmark import bench_grid as G
 from src.benchmark import rechunk as R
-from src.data.corpus import corpus
+from src.rag import chunking
 
 SENTENCES = [f"Sentence number {i} of the warnings about warfarin and aspirin." for i in range(12)]
 
@@ -68,14 +68,14 @@ def articles() -> pd.DataFrame:
 
 def served(max_chars: int = 200) -> pd.DataFrame:
     names = {"warfarin", "aspirin"}
-    original = corpus.split_text
+    original = chunking.split_text
     try:
         cut = partial(original, max_chars=max_chars, overlap=1)
-        corpus.split_text = cut  # type: ignore[assignment]
-        rows = corpus.label_chunks(labels(), names)
-        rows += corpus.abstract_chunks(articles(), {"123": ["warfarin"]}, names)
+        chunking.split_text = cut  # type: ignore[assignment]
+        rows = chunking.label_chunks(labels(), names)
+        rows += chunking.abstract_chunks(articles(), {"123": ["warfarin"]}, names)
     finally:
-        corpus.split_text = original
+        chunking.split_text = original
     pair = pd.DataFrame(
         [
             {
@@ -89,8 +89,8 @@ def served(max_chars: int = 200) -> pd.DataFrame:
             }
         ]
     )
-    rows += corpus.interaction_chunks(pair, "2026")
-    return pd.DataFrame(rows, columns=corpus.CHUNK_COLUMNS)
+    rows += chunking.interaction_chunks(pair, "2026")
+    return pd.DataFrame(rows, columns=chunking.CHUNK_COLUMNS)
 
 
 def test_variant_with_the_served_settings_gives_back_the_served_corpus() -> None:

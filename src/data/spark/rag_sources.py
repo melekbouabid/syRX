@@ -13,7 +13,7 @@ The Spark job `rag` (src/data/spark/rag_job.py) then cleans, deduplicates and ch
 
 - ingredients: the classes of config/splits/c3pi_v2/classes.csv. Classes already in v1 keep
   their RxNav mapping (data/processed/pharma/pill_ingredients.csv); the new ones are mapped
-  like v1 (NDC -> RxCUI -> ingredients, src/data/corpus/ingredients.py). Writes
+  like v1 (NDC -> RxCUI -> ingredients, src/rag/corpus.py). Writes
   data/external/rag_v2/ingredients.csv (one row per class and ingredient) and
   data/external/rag_v2/class_ingredients.csv (`active_ingredients` per class, the input of the two
   connectors).
@@ -36,12 +36,12 @@ from collections import defaultdict
 from dataclasses import replace
 from pathlib import Path
 
-from src.data.corpus import ingredients as ing
 from src.data.sources import pipeline
 from src.data.sources.config import Settings, load_settings
 from src.data.sources.http.client import PoliteClient
 from src.data.sources.literature.queries import read_ingredients
 from src.data.sources.logging_utils import setup_logging
+from src.rag import corpus as ing
 
 ROOT = Path(__file__).resolve().parents[3]
 CONFIG = ROOT / "config" / "data_pipeline" / "config.yaml"

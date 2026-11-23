@@ -7,10 +7,10 @@ import csv
 from pathlib import Path
 
 from src.data import download
-from src.data.corpus.ingredients import IngredientRow
 from src.data.sources.config import load_settings
 from src.data.sources.literature.queries import read_ingredients
 from src.data.spark import log_stats, rag_sources, submit
+from src.rag.corpus import IngredientRow
 
 
 def test_submit_runs_the_job_in_the_master_container():

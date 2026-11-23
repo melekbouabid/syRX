@@ -32,7 +32,7 @@ from app.medicines import DISCLAIMER
 from app.pharma import Pill, PillIngredient
 from src.agent.runtime import AgentHolder
 from src.agent.tools import TOOL_SPECS, Toolbox, ToolError
-from src.rag.embeddings import Embedder
+from src.rag.init_qdrant import Embedder
 
 INSTRUCTIONS = (
     "Medicine information for the {classes} Tujya pill classes and their {ingredients} active "

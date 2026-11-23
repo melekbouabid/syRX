@@ -7,14 +7,15 @@ from pathlib import Path
 import pandas as pd
 import respx
 
-from src.data.corpus import ingredients as ing
-from src.data.corpus.__main__ import served_classes, update_class_file
-from src.data.corpus.interactions import (
+from src.data.sources.testing import ClientFactory
+from src.rag import corpus as ing
+from src.rag.corpus import (
     ddinter_names,
     filter_interactions,
     read_aliases,
+    served_classes,
+    update_class_file,
 )
-from src.data.sources.testing import ClientFactory
 
 R = ing.RXNAV
 

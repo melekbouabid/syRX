@@ -7,7 +7,7 @@
 # the openFDA labels and PubMed abstracts under data/external/rag_v1/raw and
 # data/external/rag_v1/interim (the
 # collection workspace of the RAG sources, whose manifest records these paths: D86), are
-# fetched by `python -m src.data.corpus labels` / `pubmed` and tracked with `dvc add`
+# fetched by `python -m src.rag.corpus labels` / `pubmed` and tracked with `dvc add`
 # (docs/module2/rag.md).
 # Big Data (step 1.4, docs/module1/big_data.md): the PySpark jobs of src/data/spark build the
 # C3PI dataset v2 and the larger RAG corpus. `python -m src.data.spark.submit <job>` starts the
@@ -44,14 +44,14 @@ stages:
   # data/processed/pharma describes the 380 classes of the served classifier; its sources for
   # the new ingredients are the RAG v2 collection (D90). Unfreeze to rebuild it on 380 classes.
   rag_corpus:
-    cmd: python -m src.data.corpus corpus
+    cmd: python -m src.rag.corpus corpus
     frozen: true
     deps:
       - data/external/rag_v1/interim
       - data/external/rag_v1/raw/pubmed
       - data/processed/pharma/interactions_between_classes.csv
       - data/processed/pharma/pill_ingredients.csv
-      - src/data/corpus/corpus.py
+      - src/rag/chunking.py
     outs:
       - data/processed/rag/corpus
   spark_index:
@@ -120,7 +120,7 @@ stages:
       - data/external/rag_v2/interim
       - data/external/rag_v2/raw/pubmed
       - data/processed/pharma
-      - src/data/corpus/corpus.py
+      - src/rag/chunking.py
       - src/data/spark/rag_job.py
     params:
       - bigdata.seed

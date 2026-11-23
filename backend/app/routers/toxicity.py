@@ -18,7 +18,7 @@ from app.models import Action
 from app.pharma import Ingredient
 from app.schemas import ToxicityIn, ToxicityResult
 from src.models.toxicity.model import ToxHolder, ToxicityUnavailable, predict_molecules
-from src.rag.names import NameIndex
+from src.rag.query_rewriting import NameIndex
 
 router = APIRouter(prefix="/api", tags=["toxicity"], dependencies=[Depends(get_current_user)])
 

@@ -2,24 +2,26 @@
 then optionally reranked by a cross-encoder.
 
 - BM25 (k1 = 1.2, b = 0.75) over title + text. In Qdrant (step 3.2, D116): sparse vectors
-  `Qdrant/bm25` with the IDF modifier (src/rag/sparse.py). Otherwise (SQL store) in memory:
+  `Qdrant/bm25` with the IDF modifier (src/rag/stores/sparse.py). Otherwise (SQL store) in memory:
   the corpus is ~10^4 chunks, so scoring every chunk takes a few milliseconds; tokens are
   lower-cased, accents removed, English and French stop words dropped, plural "s" stripped.
 - Dense: cosine similarity of bge-m3 vectors, in Qdrant (D113), PostgreSQL (pgvector) or
   numpy (SQLite, tests).
 - Hybrid: RRF, score = sum over the two lists of 1 / (60 + rank) (Cormack et al., 2009),
   computed by Qdrant (prefetch of both lists, then fusion) or here for the SQL store.
-- Reranking (D117, src/rag/rerank.py): the first `fetch_k` results are scored by a
+- Reranking (D117, src/rag/reranking.py): the first `fetch_k` results are scored by a
   cross-encoder (BAAI/bge-reranker-base) and the best `k` are kept.
 Metadata filters (ingredient, document type, section, retracted) apply to all of them.
 """
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import math
 import re
 import threading
+import time
 from collections import Counter
 from dataclasses import dataclass, replace
 from functools import cached_property
@@ -27,11 +29,13 @@ from typing import Literal
 
 import numpy as np
 
-from src.rag.documents import Catalog
-from src.rag.embeddings import Embedder, fold
-from src.rag.rerank import Reranker
-from src.rag.sparse import SparseEncoder
-from src.rag.store import Chunk, Filters, VectorStore
+from app.config import Settings
+from src.rag.chunking import Catalog, fold
+from src.rag.init_qdrant import Embedder, OllamaEmbedder
+from src.rag.reranking import CrossEncoderReranker, Reranker
+from src.rag.stores import open_store
+from src.rag.stores.base import Chunk, Filters, VectorStore
+from src.rag.stores.sparse import FastEmbedBM25, SparseEncoder
 
 Mode = Literal["bm25", "dense", "hybrid"]
 RRF_K = 60
@@ -403,7 +407,7 @@ class RetrieverHolder:
         self._lock = threading.Lock()
 
     def get(self) -> Retriever | None:
-        """None when the index does not exist yet (`python -m src.rag.index`)."""
+        """None when the index does not exist yet (`python -m src.rag.init_qdrant`)."""
         with self._lock:
             if not self.store.exists():
                 return None
@@ -414,3 +418,68 @@ class RetrieverHolder:
                 )
                 self._version = version
             return self._retriever
+
+
+# --- The retriever the app uses, built from the settings ---------------------------------------
+def retriever_holder(settings: Settings, store: VectorStore, embedder: Embedder) -> RetrieverHolder:
+    """BM25 runs in Qdrant when the index has the sparse vectors of `rag_sparse_model`; the
+    reranker is loaded on its first use only (`rag_rerank`, or a benchmark asking for it)."""
+    cache = settings.rag_model_cache_dir
+    return RetrieverHolder(
+        store,
+        embedder,
+        sparse=FastEmbedBM25(settings.rag_sparse_model, cache_dir=cache),
+        reranker=CrossEncoderReranker(settings.rag_rerank_model, cache_dir=cache),
+    )
+
+
+# --- Command line: search the index and time each mode -----------------------------------------
+# Search the RAG index from the command line and time each mode (real bge-m3 embeddings).
+#
+# # from the repository root, project venv (.venv) active
+# python -m src.rag.retrieval "fluconazole warfarin" --ingredient warfarin --k 5
+
+
+async def run(args: argparse.Namespace) -> None:
+    settings = Settings()
+    embedder = OllamaEmbedder(
+        settings.ollama_url,
+        settings.embedding_model,
+        settings.embedding_dim,
+        num_ctx=settings.embedding_num_ctx,
+    )
+    started = time.perf_counter()
+    store = open_store(settings, embedder.dim)
+    retriever = Retriever(store, embedder)
+    print(
+        f"loaded {len(retriever.chunks)} chunks from {store.kind} "
+        f"in {time.perf_counter() - started:.2f} s"
+    )
+    filters = Filters(
+        ingredients=tuple(args.ingredient),
+        doc_types=tuple(args.doc_type),
+        exclude_retracted=not args.include_retracted,
+    )
+    await retriever.search(args.query, k=1, mode="dense")  # warm the embedding model
+    for mode in ("bm25", "dense", "hybrid"):
+        started = time.perf_counter()
+        hits = await retriever.search(args.query, k=args.k, mode=mode, filters=filters)
+        print(f"\n== {mode} ({(time.perf_counter() - started) * 1000:.0f} ms)")
+        for hit in hits:
+            print(
+                f"  {hit.score:.4f} bm25={hit.bm25_rank} dense={hit.dense_rank} {hit.chunk.title}"
+            )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("query")
+    parser.add_argument("--ingredient", action="append", default=[])
+    parser.add_argument("--doc-type", action="append", default=[])
+    parser.add_argument("--include-retracted", action="store_true")
+    parser.add_argument("--k", type=int, default=5)
+    asyncio.run(run(parser.parse_args()))
+
+
+if __name__ == "__main__":
+    main()

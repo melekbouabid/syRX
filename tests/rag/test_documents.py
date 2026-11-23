@@ -1,4 +1,4 @@
-"""The indexed documents: catalog (src/rag/documents.py) and GET /api/documents (D114).
+"""The indexed documents: catalog (src/rag/chunking.py) and GET /api/documents (D114).
 
 The API tests run the app on a Qdrant in-memory store holding the fake corpus, and ask a
 chat question through it, so the agent's path on Qdrant is covered too.
@@ -15,11 +15,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.agent.runtime import AgentHolder
-from src.rag.documents import Catalog, Document, source_group
-from src.rag.embeddings import FakeEmbedder
-from src.rag.index import index_chunks
-from src.rag.qdrant_store import QdrantStore
-from src.rag.store import Chunk
+from src.rag.chunking import Catalog, Document, source_group
+from src.rag.init_qdrant import FakeEmbedder, index_chunks
+from src.rag.stores.base import Chunk
+from src.rag.stores.qdrant import QdrantStore
 from tujya_testing.fixtures import USER, sign_in
 from tujya_testing.rag_fakes import CORPUS, DIM, FakeChatModel
 
@@ -144,7 +143,7 @@ def test_empty_index_answers_503(app: FastAPI, browser: Callable[[], TestClient]
         store=QdrantStore.connect(":memory:", DIM),
     )  # fmt: skip
     response = sign_in(browser(), USER).get("/api/documents")
-    assert response.status_code == 503 and "src.rag.index" in response.json()["detail"]
+    assert response.status_code == 503 and "src.rag.init_qdrant" in response.json()["detail"]
 
 
 def test_unreachable_store_answers_503(app: FastAPI, browser: Callable[[], TestClient]) -> None:

@@ -43,7 +43,7 @@ bigdata:
     # Names of the class tables that are no medicine (placebo tablets of a pack): no ingredient
     # here, their PubMed queries ignored (src/data/spark/rag_sources.py NOT_DRUGS, same list).
     not_drugs: [inert ingredients]
-    # Chunks keep the size of the module 2 corpus (1,500 characters, src/data/corpus/corpus.py).
+    # Chunks keep the size of the module 2 corpus (1,500 characters, src/rag/chunking.py).
     min_chars: 80          # shorter cleaned texts are dropped
     near_duplicate: 0.2    # MinHash Jaccard distance under which two abstracts are duplicates
 

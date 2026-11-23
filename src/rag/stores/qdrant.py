@@ -6,7 +6,7 @@ the tests use the client's local in-memory mode (`QdrantClient(":memory:")`), sa
 - Collection `tujya_chunks_v2` for the app (TUJYA_QDRANT_COLLECTION, D126; `tujya_chunks`,
   the default here, holds the corpus of the 150 first classes); named vector `dense` (cosine, the
   embedding model's dimension) and sparse vector `bm25` with the IDF modifier (step 3.2,
-  D116, src/rag/sparse.py). Hybrid search = both lists fused by Qdrant (RRF, k = 60).
+  D116, src/rag/stores/sparse.py). Hybrid search = both lists fused by Qdrant (RRF, k = 60).
 - Point id: UUID v5 of the chunk id (Qdrant ids are integers or UUIDs); the chunk id stays
   in the payload.
 - Payload: every metadata column of the chunk (source, document type, section, language,
@@ -26,8 +26,8 @@ import numpy as np
 from qdrant_client import QdrantClient
 from qdrant_client import models as qm
 
-from src.rag.sparse import SparseVector
-from src.rag.store import METADATA_COLUMNS, Chunk, Filters
+from src.rag.stores.base import METADATA_COLUMNS, Chunk, Filters
+from src.rag.stores.sparse import SparseVector
 
 COLLECTION = "tujya_chunks"
 DENSE = "dense"

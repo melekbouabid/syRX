@@ -29,10 +29,9 @@ from app.inference import ScannerHolder
 from app.medicines import DISCLAIMER, PharmaUnavailable, search_pills
 from app.pharma import Ingredient
 from src.models.toxicity.model import ToxHolder, ToxicityUnavailable, predict_molecules
-from src.rag.names import NameIndex
+from src.rag.query_rewriting import NameIndex, QueryRewriter
 from src.rag.retrieval import Hit, Mode, RetrieverHolder
-from src.rag.rewrite import QueryRewriter
-from src.rag.store import Filters
+from src.rag.stores.base import Filters
 
 DOC_TYPES = ("label", "abstract", "interaction")
 SNIPPET_CHARS = 700
@@ -144,7 +143,7 @@ class Toolbox:
     def retriever(self) -> Any:
         retriever = self.retrievers.get()
         if retriever is None:
-            raise ToolError("the document index is empty: run `python -m src.rag.index`")
+            raise ToolError("the document index is empty: run `python -m src.rag.init_qdrant`")
         return retriever
 
     def indexed_ingredients(self) -> frozenset[str]:

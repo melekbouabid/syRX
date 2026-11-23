@@ -11,7 +11,6 @@ import pandas as pd
 import pytest
 import respx
 
-from src.data.corpus import corpus
 from src.data.sources import pipeline
 from src.data.sources.config import Settings, SourceConfig
 from src.data.sources.connectors.openfda import (
@@ -21,6 +20,7 @@ from src.data.sources.connectors.openfda import (
     label_sections,
 )
 from src.data.sources.literature.queries import build_topic_query, read_ingredients
+from src.rag import chunking
 
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
@@ -183,7 +183,7 @@ async def test_pubmed_ingredient_mode(settings: Settings, mock_http: respx.MockR
     sent = parse_qs(esearch.calls[0].request.content.decode())
     assert sent["sort"] == ["relevance"] and '"fluconazole"[tiab]' in sent["term"][0]
     hits = pd.read_parquet(settings.interim_dir / "pubmed" / "query_hits.parquet")
-    by_pmid = corpus.pmid_ingredients(settings.raw_dir / "pubmed", hits)
+    by_pmid = chunking.pmid_ingredients(settings.raw_dir / "pubmed", hits)
     assert by_pmid == {"42": ["fluconazole", "metformin"]}
 
 
@@ -192,11 +192,11 @@ async def test_pubmed_ingredient_mode(settings: Settings, mock_http: respx.MockR
 
 def test_split_text_respects_the_limit_and_overlaps() -> None:
     text = " ".join(f"Sentence number {i} is here." for i in range(200))
-    pieces = corpus.split_text(text, max_chars=300)
+    pieces = chunking.split_text(text, max_chars=300)
     assert len(pieces) > 5 and all(len(p) <= 300 for p in pieces)
     assert pieces[1].startswith(pieces[0].split(". ")[-1].rstrip("."))  # one sentence repeated
-    assert corpus.split_text("short") == ["short"] and corpus.split_text("  ") == []
-    assert all(len(p) <= 100 for p in corpus.split_text("x" * 250, max_chars=100))
+    assert chunking.split_text("short") == ["short"] and chunking.split_text("  ") == []
+    assert all(len(p) <= 100 for p in chunking.split_text("x" * 250, max_chars=100))
 
 
 def _sections() -> pd.DataFrame:
@@ -268,10 +268,10 @@ def _pairs() -> pd.DataFrame:
 
 def test_build_chunks_metadata() -> None:
     names = {"fluconazole", "metformin", "warfarin"}
-    chunks = corpus.build_chunks(
+    chunks = chunking.build_chunks(
         _sections(), _articles(), {"42": ["metformin"]}, _pairs(), names, "2026-10-28"
     )
-    assert list(chunks.columns) == corpus.CHUNK_COLUMNS
+    assert list(chunks.columns) == chunking.CHUNK_COLUMNS
     assert chunks["doc_type"].value_counts().to_dict() == {
         "abstract": 2,
         "interaction": 2,
@@ -289,10 +289,10 @@ def test_build_chunks_metadata() -> None:
     unknown = chunks[chunks["title"].str.contains("Unknown")].iloc[0]
     assert "does not grade" in unknown.text and "no interaction" not in unknown.text
     assert chunks["chunk_id"].is_unique
-    summary = corpus.summary(chunks)
+    summary = chunking.summary(chunks)
     assert summary["chunks"] == 5 and summary["retracted_chunks"] == 2
     # Same input, same ids: indexing can be idempotent.
-    again = corpus.build_chunks(
+    again = chunking.build_chunks(
         _sections(), _articles(), {"42": ["metformin"]}, _pairs(), names, "2026-10-28"
     )
     assert list(again["chunk_id"]) == list(chunks["chunk_id"])
@@ -301,4 +301,4 @@ def test_build_chunks_metadata() -> None:
 def test_dosage_sections_are_refused_by_the_chunker() -> None:
     bad = _sections().assign(section="dosage_and_administration")
     with pytest.raises(ValueError, match="dosage"):
-        corpus.build_chunks(bad, None, {}, None, set())
+        chunking.build_chunks(bad, None, {}, None, set())

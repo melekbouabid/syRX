@@ -2,14 +2,14 @@
 
 The served corpus (data/processed/rag/corpus/chunks.parquet, stage `rag_corpus`, frozen on the
 ingredients of the 150 first classes: D119) cuts label sections and abstract paragraphs into
-pieces of at most 1,500 characters that repeat one sentence (src/data/corpus/corpus.py
+pieces of at most 1,500 characters that repeat one sentence (src/rag/chunking.py
 `split_text`). A variant cuts the same documents with another `max_chars` / `overlap`:
 
 - label sections: the same rows of
   data/external/rag_v1/interim/openfda_label/label_sections.parquet as the served chunks,
-  through `corpus.label_chunks`;
+  through `chunking.label_chunks`;
 - abstracts: the same PubMed articles, each about the same ingredients as in the served corpus,
-  through `corpus.abstract_chunks`;
+  through `chunking.abstract_chunks`;
 - DDInter rows: one short chunk per pair, never split, copied as they are.
 
 `max_chars=1500, overlap=1` gives back the served corpus exactly (tested), so a variant
@@ -35,7 +35,7 @@ from typing import Any
 
 import pandas as pd
 
-from src.data.corpus import corpus
+from src.rag import chunking
 
 ROOT = Path(__file__).resolve().parents[2]
 CHUNKS = ROOT / "data" / "processed" / "rag" / "corpus" / "chunks.parquet"
@@ -69,22 +69,22 @@ def variant(
         d.split(":", 1)[1]: sorted(values)
         for d, values in zip(abstracts["doc_id"], abstracts["ingredients"], strict=True)
     }
-    split = partial(corpus.split_text, max_chars=max_chars, overlap=overlap)
-    original = corpus.split_text
-    corpus.split_text = split  # label_chunks / abstract_chunks look it up at call time
+    split = partial(chunking.split_text, max_chars=max_chars, overlap=overlap)
+    original = chunking.split_text
+    chunking.split_text = split  # label_chunks / abstract_chunks look it up at call time
     try:
-        rows = corpus.label_chunks(kept, names)
-        rows += corpus.abstract_chunks(articles[articles["pmid"].isin(list(about))], about, names)
+        rows = chunking.label_chunks(kept, names)
+        rows += chunking.abstract_chunks(articles[articles["pmid"].isin(list(about))], about, names)
     finally:
-        corpus.split_text = original
-    frame = pd.DataFrame(rows, columns=corpus.CHUNK_COLUMNS)
+        chunking.split_text = original
+    frame = pd.DataFrame(rows, columns=chunking.CHUNK_COLUMNS)
     ddinter = served[served["doc_type"] == "interaction"]
-    return pd.concat([frame, ddinter[corpus.CHUNK_COLUMNS]], ignore_index=True)
+    return pd.concat([frame, ddinter[chunking.CHUNK_COLUMNS]], ignore_index=True)
 
 
 def load_variant(max_chars: int, overlap: int) -> pd.DataFrame:
     served = pd.read_parquet(CHUNKS)
-    if (max_chars, overlap) == (corpus.MAX_CHARS, corpus.OVERLAP_SENTENCES):
+    if (max_chars, overlap) == (chunking.MAX_CHARS, chunking.OVERLAP_SENTENCES):
         return served
     return variant(served, pd.read_parquet(LABELS), pd.read_parquet(ARTICLES), max_chars, overlap)
 

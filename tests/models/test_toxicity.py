@@ -32,7 +32,7 @@ from src.models.toxicity.model import (
     standardise,
     tanimoto_max,
 )
-from src.rag.embeddings import FakeEmbedder
+from src.rag.init_qdrant import FakeEmbedder
 from tujya_testing.fixtures import USER, sign_in
 from tujya_testing.rag_fakes import DIM, FakeChatModel, build_index
 

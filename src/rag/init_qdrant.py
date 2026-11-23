@@ -11,10 +11,11 @@ In Qdrant each chunk also gets its BM25 sparse vector (`Qdrant/bm25`, step 3.2, 
 collection made before that is migrated in place (points copied, nothing embedded again)
 and a new sparse encoder recomputes the sparse vectors only.
 
-    python -m src.rag.index          # settings from TUJYA_* env
-    python -m src.rag.index --pull   # also pull the Ollama models first
-    python -m src.rag.index --store sql --database-url postgresql+psycopg://...
-    python -m src.rag.index --copy-from-sql   # move the pgvector vectors to Qdrant, no embedding
+    python -m src.rag.init_qdrant          # settings from TUJYA_* env
+    python -m src.rag.init_qdrant --pull   # also pull the Ollama models first
+    python -m src.rag.init_qdrant --store sql --database-url postgresql+psycopg://...
+    python -m src.rag.init_qdrant --copy-from-sql   # move the pgvector vectors to Qdrant,
+                                                    # no embedding
 """
 
 from __future__ import annotations
@@ -23,21 +24,23 @@ import argparse
 import asyncio
 import hashlib
 import json
+import math
+import re
 import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 import httpx
 import pyarrow.parquet as pq
 
 from app.config import Settings
 from app.db import make_engine
-from src.rag.embeddings import Embedder, OllamaEmbedder
-from src.rag.sparse import FastEmbedBM25, SparseEncoder
-from src.rag.store import METADATA_COLUMNS, ChunkStore, VectorStore
+from src.rag.chunking import fold
 from src.rag.stores import open_store
+from src.rag.stores.base import METADATA_COLUMNS, ChunkStore, VectorStore
+from src.rag.stores.sparse import FastEmbedBM25, SparseEncoder
 
 
 def read_chunks(path: Path) -> list[dict[str, Any]]:
@@ -192,7 +195,7 @@ async def pull_models(base_url: str, models: list[str]) -> None:
 
 def main(argv: list[str] | None = None) -> None:
     settings = Settings()
-    parser = argparse.ArgumentParser(prog="python -m src.rag.index")
+    parser = argparse.ArgumentParser(prog="python -m src.rag.init_qdrant")
     parser.add_argument("--chunks", type=Path, default=settings.rag_chunks_file)
     parser.add_argument("--store", choices=["qdrant", "sql"], default=settings.vector_store)
     parser.add_argument("--qdrant-url", default=settings.qdrant_url)
@@ -241,6 +244,100 @@ def main(argv: list[str] | None = None) -> None:
         index_chunks(store, embedder, rows, batch_size=args.batch_size, log=print, sparse=sparse)
     )
     print(json.dumps(stats))
+
+
+# --- Text embeddings: bge-m3 served by Ollama, a deterministic fake in tests -------------------
+# Text embeddings: bge-m3 served by Ollama in production, a deterministic fake in tests.
+#
+# bge-m3 is multilingual (100+ languages), so a French question finds English label text.
+
+
+class Embedder(Protocol):
+    model: str
+    dim: int
+
+    async def embed(self, texts: list[str]) -> list[list[float]]: ...
+
+
+class EmbeddingError(RuntimeError):
+    """The embedding service is unreachable or answered something unusable."""
+
+
+class OllamaEmbedder:
+    """POST /api/embed on the Ollama server (docker compose service `ollama`)."""
+
+    def __init__(
+        self,
+        base_url: str,
+        model: str = "bge-m3",
+        dim: int = 1024,
+        *,
+        num_ctx: int | None = None,
+        timeout: float = 120.0,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
+        self.base_url, self.model, self.dim = base_url.rstrip("/"), model, dim
+        self.timeout, self.transport = timeout, transport
+        self.options = {"num_ctx": num_ctx} if num_ctx else {}
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        body = {
+            "model": self.model,
+            "input": texts,
+            "truncate": True,
+            **({"options": self.options} if self.options else {}),
+        }
+        for attempt in (1, 2):  # once more if Ollama was busy swapping models on the GPU
+            try:
+                async with httpx.AsyncClient(
+                    timeout=self.timeout, transport=self.transport
+                ) as client:
+                    response = await client.post(f"{self.base_url}/api/embed", json=body)
+                    response.raise_for_status()
+                break
+            except httpx.HTTPError as exc:
+                if attempt == 2:
+                    raise EmbeddingError(
+                        f"Ollama embeddings failed: {type(exc).__name__} {exc}"
+                    ) from exc
+        vectors: list[list[float]] = response.json().get("embeddings", [])
+        if len(vectors) != len(texts) or any(len(v) != self.dim for v in vectors):
+            raise EmbeddingError(f"unexpected embedding shape from {self.model}")
+        return vectors
+
+
+_WORD = re.compile(r"[a-z0-9]+")
+
+
+class FakeEmbedder:
+    """Hashed bag of words and character trigrams, L2-normalised. Deterministic, offline.
+
+    Texts sharing words get similar vectors, which is enough to test the retrieval code
+    without a model (CI never downloads embeddings).
+    """
+
+    model = "fake-hash"
+
+    def __init__(self, dim: int = 64) -> None:
+        self.dim = dim
+        self.calls = 0
+
+    def vector(self, text: str) -> list[float]:
+        values = [0.0] * self.dim
+        for word in _WORD.findall(fold(text)):
+            features = [word] + [word[i : i + 3] for i in range(max(0, len(word) - 2))]
+            for feature in features:
+                digest = hashlib.md5(feature.encode(), usedforsecurity=False).digest()
+                index = int.from_bytes(digest[:4], "little") % self.dim
+                values[index] += 1.0 if digest[4] % 2 else -1.0
+        norm = math.sqrt(sum(v * v for v in values)) or 1.0
+        return [v / norm for v in values]
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        self.calls += 1
+        return [self.vector(t) for t in texts]
 
 
 if __name__ == "__main__":

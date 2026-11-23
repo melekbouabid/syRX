@@ -40,14 +40,13 @@ from sqlalchemy.orm import Session
 from app.config import Settings
 from app.db import make_engine
 from app.pharma import Ingredient
-from src.rag.embeddings import OllamaEmbedder
-from src.rag.names import NameIndex
-from src.rag.rerank import CrossEncoderReranker
+from src.rag.init_qdrant import OllamaEmbedder
+from src.rag.query_rewriting import NameIndex, QueryRewriter
+from src.rag.reranking import CrossEncoderReranker
 from src.rag.retrieval import Mode, Retriever
-from src.rag.rewrite import QueryRewriter
-from src.rag.sparse import FastEmbedBM25
-from src.rag.store import Filters
 from src.rag.stores import open_store
+from src.rag.stores.base import Filters
+from src.rag.stores.sparse import FastEmbedBM25
 
 ROOT = Path(__file__).resolve().parents[2]
 QUESTIONS = ROOT / "src" / "benchmark" / "rag_questions.jsonl"

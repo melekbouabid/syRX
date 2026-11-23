@@ -21,7 +21,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from app.medicines import DISCLAIMER, NO_KNOWN_INTERACTION
-from src.rag.embeddings import Embedder, fold
+from src.rag.chunking import fold
+from src.rag.init_qdrant import Embedder
 
 _UNITS = (
     r"(?:mg|mcg|µg|μg|ug|g|ml|ui|iu|unites?|units?|gouttes?|drops?|comprimes?"

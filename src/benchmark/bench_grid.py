@@ -48,7 +48,7 @@ import pandas as pd
 import yaml
 
 from src.benchmark.rechunk import Relevance, load_variant
-from src.data.corpus import corpus
+from src.rag import chunking
 
 ROOT = Path(__file__).resolve().parents[2]
 GRID = ROOT / "config" / "rag_grid.yaml"
@@ -233,11 +233,11 @@ def load_corpus_v2(path: Path = CORPUS_V2) -> pd.DataFrame:
     and types of the v1 corpus."""
     frame = pd.read_parquet(path)
     frame["doc_type"] = frame["doc_type"].astype(str)
-    return frame[corpus.CHUNK_COLUMNS].sort_values("chunk_id", ignore_index=True)
+    return frame[chunking.CHUNK_COLUMNS].sort_values("chunk_id", ignore_index=True)
 
 
 def rows_of(frame: pd.DataFrame) -> list[dict[str, Any]]:
-    """Chunk rows as src/rag/index.py `read_chunks` gives them."""
+    """Chunk rows as src/rag/init_qdrant.py `read_chunks` gives them."""
     rows: list[dict[str, Any]] = frame.to_dict("records")
     for row in rows:
         row["ingredients"] = list(
@@ -278,7 +278,7 @@ class Runtime:
         from app.config import Settings
         from app.db import make_engine
         from app.pharma import Ingredient
-        from src.rag.names import NameIndex
+        from src.rag.query_rewriting import NameIndex
 
         settings = Settings()
         engine = make_engine(settings.pharma_database_url)
@@ -297,7 +297,7 @@ class Runtime:
         return self.corpora[key]
 
     def reranker(self, model: str) -> Any:
-        from src.rag.rerank import CrossEncoderReranker
+        from src.rag.reranking import CrossEncoderReranker
 
         if model not in self.rerankers:
             cache = self.settings.rag_model_cache_dir
@@ -307,11 +307,10 @@ class Runtime:
     async def retriever(self, config: Config) -> tuple[Any, float]:
         """The retriever of a configuration (its collection indexed first if needed) and the
         query encoding time to add (sentence-transformers vectors are precomputed)."""
-        from src.rag.embeddings import OllamaEmbedder
-        from src.rag.index import index_chunks
-        from src.rag.qdrant_store import QdrantStore
+        from src.rag.init_qdrant import OllamaEmbedder, index_chunks
         from src.rag.retrieval import Retriever
-        from src.rag.sparse import FastEmbedBM25
+        from src.rag.stores.qdrant import QdrantStore
+        from src.rag.stores.sparse import FastEmbedBM25
 
         s = self.settings
         sparse = FastEmbedBM25(s.rag_sparse_model, cache_dir=s.rag_model_cache_dir)
@@ -357,7 +356,7 @@ def read_queries() -> dict[str, Any]:
 async def evaluate(
     runtime: Runtime, config: Config, questions: list[dict[str, Any]], queries: dict[str, Any]
 ) -> tuple[dict[str, float], list[dict[str, Any]]]:
-    from src.rag.store import Filters
+    from src.rag.stores.base import Filters
 
     retriever, added_ms = await runtime.retriever(config)
     relevance = None
@@ -454,7 +453,7 @@ def line(name: str, s: dict[str, float]) -> str:
 
 async def cmd_rewrites(runtime: Runtime, questions: list[dict[str, Any]]) -> None:
     from src.agent.runtime import ollama_llm
-    from src.rag.rewrite import QueryRewriter
+    from src.rag.query_rewriting import QueryRewriter
 
     rewriter = QueryRewriter(ollama_llm(runtime.settings))
     await rewriter.rewrite("warm up")
@@ -488,7 +487,7 @@ async def cmd_run(runtime: Runtime, configs: list[Config], log: bool) -> None:
 async def cmd_latency(runtime: Runtime, configs: list[Config], selection: dict[str, Any]) -> None:
     """Interleaved rounds (D96): every round times each configuration on the same questions
     after a pause, in a rotated order; the median of the round medians is kept."""
-    from src.rag.store import Filters
+    from src.rag.stores.base import Filters
 
     questions = load_questions()[:: max(1, 85 // int(selection["latency_questions"]))]
     questions = questions[: int(selection["latency_questions"])]

@@ -52,7 +52,7 @@ markers = [
 [tool.mypy]
 python_version = "3.11"
 # The data pipeline and the module 2 corpus steps that run on it.
-files = ["src/data/sources", "src/data/corpus"]
+files = ["src/data/sources", "src/rag/corpus.py", "src/rag/chunking.py"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 check_untyped_defs = true
@@ -62,7 +62,7 @@ no_implicit_optional = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["pandas.*", "pyarrow.*", "dotenv.*"]
+module = ["pandas.*", "pyarrow.*", "dotenv.*", "app.*"]
 ignore_missing_imports = true
 follow_imports = "skip"
 
