@@ -25,3 +25,5 @@ ignore = [
 # Kaggle notebooks run fixed commands: git clone of the project, pip install of
 # its pinned packages (notebooks/module1/kaggle/requirements.txt).
 "notebooks/module1/kaggle/*.ipynb" = ["S603", "S607"]
+# Summary notebooks set the environment and sys.path before importing mlflow and src.
+"notebooks/module[12]/[0-9][0-9]_*.ipynb" = ["E402"]
