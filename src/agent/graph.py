@@ -32,7 +32,6 @@ from sqlalchemy.orm import Session
 from app.medicines import DISCLAIMER, pill_infos
 from src.agent.prompts import DEFAULT_PROMPT_VERSION, TOOLS_PROMPT, answer_prompt
 from src.agent.safety import (
-    CROSS_REFERENCE,
     REFUSAL_DOSE,
     SentenceFilter,
     attribute_by_meaning,
@@ -44,14 +43,13 @@ from src.agent.tools import CHAT_TOOLS, Toolbox, ToolError, langchain_tools
 from src.models.toxicity.model import LOW_NOTE, MIXTURE_NOTE, WORDING
 from src.rag.chunking import fold
 from src.rag.init_qdrant import EmbeddingError
+from src.rag.rag_chain import SOURCE_CHARS, answer_messages, number_sources, stream_answer
 
-MAX_SOURCES = 8
 # A question about toxicity gets predict_toxicity even if the planner forgets it (folded text).
 TOXICITY_QUESTION = re.compile(r"\btoxi\w*|\btox21\b|\bin vitro\b")
 # An answer sentence about the prediction (folded text): toxicity words, assays, Tox21 tasks.
 TOX_MENTION = re.compile(r"\btoxi\w*|\btox21\b|\bin vitro\b|\bassays?\b|\b(?:nr|sr)-\w+")
 MAX_TOOL_CALLS = 6
-SOURCE_CHARS = 900
 FRENCH_HINTS = frozenset(
     [
         "le",
@@ -489,52 +487,39 @@ class TujyaAgent:
 
     async def retrieve(self, state: AgentState) -> AgentState:
         started = time.perf_counter()
-        sources: list[dict[str, Any]] = []
-        seen: set[str] = set()
-
-        def add(items: list[dict[str, Any]], limit: int) -> None:
-            for item in items[:limit]:
-                if item["chunk_id"] not in seen and len(sources) < MAX_SOURCES:
-                    seen.add(item["chunk_id"])
-                    sources.append(item)
-
-        add(brand_sources(state.get("brands", [])), 3)
+        # (items, at most this many of them), in the order of their numbers (rag_chain.py).
+        groups: list[tuple[list[dict[str, Any]], int]] = []
+        groups.append((brand_sources(state.get("brands", [])), 3))
         results = state.get("tool_results", [])
         for entry in results:
             if entry["name"] == "check_interaction" and entry["result"]:
-                add(interaction_sources(entry["result"]), 3)
+                groups.append((interaction_sources(entry["result"]), 3))
         for entry in results:
             if entry["name"] == "predict_toxicity" and entry["result"]:
-                add(toxicity_sources(entry["result"]), 2)
+                groups.append((toxicity_sources(entry["result"]), 2))
         for entry in results:
             if entry["name"] == "get_drug_info" and entry["result"]:
-                add(entry["result"].get("label_sections", []), 2)
+                groups.append((entry["result"].get("label_sections", []), 2))
         for entry in results:
             if entry["name"] == "search_documents" and entry["result"]:
-                add(entry["result"].get("results", []), self.top_k)
-        for number, source in enumerate(sources, start=1):
-            source["n"] = number
+                groups.append((entry["result"].get("results", []), self.top_k))
+        sources = number_sources(groups)
         timings = {**state.get("timings", {}), "retrieve_ms": _ms(started)}
         return {"sources": sources, "timings": timings}
 
     def _answer_messages(self, state: AgentState) -> list[Any]:
         language = state.get("language", "fr")
-        blocks = []
-        for source in state.get("sources", []):
-            text = CROSS_REFERENCE.sub("", source.get("text") or source.get("snippet") or "")
-            blocks.append(
-                f"[{source['n']}] {source['title']} ({source['source_name']}"
-                f"{', ' + source['date'] if source.get('date') else ''})\n{text[:SOURCE_CHARS]}"
-            )
         pills = state.get("pill_labels", [])
         brands = [f"{b['brand']} = {', '.join(b['ingredients'])}" for b in state.get("brands", [])]
-        context = "\n\n".join(blocks)
-        user = (
-            (f"Comprimés confirmés : {'; '.join(pills)}\n" if pills else "")
-            + (f"Marques reconnues : {'; '.join(brands)}\n" if brands else "")
-            + f"Sources :\n{context}\n\nQuestion : {state['question']}"
+        preamble = (f"Comprimés confirmés : {'; '.join(pills)}\n" if pills else "") + (
+            f"Marques reconnues : {'; '.join(brands)}\n" if brands else ""
         )
-        return [SystemMessage(answer_prompt(self.prompt_version, language)), HumanMessage(user)]
+        return answer_messages(
+            answer_prompt(self.prompt_version, language),
+            state["question"],
+            state.get("sources", []),
+            preamble,
+        )
 
     async def answer(self, state: AgentState) -> AgentState:
         started = time.perf_counter()
@@ -547,10 +532,7 @@ class TujyaAgent:
             hold=(lambda s: about_prediction(s, numbers)) if numbers else None
         )
         parts: list[str] = []
-        async for chunk in self.llm.astream(self._answer_messages(state)):
-            text = chunk.content if isinstance(chunk.content, str) else ""
-            if not text:
-                continue
+        async for text in stream_answer(self.llm, self._answer_messages(state)):
             parts.append(text)
             for sentence in sentences.feed(text):
                 writer({"type": "token", "text": sentence})
