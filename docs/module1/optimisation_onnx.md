@@ -11,8 +11,8 @@ commun) et D96 (tête YOLO en float, méthode de latence) dans [docs/decisions.m
 # venv d'entraînement, serveur MLflow lancé (docker compose up -d mlflow)
 .venv-train/Scripts/python -m src.models.optimize            # les deux champions
 .venv-train/Scripts/python -m src.models.optimize --task detect --no-register   # mesure seule
-.venv-train/Scripts/python -m src.models.publish             # copie les variantes servies vers models/
-.venv-train/Scripts/python -m src.models.publish --exact     # les champions FP32 eux-mêmes
+.venv-train/Scripts/python -m src.models.registry publish             # copie les variantes servies vers models/
+.venv-train/Scripts/python -m src.models.registry publish --exact     # les champions FP32 eux-mêmes
 ```
 
 Un nouveau champion (étapes 2.2 et 2.3) n'a besoin que de ces deux commandes : tant que
@@ -118,7 +118,7 @@ mAP50 : FP32 et FP16 0,974, INT8 statique 0,966, INT8 dynamique 0,968. Le FP32 O
 - Les variantes de l'ancien champion (versions 6 à 8, YOLOv8n) restent dans le Registry avec
   `status=variant` et `variant_of=2` ; l'alias `served` est passé de la version 6 à la version 9.
 
-Vérification dans l'API (07/11, modèles publiés par `python -m src.models.publish`) :
+Vérification dans l'API (07/11, modèles publiés par `python -m src.models.registry publish`) :
 `GET /health` `ok`, `GET /model/metadata` détecteur `yolo11s` version 9, alias `champion` et
 `served`, FP32 ; `POST /predict` sur 30 photos du split de comparaison réparties sur tout le
 split : 34 boîtes sur 34 trouvées (IoU >= 0,5), 36 prédites (rappel 1,000, précision 0,944).

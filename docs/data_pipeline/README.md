@@ -2,7 +2,7 @@
 
 Pipeline de collecte d'origine du dépôt, écrit pour le premier objectif du projet (synergie de
 combinaisons de médicaments anticancéreux). Tujya n'en garde que ce qui sert au corpus du
-module 2 ([src/data/corpus/](../../src/data/corpus/)) : ses
+module 2 ([src/rag/corpus.py](../../src/rag/corpus.py)) : ses
 briques HTTP « polies » (limites de débit, cache, robots.txt, manifeste, provenance) et trois
 connecteurs, **DDInter**, **PubMed** et **openFDA** (notices). Les sources et les étapes de
 synergie (DrugComb, TDC, O'Neil, NCI-ALMANAC, DepMap, GDSC, PubChem, ChEMBL, Europe PMC,
@@ -20,8 +20,8 @@ tests dans `tests/data/`, ses réglages dans `config/` et sa documentation ici.
 
 | Élément | Rôle |
 |---|---|
-| [`src/data/tujya_data/`](../../src/data/tujya_data/) | le paquet Python (`tujya-data`, commande en ligne) |
-| [`tests/data/pipeline/`](../../tests/data/pipeline/) (`unit/`, `live/`) | tests unitaires (HTTP simulé, aucun réseau) et tests de fumée optionnels sur les vrais services |
+| [`src/data/sources/`](../../src/data/sources/) | le paquet Python (`tujya-data`, commande en ligne) |
+| [`tests/data/sources/`](../../tests/data/sources/) (`unit/`, `live/`) | tests unitaires (HTTP simulé, aucun réseau) et tests de fumée optionnels sur les vrais services |
 | [`config/data_pipeline/config.yaml`](../../config/data_pipeline/config.yaml) | réglages (aucun secret) ; fixe la racine du projet à la racine du dépôt (`project_root: ../..`) |
 | [`config/data_pipeline/manifest.json`](../../config/data_pipeline/manifest.json), [LICENSES.md](LICENSES.md) | SHA-256, taille, URL, version, date et licence de chaque fichier collecté ; licences et citations des sources |
 | ce dossier | [dictionnaire des données](data_dictionary.md), [sources et état des liens](sources.md), [règles d'accès aux sources](code_review.md) |
@@ -48,7 +48,7 @@ data/
 Chaque colonne est expliquée dans [docs/data_pipeline/data_dictionary.md](data_dictionary.md) (un test
 vérifie que toutes les colonnes écrites y figurent, et seulement elles). Les étapes du corpus
 lancent ces connecteurs avec leurs propres réglages : les notices et les résumés vont dans
-`data/rag/` avec leur propre manifeste ([rag.md](../module2/rag.md)).
+`data/external/rag_v1/` avec leur propre manifeste ([rag.md](../module2/rag.md)).
 
 ## Installation
 
@@ -74,12 +74,12 @@ Puis vérifier la machine : `tujya-data preflight`.
 ## Utilisation
 
 Pour Tujya, passer par les étapes du module 2, qui règlent les sources comme il faut
-(DDInter accepté sous ses conditions, PubMed sur les principes actifs, dossier `data/rag`) :
+(DDInter accepté sous ses conditions, PubMed sur les principes actifs, dossier `data/external/rag_v1`) :
 
 ```bash
-python -m src.data.corpus ddinter      # depuis la racine du dépôt
-python -m src.data.corpus labels
-python -m src.data.corpus pubmed
+python -m src.rag.corpus ddinter      # depuis la racine du dépôt
+python -m src.rag.corpus labels
+python -m src.rag.corpus pubmed
 ```
 
 La commande `tujya-data` reste utilisable directement, depuis la racine du dépôt avec
@@ -148,21 +148,21 @@ nul. `tujya-data update` peut être relancé sans risque.
 ## Développement
 
 Depuis la racine du dépôt : `python -m ruff check src tests`, `python -m mypy`,
-`python -m pytest tests/data/pipeline/unit` (HTTP simulé, pas de réseau) et
-`python -m pytest tests/data/pipeline/live -m live` (tests de fumée optionnels sur les vrais
+`python -m pytest tests/data/sources/unit` (HTTP simulé, pas de réseau) et
+`python -m pytest tests/data/sources/live -m live` (tests de fumée optionnels sur les vrais
 services, petits échantillons). Règles de lint communes : [ruff.toml](../../ruff.toml).
 
 Ajouter une source, c'est écrire une sous-classe de `Connector` (`discover`, `fetch`,
-`parse`, `validate`) et l'enregistrer dans `src/data/tujya_data/connectors/__init__.py`. Lire
+`parse`, `validate`) et l'enregistrer dans `src/data/sources/connectors/__init__.py`. Lire
 d'abord [docs/data_pipeline/code_review.md](code_review.md).
 
 ```
-src/data/tujya_data/
+src/data/sources/
   cli.py  pipeline.py  config.py  manifest.py  provenance.py  state.py  preflight.py
   http/         client, ratelimit, retry, cache, robots, circuit, guardrails
   connectors/   base, schemas, ddinter, pubmed, openfda
   literature/   queries (requêtes PubMed), abstracts (lecture du XML PubMed)
   quality/      drift (dérive de schéma), linkcheck (docs/data_pipeline/sources.md)
-tests/data/pipeline/
+tests/data/sources/
   unit/         HTTP simulé        live/   tests de fumée optionnels
 ```

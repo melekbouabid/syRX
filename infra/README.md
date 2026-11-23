@@ -8,9 +8,9 @@ Fichiers de l'infrastructure locale lancée par [`docker-compose.yml`](../docker
 
 | Fichier | Rôle |
 |---|---|
-| [`infra/docker/mlflow/Dockerfile`](docker/mlflow/Dockerfile) | serveur MLflow 3.17.2 (tracking + Model Registry) avec le pilote PostgreSQL |
-| [`infra/docker/postgres/init/01-init.sql`](docker/postgres/init/01-init.sql) | exécuté une fois, sur un volume vide : extension pgvector et base `mlflow` |
-| [`infra/docker/ollama/cpu.yml`](docker/ollama/cpu.yml) | surcharge pour une machine sans GPU NVIDIA |
+| [`infra/mlflow/Dockerfile`](mlflow/Dockerfile) | serveur MLflow 3.17.2 (tracking + Model Registry) avec le pilote PostgreSQL |
+| [`infra/postgres/init/01-init.sql`](postgres/init/01-init.sql) | exécuté une fois, sur un volume vide : extension pgvector et base `mlflow` |
+| [`infra/ollama/cpu.yml`](ollama/cpu.yml) | surcharge pour une machine sans GPU NVIDIA |
 
 Les images de l'application sont construites depuis leur dossier : l'API depuis la racine
 (`backend/Dockerfile`, elle importe les paquets des modules) et le site depuis
@@ -18,7 +18,7 @@ Les images de l'application sont construites depuis leur dossier : l'API depuis 
 
 ```bash
 docker compose up -d --build                                              # tout, GPU pour Ollama
-docker compose -f docker-compose.yml -f infra/docker/ollama/cpu.yml up -d # sans GPU
+docker compose -f docker-compose.yml -f infra/ollama/cpu.yml up -d # sans GPU
 docker compose down                                                       # garde les volumes
 ```
 

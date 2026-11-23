@@ -45,7 +45,7 @@ apprises sur les photos à deux comprimés (recto et verso) et grâce à l'augme
 
 ## Jeux de données (étape DVC `prepare`)
 
-`python -m src.data.prepare` (ou `dvc repro prepare`) écrit, à partir de
+`python -m src.data.prepare v1` (ou `dvc repro prepare`) écrit, à partir de
 `config/splits/selected_images.csv` :
 
 - `data/processed/c3pi/labels/autolabel.csv` : par image, boîtes, drapeaux, ok
@@ -86,7 +86,7 @@ nouvelle version de `tujya-pill-classifier` ou de `tujya-pill-detector`.
 Boîtes par photo propre : 1 (2 862), 2 (775), 3 (43), 4 (30).
 
 **Contrôle à l'œil** d'une planche aléatoire de 48 photos
-(`python -m src.data.prepare --sheet`) : 40 ont passé les filtres, dont 36 avec toutes
+(`python -m src.data.prepare v1 --sheet`) : 40 ont passé les filtres, dont 36 avec toutes
 leurs boîtes justes (environ 90 %). Les erreurs sont surtout un rectangle pâle de lumière
 inégale près du bord inférieur d'un papier beige, et une fois un second comprimé manqué. Les
 photos douteuses étaient bien signalées. Améliorer les étiquettes (vérification à la main du
@@ -168,7 +168,7 @@ ONNX Runtime (D45). Vérifications :
   40/40, IoU moyen de la boîte principale 0,9999, même classe top-1 sur 39/39 (une photo sans
   boîte) ;
 - sur les 600 photos de test
-  (`python -m src.models.evaluate_scan --split test`) : comprimé trouvé
+  (`python -m src.models.predict --split test`) : comprimé trouvé
   98,5 %, top-1 **89,3 %**, top-5 **95,8 %**, comme l'évaluation de bout en bout ci-dessus.
 
 ### Seuil de confirmation
@@ -176,7 +176,7 @@ ONNX Runtime (D45). Vérifications :
 L'application demande à l'utilisateur de confirmer un comprimé quand sa probabilité top-1 est
 sous un seuil (`needs_confirmation`). Choisi sur les photos de **validation** (600, jamais
 utilisées pour l'entraînement), avec
-`python -m src.models.evaluate_scan --split val` : règle = le plus petit
+`python -m src.models.predict --split val` : règle = le plus petit
 seuil pour lequel au plus 1 % de toutes les photos serait accepté avec un mauvais comprimé.
 
 | Seuil | Acceptées sans confirmation | Top-1 parmi les acceptées | Fausses et acceptées (part de toutes les photos) |

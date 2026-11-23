@@ -18,7 +18,7 @@ archivés ; règle, ordre d'import et discussion dans la décision D98 et la sec
 
 | Branche | Modèle | Famille | Paramètres | Notebook | Recherche (`config/hpo/`) |
 |---|---|---|---:|---|---|
-| `experiment/detector-yolov8n` | YOLOv8n (Ultralytics) | une étape | 3,2 M | `notebooks/kaggle/detector_yolov8n.ipynb` | 12 essais, 10 époques sur 35 % du train ; final 60 époques |
+| `experiment/detector-yolov8n` | YOLOv8n (Ultralytics) | une étape | 3,2 M | `notebooks/module1/kaggle/detector_yolov8n.ipynb` | 12 essais, 10 époques sur 35 % du train ; final 60 époques |
 | `experiment/detector-yolov8s` | YOLOv8s (Ultralytics) | une étape | 11 M | `detector_yolov8s.ipynb` | 10 essais, 10 époques sur 30 % ; final 50 époques |
 | `experiment/detector-yolo11s` | YOLO11s (Ultralytics) | une étape | 9,4 M | `detector_yolo11s.ipynb` | 10 essais, 10 époques sur 30 % ; final 50 époques |
 | `experiment/detector-yolov10n` | YOLOv10n (Ultralytics) | une étape, sans NMS | 2,3 M | `detector_yolov10n.ipynb` | 12 essais, 10 époques sur 35 % ; final 60 époques |
@@ -56,7 +56,7 @@ Les augmentations ne s'appliquent qu'au train (Ultralytics et
 
 - Jeu : **C3PI v2** (étape 1.4), photos « consumer » des 380 classes, boîtes produites par
   [autolabel.py](../../src/data/autolabel.py) comme pour v1, photos douteuses écartées ; étape
-  DVC `prepare_detect_v2` ([prepare_detect_v2.py](../../src/data/prepare_detect_v2.py)),
+  DVC `prepare_detect_v2` ([prepare/detect_v2.py](../../src/data/prepare/detect_v2.py)),
   sortie `data/processed/c3pi/datasets_v2/detect` (images 640 px, format YOLO).
 - Split de comparaison `test_holdout.txt` : les photos de test v2 dont la session de prise de
   vue ne contient aucune photo vue par la baseline (entraînée sur v1) en train ou en val.
@@ -99,7 +99,7 @@ de vue) est plus difficile.
 
 | Fichier | Rôle |
 |---|---|
-| [src/data/prepare_detect_v2.py](../../src/data/prepare_detect_v2.py) | jeu de détection v2 et split de comparaison (étape DVC `prepare_detect_v2`) |
+| [src/data/prepare/detect_v2.py](../../src/data/prepare/detect_v2.py) | jeu de détection v2 et split de comparaison (étape DVC `prepare_detect_v2`) |
 | [src/models/detection/metrics.py](../../src/models/detection/metrics.py) | mAP@[.5:.95], mAP50, précision, rappel (COCO) |
 | [src/models/detection/latency.py](../../src/models/detection/latency.py) | latence ONNX Runtime CPU (prétraitement de l'API) |
 | [src/models/detection/labels.py](../../src/models/detection/labels.py) | étiquettes YOLO, boîtes en pixels, cibles torchvision, sous-ensembles |
@@ -150,7 +150,7 @@ Avec un jeton installé par vos soins : `kaggle datasets create -p runs/kaggle/t
 
 Pour chaque modèle : Kaggle > **Code** > **New Notebook** > **File** > **Import Notebook** >
 onglet GitHub, `melekbouabid/syRX`, branche `experiment/detector-<archi>`, fichier
-`notebooks/kaggle/detector_<archi>.ipynb` (ou importer le fichier `.ipynb` téléchargé).
+`notebooks/module1/kaggle/detector_<archi>.ipynb` (ou importer le fichier `.ipynb` téléchargé).
 Puis, dans **Settings** : **Accelerator** GPU (T4 x1, ou P100 pour Faster R-CNN), **Internet**
 activé (clone de la branche et `pip install` des versions figées). **Add Input** : votre dataset
 `tujya-c3pi-detect-v2`. Enfin **Save Version** > **Save & Run All (Commit)** : le calcul
@@ -224,8 +224,8 @@ pour les alias.
 ```bash
 git switch experiment/detector-<archi>
 # dossier d'export dézippé, jamais dans git
-.venv-train/Scripts/python -m dvc add data/models/detectors/detector-<archi>
-git add data/models/detectors/detector-<archi>.dvc data/models/detectors/.gitignore
+.venv-train/Scripts/python -m dvc add data/processed/models/detectors/detector-<archi>
+git add data/processed/models/detectors/detector-<archi>.dvc data/processed/models/detectors/.gitignore
 git commit -m "exp(detector): record the <archi> Kaggle run (test_v2_mAP50_95 0.xxxx)"
 ```
 
@@ -237,7 +237,7 @@ taille du fichier ONNX).
 ### 8. Fin de l'étape
 
 1. Tests et lint ([docs/project_rules.md](../project_rules.md) ; `pytest` à la racine, dans `backend/` et `tools/`, `ruff`, `flake8`, `black`, `mypy`), `dvc status` propre.
-2. `python -m src.models.publish` copie le champion vers `models/` ; vérifier que l'API le
+2. `python -m src.models.registry publish` copie le champion vers `models/` ; vérifier que l'API le
    sert (`/api/scan`, `models.json`). Faster R-CNN est exporté au format des YOLO
    (entrée 1x3xSxS, sortie 1x5xN), l'API le sert sans changement.
 3. `git switch main && git merge --no-ff experiment/detector-<champion>`.
@@ -338,7 +338,7 @@ YOLOv10n, YOLOv8s, Faster R-CNN. Résultat, sans correction manuelle des alias :
 | 2 | YOLOv8n | 0,8774 | archivé (champion jusqu'au 07/11) | importé le 06/11 | `b06895360a7e441899172c1c04bd7721` | 12 |
 | 1 | YOLO11n (baseline) | 0,7888 | archivé | baseline de l'étape 2.1 | `6766123e6ecc43b2bda50f01d9419e32` | - |
 
-Poids et exports Kaggle : `data/models/detectors/detector-<archi>` (DVC), un pointeur `.dvc`
+Poids et exports Kaggle : `data/processed/models/detectors/detector-<archi>` (DVC), un pointeur `.dvc`
 par branche `experiment/detector-<archi>` ; seule `experiment/detector-yolo11s` est fusionnée
 dans `main`.
 

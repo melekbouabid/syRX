@@ -9,9 +9,9 @@ flowchart LR
   end
   subgraph M2["Module 2 : AI Engineering"]
     AG["src/agent<br/>LangGraph, outils,<br/>sécurité"]
-    MCP["src/mcp_server"]
+    MCP["src/agent/mcp_server.py"]
     RAG["src/rag<br/>dense + BM25"]
-    CORP["src/data/corpus<br/>openFDA, PubMed,<br/>DDInter"]
+    CORP["src/rag/corpus.py<br/>openFDA, PubMed,<br/>DDInter"]
   end
   BE --> SCAN
   BE --> AG
@@ -25,7 +25,7 @@ flowchart LR
   DATA["data/raw, data/processed (DVC)<br/>C3PI, DDInter, corpus"] --> TR
   CORP --> DATA
   DATA --> RAG
-  PIPE["src/data/tujya_data<br/>connecteurs"] --> CORP
+  PIPE["src/data/sources<br/>connecteurs"] --> CORP
   classDef ops fill:#eef6ee,stroke:#5a8f5a
   classDef app fill:#eef3f8,stroke:#4a6f8f
   class DATA,TR,MLF,PIPE,CORP ops

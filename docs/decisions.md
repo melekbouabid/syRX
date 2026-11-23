@@ -426,14 +426,14 @@ ingredient, English abstracts since 2000, `sort=relevance`, at most 20 records (
 most; 1,570 distinct articles). A larger bound would make abstracts dominate the labels in
 retrieval and take longer to embed; every query hit the cap, so this is a sample of the
 literature, not all of it. Retracted articles are kept and flagged, and excluded at search
-time by default. The RAG sources run in their own data folder (`data/rag`, own manifest),
+time by default. The RAG sources run in their own data folder (`data/external/rag_v1`, own manifest),
 so they never mix with the SynergyRx PubMed records.
 
 **D62. DDInter in the text index: only the 2,350 pairs between the class ingredients.**
 DDInter rows only say "A and B interact, severity X". The 40,508 pairs with any drug would
 be 80 % of the corpus in near-identical sentences and push labels and abstracts out of the
 results; the `check_interaction` tool reads every pair from the database instead. The RAG
-corpus is versioned with DVC: sources with `dvc add` (`data/rag/raw`, `interim`,
+corpus is versioned with DVC: sources with `dvc add` (`data/external/rag_v1/raw`, `interim`,
 `manifest.json`), chunks as the `rag_corpus` stage of `dvc.yaml`.
 
 **D59. Embeddings: bge-m3 (1,024 dimensions) served by the same Ollama container.** The
@@ -676,7 +676,7 @@ recherche, les embeddings et le rapprochement des noms ; `agent/` le graphe Lang
 de sécurité et leur câblage ; `mcp_server/` le serveur MCP (`server.py`, lancé par
 `python -m module2_ai_engineering.mcp_server`) ; `benchmark/` le jeu de questions, les
 résultats et les scripts `bench_*.py`, devenus des modules (`python -m
-module2_ai_engineering.benchmark.bench_retrieval`, plus de `sys.path.insert`). Les
+module2_ai_engineering.benchmark.benchmark_retrieval`, plus de `sys.path.insert`). Les
 **connecteurs** openFDA et PubMed restent dans le pipeline (`data_pipeline/src/
 synergyrx_data/connectors/`) : ils sont enregistrés dans son registre de sources et
 configurés par son `config.yaml`, au même titre que les douze autres ; les déplacer ferait
@@ -686,7 +686,7 @@ est typé par le mypy du pipeline et soumis au même test de politique réseau
 perdu au déménagement). Les fixtures du pipeline deviennent le plugin
 `synergyrx_data.testing` (même raison que `tujya_testing`, D79). Les tests du module 2
 tournent avec le venv du backend, où le pipeline est installé en éditable. Les tests
-pgvector passent dans un job CI `module2` qui a le service PostgreSQL. `make_spec.py`
+pgvector passent dans un job CI `module2` qui a le service PostgreSQL. `generate_questions.py`
 écrivait dans un chemin absolu du dossier d'origine : il écrit maintenant à côté de lui
 (régénéré à l'identique).
 
@@ -803,7 +803,7 @@ module 2. Les dossiers par module de D79 à D82 (`module1_vision_mlops/`,
 - `src/data` : préparation C3PI (`c3pi`, `data_cli`, `autolabel`, `prepare`), corpus RAG
   (`corpus/`) et pipeline de collecte (`synergyrx_data`, renommé `tujya_data`) ;
   `src/models` : entraînement, évaluation, publication, et le modèle Tox21 du bonus
-  (`toxicity/`) ; `src/rag`, `src/agent`, `src/mcp_server`, `src/benchmark` ; `src/utils`
+  (`toxicity/`) ; `src/rag`, `src/agent`, `src/mcp_server`, `src/evaluation` ; `src/utils`
   attend les utilitaires des étapes suivantes (MLflow, Grad-CAM) ;
 - `backend/` : l'API, dont la chaîne de scan ONNX Runtime devenue `app/inference.py` (le
   guide nomme `app/{main,schemas,inference}.py`) ; ses tests, dont ceux du scan ;
@@ -822,7 +822,7 @@ Données : `dvc move` (mêmes empreintes, rien à envoyer au remote) range les i
 métadonnées C3PI dans `data/raw/c3pi`, Tox21 dans `data/raw/tox21` et les tables des
 médicaments dans `data/processed/pharma` ; les sorties des étapes `prepare` et `rag_corpus`
 vont dans `data/processed/c3pi` et `data/processed/rag/corpus` (`dvc commit -f`, sorties
-inchangées). Exception : l'espace de collecte des sources RAG reste dans `data/rag`
+inchangées). Exception : l'espace de collecte des sources RAG reste dans `data/external/rag_v1`
 (`raw/`, `interim/`, `manifest.json`), car son manifeste, suivi par DVC, enregistre ces
 chemins ; le réécrire créerait un contenu qu'on ne peut pas envoyer au remote partagé (pas de
 `dvc push`). Il sera déplacé quand la collecte sera refaite (étape 1.4). `params.yaml`
@@ -848,7 +848,7 @@ que `ruff format` défaisait : ces passages ont été réécrits pour que les de
 la même mise en page (expressions de message sorties des `assert`, en-têtes HTTP dans une
 variable), sans changer le comportement ; les 4 lignes de plus de 100 caractères que ruff
 tolérait (expressions régulières, `# type: ignore`) sont coupées, la regex des doses reste
-identique (vérifié). Deux exceptions flake8 copient celles de ruff : `make_spec.py` (E501)
+identique (vérifié). Deux exceptions flake8 copient celles de ruff : `generate_questions.py` (E501)
 et `inference.py` (E402, variable d'OpenCV posée avant l'import de cv2). Dans pre-commit,
 flake8 et black ne font que vérifier (ruff corrige). `docker-build.yml` ne dépend plus de la
 CI (`workflow_run`) : il tourne sur chaque push de branche et chaque pull request, en
@@ -921,15 +921,15 @@ de test en train : ePillID sert seulement à comparer nos modèles à la littér
 `epillid` : recouvrement par NDC9 avec l'archive et avec les classes v1 / v2). Module 2 : le
 même cluster traite le corpus RAG ; les sources des nouvelles classes (RxNav, openFDA, PubMed
 avec 40 résumés par principe actif au lieu de 20) sont collectées par les connecteurs polis
-du pipeline dans `data/rag_v2` (`python -m src.data.spark.rag_sources`, testé), pour ne pas
-toucher l'espace `data/rag` du corpus servi. Le job `rag` nettoie, déduplique (PMID, texte
+du pipeline dans `data/external/rag_v2` (`python -m src.data.spark.rag_sources`, testé), pour ne pas
+toucher l'espace `data/external/rag_v1` du corpus servi. Le job `rag` nettoie, déduplique (PMID, texte
 identique, MinHash LSH) et découpe en Parquet (`data/processed/rag/corpus_v2`) les espaces
 listés dans `params.yaml` (`bigdata.rag.workspaces`) ; l'index servi reste le corpus v1
 jusqu'à la phase 3. Périmètre réduit (en l'absence du propriétaire) : le client poli
 refuse toute requête sans `CONTACT_EMAIL` dans `.env`, absent de cette copie du dépôt ; on
 ne met pas l'adresse du propriétaire dans des requêtes à sa place. Le job a donc tourné sur
 l'espace v1 seulement ; la collecte v2 attend que le propriétaire renseigne `CONTACT_EMAIL`,
-puis `rag_sources ingredients|labels|pubmed`, `dvc add data/rag_v2`, ajout de `data/rag_v2`
+puis `rag_sources ingredients|labels|pubmed`, `dvc add data/external/rag_v2`, ajout de `data/external/rag_v2`
 aux paramètres et aux dépendances de `spark_rag`, `dvc repro`. Périmètre réduit : les paires DDInter du corpus v2 viennent de
 `interactions_with_any_drug.csv` (au moins un principe actif v1), la table DDInter complète
 n'étant plus sur le disque ; les paires entre deux nouveaux principes actifs viendront quand
@@ -943,7 +943,7 @@ jeu C3PI v1 de 150 classes) ont leurs runs MLflow sur le serveur de la première
 projet, pas sur celui-ci (D83) ; leurs sorties Ultralytics (poids, `results.csv`, `args.yaml`,
 `summary.json`) sont restées dans `runs/`. Aucun entraînement long n'est lancé à cette étape
 (les nouveaux entraînements passeront sur le GPU de Kaggle aux étapes 2.2 et 2.3) :
-`src/models/register_baseline.py` les ré-enregistre au lieu de les réentraîner : il vérifie que leurs hyperparamètres sont exactement ceux de `params.yaml`
+`src/models/train.py` les ré-enregistre au lieu de les réentraîner : il vérifie que leurs hyperparamètres sont exactement ceux de `params.yaml`
 (`train.*`, sinon il refuse), crée un run suivi par modèle dans `tujya-vision` (tags
 `git_commit`, `dvc_rev`, `dataset`, `seed`, `baseline=true`, `origin_*` vers le run
 d'origine ; historique par époque, poids, figures, `requirements.txt`, `dvc.lock`) et
@@ -1023,7 +1023,7 @@ Optuna, exécuteur d'expérience, empaquetage du dataset Kaggle, import MLflow, 
 champion, tableau et figure de comparaison, générateur de notebooks), et chaque branche
 `experiment/detector-<archi>` part de cette branche et ajoute ce qui est propre au modèle :
 sa configuration Optuna `config/hpo/detector_<archi>.yaml`, son notebook
-`notebooks/kaggle/detector_<archi>.ipynb` et, pour `experiment/detector-fasterrcnn`, le code
+`notebooks/module1/kaggle/detector_<archi>.ipynb` et, pour `experiment/detector-fasterrcnn`, le code
 torchvision et ses tests (job CI `vision` avec PyTorch CPU). Ainsi l'historique montre
 l'outillage une fois, puis une branche par expérience ; seule la branche du champion sera
 fusionnée dans `main` (avec l'outillage qu'elle contient). Les notebooks clonent leur branche
@@ -1057,11 +1057,11 @@ MLflow (`stage=optimize`) et une nouvelle version du même modèle enregistré, 
 `precision` et `variant_of` (numéro de la version champion) et `status=variant` ; l'alias
 `champion` ne quitte jamais le modèle FP32 ; la variante retenue reçoit l'alias `served` (la
 version champion elle-même si FP32 l'emporte) et la version champion le tag
-`served_precision`. `python -m src.models.publish` publie par défaut la version `served` si
+`served_precision`. `python -m src.models.registry publish` publie par défaut la version `served` si
 elle est le champion ou une variante du champion actuel, sinon le champion FP32 (cas d'un
 nouveau champion promu depuis la dernière optimisation, jusqu'à ce que
 `python -m src.models.optimize` soit relancé) ; `--exact` publie l'alias tel quel
-(`src/models/serving.py`). Pour mesurer, la branche `feature/detector-kaggle-tooling` (outillage
+(`src/models/registry.py`). Pour mesurer, la branche `feature/detector-kaggle-tooling` (outillage
 commun de l'étape 2.2 : jeu de détection v2 et `test_holdout.txt`, métriques COCO, latence
 ONNX CPU en processus isolé, import Kaggle) est fusionnée dans `perf/onnx-quantization`, donc
 dans `main` ; aucune branche `experiment/*` n'est fusionnée et l'étape 2.2 reste en attente des
@@ -1100,7 +1100,7 @@ ne lisent ni n'écrivent aucune donnée personnelle, gardent les limites de tail
 derrière la connexion (D46). Les erreurs suivent le guide : 400 pour un type ou un contenu qui
 n'est pas une image (`/api/scan` garde son 415), 413 trop grande, 503 sans modèles ; `/health`
 répond toujours 200 avec `status=degraded` pour qu'une sonde voie la raison. `/model/metadata` lit
-`models.json`, que `python -m src.models.publish` enrichit de l'architecture (tag `arch` du
+`models.json`, que `python -m src.models.registry publish` enrichit de l'architecture (tag `arch` du
 Registry) et des métriques de la version publiée (celles d'une variante FP16 / INT8 complétées
 par les scores de validation de son champion) : l'API ne contacte jamais MLflow à l'exécution.
 `/predict/visualize` renvoie un PNG annoté (couleur stable par classe). Grad-CAM n'est pas servi :
@@ -1172,7 +1172,7 @@ modèle, sur un processeur plus ou moins chaud) ; changer le nombre de fils d'ON
 **D99. Les classifieurs de l'étape 2.3 sont entraînés sur les crops de C3PI v2 et tous comparés
 sur le même split, champion v1 compris.** Comme les détecteurs (D93), les six candidats sont
 entraînés sur v2 (380 classes, étape 1.4). Nouvelle étape DVC `prepare_classify_v2`
-(`src/data/prepare_classify_v2.py`, sortie `data/processed/c3pi/datasets_v2/classify`) : le crop
+(`src/data/prepare/classify_v2.py`, sortie `data/processed/c3pi/datasets_v2/classify`) : le crop
 carré (marge de 20 %, 256 px) de chaque comprimé de chaque image du split v2 (D89), c'est-à-dire
 le crop que l'API donne au classifieur (`square_crop`) ; boîtes des photos « consumer » par
 `autolabel.py` (photos douteuses écartées, même règle que v1 et que la détection), images de
@@ -1245,7 +1245,7 @@ l'autre), `label_space=c3pi-v2`, `num_classes`, `imgsz`, `arch` ; `classes.csv` 
 chaque export. Problème : l'API lit `names` comme le `class_id` de `config/pill_classes.csv`
 (les 150 classes de v1) ; les identifiants v2 ne sont pas ceux de v1 (7 sur 150 coïncident) et
 230 classes n'y sont pas : servi tel quel, un classifieur v2 afficherait le mauvais médicament.
-Choix : `python -m src.models.publish` refuse un classifieur dont les `class_keys` ne désignent
+Choix : `python -m src.models.registry publish` refuse un classifieur dont les `class_keys` ne désignent
 pas, pour chaque sortie, le même produit que la ligne de `config/pill_classes.csv` nommée par
 `names` (`check_class_table`) ; l'export Ultralytics de v1 n'a pas de `class_keys` et passe comme
 avant. Pour servir le champion de l'étape 2.3 (fin d'étape, après Kaggle), `config/pill_classes.csv`
@@ -1293,7 +1293,7 @@ les autres : deux recettes, comparaison inéquitable) ; une recherche par Ultral
 compte Kaggle sur ce PC et un GPU de 4 Go : le code commun est sur
 `feature/classifier-kaggle-tooling`, chaque branche `experiment/classifier-<archi>` (baseline-cnn,
 resnet50, efficientnetv2s, convnext-tiny, vit-b16, yolo11s-cls) en part et ajoute sa
-configuration Optuna et son notebook (`notebooks/kaggle/classifier_<archi>.ipynb`, qui clone sa
+configuration Optuna et son notebook (`notebooks/module1/kaggle/classifier_<archi>.ipynb`, qui clone sa
 branche) ; le job CI `vision` installe PyTorch CPU et Ultralytics pour les tests des
 architectures, de l'entraînement, de l'export ONNX et de Grad-CAM. Runs « smoke » locaux
 (`smoke=true`, nom `smoke-...`) jamais enregistrés dans le Model Registry. Budget : débit
@@ -1477,7 +1477,7 @@ serveur MCP) : marque -> principes actifs avec la source de chaque lien, RxNav e
 « non reconnue » sinon. `identify_pills` (MCP) lit aussi les boîtes. Benchmark : 8 questions de
 type `brand` ajoutées au jeu du module 2 (96 questions, les 88 autres inchangées), dont 6 sans
 chunk attendu (paracétamol et ibuprofène ne sont pas des principes actifs des classes indexées :
-l'interaction vient de DDInter) ; `bench_brands.py` les passe dans l'agent réel avec et sans la
+l'interaction vient de DDInter) ; `benchmark_brands.py` les passe dans l'agent réel avec et sans la
 table des marques.
 Corrections trouvées par ce benchmark : le LLM planificateur passait la marque brute à
 `check_interaction` (« Augmentin ») : elle est remplacée par ses principes actifs ; le modèle 3B
@@ -1498,7 +1498,7 @@ télémétrie coupée), collection `tujya_chunks` : un point par chunk, vecteur 
 identifiants texte), payload = toutes les métadonnées du chunk + `content_hash` SHA-256 +
 `embedding_model`, index de payload sur chaque champ filtré (le filtrage reste exact), modèle,
 dimension et date d'indexation dans les métadonnées de la collection. Une seule interface de
-stockage (`src/rag/store.py`) avec deux implémentations : Qdrant par défaut, la table SQL
+stockage (`src/rag/stores/base.py`) avec deux implémentations : Qdrant par défaut, la table SQL
 (pgvector, SQLite dans les tests) gardée derrière `TUJYA_VECTOR_STORE=sql`, pour comparer et
 revenir en arrière. Migration sans réencodage (`--copy-from-sql` copie les vecteurs) : le
 benchmark de récupération donne exactement les mêmes Recall@k et MRR sur les deux stores
@@ -1511,7 +1511,7 @@ cours).
 
 **D114. Les documents indexés sont consultables dans l'application : page « Documents » et
 `GET /api/documents`, reconstruits depuis les chunks de l'index.** Le catalogue
-(`src/rag/documents.py`) regroupe les chunks par `doc_id` dans l'ordre : il montre donc ce que
+(`src/rag/chunking.py`) regroupe les chunks par `doc_id` dans l'ordre : il montre donc ce que
 l'agent peut retrouver, sans copie séparée qui pourrait diverger. Liste paginée avec filtres
 (type, principe actif dont parle ou que cite le document, section, langue, source, mots du
 titre) et facettes ; détail d'un document avec toutes ses métadonnées, le lien vers la source
@@ -1596,7 +1596,7 @@ sans mesurer les réponses).
 **D119. La table de classes de l'API passe aux 380 classes de C3PI v2 ; celle de v1 garde son
 rôle sous un autre nom ; le corpus RAG servi reste celui de v1.** Le champion de l'étape 2.3 a
 380 sorties aux identifiants v2 (D101) : `config/pill_classes.csv` décrit désormais ces 380
-classes (`python -m src.data.corpus classes`, copie de `config/splits/c3pi_v2/classes.csv` avec
+classes (`python -m src.rag.corpus classes`, copie de `config/splits/c3pi_v2/classes.csv` avec
 les mêmes identifiants et les colonnes de principes actifs), puis `ingredients` et
 `interactions` refont les tables de `data/processed/pharma` avec la méthode et les sources de
 v1 (RxNav : NDC -> RxCUI -> principes actifs de base ; DDInter 2.0, 14 fichiers, reconstruit
@@ -1649,7 +1649,7 @@ résultats décide) ; une moyenne sur plusieurs graines (budget GPU Kaggle, D103
 (`optimize --task classify`, noté sur le split de comparaison pour un champion `label_space=c3pi-v2`) :
 le FP16 a la même précision mais n'est que 1 % plus rapide, l'INT8 statique perd 13 points et
 le dynamique 1,2 point, tous deux plus lents (docs/module1/optimisation_onnx.md). Grad-CAM de la
-galerie : poids PyTorch de la version servie (`data/models/classifiers/classifier-efficientnetv2s`,
+galerie : poids PyTorch de la version servie (`data/processed/models/classifiers/classifier-efficientnetv2s`,
 DVC), couche `ClassifierNet.parts().cam_layer` (dernier bloc convolutif, `body.features.7`),
 même top-1 et même probabilité qu'ONNX sur les 10 comprimés des 8 photos.
 
@@ -1747,8 +1747,8 @@ grille bge-m3 rejouée désigne l'hybride + réécriture comme champion.** La co
 une adresse de contact dans `.env` : elle est faite avec les connecteurs polis (débit limité,
 reprises, cache, manifeste ; l'adresse est lue par le client, jamais écrite dans un journal ni un
 fichier). Périmètre : seulement les **93 principes actifs** des 380 classes qu'aucune classe de v1
-n'a (`data/rag_v2/new_ingredients.csv`) ; les 82 de v1 gardent leur notice et leurs 20 résumés de
-`data/rag`, pour ne pas avoir deux versions d'une même notice et pour que les chunks attendus des
+n'a (`data/external/rag_v2/new_ingredients.csv`) ; les 82 de v1 gardent leur notice et leurs 20 résumés de
+`data/external/rag_v1`, pour ne pas avoir deux versions d'une même notice et pour que les chunks attendus des
 benchmarks restent les documents sur lesquels les questions ont été écrites. Résultat : 90 notices
 openFDA (pas de notice pour le fer carbonyle, la rosiglitazone et la ticlopidine ; un alias
 « omega-3-acid ethyl esters » pour le nom RxNorm suivi de « (usp) »), 3 413 résumés PubMed (au plus

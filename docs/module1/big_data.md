@@ -48,7 +48,7 @@ Corpus RAG traité par Spark (espace v1, D90) : 975 sections de notices lues, 96
 8 642 chunks (3 997 documents) contre 8 661 pour le corpus v1 en pandas.
 
 Corpus RAG v2 (16/11, D126), servi par l'application : les deux espaces de collecte
-(`data/rag` pour les 82 principes actifs de v1, `data/rag_v2` pour les 93 principes actifs des
+(`data/external/rag_v1` pour les 82 principes actifs de v1, `data/external/rag_v2` pour les 93 principes actifs des
 nouvelles classes : 90 notices openFDA, 3 413 résumés PubMed, au plus 40 par principe actif).
 2 065 sections de notices lues, 2 048 gardées ; 4 983 résumés lus (4 935 PMID distincts),
 4 878 gardés (7 quasi-doublons MinHash) ; 8 611 paires DDInter entre les principes actifs des
@@ -75,7 +75,7 @@ le placebo d'une plaquette, pas un médicament : paramètre `bigdata.rag.not_dru
 ```mermaid
 flowchart LR
   M["ALLXML + directory_of_images<br/>(data/raw/c3pi/metadata)"] --> I["spark_index"]
-  I -- "download_list.csv" --> DL["data_cli download --list<br/>(SHA-1 vérifié, reprise)"]
+  I -- "download_list.csv" --> DL["python -m src.data.download download --list<br/>(SHA-1 vérifié, reprise)"]
   DL --> IMG["data/raw/c3pi/images (DVC)"]
   I --> Q["spark_quality"]
   IMG --> Q
@@ -102,9 +102,9 @@ tourne dans le cluster Spark de `docker-compose.yml` (un master, un worker, prof
 | Job (code) | Ce qu'il fait en Spark | Sortie |
 |---|---|---|
 | `index` ([index_job.py](../../src/data/spark/index_job.py)) | lit les 110 XML (source XML native de Spark 4, schéma explicite, ISO-8859-1), joint `directory_of_images.txt`, déduplique les chemins, agrège par classe et par type, choisit les classes (au moins N photos « consumer », `bigdata.index.min_images`) et la liste à télécharger | `index/images` (Parquet partitionné par type), `class_stats`, `type_stats`, `classes`, `selection`, `download_list.csv` |
-| `quality` ([quality_job.py](../../src/data/spark/quality_job.py)) | ouvre chaque image avec Pillow dans `mapInPandas` : octets, résolution, décodage complet, luminosité, contraste, netteté (variance du laplacien), hash perceptuel dHash 256 bits ; doublons par SHA-1 et quasi-doublons par jointure en bandes sur le hash (4 blocs : au plus 3 bits d'écart implique un bloc identique) | `metrics`, `near_duplicates`, `judged`, `rejected.csv` (chemin, classe, raison) |
-| `split` ([split_job.py](../../src/data/spark/split_job.py)) | classes finales (N photos utilisables), groupes de prise de vue fusionnés le long des quasi-doublons (union-find), répartition par classe avec `applyInPandas`, contrôle de fuite | `split/images` (Parquet), [config/splits/c3pi_v2/](../../config/splits/c3pi_v2/) |
-| `augment` ([augment_job.py](../../src/data/spark/augment_job.py)) | plan d'augmentation (Spark, graine par classe et indice), génération parallèle des images, uniquement à partir du train | `augmented/images/<classe>/`, `manifest` |
+| `quality` ([cleaning.py](../../src/data/cleaning.py)) | ouvre chaque image avec Pillow dans `mapInPandas` : octets, résolution, décodage complet, luminosité, contraste, netteté (variance du laplacien), hash perceptuel dHash 256 bits ; doublons par SHA-1 et quasi-doublons par jointure en bandes sur le hash (4 blocs : au plus 3 bits d'écart implique un bloc identique) | `metrics`, `near_duplicates`, `judged`, `rejected.csv` (chemin, classe, raison) |
+| `split` ([split.py](../../src/data/split.py)) | classes finales (N photos utilisables), groupes de prise de vue fusionnés le long des quasi-doublons (union-find), répartition par classe avec `applyInPandas`, contrôle de fuite | `split/images` (Parquet), [config/splits/c3pi_v2/](../../config/splits/c3pi_v2/) |
+| `augment` ([augmentation.py](../../src/data/augmentation.py)) | plan d'augmentation (Spark, graine par classe et indice), génération parallèle des images, uniquement à partir du train | `augmented/images/<classe>/`, `manifest` |
 | `epillid` ([epillid_job.py](../../src/data/spark/epillid_job.py)) | NDC9 de chaque image ePillID, jointure avec l'archive C3PI et les classes v1 / v2 | `epillid/images`, `classes`, `summary.json` |
 | `rag` ([rag_job.py](../../src/data/spark/rag_job.py)) | corpus RAG des deux espaces de collecte : nettoyage Spark SQL, déduplication (PMID, texte identique, MinHash LSH de `pyspark.ml`), découpage par partition avec les fonctions du corpus v1 | `data/processed/rag/corpus_v2/chunks` (Parquet partitionné par type) |
 | `dataset_stats` ([log_stats.py](../../src/data/spark/log_stats.py)) | tableau avant / après, run MLflow | `stats.json` (métriques DVC), expérience MLflow `tujya-data` |
@@ -123,7 +123,7 @@ jusqu'à la phase 3.
 ```bash
 docker compose --profile spark up -d spark-master spark-worker      # UI : http://localhost:8090
 python -m src.data.spark.submit index
-python -m src.data.data_cli download --list data/processed/c3pi/bigdata/index/download_list.csv --workers 6
+python -m src.data.download download --list data/processed/c3pi/bigdata/index/download_list.csv --workers 6
 dvc add data/raw/c3pi/images
 python -m src.data.spark.submit quality
 python -m src.data.spark.submit split
@@ -132,7 +132,7 @@ python -m src.data.spark.submit epillid
 python -m src.data.spark.rag_sources ingredients     # .venv : RxNav, openFDA, PubMed (polis,
 python -m src.data.spark.rag_sources labels          #   CONTACT_EMAIL dans .env)
 python -m src.data.spark.rag_sources pubmed
-dvc add data/rag_v2/raw data/rag_v2/interim data/rag_v2/manifest.json data/rag_v2/*.csv
+dvc add data/external/rag_v2/raw data/external/rag_v2/interim data/external/rag_v2/manifest.json data/external/rag_v2/*.csv
 python -m src.data.spark.submit rag                  # ou dvc repro spark_rag
 .venv-train/Scripts/python -m src.data.spark.log_stats   # MLflow : docker compose up -d mlflow
 # ou, une fois les données en place : dvc repro ; dvc dag ; dvc metrics show

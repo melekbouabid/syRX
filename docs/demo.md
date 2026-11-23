@@ -205,7 +205,7 @@ et temps mesurés à cette occasion.
 ## 13. Serveur MCP (45 s)
 
 - **Faire** (terminal `backend/`, variables de la préparation) :
-  `.venv/Scripts/python -m src.mcp_server.smoke`
+  `.venv/Scripts/python -m src.agent.mcp_smoke`
 - **Le jury voit** (≈ 11 s) : `tools: ['identify_pills', 'check_interaction',
   'get_drug_info', 'search_documents']`, `check_interaction -> … Major`,
   `search_documents -> ['Metformin label …']`.
@@ -259,7 +259,7 @@ et temps mesurés à cette occasion.
 | La webcam ne reconnaît rien | Le dire (modèle entraîné sur C3PI uniquement) et revenir aux photos de démo |
 | `/docs` reste blanc | Pas d'Internet (Swagger UI vient d'un CDN) : montrer <http://localhost:8080/openapi.json> et la capture [07](screenshots/07-swagger.jpg) |
 | Un conteneur n'est pas « healthy » | `docker compose logs <service> --tail 30`, puis `docker compose up -d` |
-| Scan en 503 | `models/` vide : `.venv-train/Scripts/python -m src.models.publish` (MLflow démarré) |
+| Scan en 503 | `models/` vide : `.venv-train/Scripts/python -m src.models.registry publish` (MLflow démarré) |
 | Pas d'Internet pour GitHub | `gh run list` ne marchera pas : montrer `.github/workflows/` et le rapport de session 4 |
 | Le script MCP met plus d'une minute | une adresse contient `localhost` : la remplacer par `127.0.0.1` |
 

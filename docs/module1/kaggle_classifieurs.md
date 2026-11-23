@@ -23,7 +23,7 @@ et vérification dans [optimisation_onnx.md](optimisation_onnx.md).
 
 | Branche | Modèle | Préentraînement | Paramètres | Blocs dégelables | Notebook |
 |---|---|---|---:|---:|---|
-| `experiment/classifier-baseline-cnn` | petit CNN maison (4 blocs de 2 convolutions 3x3, BN, ReLU, max pooling), la baseline | aucun (entraîné de zéro) | 1,3 M (largeur 32) | tout le réseau | `notebooks/kaggle/classifier_baseline-cnn.ipynb` |
+| `experiment/classifier-baseline-cnn` | petit CNN maison (4 blocs de 2 convolutions 3x3, BN, ReLU, max pooling), la baseline | aucun (entraîné de zéro) | 1,3 M (largeur 32) | tout le réseau | `notebooks/module1/kaggle/classifier_baseline-cnn.ipynb` |
 | `experiment/classifier-resnet50` | ResNet-50 (torchvision) | ImageNet-1k (V2) | 24,3 M | 5 | `classifier_resnet50.ipynb` |
 | `experiment/classifier-efficientnetv2s` | EfficientNetV2-S (torchvision) | ImageNet-1k | 20,7 M | 8 | `classifier_efficientnetv2s.ipynb` |
 | `experiment/classifier-convnext-tiny` | ConvNeXt-Tiny (torchvision) | ImageNet-1k | 28,1 M | 8 | `classifier_convnext-tiny.ipynb` |
@@ -82,7 +82,7 @@ réentraînement, RandAugment à 2 opérations, alpha 0,2 (MixUp) et 1,0 (CutMix
 ## Données et équité de la comparaison (D99, D100)
 
 - Jeu : **crops de C3PI v2** (étape DVC `prepare_classify_v2`,
-  [prepare_classify_v2.py](../../src/data/prepare_classify_v2.py), sortie
+  [prepare/classify_v2.py](../../src/data/prepare/classify_v2.py), sortie
   `data/processed/c3pi/datasets_v2/classify`) : le crop carré (marge de 20 %, 256 px) de chaque
   comprimé, celui que l'API donne au classifieur. Train : photos « consumer », images de
   référence, du challenge NLM, de studio segmentées et augmentation hors ligne des classes
@@ -134,10 +134,10 @@ de la version 1 (`6dd616a6fd6c4e46a0b73de2c9f7ba4c`), le 08/11/2026. Lecture :
 
 | Fichier | Rôle |
 |---|---|
-| [src/data/prepare_classify_v2.py](../../src/data/prepare_classify_v2.py) | jeu de crops v2 et split de comparaison (étape DVC `prepare_classify_v2`) |
+| [src/data/prepare/classify_v2.py](../../src/data/prepare/classify_v2.py) | jeu de crops v2 et split de comparaison (étape DVC `prepare_classify_v2`) |
 | [src/models/architecture.py](../../src/models/architecture.py) | les six architectures, blocs pour le *fine-tuning* sélectif, couche de Grad-CAM |
 | [src/utils/gradcam.py](../../src/utils/gradcam.py) | Grad-CAM (cartes de convolution et jetons de ViT) |
-| [src/models/classification/data.py](../../src/models/classification/data.py) | lecture du jeu, prétraitement de l'API, parts stratifiées, sous-ensembles |
+| [src/data/dataset.py](../../src/data/dataset.py) | lecture du jeu, prétraitement de l'API, parts stratifiées, sous-ensembles |
 | [src/models/classification/metrics.py](../../src/models/classification/metrics.py) | top-1, top-5, F1 macro, matrice de confusion, espace d'étiquettes restreint |
 | [src/models/classification/hpo.py](../../src/models/classification/hpo.py) | espaces Optuna lus dans `config/hpo/classifier_<archi>.yaml` |
 | [src/models/classification/torch_backend.py](../../src/models/classification/torch_backend.py) | entraînement, prédiction, export ONNX, images Grad-CAM |
@@ -148,7 +148,7 @@ de la version 1 (`6dd616a6fd6c4e46a0b73de2c9f7ba4c`), le 08/11/2026. Lecture :
 | [src/models/classification/notebook.py](../../src/models/classification/notebook.py) | génère les notebooks Kaggle (un modèle pour tous) |
 | [src/models/classification/compare.py](../../src/models/classification/compare.py) | tableau et figure de comparaison depuis MLflow |
 | [src/models/detection/compare_latency.py](../../src/models/detection/compare_latency.py) `--task classify` | latence ONNX CPU, taille et paramètres de tous les classifieurs, mesurés ensemble |
-| [src/models/publish.py](../../src/models/publish.py) | refuse un classifieur dont la liste de classes ne correspond pas à la table de l'API (D101) |
+| [src/models/registry.py](../../src/models/registry.py) | refuse un classifieur dont la liste de classes ne correspond pas à la table de l'API (D101) |
 | [tests/models/classification/](../../tests/models/classification/), [tests/models/test_architecture.py](../../tests/models/test_architecture.py), [tests/utils/test_gradcam.py](../../tests/utils/test_gradcam.py) | tests (store MLflow SQLite temporaire, famille de modèles factice ; ceux qui demandent PyTorch tournent dans le job CI `vision`, PyTorch CPU) |
 
 Le format d'export (`run.json`, schéma 1) contient : code (`git_commit`, branche), données
@@ -190,7 +190,7 @@ jeton installé par vos soins : `kaggle datasets create -p runs/kaggle/tujya-c3p
 
 Pour chaque modèle : Kaggle > **Code** > **New Notebook** > **File** > **Import Notebook** >
 onglet GitHub, `melekbouabid/syRX`, branche `experiment/classifier-<archi>`, fichier
-`notebooks/kaggle/classifier_<archi>.ipynb` (ou importer le fichier `.ipynb` téléchargé depuis
+`notebooks/module1/kaggle/classifier_<archi>.ipynb` (ou importer le fichier `.ipynb` téléchargé depuis
 GitHub). Puis, dans **Settings** : **Accelerator** GPU T4 x1, **Internet** activé (clone de la
 branche, `pip install` des versions figées, poids ImageNet). **Add Input** : votre dataset
 `tujya-c3pi-classify-v2`. Enfin **Save Version** > **Save & Run All (Commit)** : le calcul
@@ -288,8 +288,8 @@ les modèles ; onglet **Models** pour les alias.
 ```bash
 git switch experiment/classifier-<archi>
 # dossier d'export dézippé, jamais dans git
-.venv-train/Scripts/python -m dvc add data/models/classifiers/classifier-<archi>
-git add data/models/classifiers/classifier-<archi>.dvc data/models/classifiers/.gitignore
+.venv-train/Scripts/python -m dvc add data/processed/models/classifiers/classifier-<archi>
+git add data/processed/models/classifiers/classifier-<archi>.dvc data/processed/models/classifiers/.gitignore
 git commit -m "exp(classifier): record the <archi> Kaggle run (test_v2_top1 0.xxxx)"
 ```
 
@@ -304,10 +304,10 @@ fichier ONNX).
    `backend/` et `tools/`, `ruff`, `flake8`, `black`, `mypy`), `dvc status` propre.
 2. Table de classes de l'API (D101) : le champion de l'étape a 380 sorties aux identifiants v2 ;
    `config/pill_classes.csv` (et les tables de médicaments chargées depuis lui) doit décrire les
-   380 classes v2 avec ces identifiants avant la publication, sinon `python -m src.models.publish`
+   380 classes v2 avec ces identifiants avant la publication, sinon `python -m src.models.registry publish`
    refuse le modèle (`check_class_table`) au lieu de servir de mauvais noms de médicaments.
 3. `python -m src.models.optimize --task classify` (variantes FP16 / INT8 du nouveau champion,
-   alias `served`, étape 2.4), puis `python -m src.models.publish` copie le champion vers
+   alias `served`, étape 2.4), puis `python -m src.models.registry publish` copie le champion vers
    `models/` ; vérifier que l'API le sert (`/api/scan`, `/model/metadata`, `models.json`).
 4. `git switch main && git merge --no-ff experiment/classifier-<champion>`.
 5. Tags annotés : un `model/classifier-<archi>-v1.0.0` par modèle (note : métriques, run MLflow,
@@ -410,7 +410,7 @@ latence dans un processus séparé, matrice de confusion, 8 images Grad-CAM, zip
 avec les tags de provenance. Les six ONNX ont aussi été chargés par le scanner de l'API
 (`backend/app/inference.py`, avec le détecteur servi) sans modification : entrée carrée lue dans
 le graphe, 380 sorties, top-5 et probabilités sur une photo de test ; `python -m
-src.models.publish` les refuse tant que la table de classes de l'API est celle de v1 (D101).
+src.models.registry` les refuse tant que la table de classes de l'API est celle de v1 (D101).
 Cinq de ces runs portent `git_dirty` : une modification de
 `evaluate_champion.py` (sans lien avec l'entraînement) était en cours pendant les tests et a été
 commitée ensuite.

@@ -7,7 +7,7 @@ The pipeline writes under the one `data/external/` folder: `data/external/raw` (
 files, as received), `data/external/interim/<source>/` (the validated tables below),
 `data/external/cache` and `data/external/state`. Rows that fail their schema are in `<table>.rejects.parquet` next to each
 table. Only `manifest.json`, the index of all those files, sits beside the folder. The module
-2 corpus (`python -m src.data.corpus`) reads these tables; the original project's
+2 corpus (`python -m src.rag.corpus`) reads these tables; the original project's
 processed tables (`data/parquet`, `csv`, `json`, `reports`) were removed with the synergy
 sources (decision D85).
 
