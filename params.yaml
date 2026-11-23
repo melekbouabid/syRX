@@ -1,7 +1,7 @@
 # Parameters of the DVC pipeline (dvc.yaml): each stage lists the keys it reads, so
 # `dvc repro` reruns a stage when one of them changes and `dvc params diff` shows the change.
 #
-# bigdata: the PySpark jobs of src/data/spark (step 1.4, docs/module1/big_data.md), which
+# bigdata: the PySpark jobs of src/data/spark, which
 # build the C3PI dataset v2 (more classes, more images per class, offline augmentation of the
 # rare classes) and the larger RAG corpus.
 bigdata:
@@ -10,8 +10,7 @@ bigdata:
     # N: a pill product (NDC9 + part) becomes a class when it has at least N consumer photos.
     # The split stage applies N again after the quality checks (usable photos only).
     min_images: 20
-    # Cameras left out (step 1.2 had dropped the two high-resolution ones to stay within a
-    # 4 GB budget, D32); empty = the 9 cameras.
+    # Cameras left out (high-resolution ones, to save disk space); empty = the 9 cameras.
     exclude_cameras: []
     # Studio images segmented by NLM (MC_C3PI_REFERENCE_SEG_V1.6, alpha mask) per class.
     seg_per_class: 8
@@ -34,10 +33,9 @@ bigdata:
     size: 512              # long side of the generated JPEGs
   rag:
     # Collection workspaces read by the job, and the ingredient list of their classes:
-    # data/external/rag_v1 (v1 classes) and data/external/rag_v2 (the 94 ingredients of the v2
-    # classes that v1
-    # lacks, `python -m src.data.spark.rag_sources`, D126); data/processed/pharma lists the
-    # 176 ingredients of the 380 served classes (D119).
+    # data/external/rag_v1 (v1 classes) and data/external/rag_v2 (the ingredients of the v2
+    # classes that v1 lacks, `python -m src.data.spark.rag_sources`); data/processed/pharma
+    # lists the ingredients of the 380 served classes.
     workspaces: [data/external/rag_v1, data/external/rag_v2]
     ingredient_files: [data/processed/pharma/pill_ingredients.csv]
     # Names of the class tables that are no medicine (placebo tablets of a pack): no ingredient
@@ -47,10 +45,8 @@ bigdata:
     min_chars: 80          # shorter cleaned texts are dropped
     near_duplicate: 0.2    # MinHash Jaccard distance under which two abstracts are duplicates
 
-# Module 1 vision models (step 2.1, src/models, docs/module1/mlflow.md): hyperparameters of
-# the stages train_detector / train_classifier (src/models/train.py reads them; a command-line
-# flag overrides them for a quick experiment). The values are those of the baseline, the GPU
-# runs of 2026-10-28 served by the API (D91).
+# Vision models (src/models): hyperparameters of the stages train_detector / train_classifier
+# (src/models/train.py; a command-line flag overrides them). The values are the baseline's.
 train:
   seed: 0
   dataset: c3pi-v1         # 150 classes, data/processed/c3pi/datasets (stage prepare)
@@ -85,16 +81,15 @@ registry:
     name: tujya-pill-classifier
     metric: test_top1
     min_gain: 0.005
-# Step 2.2, comparison of detectors (src/models/detection, docs/module1/kaggle_detecteurs.md,
-# D93): candidates trained on C3PI v2 (Kaggle) and the baseline are all scored on the same
+# Comparison of detectors (src/models/detection): candidates trained on C3PI v2 (Kaggle) and
+# the baseline are all scored on the same
 # comparison split (test_holdout.txt of stage prepare_detect_v2) and promoted on this metric,
 # with registry.detector.min_gain. The search spaces are in config/hpo/detector_<arch>.yaml.
 compare:
   detector:
     dataset: c3pi-v2-detect
     metric: test_v2_mAP50_95
-  # Step 2.3, comparison of classifiers (src/models/classification,
-  # docs/module1/kaggle_classifieurs.md, D99-D100): candidates trained on the 380 classes of
+  # Comparison of classifiers (src/models/classification): candidates trained on the 380 classes of
   # C3PI v2 (Kaggle) and the v1 champion (150 classes) are scored on the comparison split
   # (test_holdout.txt of stage prepare_classify_v2), the classes a model does not know counting
   # as errors, and promoted on `metric` with registry.classifier.min_gain. Guard: a candidate
@@ -106,14 +101,14 @@ compare:
     metric: test_v2_top1
     guard_metric: test_v2_v1c_top1
     guard_max_drop: 0.01     # one point of top-1 (about 3 of the 275 crops), as optimize.max_drop
-  # Step 2.7, OCR engines of the medicine boxes (src/models/ocr/evaluate.py, D110): box photos
+  # OCR engines of the medicine boxes (src/models/ocr/evaluate.py): box photos
   # with a known ingredient where a true one is found; Registry tujya-box-ocr.
   ocr:
     dataset: italian-otc-medicines
     metric: ingredient_recall
     min_gain: 0.005
-# Step 2.4, ONNX optimisation of the champions (src/models/optimize.py,
-# docs/module1/optimisation_onnx.md): FP16 / INT8 variants, calibration on the validation split.
+# ONNX optimisation of the champions (src/models/optimize.py): FP16 / INT8 variants,
+# calibration on the validation split.
 # The served variant is the fastest one whose accuracy (test_v2_mAP50_95 / test_top1) is at
 # most max_drop below FP32 and whose mean CPU latency is at least min_speedup lower; else FP32.
 optimize:
@@ -123,14 +118,14 @@ optimize:
   latency_images: 20       # test images cycled through by the latency measurement
   latency_runs: 30         # timed forward passes per round (mean and p95), in a fresh process
   latency_warmup: 10
-  latency_rounds: 5        # interleaved rounds over the variants, medians kept (D96)
+  latency_rounds: 5        # interleaved rounds over the variants, medians kept
   latency_cooldown_s: 20   # rest before each timing: the laptop CPU throttles under load
   latency_budget_s: 1.5    # seconds of load per timing at most: past ~2 s the laptop CPU
-                           # slows down ~15x (D98); one API request is far below that
+                           # slows down ~15x; one API request is far below that
   detector:
     calibration_images: 200   # spread over the 1,315 validation photos of C3PI v2
     calibration_method: minmax
-    exclude_head: true        # keep the box decoding of the YOLO head in float (D96)
+    exclude_head: true        # keep the box decoding of the YOLO head in float
   classifier:
     calibration_images: 300   # spread over the validation crops (C3PI v2: 1,461; v1: 560)
     calibration_method: minmax
@@ -138,17 +133,17 @@ optimize:
 # Stage evaluate (src/models/evaluate.py): detector confidence threshold, end to end.
 evaluate:
   conf: 0.25
-# Step 2.7, kind of a scanned photo (app/boxes.py decide_kind, D111): same values as the API's
+# Kind of a scanned photo (app/boxes.py decide_kind): same values as the API's
 # defaults (TUJYA_SCAN_PILL_MIN_CONFIDENCE, TUJYA_BOX_TEXT_CHARS).
 boxes:
   pill_confidence: 0.5     # best pill detection needed to call the photo a pill
   box_text_chars: 20       # letters read with confidence >= 0.5 that make it a box
-# Step 2.8, data drift of the scanned photos (backend/app/drift.py, stage drift_reference,
-# docs/module1/derive.md): statistics of `reference_images` photos of C3PI v2, and the tests
+# Data drift of the scanned photos (backend/app/drift.py, stage drift_reference):
+# statistics of `reference_images` photos of C3PI v2, and the tests
 # the API runs on its sliding window of the last `window` scanned photos.
 drift:
   seed: 0
-  reference_split: val     # never trained on, chosen like the test photos (train drifts: D122)
+  reference_split: val     # never trained on, chosen like the test photos (train drifts)
   reference_images: 600    # spread over that split of the detection dataset v2
   window: 200              # last scanned photos kept by the API (eight numbers each, memory only)
   min_samples: 30          # fewer photos in the window: "insufficient", no test

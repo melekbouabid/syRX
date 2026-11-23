@@ -1,5 +1,5 @@
-# Hyperparameter search of experiment/detector-yolo11s (step 2.2): Optuna, one child MLflow run
-# per trial (src/models/detection/hpo.py, runner.py; docs/module1/kaggle_detecteurs.md).
+# Hyperparameter search of experiment/detector-yolo11s: Optuna, one child MLflow run per trial
+# (src/models/detection/hpo.py, runner.py).
 # Ultralytics yolo11s (9.4 M parameters), pretrained on COCO (transfer learning), one class.
 arch: yolo11s
 family: yolo

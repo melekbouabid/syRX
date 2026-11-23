@@ -5,7 +5,7 @@
 #   http://localhost:8080        web app (nginx: React build; /api, /docs, /openapi.json -> backend)
 #   http://localhost:8000/docs   API directly (Swagger)
 #   http://localhost:5000        MLflow UI          localhost:5432  PostgreSQL + pgvector
-#   http://localhost:6333/dashboard  Qdrant (RAG chunks, payload and vectors, D113)
+#   http://localhost:6333/dashboard  Qdrant (RAG chunks, payload and vectors)
 #   http://localhost:11434       Ollama (local LLM and embeddings, GPU if available)
 #
 #   docker compose down          # keeps the volumes; `down -v` deletes them
@@ -19,15 +19,12 @@
 #   - `python -m src.models.registry publish` (training venv, .venv-train) to fill models/ from the Model Registry.
 # `pharma-init` reloads the medicine tables from data/processed/pharma on every start, then exits;
 # `rag-init` pulls the Ollama models (first start only) and indexes
-# data/processed/rag/corpus_v2 (corpus of the 380 classes, DVC stage spark_rag, D126) in Qdrant.
+# data/processed/rag/corpus_v2 (corpus of the 380 classes, DVC stage spark_rag) in Qdrant.
 #
 # Credentials are development defaults; override them in the shell or in a compose
 # `.env` file (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_PORT, MLFLOW_PORT,
-# BACKEND_PORT, WEB_PORT, OLLAMA_PORT, QDRANT_PORT, BACKEND_IMAGE, FRONTEND_IMAGE).
-# Project name of this local copy (tujia2): its containers and volumes are separate from the
-# original project's (`tujya`), and so are its image tags (tujia2-*), so building here never
-# replaces the original's images. Same ports, so only one of the two runs at a time.
-name: tujia2
+# BACKEND_IMAGE, FRONTEND_IMAGE). The project name (containers, volumes, image names) is
+# COMPOSE_PROJECT_NAME (.env, see .env.example).
 
 services:
   postgres:
@@ -51,7 +48,7 @@ services:
 
   mlflow:
     build: ./infra/mlflow
-    image: tujia2-mlflow:3.17.2
+    image: ${COMPOSE_PROJECT_NAME:-tujya}-mlflow:3.17.2
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,7 +67,7 @@ services:
 
   # One-shot: (re)build the medicine tables from config/ and data/processed/pharma, then exit.
   pharma-init:
-    image: ${BACKEND_IMAGE:-tujia2-backend:local}
+    image: ${BACKEND_IMAGE:-${COMPOSE_PROJECT_NAME:-tujya}-backend:local}
     # The API imports the module packages, so its build context is the repository root
     # (allow-list: backend/Dockerfile.dockerignore).
     build: &backend-build
@@ -83,7 +80,7 @@ services:
       # Module 2: the agent's LLM and embeddings (docs/module2/agent.md, docs/module2/rag.md)
       TUJYA_OLLAMA_URL: http://ollama:11434
       TUJYA_QDRANT_URL: http://qdrant:6333
-      # fastembed models of step 3.2 (Qdrant/bm25, bge-reranker-base), downloaded once.
+      # fastembed models (Qdrant/bm25, rerankers), downloaded once.
       TUJYA_RAG_MODEL_CACHE_DIR: /tujya/cache/fastembed
       TUJYA_LLM_MODEL: ${LLM_MODEL:-qwen2.5:3b}
     volumes: &backend-mounts
@@ -91,7 +88,7 @@ services:
       - ./config:/tujya/config:ro
       - ./data/processed/pharma:/tujya/data/processed/pharma:ro
       - ./data/raw/c3pi/images:/tujya/data/raw/c3pi/images:ro
-      # Grad-CAM of the demo gallery (DVC stage gradcam_gallery, D104); empty = none shown.
+      # Grad-CAM of the demo gallery (DVC stage gradcam_gallery); empty = none shown.
       - ./data/processed/c3pi/gradcam:/tujya/data/processed/c3pi/gradcam:ro
       - ./data/processed/c3pi/drift:/tujya/data/processed/c3pi/drift:ro
       - ./data/processed/rag/corpus_v2:/tujya/data/processed/rag/corpus_v2:ro
@@ -106,7 +103,7 @@ services:
   # Idempotent: an unchanged corpus is not embedded again. The backend does not wait for it
   # (scan and interactions work without it; /api/chat answers 503 until the index exists).
   rag-init:
-    image: ${BACKEND_IMAGE:-tujia2-backend:local}
+    image: ${BACKEND_IMAGE:-${COMPOSE_PROJECT_NAME:-tujya}-backend:local}
     build: *backend-build
     command: ["python", "-m", "src.rag.init_qdrant", "--pull"]
     environment: *backend-env
@@ -121,7 +118,7 @@ services:
     restart: "no"
 
   backend:
-    image: ${BACKEND_IMAGE:-tujia2-backend:local}
+    image: ${BACKEND_IMAGE:-${COMPOSE_PROJECT_NAME:-tujya}-backend:local}
     build: *backend-build
     environment: *backend-env
     volumes: *backend-mounts
@@ -136,8 +133,8 @@ services:
         condition: service_started
     restart: unless-stopped
 
-  # Vector database of the RAG (D113): collection tujya_chunks_v2 (D126; tujya_chunks = the
-  # corpus of the 150 first classes, kept for the benchmarks), one point per chunk with its
+  # Vector database of the RAG: collection tujya_chunks_v2 (tujya_chunks = the corpus of the
+  # 150 first classes, kept for the benchmarks), one point per chunk with its
   # metadata as payload. The web dashboard (http://localhost:6333/dashboard) shows the
   # points, their payload and vectors, and runs filtered searches. Telemetry off.
   qdrant:
@@ -183,7 +180,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: ${FRONTEND_IMAGE:-tujia2-frontend:local}
+    image: ${FRONTEND_IMAGE:-${COMPOSE_PROJECT_NAME:-tujya}-frontend:local}
     build: ./frontend
     ports:
       - "127.0.0.1:${WEB_PORT:-8080}:80"
@@ -192,7 +189,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # Big Data (step 1.4, docs/module1/big_data.md): a Spark standalone cluster, one master and
+  # Big Data: a Spark standalone cluster, one master and
   # one worker, for the PySpark jobs of src/data/spark (C3PI index, quality, split,
   # augmentation, RAG corpus). Not part of the app: it starts only with its profile,
   #   docker compose --profile spark up -d spark-master spark-worker
@@ -201,7 +198,7 @@ services:
   # application http://localhost:4040 (the driver runs in the master container).
   spark-master:
     build: ./infra/spark
-    image: tujia2-spark:4.1.1
+    image: ${COMPOSE_PROJECT_NAME:-tujya}-spark:4.1.1
     profiles: ["spark"]
     hostname: spark-master
     command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.master.Master",
@@ -219,7 +216,7 @@ services:
     restart: unless-stopped
 
   spark-worker:
-    image: tujia2-spark:4.1.1
+    image: ${COMPOSE_PROJECT_NAME:-tujya}-spark:4.1.1
     profiles: ["spark"]
     hostname: spark-worker
     command: ["/opt/spark/bin/spark-class", "org.apache.spark.deploy.worker.Worker",

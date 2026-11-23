@@ -131,7 +131,7 @@ jobs:
       - run: pip install -r src/data/spark/requirements.txt
       - run: python -m pytest tests/data/spark --noconftest -p tests.data.spark.fixtures
 
-  # The classifiers of step 2.3 (src/models/architecture.py, classification/torch_backend.py,
+  # The classifiers (src/models/architecture.py, classification/torch_backend.py,
   # src/utils/gradcam.py): their tests need PyTorch, torchvision and Ultralytics (YOLO11s-cls),
   # which the other jobs do not install. CPU wheels only (no CUDA download), same versions as
   # the training venv; the networks are built without pretrained weights: no data, no download
@@ -208,8 +208,8 @@ jobs:
             frontend/package-lock.json
             frontend/eslint/package-lock.json
       - run: npm ci
-      # ESLint has its own package (TypeScript 6.0 for the parser; the app builds with
-      # TypeScript 7, docs/decisions.md D84).
+      # ESLint has its own package: its parser needs TypeScript 6.0, the app builds with
+      # TypeScript 7.
       - run: npm ci --prefix eslint
       - run: npm run lint
       # Vitest: helpers and components of the Scanner page (src/**/*.test.ts(x), in Node).

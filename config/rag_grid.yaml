@@ -1,4 +1,4 @@
-# Retrieval grid of step 3.3 (src/evaluation/retrieval_grid.py, docs/module2/benchmark_retrieval.md).
+# Retrieval grid (src/evaluation/retrieval_grid.py).
 # One group = one experiment branch `experiment/rag-<group>`; one configuration = one MLflow
 # run in the experiment `tujya-rag-retrieval`. Every configuration uses the ingredient filter
 # the agent applies (`names`) and the 85 benchmark questions that have expected chunks.
@@ -7,11 +7,11 @@
 #            src/evaluation/encode_sentence_transformers.py, data/processed/rag/bench/vectors/<slug>.npz)
 # chunk:     max characters / overlapping sentences of the corpus variant (1500/1 = served)
 # mode:      dense | hybrid (dense + BM25 sparse, RRF in Qdrant) | bm25
-# rewrite:   the LLM rewrites the question into an English query first (D118)
-# rerank:    fastembed cross-encoder reading the first `fetch_k` candidates (D117)
+# rewrite:   the LLM rewrites the question into an English query first
+# rerank:    fastembed cross-encoder reading the first `fetch_k` candidates
 
-# Choice of the agent's setting (D123): the best MRR among the configurations whose median
-# time per question on this PC (rewrite + search + rerank, interleaved rounds of D96) stays
+# Choice of the agent's setting: the best MRR among the configurations whose median
+# time per question on this PC (rewrite + search + rerank, interleaved rounds) stays
 # within the budget; the second best within the budget is the challenger. A configuration on
 # another chunking than the served one (1500/1) needs the served index rebuilt and the chunk
 # ids of the benchmarks remapped: it is kept only if its gain over the best served-chunking
@@ -58,15 +58,14 @@ groups:
     - {embedding: "ollama:bge-m3", mode: hybrid, rewrite: true, rerank: Xenova/ms-marco-MiniLM-L-12-v2, fetch_k: 20}
     - {embedding: "ollama:bge-m3", mode: hybrid, rewrite: true, rerank: jinaai/jina-reranker-v1-turbo-en, fetch_k: 20}
     - {embedding: "ollama:bge-m3", mode: dense, rerank: Xenova/ms-marco-MiniLM-L-6-v2, fetch_k: 10}
-  # Step 3.5: the bge-m3 fine-tuned on Kaggle, added once its export is imported
-  # (docs/module2/benchmark_retrieval.md, "Ajouter bge-m3 fine-tuné"). `bge-m3-st` is the
-  # untuned model through the same sentence-transformers path: the fair "before".
+  # The bge-m3 fine-tuned on Kaggle. `bge-m3-st` is the untuned model through the same
+  # sentence-transformers path: the fair "before".
   bge-m3-finetuned:
     - {embedding: "st:bge-m3-st", mode: dense}
     - {embedding: "st:bge-m3-st", mode: hybrid, rewrite: true}
     - {embedding: "st:bge-m3-finetuned", mode: dense}
     - {embedding: "st:bge-m3-finetuned", mode: hybrid, rewrite: true}
-  # D126: the bge-m3 group again on the corpus of the 380 classes (Spark job `rag`, collection
+  # The bge-m3 group again on the corpus of the 380 classes (Spark job `rag`, collection
   # tujya_chunks_v2), to check that the champion setting holds on 3 times more chunks. Same
   # questions; their expected chunks are matched in v2 by src/evaluation/chunking_variants.py `Relevance`.
   corpus-v2:
