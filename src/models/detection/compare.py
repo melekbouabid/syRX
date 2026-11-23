@@ -70,7 +70,7 @@ def row_from_run(run: Any, status: str = "", version: str = "") -> Row:
     )
 
 
-COMPARED = "tags.stage LIKE 'compare%' and tags.smoke = 'false'"
+COMPARED = "tags.stage LIKE 'compare%' and tags.smoke = 'false' and tags.task = 'detect'"
 
 
 def final_value(client: Any, run_id: str, key: str, latest: float | None) -> float | None:
