@@ -41,7 +41,7 @@ def test_summary_is_public_and_counts_the_tables(
     response = anonymous.get("/api/catalog/summary")
     assert response.status_code == 200, response.text
     body = response.json()
-    # tujya_testing/pharma_data.py: 4 pill classes, 6 ingredients, 4 interaction pairs.
+    # tests/support/pharma_data.py: 4 pill classes, 6 ingredients, 4 interaction pairs.
     assert body["counts"] == {"pills": 4, "ingredients": 6, "interaction_pairs": 4}
     assert body["confirm_threshold"] == 0.85
     assert "consultez un pharmacien ou un médecin" in body["disclaimer"]

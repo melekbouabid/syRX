@@ -27,7 +27,7 @@ def pharma_url(tmp_path: Path) -> str:
 
 @pytest.fixture
 def pharma(pharma_url: str, tmp_path: Path) -> str:
-    from tujya_testing.pharma_data import load_pharma
+    from .pharma_data import load_pharma
 
     load_pharma(pharma_url, tmp_path / "pharma_inputs")
     return pharma_url

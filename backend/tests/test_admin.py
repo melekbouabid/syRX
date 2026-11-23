@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 from fastapi.testclient import TestClient
 
-from tujya_testing.fixtures import ADMIN, USER, sign_in
+from tests.support.fixtures import ADMIN, USER, sign_in
 
 NEW_USER = {"email": "Bob@Mail.com", "full_name": "Bob Stone", "password": "bob-password"}
 

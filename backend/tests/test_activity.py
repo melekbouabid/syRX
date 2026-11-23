@@ -14,7 +14,7 @@ from sqlalchemy import select
 from app.activity import GROUP_OF, GROUPS, prune
 from app.db import utc_now
 from app.models import Action, ActivityEvent
-from tujya_testing.fixtures import ADMIN, USER, sign_in
+from tests.support.fixtures import ADMIN, USER, sign_in
 
 
 def actions(admin: TestClient, **params: object) -> list[str]:

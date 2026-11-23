@@ -10,7 +10,7 @@ import pytest
 from src.rag.init_qdrant import FakeEmbedder, index_chunks
 from src.rag.retrieval import BM25, Retriever, RetrieverHolder, rrf, tokenize
 from src.rag.stores.base import ChunkStore, Filters
-from tujya_testing.rag_fakes import CORPUS, DIM, build_index
+from tests.support.rag_fakes import CORPUS, DIM, build_index
 
 
 @pytest.fixture

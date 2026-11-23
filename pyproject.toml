@@ -1,10 +1,10 @@
 # The project's Python environment (one venv, `.venv` at the repository root, for the API, the
 # code under src/ and every test suite): `uv pip install -p .venv -r requirements-dev.txt`,
 # which includes `-e .`. The editable install adds two folders to sys.path: the repository
-# root (package `src`) and backend/ (package `app`, the FastAPI core, and the shared test
-# fixtures `tujya_testing`). The API dependencies stay in backend/requirements.txt, also used
-# by the Docker image, which sets PYTHONPATH instead of installing this file; the
-# dependencies below are those of the data collection pipeline (src/data/sources).
+# root (package `src`) and backend/ (package `app`, the FastAPI core). The API dependencies stay
+# in backend/requirements.txt, also used by the Docker image, which sets PYTHONPATH instead of
+# installing this file; the dependencies below are those of the data collection pipeline
+# (src/data/sources).
 # Training (PyTorch, Ultralytics) has its own venv: src/models/requirements-train.txt.
 [build-system]
 requires = ["hatchling>=1.27"]

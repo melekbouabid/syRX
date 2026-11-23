@@ -18,7 +18,7 @@ from app.db import make_engine
 from src.rag.init_qdrant import FakeEmbedder, index_chunks
 from src.rag.retrieval import Retriever
 from src.rag.stores.base import ChunkStore, Filters
-from tujya_testing.rag_fakes import CORPUS, DIM
+from tests.support.rag_fakes import CORPUS, DIM
 
 URL = os.environ.get("TUJYA_TEST_PG_URL")
 pytestmark = pytest.mark.skipif(not URL, reason="TUJYA_TEST_PG_URL not set")

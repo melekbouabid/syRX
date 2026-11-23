@@ -21,7 +21,7 @@ from src.rag.init_qdrant import FakeEmbedder, copy_index, index_chunks
 from src.rag.retrieval import Retriever, RetrieverHolder
 from src.rag.stores.base import METADATA_COLUMNS, ChunkStore, Filters
 from src.rag.stores.qdrant import DENSE, QdrantStore, point_id, to_filter
-from tujya_testing.rag_fakes import CORPUS, DIM, build_index
+from tests.support.rag_fakes import CORPUS, DIM, build_index
 
 SERVER = os.environ.get("TUJYA_TEST_QDRANT_URL")
 TARGETS = [":memory:"] + ([SERVER] if SERVER else [])

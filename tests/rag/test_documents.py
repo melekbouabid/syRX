@@ -14,13 +14,13 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from backend.tests.support.fixtures import USER, sign_in
 from src.agent.runtime import AgentHolder
 from src.rag.chunking import Catalog, Document, source_group
 from src.rag.init_qdrant import FakeEmbedder, index_chunks
 from src.rag.stores.base import Chunk
 from src.rag.stores.qdrant import QdrantStore
-from tujya_testing.fixtures import USER, sign_in
-from tujya_testing.rag_fakes import CORPUS, DIM, FakeChatModel
+from tests.support.rag_fakes import CORPUS, DIM, FakeChatModel
 
 
 def chunks() -> list[Chunk]:

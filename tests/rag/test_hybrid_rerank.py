@@ -21,7 +21,7 @@ from src.rag.retrieval import BM25, Retriever, rrf, tokenize
 from src.rag.stores.base import METADATA_COLUMNS, Filters
 from src.rag.stores.qdrant import DENSE, QdrantStore
 from src.rag.stores.sparse import TokenBM25
-from tujya_testing.rag_fakes import CORPUS, DIM, FakeChatModel
+from tests.support.rag_fakes import CORPUS, DIM, FakeChatModel
 
 SERVER = os.environ.get("TUJYA_TEST_QDRANT_URL")
 TARGETS = [":memory:"] + ([SERVER] if SERVER else [])

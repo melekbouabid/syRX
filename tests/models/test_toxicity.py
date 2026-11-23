@@ -16,6 +16,7 @@ from mcp import Client
 
 from app.config import Settings
 from app.medicines import DISCLAIMER
+from backend.tests.support.fixtures import USER, sign_in
 from src.agent.mcp_server import build_server, default_toolbox
 from src.agent.runtime import AgentHolder
 from src.models.toxicity.model import (
@@ -33,8 +34,7 @@ from src.models.toxicity.model import (
     tanimoto_max,
 )
 from src.rag.init_qdrant import FakeEmbedder
-from tujya_testing.fixtures import USER, sign_in
-from tujya_testing.rag_fakes import DIM, FakeChatModel, build_index
+from tests.support.rag_fakes import DIM, FakeChatModel, build_index
 
 WARFARIN = "CC(=O)CC(C1=CC=CC=C1)C2=C(C3=CC=CC=C3OC2=O)O"
 FLUCONAZOLE = "C1=CC(=C(C=C1F)F)C(CN2C=NC=N2)(CN3C=NC=N3)O"
@@ -224,7 +224,7 @@ def test_summary_alone_when_every_llm_sentence_is_removed(
 
 
 def test_mcp_exposes_predict_toxicity(tmp_path: Path) -> None:
-    from tujya_testing.pharma_data import load_pharma
+    from backend.tests.support.pharma_data import load_pharma
 
     url = f"sqlite:///{(tmp_path / 'pharma.db').as_posix()}"
     load_pharma(url, tmp_path / "inputs")

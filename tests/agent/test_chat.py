@@ -12,10 +12,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.medicines import DISCLAIMER
+from backend.tests.support.fixtures import USER, sign_in
 from src.agent.runtime import AgentHolder
 from src.rag.init_qdrant import FakeEmbedder
-from tujya_testing.fixtures import USER, sign_in
-from tujya_testing.rag_fakes import DIM, FakeChatModel, build_index
+from tests.support.rag_fakes import DIM, FakeChatModel, build_index
 
 
 @pytest.fixture

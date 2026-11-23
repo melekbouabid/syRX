@@ -12,7 +12,7 @@ from app.medicines import DISCLAIMER
 from app.models import Report
 from app.reports import seal
 from app.schemas import CitationRef
-from tujya_testing.fixtures import USER, sign_in
+from tests.support.fixtures import USER, sign_in
 
 ANSWER = {
     "question": "Warfarine et fluconazole ?",
