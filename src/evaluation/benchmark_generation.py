@@ -1,20 +1,7 @@
-"""Generation benchmark, step 1: run the real agent on every benchmark question.
+"""Generation benchmark, part 1: run the real agent on every benchmark question.
 
-Writes one answers file per configuration (git-ignored: it holds the source texts, some from
-PubMed abstracts): question, draft (before the safety node), answer, sources with their
-text, tool calls, safety report, timings. Step 2 is ragas_evaluation.py.
-
-A configuration is the LLM (`--llm`, an Ollama model) and the answer prompt version
-(`--prompt`, src/agent/prompts.py); retrieval is the agent's served setting (step 3.3, D123),
-on the corpus `--corpus` (v1: the 150 first classes, collection tujya_chunks, the corpus of
-step 3.4; v2: the 380 classes, collection tujya_chunks_v2, D126).
-With `--trace`, MLflow traces every question (experiment `tujya-rag-generation`): LangChain
-autolog records the LangGraph nodes, the LLM calls and one span per tool call, under a root
-span `question` tagged with the configuration and the question id.
-
-    # from the repository root, project venv (.venv) active; Ollama, Qdrant, postgres running
-    python -m src.evaluation.benchmark_generation --llm qwen2.5:3b --prompt v1 --trace [--resume]
-    # needs TUJYA_PHARMA_DATABASE_URL (docs/demo.md)
+One answers file per configuration (LLM + prompt version, `--corpus v1|v2`); `--trace` logs
+MLflow traces. Run: `python -m src.evaluation.benchmark_generation --llm M --prompt v1`.
 """
 
 from __future__ import annotations

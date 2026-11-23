@@ -1,26 +1,7 @@
-"""Retrieval benchmark: Recall@k (k = 1, 3, 5, 10) and MRR for BM25, dense and hybrid.
+"""Retrieval benchmark: Recall@k, Coverage@k and MRR@10 for BM25, dense and hybrid search.
 
-Each configuration is one MLflow run in the experiment `tujya-rag` (params, metrics, the
-per-question results as an artifact). Results: docs/module2/benchmark.md.
-
-    # from the repository root, project venv (.venv) active
-    python -m src.evaluation.benchmark_retrieval                 # Qdrant (TUJYA_QDRANT_URL)
-    python -m src.evaluation.benchmark_retrieval --store sql     # pgvector, the store before D113
-    # step 3.2: reranking and query rewriting (D117, D118), merged into the results file
-    python -m src.evaluation.benchmark_retrieval --configs dense-names-rerank,hybrid-names-rerank
-    python -m src.evaluation.benchmark_retrieval --configs dense-names-rewrite --fetch-k 10
-    # needs TUJYA_PHARMA_DATABASE_URL (ingredient names) and MLFLOW_TRACKING_URI
-
-Metrics, over the questions that have expected chunks (src/evaluation/questions.jsonl):
-- Recall@k: share of questions with at least one expected chunk in the top k (hit rate);
-- Coverage@k: mean share of a question's expected chunks found in the top k;
-- MRR@10: mean of 1 / rank of the first expected chunk (0 if none in the top 10).
-Two filter settings: `none` (the raw question), and `names` (the ingredients the agent
-finds in the question, as metadata filter, which is what the agent does).
-A configuration is `<mode>-<filter>`, plus `-rerank` (the cross-encoder reads the first
-`--fetch-k` results and reorders them; Recall@10 needs fetch_k >= 10) and/or `-rewrite` (the
-LLM rewrites the question into an English query first; the filter still comes from the
-question). BM25 and hybrid run in Qdrant when the index has the `Qdrant/bm25` sparse vectors.
+Configurations `<mode>-<filter>[-rerank][-rewrite]`, one MLflow run each (experiment `tujya-rag`).
+Run: `python -m src.evaluation.benchmark_retrieval [--store sql] [--configs a,b]`.
 """
 
 from __future__ import annotations

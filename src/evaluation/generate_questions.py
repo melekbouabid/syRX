@@ -390,7 +390,7 @@ OUT.write_text(
 )
 print(len(specs), "specs")
 
-# Hand-written references (checked against the label sentences of each pair, 2026-10-28)
+# Hand-written references (checked against the label sentences of each pair)
 PAIR_REFS = {
     (
         "propranolol",

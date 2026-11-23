@@ -1,31 +1,7 @@
-"""Retrieval grid of step 3.3: embeddings x modes x chunking x rerankers, one MLflow run each.
+"""Retrieval grid: embeddings x modes x chunking x rerankers, one MLflow run each.
 
-The configurations are in config/rag_grid.yaml, by group (one experiment branch
-`experiment/rag-<group>` per group). Results: docs/module2/benchmark_retrieval.md, MLflow
-experiment `tujya-rag-retrieval`, `src/evaluation/results/grid/<group>.json`.
-
-    # project venv (.venv), from the repository root; stack running (qdrant, ollama, postgres,
-    # mlflow), TUJYA_PHARMA_DATABASE_URL set (ingredient names of the filter)
-    python -m src.evaluation.retrieval_grid rewrites            # once: queries.json (LLM rewrites)
-    python -m src.evaluation.retrieval_grid run --group bge-m3  # the group's configurations
-    python -m src.evaluation.retrieval_grid latency --configs a,b,c   # interleaved rounds (D96)
-    python -m src.evaluation.retrieval_grid select              # champion / challenger (D123)
-
-Every configuration searches like the agent (src/agent/tools.py `search_documents`): the ingredients
-found in the question are a metadata filter (`names`), top 10 kept. Metrics over the questions that
-have expected chunks: Recall@k (k = 1, 3, 5, 10: at least one expected chunk in the top k), MRR@10,
-nDCG@10 (binary relevance) and Coverage@10, by language too. A corpus variant (`chunk` other than
-1500/1) has other chunk ids: its relevant chunks are found by src/evaluation/chunking_variants.py
-`Relevance`. `corpus: v2` runs a configuration on the corpus of the 380 classes (Spark job `rag`,
-data/processed/rag/corpus_v2, collection tujya_chunks_v2, D126): the questions keep their expected
-chunks of v1, matched in v2 by the same `Relevance` rule (same document and section, shared text),
-since the Spark cleaning can cut a text a little differently.
-
-Time per question: the search (embedding of the query, Qdrant, reranker) is timed during the run;
-the rewrite is the median time the LLM took in `rewrites`; for a sentence-transformers embedding the
-query vector is precomputed, so its CPU encoding time measured by encode_sentence_transformers.py is
-added. The `latency` command measures the shortlisted configurations again in interleaved rounds
-after a pause (D96: this laptop slows down under sustained load).
+Configurations in config/rag_grid.yaml; results in src/evaluation/results/grid/<group>.json.
+Run: `python -m src.evaluation.retrieval_grid rewrites | run --group G | latency | select`.
 """
 
 from __future__ import annotations
@@ -77,7 +53,7 @@ class Config:
     rerank: str = ""
     fetch_k: int = 0
     group: str = ""
-    corpus: str = "v1"  # v1 = 150 classes (steps 3.1-3.5), v2 = 380 classes (D126)
+    corpus: str = "v1"  # v1 = 150 classes, v2 = 380 classes
     extra: dict[str, Any] = field(default_factory=dict, compare=False, hash=False)
 
     @property
@@ -336,7 +312,7 @@ class Runtime:
             )
             embedder = PrecomputedEmbedder(VECTORS / f"{slug}.npz", texts)
             added_ms = float(embedder.meta["query_cpu_ms"])
-        # The served index of step 3.3 by name: the API's default collection moved to v2 (D126).
+        # The v1 index by name: the API's default collection is v2.
         collection = config.collection or COLLECTIONS["v1"]
         store = QdrantStore.connect(s.qdrant_url, embedder.dim, collection, timeout=120)
         if config.collection:
@@ -490,8 +466,10 @@ async def cmd_run(runtime: Runtime, configs: list[Config], log: bool) -> None:
 
 
 async def cmd_latency(runtime: Runtime, configs: list[Config], selection: dict[str, Any]) -> None:
-    """Interleaved rounds (D96): every round times each configuration on the same questions
-    after a pause, in a rotated order; the median of the round medians is kept."""
+    """Interleaved rounds: each round times every configuration on the same questions after a pause.
+
+    The median of the round medians is kept.
+    """
     from src.rag.stores.base import Filters
 
     questions = load_questions()[:: max(1, 85 // int(selection["latency_questions"]))]
@@ -579,7 +557,7 @@ def per_question(run_id: str, metric: str) -> dict[str, float]:
 
 
 def time_of(record: dict[str, Any]) -> float:
-    """The interleaved measurement (D96) when there is one, the time of the run otherwise."""
+    """The interleaved measurement when there is one, the time of the run otherwise."""
     return float(record.get("latency_d96_ms") or record["ms_per_question"])
 
 
@@ -590,13 +568,9 @@ def choose(
 ) -> list[str]:
     """Names within the latency budget, best `metric` first (ties: faster first).
 
-    With `servable_only`, only the embeddings the API can compute (Ollama) are kept: the
-    sentence-transformers ones need torch, which the backend image does not have.
-
-    A configuration on another chunking than the served one needs the whole served index
-    rebuilt (and the chunk ids the benchmarks expect remapped): with
-    `rebuild_needs_significance`, it stays in the ranking only if `significant[name]` says
-    its gain over the best served-chunking configuration is significant."""
+    `servable_only` keeps the embeddings the API can compute (Ollama). With
+    `rebuild_needs_significance`, another chunking stays only if `significant[name]` is true.
+    """
     metric, budget = selection["metric"], float(selection["latency_budget_ms"])
     corpus = selection.get("corpus", "v1")  # one corpus at a time: the scores are not comparable
     results = {n: r for n, r in results.items() if r.get("corpus", "v1") == corpus}
@@ -773,7 +747,7 @@ class RetrievalConfig:  # a minimal mlflow.pyfunc.PythonModel, imported lazily
 def table(results: dict[str, dict[str, Any]], groups: dict[str, list[Config]]) -> str:
     """Markdown table of the results, in the order of the grid file (docs/module2)."""
     head = (
-        "| Groupe | Configuration | R@1 | R@5 | R@10 | MRR | nDCG@10 | MRR fr | MRR en "
+        "| Group | Configuration | R@1 | R@5 | R@10 | MRR | nDCG@10 | MRR fr | MRR en "
         "| ms / question | Run |\n|---|---|---|---|---|---|---|---|---|---|---|"
     )
     lines = [head]
@@ -781,9 +755,9 @@ def table(results: dict[str, dict[str, Any]], groups: dict[str, list[Config]]) -
         for config in items:
             r = results.get(config.name)
             if r is None:
-                lines.append(f"| {group} | {config.name} | " + "| " * 8 + "à venir | |")
+                lines.append(f"| {group} | {config.name} | " + "| " * 8 + "pending | |")
                 continue
-            took = f"{time_of(r):.0f}" + (" (D96)" if r.get("latency_d96_ms") else "")
+            took = f"{time_of(r):.0f}" + (" (interleaved)" if r.get("latency_d96_ms") else "")
             lines.append(
                 f"| {group} | {config.name} | {r['recall_at_1']:.3f} | {r['recall_at_5']:.3f} "
                 f"| {r['recall_at_10']:.3f} | {r['mrr']:.3f} | {r['ndcg_at_10']:.3f} "

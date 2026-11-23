@@ -1,26 +1,7 @@
-"""Brand questions of the benchmark (step 2.7): the real agent with and without the brand table.
+"""Brand questions of the benchmark: the real agent with and without the brand table.
 
-    # from the repository root, project venv (.venv) active; Ollama running and
-    # TUJYA_PHARMA_DATABASE_URL set (as for benchmark_generation.py)
-    python -m src.evaluation.benchmark_brands               # logs to MLflow (tujya-rag)
-    python -m src.evaluation.benchmark_brands --no-mlflow
-
-Every `brand` question of questions.jsonl ("Puis-je prendre du Panadol avec de la
-warfarine ?") goes twice through the full agent (TujyaAgent.run, Ollama LLM):
-
-- `without`: an empty brand table, i.e. the agent before step 2.7;
-- `with`: config/brand_aliases.csv.
-
-Scores of each variant (share of the questions):
-
-- `brand_found`: every brand of the question is recognised (its source is in the sources);
-- `ingredients_found`: every expected ingredient is among the agent's ingredients;
-- `interaction_tool`: check_interaction was called and ran;
-- `interaction_found`: it returned the DDInter interaction of the expected pair;
-- `brand_cited`: the answer cites the brand's source ([n] of the brand table entry);
-- `cited`: the answer cites at least one source; `disclaimer`: it ends with the disclaimer.
-
-Results: src/evaluation/results/brands.json (no source text) and an MLflow run `bench-brands`.
+Scores brand_found, ingredients_found, interaction_tool, interaction_found, brand_cited,
+cited and disclaimer. Run: `python -m src.evaluation.benchmark_brands [--no-mlflow]`.
 """
 
 from __future__ import annotations
