@@ -1,27 +1,7 @@
-"""CPU latency, size and parameters of every compared detector, measured together (step 2.2).
+"""CPU latency, size and parameters of every compared model, timed together in rounds.
 
-    # training venv, MLflow server running, dataset of stage prepare_detect_v2 on disk
-    python -m src.models.detection.compare_latency             # measure and log
-    python -m src.models.detection.compare_latency --dry-run   # measure and print only
-    python -m src.models.detection.compare_latency --task classify   # the classifiers (2.3)
-
-The development PC is a laptop whose CPU slows down under a sustained load (D96): a model
-timed alone, right after another one, is measured on a hotter CPU. So the FP32 detectors of the
-comparison (every version of `tujya-pill-detector` without a `precision` tag, baseline
-included, superseded versions excluded) are timed together with the protocol of step 2.4
-(`src.models.optimize.measure_latency`, params.yaml `optimize`): interleaved rounds, each model
-once per round in a fresh process after a rest, medians over the rounds, on the same test
-images of the comparison split. The models are timed from the smallest file to the largest,
-so the slow two-stage detector never runs just before a small one within a round.
-
-For each model the figures are logged to the run of its Registry version and to the
-re-evaluation run of the baseline (`stage=compare-eval`, read by compare.py):
-`onnx_cpu_latency_ms` (mean, median of the rounds), `onnx_cpu_latency_median_ms`,
-`onnx_cpu_latency_p95_ms`, the mean of every round (`onnx_cpu_latency_round_ms`, one step per
-round, to check that no round was throttled), `model_size_mb` (self-contained FP32 ONNX file)
-and `onnx_parameters` (floating-point weights of the ONNX graph), with the tags
-`latency_protocol`, `latency_cpu` and `latency_git_commit`. A summary is written to
-models/compare/latency.json (git-ignored).
+Logs the figures to each Registry version's run; writes models/compare/latency.json.
+Run: `python -m src.models.detection.compare_latency [--task classify] [--dry-run]`.
 """
 
 from __future__ import annotations
@@ -47,7 +27,7 @@ from src.utils.console import console_utf8
 
 ROOT = mu.ROOT
 SUMMARY = ROOT / "models" / "compare" / "latency.json"
-# Crops of step 2.3 (stage prepare_classify_v2): `--task classify` times the classifiers.
+# Crops of stage prepare_classify_v2: `--task classify` times the classifiers.
 CLASSIFY_V2_DATA = ROOT / "data" / "processed" / "c3pi" / "datasets_v2" / "classify"
 FLOAT_TYPES = {onnx.TensorProto.FLOAT, onnx.TensorProto.FLOAT16, onnx.TensorProto.DOUBLE}
 
@@ -82,7 +62,7 @@ def target_runs(run_id: str, experiment_ids: list[str], client: MlflowClient) ->
 
 def protocol(settings: dict[str, Any]) -> str:
     return (
-        f"interleaved rounds (D96): {int(settings.get('latency_rounds', 1))} rounds x "
+        f"interleaved rounds: {int(settings.get('latency_rounds', 1))} rounds x "
         f"{int(settings.get('latency_runs', 30))} passes after "
         f"{int(settings.get('latency_warmup', 5))} warm-up, "
         f"{float(settings.get('latency_cooldown_s', 0)):g} s rest before each, at most "
@@ -101,8 +81,7 @@ def measure_all(
     log: bool = True,
     client: MlflowClient | None = None,
 ) -> dict[str, Any]:
-    """Time every compared model of `task` together (detect: the detectors of step 2.2,
-    classify: the classifiers of step 2.3); log the figures unless `log` is False."""
+    """Time every compared model of `task` together; log the figures unless `log` is False."""
     import mlflow
 
     name = name or REGISTERED[task]

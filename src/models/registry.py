@@ -1,14 +1,6 @@
-"""MLflow Model Registry of the vision models: registration, aliases and publication.
+"""MLflow Model Registry of the vision models: registration, aliases, promotion and publication.
 
-    python -m src.models.registry publish                     # served variant of each champion
-    python -m src.models.registry publish --exact             # the champions themselves (FP32)
-    python -m src.models.registry publish --alias challenger  # another alias
-
-- aliases: `champion` (best FP32 model), `challenger` (runner-up), `served` (the champion or
-  its optimised variant, src/models/optimize.py);
-- `register`, `alias_version`, `version_metric` and the champion rule `promote_if_better`;
-- `served_version` / `set_served`: which version the API serves;
-- `publish`: copies the served ONNX models into models/, where the API loads them.
+Aliases: `champion`, `challenger`, `served`. Run: `python -m src.models.registry publish [--exact]`.
 """
 
 from __future__ import annotations
@@ -33,18 +25,9 @@ from mlflow import MlflowClient
 from mlflow.entities.model_registry import ModelVersion
 
 # --- Served version: the champion or its optimised variant ----------------------------------
-# Which registered version the API serves: the champion, or its optimised variant (step 2.4).
-#
-# The alias `champion` always marks the best FP32 model: promote_if_better
-# (below) compares new candidates with it on the FP32 test metric, so a
-# quantized copy must never hold it. The optimised variants of a champion (FP16, INT8) are
-# registered as further versions of the same registered model with the tags `precision` and
-# `variant_of` (the champion's version number); the one chosen for serving holds the alias
-# `served` (src/models/optimize.py). When FP32 is chosen, `served` is the champion itself.
-#
-# `served_version` resolves what to publish: the `served` version when it is the champion or a
-# variant of the current champion; otherwise (a new champion was promoted since the last
-# optimisation) the champion itself, until `python -m src.models.optimize` runs again.
+# `champion` always marks the best FP32 model; its FP16 / INT8 variants are further versions
+# tagged `precision` and `variant_of`, and the one chosen for serving holds `served`. If a new
+# champion has no variant yet, the champion itself is served.
 REGISTERED = {"classify": "tujya-pill-classifier", "detect": "tujya-pill-detector"}
 CHAMPION = "champion"
 SERVED = "served"
@@ -182,17 +165,8 @@ def promote_if_better(
 ) -> Promotion:
     """Give the alias `champion` to `version` only if it beats the champion by `min_gain`.
 
-    - no champion yet: the candidate becomes champion;
-    - candidate better by at least `min_gain` (and strictly better): it becomes champion and
-      the former champion becomes challenger;
-    - otherwise the champion stays; the candidate becomes challenger if there is none or if
-      it beats the current challenger, else it is archived.
-
-    The versions involved get the tag `status` (champion / challenger / archived) and the
-    candidate a tag `promotion` explaining the decision, so the Registry shows the history.
-
-    `eligible=False` (a guard the caller checked failed, `ineligible_reason` says which) keeps
-    the candidate away from both aliases: it is archived whatever its score (D100).
+    Otherwise the candidate becomes challenger (if it beats the current one) or is archived.
+    `eligible=False` (a failed guard) archives it whatever its score.
     """
     client = client or MlflowClient()
     version = str(version)
@@ -265,33 +239,15 @@ def _set_status(client: MlflowClient, name: str, version: str, alias: str) -> No
     client.set_model_version_tag(name, version, STATUS_TAG, alias)
     if previous is not None and previous != version:
         holder = client.get_model_version(name, previous)
-        # Only champion / challenger are statuses: `served` (step 2.4) does not keep one.
+        # Only champion / challenger are statuses: `served` does not keep one.
         if not set(holder.aliases or []) & {CHAMPION, CHALLENGER}:
             client.set_model_version_tag(name, previous, STATUS_TAG, ARCHIVED)
 
 
 # --- Publication of the served models ----------------------------------------------------------
-# Copy the deployment models into the directory the API loads them from.
-#
-#     python -m src.models.registry publish                  # served variant of each champion
-#     python -m src.models.registry publish --exact          # the champions themselves (FP32)
-#     python -m src.models.registry publish --alias challenger # another alias (MLflow Registry)
-#     python -m src.models.registry publish --classifier-version 2 --detector-version 1
-#     python -m src.models.registry publish --from-runs      # newest runs/*/weights/best.onnx
-#
-# Writes `detector.onnx`, `classifier.onnx` and `models.json` (origin and SHA-256 of each file)
-# into `--out` (default `models/` at the repository root, git-ignored; the API reads it from
-# TUJYA_MODELS_DIR, same default). The files are the ONNX exports registered by
-# `src.models.export_onnx`, so the API serves exactly the versions shown in the Model Registry:
-# by default the champions chosen by promote_if_better (above), in the
-# precision chosen by `python -m src.models.optimize` (alias `served`: FP32, FP16 or INT8 variant
-# of the champion, above). `--exact` publishes the alias as it is.
-#
-# A classifier that carries its class list (ONNX metadata `class_keys`, the C3PI product of
-# every output: the classifiers of step 2.3, D101) is published only if its `names` point, for
-# every output, to the class_id of the same product in the API's class table
-# (config/pill_classes.csv); otherwise the API would show the wrong medicine. The Ultralytics
-# export of v1 has no `class_keys` and is published as before.
+# Writes detector.onnx, classifier.onnx and models.json (origin and SHA-256 of each file) into
+# `--out` (default models/, read by the API through TUJYA_MODELS_DIR). A classifier with
+# `class_keys` is published only if they match the API's class table (config/pill_classes.csv).
 
 ROOT = Path(__file__).resolve().parents[2]  # repository root
 RUNS = ROOT / "runs"  # Ultralytics training runs (src/models/train.py)
@@ -311,9 +267,7 @@ def sha256(path: Path) -> str:
 def check_class_table(model: Path, table: Path = CLASS_TABLE) -> None:
     """Refuse a classifier whose outputs would name other products in the API's class table.
 
-    `names` (output index -> class folder) is what backend/app/inference.py reads as the
-    class_id of `table`; `class_keys` (output index -> C3PI class key, NDC9 + part) says which
-    product each output really is. Both must agree for every output (D101).
+    `names` and `class_keys` must agree for every output.
     """
     props = onnx.load(str(model), load_external_data=False).metadata_props
     meta = {p.key: p.value for p in props}
@@ -329,8 +283,7 @@ def check_class_table(model: Path, table: Path = CLASS_TABLE) -> None:
             f"the classifier's class list ({meta.get('label_space', '?')}, "
             f"{len(names)} outputs) does not match {table.name}: {len(wrong)} outputs would "
             f"name another product (first: output {wrong[0]}, {keys.get(str(wrong[0]))}). "
-            "Move the API's class table to the model's label space first "
-            "(docs/module1/kaggle_classifieurs.md, decision D101)."
+            "Move the API's class table to the model's label space first."
         )
 
 

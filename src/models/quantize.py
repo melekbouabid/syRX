@@ -1,19 +1,6 @@
-"""ONNX weight optimisation: FP16 and INT8 variants of an exported model (step 2.4).
+"""ONNX weight optimisation: FP16 and INT8 (static QDQ or dynamic) variants of a model.
 
-Pure functions on ONNX files, without MLflow, used by src/models/optimize.py:
-
-- `to_fp16`: weights and activations in float16 (`onnxruntime.transformers.float16`, the
-  converter of onnxconverter-common shipped with ONNX Runtime). Inputs and outputs stay
-  float32 (`keep_io_types`), so the API feeds the model exactly as before.
-- `to_int8_static`: post-training static quantization in the QDQ format (QuantizeLinear /
-  DequantizeLinear pairs around each quantized operator), int8 weights per channel and int8
-  activations whose ranges are calibrated on images of the validation split
-  (`CalibrationReader`), never on the test split.
-- `to_int8_dynamic`: int8 weights only, activation ranges computed at run time (no
-  calibration); the fallback when the static quantization loses too much precision.
-- `copy_metadata`: the Ultralytics metadata (`names`, `imgsz`, ...) of the original model,
-  which the API reads, copied onto every variant.
-- `choose_variant`: the rule that picks the served variant (docs/module1/optimisation_onnx.md).
+INT8 static is calibrated on validation images; `choose_variant` picks the served variant.
 """
 
 from __future__ import annotations
@@ -190,11 +177,7 @@ def choose_variant(
 ) -> Choice:
     """The served variant: the fastest one that loses at most `max_drop` of accuracy.
 
-    FP32 is the reference. A variant is admissible when its accuracy is at most `max_drop`
-    below FP32 (absolute, e.g. 0.01 = one point of mAP or top-1) and its mean latency at least
-    `min_speedup` lower (relative, e.g. 0.05 = 5 %: smaller gains are within the measurement
-    noise). Among the admissible variants the lowest mean latency wins (then the smaller
-    file); without any, FP32 is kept.
+    It must also be at least `min_speedup` faster than FP32; otherwise FP32 is kept.
     """
     by_precision = {r.precision: r for r in results}
     if FP32 not in by_precision:

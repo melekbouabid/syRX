@@ -1,15 +1,6 @@
-"""Train, log and publish the Tox21 toxicity model (bonus tool, docs/bonus/toxicity.md).
+"""Train, log and publish the Tox21 toxicity model (scaffold split, 12 LightGBM boosters).
 
-# from the repository root, project venv (rdkit, lightgbm, mlflow)
-python -m src.models.toxicity.train_tox21 download   # MoleculeNet tox21.csv.gz -> data/raw/tox21/
-python -m src.models.toxicity.train_tox21 train      # scaffold split, 12 LightGBM, MLflow tujya-tox
-python -m src.models.toxicity.train_tox21 publish    # registered version -> models/tox21/ (API)
-
-Featurisation is the API's own (src/models/toxicity/model.py): largest fragment, Morgan
-radius 2, 2,048 bits. Split: Bemis-Murcko scaffolds, largest groups first into train until
-80 %, then validation (10 %) and test (10 %), as in MoleculeNet / DeepChem's scaffold
-splitter, so the test molecules have scaffolds never seen in training. Early stopping on
-validation AUC.
+Run: `python -m src.models.toxicity.train_tox21 download | train | publish`.
 """
 
 from __future__ import annotations

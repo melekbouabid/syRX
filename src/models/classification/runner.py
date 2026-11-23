@@ -1,27 +1,7 @@
 """One classifier experiment: Optuna search, retraining of the best trial, test, ONNX export.
 
-    python -m src.models.classification.runner --config config/hpo/classifier_resnet50.yaml \
-        --data data/processed/c3pi/datasets_v2/classify --out runs/classifier-resnet50
-    python -m src.models.classification.runner --config ... --smoke    # local check, tiny subset
-
-This is what each Kaggle notebook (notebooks/module1/kaggle/classifier_<arch>.ipynb) runs on the
-GPU, the same steps as the detectors (src/models/detection/runner.py):
-
-1. Optuna study (seeded TPE sampler, config/hpo/classifier_<arch>.yaml): each trial trains the
-   model for `search.epochs` epochs on `search.fraction` of the train crops of every class and
-   is scored on the validation split (`val_top1`);
-2. the best trial's hyperparameters are retrained on the whole train split (`final.epochs`,
-   early stopping on validation, time limit `final.max_hours`);
-3. the retrained model is scored on the comparison split `test_holdout.txt` (`test_v2_*`,
-   promotion metric `test_v2_top1`), on the whole v2 test split (`test_v2_all_*`) and on the
-   comparison crops of the 150 classes of v1 with the prediction restricted to them
-   (`test_v2_v1c_*`, the like-for-like comparison with the v1 champion, D100); it is exported
-   to ONNX (parity with PyTorch checked, CPU latency), with its confusion matrix, per-class
-   scores and Grad-CAM pictures.
-
-Nothing is logged to a server from Kaggle: everything goes into the export folder (`run.json`,
-weights, ONNX model, class list, trials, figures), which
-src/models/classification/import_kaggle.py turns into MLflow runs locally.
+What each Kaggle notebook runs; everything goes into an export folder for import_kaggle.
+Run: `python -m src.models.classification.runner --config <yaml> --data <dir> --out <dir>`.
 """
 
 from __future__ import annotations
@@ -194,9 +174,9 @@ def plot_confusion(matrix: np.ndarray, path: Path) -> bool:
     share = np.divide(matrix, rows, out=np.zeros(matrix.shape, float), where=rows > 0)
     fig, ax = plt.subplots(figsize=(7, 6.4), dpi=150)
     image = ax.imshow(share, cmap="Blues", vmin=0, vmax=1, interpolation="nearest")
-    ax.set_xlabel("classe prédite (id v2)")
-    ax.set_ylabel("vraie classe (id v2)")
-    ax.set_title("Matrice de confusion, split de comparaison (part de chaque vraie classe)")
+    ax.set_xlabel("predicted class (v2 id)")
+    ax.set_ylabel("true class (v2 id)")
+    ax.set_title("Confusion matrix, comparison split (share of each true class)")
     fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
     fig.tight_layout()
     fig.savefig(path)
@@ -492,9 +472,7 @@ def run_experiment(
 def onnx_metadata(
     config: dict[str, Any], classes: list[dict[str, Any]], imgsz: int
 ) -> dict[str, str]:
-    """The class list travels with the model (D101): `names` as Ultralytics writes it (what
-    the API reads: output index -> class folder), the class keys of C3PI (NDC9 + part, stable
-    across dataset versions) and the label space."""
+    """ONNX metadata: `names` (output index -> class folder), C3PI class keys, label space."""
     names = D.class_names(classes)
     keys = {r["class_id"]: r.get("class_key", "") for r in classes}
     return {

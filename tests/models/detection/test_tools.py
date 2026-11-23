@@ -116,7 +116,7 @@ def test_comparison_table_has_size_p95_whole_test_and_version() -> None:
         version="10",
     )
     table = compare.markdown_table([row])
-    assert "Taille ONNX (Mo)" in table and "p95 (ms)" in table
+    assert "ONNX size (MB)" in table and "p95 (ms)" in table
     assert (
         "| yolo11s | 0.8700 | 0.8885 | 0.9740 | 0.952 | 0.936 | 0.8722 | 68.2 | 75.0 | 37.9 "
         "| 9.4 | v10 | champion | `cccccccc` |" in table

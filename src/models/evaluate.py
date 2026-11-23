@@ -1,15 +1,6 @@
-"""End-to-end evaluation: detector boxes -> crops -> classifier, on every test photo.
+"""End-to-end evaluation on every test photo: detector boxes -> crops -> classifier (ONNX).
 
-    python -m src.models.evaluate        # DVC stage `evaluate`: the ONNX models of models/onnx
-    python -m src.models.evaluate --detector runs/<detect-run>/weights/best.onnx \
-        --classifier runs/<classify-run>/weights/best.onnx --no-out
-
-Unlike the per-model test scores, this uses all consumer photos of the test split (also the
-ones the auto-labeller found doubtful), the detector's own boxes and the ONNX exports, i.e.
-what the app will run. Per photo, the most confident box is classified; a photo where the
-detector finds nothing counts as wrong. Results are logged to MLflow as a tracked
-`evaluate-end-to-end` run (src/utils/mlflow_utils.py) and written to models/evaluate.json
-(`dvc metrics show`). Confidence threshold: params.yaml evaluate.conf.
+Logged to MLflow and written to models/evaluate.json. Run: `python -m src.models.evaluate`.
 """
 
 from __future__ import annotations

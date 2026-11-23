@@ -1,21 +1,6 @@
-"""Pack the crop dataset of C3PI v2 for a private Kaggle dataset (step 2.3).
+"""Pack the C3PI v2 crop dataset for a private Kaggle dataset (runs/kaggle/, git-ignored).
 
-    python -m src.models.classification.package_kaggle                  # runs/kaggle/ (git-ignored)
-    python -m src.models.classification.package_kaggle --owner <kaggle-username> --no-zip
-
-Input: the output of the DVC stage prepare_classify_v2 (data/processed/c3pi/datasets_v2/classify).
-Output, under runs/kaggle/ (never committed, never pushed anywhere by this script):
-
-    tujya-c3pi-classify-v2/          folder for `kaggle datasets create -p <folder>` (optional)
-      train/ val/ test/ <class>/*.jpg     the square crops (256 px), one folder per v2 class
-      index.csv  classes.csv  test_holdout.txt  summary.json
-      MANIFEST.json                 dataset name, DVC hash (dvc.lock), dvc_rev, packing commit
-      dataset-metadata.json         Kaggle metadata (private by default, licence ODbL-1.0)
-      README.md                     source, licence and terms of C3PI
-    tujya-c3pi-classify-v2.zip      the same content, to upload through the Kaggle website
-
-Files are hard-linked when possible (no extra disk space), copied otherwise. The notebooks
-read MANIFEST.json, so every run imported into MLflow carries the exact data version.
+Run: `python -m src.models.classification.package_kaggle [--owner NAME] [--no-zip]`.
 """
 
 from __future__ import annotations

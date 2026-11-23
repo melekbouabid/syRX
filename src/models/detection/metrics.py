@@ -1,18 +1,6 @@
 """Detection metrics computed the same way for every model (COCO protocol, one class).
 
-Every detector of step 2.2 (Ultralytics or torchvision) and the baseline are scored by
-`evaluate`, from their raw predictions (boxes and scores, confidence threshold ~0), so no
-library-specific shortcut can favour one model:
-
-- AP at an IoU threshold: detections of all images sorted by score, each one matched greedily
-  to the unmatched ground-truth box of highest IoU (at least the threshold), then the
-  101-point interpolated area under the precision / recall curve (COCO);
-- `mAP50` = AP at IoU 0.50, `mAP50_95` = mean AP over IoU 0.50, 0.55, ..., 0.95 (the metric
-  of the module guide and of the Model Registry);
-- `precision`, `recall`: at the confidence that maximises F1 at IoU 0.50 (as Ultralytics
-  reports them), with that confidence as `best_conf`.
-
-At most `max_det` detections per image are kept (100, the COCO default).
+mAP50, mAP50_95 (101-point AP), and precision / recall at the confidence that maximises F1.
 """
 
 from __future__ import annotations

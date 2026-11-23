@@ -1,23 +1,7 @@
-"""MLflow helpers shared by every training, export and evaluation script (lab MLflow).
+"""MLflow helpers shared by every training, export and evaluation script.
 
-Every run started with `start_tracked_run` can be traced back to the exact code, data and
-environment that produced it:
-
-- tags `git_commit` (and `git_dirty` when the working tree had uncommitted changes),
-  `dvc_rev` (git object id of `dvc.lock`, which pins every DVC-tracked input), `dataset`
-  (plus `dataset_md5`, the DVC hash of the dataset folder when it is a pipeline output) and
-  `seed` (also logged as a parameter);
-- artefacts under `reproducibility/`: `requirements.txt` frozen from the running
-  environment, `dvc.lock` and `params.yaml`.
-
-`git checkout <git_commit> && dvc checkout` then restores the code and the data of the run.
-
-Models are logged with the MLflow 3 API (`name=`, one LoggedModel per call, metrics linked to
-it), registered in the Model Registry, and promoted with aliases (the stages Staging /
-Production are deprecated since MLflow 2.9): `champion` is the version the API serves,
-`challenger` the runner-up. `promote_if_better` is the guard rail of the lab: a new version
-replaces the champion only if it beats it by at least `min_gain` on a given metric. The
-registration, the aliases and promote_if_better are in src/models/registry.py.
+`start_tracked_run` tags each run with git_commit, dvc_rev, dataset and seed, and logs
+requirements, dvc.lock and params.yaml, so a run can be traced to its code and data.
 """
 
 from __future__ import annotations
@@ -83,11 +67,9 @@ def git_dirty(root: Path = ROOT) -> bool:
 
 
 def dvc_rev(root: Path = ROOT) -> str:
-    """Git object id of `dvc.lock` as it is on disk, i.e. the version of every DVC input.
+    """Git object id of `dvc.lock` on disk, i.e. the version of every DVC input.
 
-    It equals the blob id git stores once the file is committed, so
-    `git log --find-object=<dvc_rev>` finds the commits with this exact data version. Falls back
-    to the SHA-1 of the content outside a git repository, "none" without a dvc.lock.
+    Find the matching commits with `git log --find-object=<dvc_rev>`; "none" without a dvc.lock.
     """
     lock = root / "dvc.lock"
     if not lock.is_file():
@@ -205,11 +187,9 @@ def log_model(
     pip_requirements: list[str] | None = None,
     **kwargs: Any,
 ) -> ModelInfo:
-    """Log a model in the active run with the MLflow 3 API (a LoggedModel called `name`).
+    """Log a model in the active run as an MLflow 3 LoggedModel called `name`.
 
-    `metrics` are logged to the run and linked to the LoggedModel, so the Models tab shows
-    them next to the model. The requirements are given (not inferred) for ONNX: inference
-    starts a subprocess and is slow; the ONNX runtime is all a served model needs.
+    `metrics` are linked to the model; ONNX requirements are given, not inferred.
     """
     if pip_requirements is None and flavor == "onnx":
         pip_requirements = _onnx_requirements()

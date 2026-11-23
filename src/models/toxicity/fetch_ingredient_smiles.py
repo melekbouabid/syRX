@@ -1,12 +1,6 @@
-"""Write config/ingredient_smiles.csv: a structure (SMILES) for each active ingredient.
+"""Write config/ingredient_smiles.csv: one PubChem SMILES per active ingredient (empty if unknown).
 
-# from the repository root, project venv (.venv) active
-python -m src.models.toxicity.fetch_ingredient_smiles      # PubChem PUG-REST, 4 requests/s at most
-
-Used by the toxicity tool to accept ingredient names (docs/bonus/toxicity.md). One PubChem lookup
-by name per ingredient of data/processed/pharma/pill_ingredients.csv; PubChem data is public domain.
-An ingredient PubChem does not find (or a mixture such as a multivitamin) gets an empty
-SMILES: the tool then says it cannot predict it.
+Run: `python -m src.models.toxicity.fetch_ingredient_smiles`.
 """
 
 from __future__ import annotations

@@ -1,12 +1,6 @@
-"""OCR engines compared on the medicine box photos of step 2.7 (src/models/ocr/evaluate.py).
+"""OCR engines compared on the medicine box photos: RapidOCR (ONNX, served) and EasyOCR (PyTorch).
 
-- `rapidocr`: RapidOCR 3 (PP-OCRv4 mobile, ONNX Runtime CPU), the engine the API can serve
-  (app/boxes.py, no PyTorch in the backend image);
-- `easyocr`: EasyOCR 1.7 (CRAFT detection + CRNN recognition, PyTorch), training venv only,
-  Italian + French + English recognition model.
-
-Tesseract is not compared: its Windows installer needs administrator rights on the
-project's PC (decision D109). Both engines return app.boxes.OcrResult.
+Both return app.boxes.OcrResult.
 """
 
 from __future__ import annotations

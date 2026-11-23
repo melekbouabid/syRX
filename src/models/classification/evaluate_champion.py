@@ -1,24 +1,7 @@
-"""Score the current champion classifier (150 classes of C3PI v1) on the split of step 2.3.
+"""Score the v1 champion classifier (150 classes) on the v2 comparison split, like the candidates.
 
-    # training venv, MLflow server running, dataset of stage prepare_classify_v2 on disk
-    python -m src.models.classification.evaluate_champion            # alias champion
-    python -m src.models.classification.evaluate_champion --version 1
-
-The champion (YOLO11s-cls, step 2.1, trained on the 150 classes of v1) was scored on the v1
-test crops; the candidates of step 2.3 are trained on the 380 classes of v2 and scored on the
-v2 comparison split (`test_holdout.txt`: test sessions the champion never saw, D99). To
-compare like with like (D100), this script scores the registered ONNX model, the file the API
-serves, with the preprocessing of the API and the metrics of the candidates
-(src/models/classification/metrics.py):
-
-1. its outputs (v1 class folders, ONNX metadata `names`) are mapped to v2 class ids through
-   the C3PI class key (classes.csv `v1_class_id`); the 230 classes it does not know get no
-   probability, so their crops count as errors in `test_v2_*` and `test_v2_all_*`;
-2. `test_v2_v1c_*`: the comparison crops of the 150 v1 classes, the prediction restricted to
-   these classes: the same label space as the champion (the guard of the promotion);
-3. the metrics and the CPU latency are logged in a run `evaluate-classifier-v<n>-c3pi-v2`
-   (tag `stage=compare-eval`); the scores are also added to the version's own run, where
-   promote_if_better reads them.
+Its outputs are mapped to v2 class ids; `test_v2_v1c_*` scores it on its own 150 classes.
+Run: `python -m src.models.classification.evaluate_champion [--version N]`.
 """
 
 from __future__ import annotations
@@ -138,8 +121,7 @@ def evaluate_version(
         mlflow.log_metrics(metrics)
         mlflow.set_tag("latency_cpu", cpu_name())
     # The version's own run receives the scores too: promote_if_better reads them there. Its
-    # latency stays the one of the interleaved protocol (step 2.4, then compare_latency
-    # --task classify, D96): the isolated timing above goes to the evaluation run only.
+    # latency stays the one of compare_latency (interleaved rounds).
     with mlflow.start_run(run_id=mv.run_id):
         mlflow.log_metrics({k: v for k, v in metrics.items() if k.startswith("test_v2")})
         mlflow.set_tag("test_v2_eval_run_id", eval_run.info.run_id)

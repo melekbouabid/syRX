@@ -1,12 +1,6 @@
 """YOLO detection datasets: label files, pixel boxes, splits and small subsets.
 
-Layout (src/data/prepare/detect_v2.py, also the Kaggle dataset of package_kaggle):
-
-    <root>/images/<split>/<stem>.jpg   <root>/labels/<split>/<stem>.txt   <root>/data.yaml
-    <root>/test_holdout.txt            (comparison split: file names of test images)
-
-A label line is `class cx cy w h`, normalised to [0, 1]. torchvision detectors want absolute
-x1 y1 x2 y2 boxes and labels starting at 1 (0 is the background): `to_torchvision`.
+A label line is `class cx cy w h` in [0, 1]; `to_torchvision` gives x1 y1 x2 y2 boxes.
 """
 
 from __future__ import annotations

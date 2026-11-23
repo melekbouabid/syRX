@@ -1,25 +1,6 @@
-"""Train and test the two Tujya vision models (DVC stages train_detector, train_classifier).
+"""Train and test the vision models (DVC stages train_detector, train_classifier).
 
-    python -m src.models.train detect                  # hyperparameters: params.yaml train.detector
-    python -m src.models.train classify --epochs 5     # a flag overrides params.yaml (experiments)
-    python -m src.models.train baseline                # record the runs of 2026-10-28 (D91)
-
-Each run:
-1. trains an Ultralytics YOLO model from pretrained weights (transfer learning) with the
-   hyperparameters of params.yaml (`train.detector` / `train.classifier`, seed `train.seed`);
-2. tests the best weights on the test split (mAP for detection, top-1 / top-5 for
-   identification);
-3. logs it to MLflow (experiment tujya-vision) through src/utils/mlflow_utils.py: tags
-   git_commit, dvc_rev, dataset, seed; requirements.txt, dvc.lock and params.yaml; per-epoch
-   metrics, test metrics, weights and plots;
-4. writes the stage outputs: models/train/<model>/ (weights/best.pt, results.csv, args.yaml)
-   and models/train/<model>.json (test metrics and MLflow run_id, read by `dvc metrics show`
-   and by the next stage).
-
-The next stage, src/models/export_onnx.py, exports the weights to ONNX, checks ONNX Runtime
-against PyTorch, registers the ONNX model and promotes it if it beats the champion.
-
-MLflow server: MLFLOW_TRACKING_URI, default http://127.0.0.1:5000 (docker compose up -d mlflow).
+Run: `python -m src.models.train detect | classify | baseline`; logs to MLflow `tujya-vision`.
 """
 
 from __future__ import annotations
@@ -120,12 +101,7 @@ def _log_epochs(results_csv: Path) -> None:
 
 
 def classify_test(model: YOLO, folder: Path, imgsz: int, batch: int) -> dict[str, float]:
-    """Top-1 / top-5 on the test crops, matching folder names to the model's class names.
-
-    Done here rather than with `model.val(split="test")` because a class can have no test
-    crop (its test photos were all doubtful), and a per-folder dataset would then number
-    the classes differently from training.
-    """
+    """Top-1 / top-5 on the test crops, matching folder names to the model's class names."""
     index = {name: i for i, name in model.names.items()}
     files = sorted(folder.glob("*/*.jpg"))
     top1 = top5 = 0
@@ -279,30 +255,13 @@ def main(argv: list[str] | None = None) -> None:
     run(parser.parse_args(args))
 
 
-# --- Baseline: the GPU runs of 2026-10-28 recorded as the stages' output -----------------------
-# Record the models trained on 2026-10-28 as the BASELINE of the pipeline and of MLflow.
-#
-#     python -m src.models.train baseline        # training venv, MLflow server running
-#     dvc commit -f train_detector train_classifier # the baseline becomes the stages' output
-#     dvc repro export_onnx evaluate                # ONNX export, Registry, alias champion
-#
-# The detector (YOLO11n) and the classifier (YOLO11s-cls) served since 2026-10-28 were trained
-# by the GPU runs kept on disk under runs/ (Ultralytics output: weights, results.csv,
-# args.yaml), but their MLflow runs are on the server of the first copy of the project, not on
-# this one (docs/decisions.md D83). Rather than retrain them, this script, for each model:
-#
-# 1. checks that the run's hyperparameters (args.yaml) are those of params.yaml `train.*`, so
-#    the DVC stage train_<model> describes exactly how the weights were made;
-# 2. starts a tracked run (src/utils/mlflow_utils.py: tags git_commit, dvc_rev, dataset, seed;
-#    requirements.txt, dvc.lock, params.yaml) in the experiment tujya-vision, with the
-#    training parameters, the per-epoch history, the weights and plots, and tags pointing to the
-#    original run (`origin_*`, `baseline=true`);
-# 3. evaluates the weights again on the test split, now (GPU if available, tag `eval_device`),
-#    and logs these test metrics (the original ones are kept as `origin_test_*` tags);
-# 4. writes the outputs of the stage train_<model> (models/train/<model>/ and
-#    models/train/<model>.json), exactly as src/models/train.py does.
+# --- Baseline: existing GPU runs recorded as the stages' output --------------------------------
+# `baseline` records the YOLO runs kept under runs/ without retraining them: it checks that
+# their args.yaml match params.yaml `train.*`, logs a tracked MLflow run (tag baseline=true),
+# evaluates the weights again on the test split and writes the stage outputs.
+# Then: `dvc commit -f train_detector train_classifier`.
 
-# Ultralytics runs of the models served since 2026-10-28 (models/models.json).
+# Ultralytics runs of the baseline models (models/models.json).
 BASELINE_RUNS = {
     "detect": RUNS / "detect-20261028-023214",
     "classify": RUNS / "classify-20261028-021601",

@@ -1,16 +1,6 @@
-"""Comparison table and figure of the detectors of step 2.2, read from MLflow.
+"""Comparison table and figure of the detectors, read from MLflow (experiment `tujya-vision`).
 
-    python -m src.models.detection.compare        # training venv, MLflow server running
-
-Reads the experiment `tujya-vision`: the parent runs of the candidates (tag `stage=compare`)
-and the re-evaluation of the baseline (tag `stage=compare-eval`), smoke runs excluded (the
-MLflow search has no `IN` for tags: `tags.stage LIKE 'compare%'`). The latency, size and
-parameter figures are those logged by src/models/detection/compare_latency.py (every model
-timed together, D96 / D98). Writes
-- docs/module1/assets/detecteurs_comparaison.png: mAP@[.5:.95] on the comparison split
-  against the ONNX CPU latency and against the size of the ONNX file (one point per model,
-  the champion highlighted);
-- the Markdown table between the markers of docs/module1/kaggle_detecteurs.md.
+Run: `python -m src.models.detection.compare` (training venv, MLflow server running).
 """
 
 from __future__ import annotations
@@ -84,12 +74,7 @@ COMPARED = "tags.stage LIKE 'compare%' and tags.smoke = 'false'"
 
 
 def final_value(client: Any, run_id: str, key: str, latest: float | None) -> float | None:
-    """The score of the retained model (step 0), not of the last epoch.
-
-    The import logs the final metrics at step 0 and the per-epoch history at steps 1..n; a
-    history key with the same name (Faster R-CNN's `val_mAP50_95`) would otherwise show the
-    last epoch, which is not the checkpoint kept.
-    """
+    """The score of the retained model (logged at step 0), not of the last epoch."""
     at_zero = [m for m in client.get_metric_history(run_id, key) if m.step == 0]
     return float(max(at_zero, key=lambda m: m.timestamp).value) if at_zero else latest
 
@@ -107,7 +92,7 @@ def collect(
     version_by_run: dict[str, str] = {}
     for mv in client.search_model_versions(f"name='{model}'"):
         if "precision" in (mv.tags or {}):
-            continue  # FP16 / INT8 variants (step 2.4) share the run of no candidate
+            continue  # FP16 / INT8 variants share the run of no candidate
         status_by_run[mv.run_id] = (mv.tags or {}).get("status", "")
         version_by_run[mv.run_id] = str(mv.version)
     runs = client.search_runs(
@@ -143,9 +128,9 @@ def _fmt(value: float | None, digits: int = 4) -> str:
 
 def markdown_table(rows: list[Row]) -> str:
     lines = [
-        "| Modèle | mAP@[.5:.95] val | mAP@[.5:.95] test | mAP50 test | Précision | Rappel "
-        "| mAP@[.5:.95] test v2 complet | Latence ONNX CPU moy. (ms) | p95 (ms) | Taille ONNX (Mo) "
-        "| Paramètres (M) | Version | Statut | Run MLflow |",
+        "| Model | mAP@[.5:.95] val | mAP@[.5:.95] test | mAP50 test | Precision | Recall "
+        "| mAP@[.5:.95] full v2 test | ONNX CPU mean latency (ms) | p95 (ms) | ONNX size (MB) "
+        "| Parameters (M) | Version | Status | MLflow run |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|",
     ]
     for r in rows:
@@ -168,8 +153,8 @@ def replace_between_markers(text: str, table: str) -> str:
 
 
 PANELS = (
-    ("latency_ms", "Latence ONNX Runtime CPU par image (ms, échelle log)"),
-    ("size_mb", "Taille du fichier ONNX FP32 (Mo, échelle log)"),
+    ("latency_ms", "ONNX Runtime CPU latency per image (ms, log scale)"),
+    ("size_mb", "FP32 ONNX file size (MB, log scale)"),
 )
 
 
@@ -236,9 +221,9 @@ def plot(rows: list[Row], path: Path) -> Path:
             ax.spines[side].set_color("#c3c2b7")
         ax.tick_params(colors=MUTED)
         ax.margins(x=0.25)
-    axes[0].set_ylabel("mAP@[.5:.95], split de comparaison", color=MUTED)
+    axes[0].set_ylabel("mAP@[.5:.95], comparison split", color=MUTED)
     fig.suptitle(
-        "Détecteurs de comprimés, C3PI v2 (étape 2.2) : précision, latence et taille",
+        "Pill detectors, C3PI v2: accuracy, latency and size",
         color=INK,
         x=0.01,
         ha="left",

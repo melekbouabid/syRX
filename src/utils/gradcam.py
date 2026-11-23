@@ -1,24 +1,6 @@
 """Grad-CAM: where a classifier looks when it predicts a class (Selvaraju et al., 2017).
 
-    from src.utils.gradcam import GradCAM, overlay
-    with GradCAM(model, layer) as cam:
-        heatmap = cam(image_tensor, class_index)      # H x W in [0, 1]
-    picture = overlay(bgr_image, heatmap)
-
-For a convolutional layer with activations A (K maps of h x w) and the score y_c of class c
-before the softmax, Grad-CAM weights every map by the mean of its gradient,
-alpha_k = mean_ij dy_c / dA_kij, and keeps the positive part of the weighted sum,
-ReLU(sum_k alpha_k A_k), upsampled to the input size and scaled to [0, 1].
-
-Transformers (ViT) output tokens, not maps: `tokens=True` drops the class token and folds the
-patch tokens back into their grid (14 x 14 for ViT-B/16 at 224 px) before the same formula.
-
-It needs the PyTorch model and its gradients, so it runs in the training venv (Kaggle
-notebooks, the runner of src/models/classification, which saves a few pictures in every
-export), never in the API, which serves ONNX models without PyTorch (D97). The layer of each
-architecture is given by src/models/architecture.py (`ClassifierNet.parts().cam_layer`). The
-pictures of the app's demo gallery are precomputed by `src/models/gradcam_gallery.py` with the
-weights of the served classifier and served as files next to the gallery (D104).
+Needs PyTorch gradients, so it runs in the training venv, never in the API.
 """
 
 from __future__ import annotations

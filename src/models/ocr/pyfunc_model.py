@@ -1,10 +1,4 @@
-"""MLflow pyfunc of an OCR engine (models from code, step 2.7): what the Registry versions.
-
-The engines are pretrained (no training here): a registered version is an engine with its
-configuration (`model_config`: engine name and options, e.g. ONNX Runtime threads), scored
-on the box photos by src/models/ocr/evaluate.py. `predict` takes image paths and returns the
-printed lines, so a version can be loaded back with `mlflow.pyfunc.load_model`.
-"""
+"""MLflow pyfunc of an OCR engine and its configuration: what the Registry versions."""
 
 from __future__ import annotations
 

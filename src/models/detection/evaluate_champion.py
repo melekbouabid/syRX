@@ -1,20 +1,6 @@
-"""Re-evaluate the current champion detector on the comparison split of step 2.2.
+"""Re-evaluate the current champion detector on the v2 comparison split, with the candidates' code.
 
-    # training venv, MLflow server running, dataset of stage prepare_detect_v2 on disk
-    python -m src.models.detection.evaluate_champion            # alias champion
-    python -m src.models.detection.evaluate_champion --version 1
-
-The baseline (YOLO11n, trained on C3PI v1) was scored on the v1 test split; the candidates of
-step 2.2 are trained on C3PI v2 and scored on the v2 comparison split (`test_holdout.txt`:
-v2 test sessions the baseline never saw, D93). To compare like with like, this script scores
-the registered version again, with the same code as the candidates
-(src/models/detection/runner.py `test_metrics`, src/models/detection/metrics.py):
-
-1. downloads the weights logged in the version's run (`weights/best.pt`) and its ONNX model;
-2. computes `test_v2_*` (comparison split) and `test_v2_all_*` (whole v2 test) and the CPU
-   latency of the ONNX model on this PC (`onnx_cpu_latency_ms`);
-3. logs them in a run `evaluate-detector-v<version>-c3pi-v2` (tag `stage=compare-eval`) and
-   adds them to the version's own run, where promote_if_better reads the metric.
+Run: `python -m src.models.detection.evaluate_champion [--version N]`.
 """
 
 from __future__ import annotations

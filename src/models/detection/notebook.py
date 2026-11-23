@@ -1,17 +1,6 @@
-"""Build the Kaggle notebooks of step 2.2 (notebooks/module1/kaggle/detector_<arch>.ipynb).
+"""Generate the Kaggle notebooks notebooks/module1/kaggle/detector_<arch>.ipynb from one template.
 
-    python -m src.models.detection.notebook yolov8n        # writes notebooks/module1/kaggle/...
-    python -m src.models.detection.notebook --all
-
-Every notebook is the same short driver: clone the experiment branch, install the pinned
-packages (notebooks/module1/kaggle/requirements.txt), find the private dataset, run
-src/models/detection/runner.py with config/hpo/detector_<arch>.yaml, zip the export folder.
-Only the architecture changes, so they are generated from one template (a test checks that
-the committed notebooks are exactly the generated ones). Notebooks are committed without
-outputs (nbstripout); the results go to MLflow through import_kaggle.
-
-`TUJYA_SMOKE=1` in the environment runs the notebook in smoke mode (tiny subset, 2 trials,
-1 epoch), which is how it is checked locally before going to Kaggle.
+Run: `python -m src.models.detection.notebook <arch> | --all`; TUJYA_SMOKE=1 runs a tiny check.
 """
 
 from __future__ import annotations

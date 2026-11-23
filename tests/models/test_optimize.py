@@ -159,7 +159,7 @@ def test_optimise_registers_variants_and_sets_served(
 
     table = optimize.markdown_table({"classify": report})
     assert table.count("\n") == 2 + len(q.PRECISIONS)
-    assert "(servie)" in table
+    assert "(served)" in table
 
     monkeypatch.setitem(reg.REGISTERED, "detect", tracking.model)
     out = tmp_path / "models"

@@ -1,29 +1,7 @@
-"""Import a classifier experiment run on Kaggle (export folder of runner.py) into MLflow.
+"""Import a classifier experiment run on Kaggle into MLflow, register it and promote the best.
 
-    # training venv, MLflow server running (docker compose up -d mlflow)
-    python -m src.models.classification.import_kaggle --no-latency classifier_*_export.zip
-    python -m src.models.classification.import_kaggle <folder or .zip> --smoke   # never registered
-
-Same steps as the detectors (src/models/detection/import_kaggle.py, whose export reading,
-ordering and trial logging are reused): several exports are imported best first (promotion
-metric of their run.json, D98), so the result does not depend on the order of the arguments.
-
-What it creates in the experiment `tujya-vision`:
-
-- one parent run `classifier-<arch>` (tags `stage=compare`, `task=classify`): provenance of
-  the Kaggle run (`git_commit`, `git_branch`, `dvc_rev`, `dataset_md5`, `seed`, GPU), the
-  retained hyperparameters, the per-epoch history of the final training, the validation and
-  test metrics (`test_v2_*` comparison split, `test_v2_all_*` whole v2 test, `test_v2_v1c_*`
-  like-for-like with the v1 champion), latency, and the artefacts (weights, ONNX model, class
-  list, confusion matrix, per-class scores, Grad-CAM pictures, trials, requirements);
-- one child run per Optuna trial (`trial-NNN`, tag `stage=hpo`);
-- unless `--smoke` (or a smoke export): the ONNX model as a LoggedModel, a new version of
-  `tujya-pill-classifier` (tags `label_space`, `num_classes`) and `promote_if_better` on
-  `test_v2_top1` (params.yaml `compare.classifier`) with the guard of D100: a model trained on
-  another class list than the reference (the v1 champion) must not be worse than it on the
-  like-for-like metric `test_v2_v1c_top1`, otherwise it is archived.
-
-A smoke export gets the tag `smoke=true`, a `smoke-` run name and never reaches the Registry.
+One parent run, one child run per Optuna trial; a smoke export never reaches the Registry.
+Run: `python -m src.models.classification.import_kaggle [--smoke] <folder or .zip> ...`.
 """
 
 from __future__ import annotations
@@ -80,7 +58,7 @@ def compare_rules(params_path: Path = PARAMS) -> dict[str, Any]:
 
 
 def guard_reference(name: str, client: MlflowClient) -> str | None:
-    """The version the guard compares with: the baseline (the v1 champion, step 2.1)."""
+    """The version the guard compares with: the v1 champion."""
     for mv in client.search_model_versions(f"name='{name}'"):
         tags = mv.tags or {}
         if tags.get("baseline") == "true" and "precision" not in tags:
@@ -91,11 +69,10 @@ def guard_reference(name: str, client: MlflowClient) -> str | None:
 def check_guard(
     metrics: dict[str, float], rules: dict[str, Any], client: MlflowClient
 ) -> tuple[bool, str, str | None]:
-    """(eligible, reason, reference version) of a candidate (D100).
+    """(eligible, reason, reference version) of a candidate.
 
-    The reference serves another class list (150 classes of v1): the candidate must not be
-    worse than it on the like-for-like metric (same comparison crops of the v1 classes, the
-    prediction restricted to them), by more than `guard_max_drop`.
+    A candidate with another class list must not be worse than the reference by more than
+    `guard_max_drop` on the like-for-like metric.
     """
     reference = guard_reference(rules["name"], client)
     if reference is None:
@@ -352,7 +329,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--keep-order",
         action="store_true",
-        help="import in the order given (default: best promotion metric first, D98)",
+        help="import in the order given (default: best promotion metric first)",
     )
     args = parser.parse_args(argv)
     console_utf8()

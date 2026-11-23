@@ -1,35 +1,7 @@
-"""Import a detector experiment run on Kaggle (export folder of runner.py) into MLflow.
+"""Import detector experiments run on Kaggle into MLflow, register them and promote the best.
 
-    # training venv, MLflow server running (docker compose up -d mlflow)
-    python -m src.models.detection.import_kaggle runs/kaggle/out/detector-yolov8n
-    python -m src.models.detection.import_kaggle <folder or .zip> --smoke   # never registered
-    python -m src.models.detection.import_kaggle --no-latency a.zip b.zip   # several, best first
-
-Several exports are imported best first (promotion metric of their run.json, `promotion_order`)
-so that the result of promote_if_better does not depend on the order of the arguments (D98);
-`--keep-order` keeps the given order. `--no-latency` skips the single local timing: the
-comparable figure is then measured for every detector together, in interleaved rounds, by
-src/models/detection/compare_latency.py (D96, D98).
-
-What it creates in the experiment `tujya-vision`:
-
-- one parent run `detector-<arch>` (tag `stage=compare`): the provenance of the Kaggle run
-  (`git_commit` and `git_branch` of the code that ran, `dvc_rev` and `dataset_md5` of the
-  data, `seed`, GPU), the retained hyperparameters, the per-epoch history of the final
-  training, the validation and test metrics (`test_v2_*` on the comparison split,
-  `test_v2_all_*` on the whole v2 test), the Kaggle CPU latency and the latency measured
-  again here (`onnx_cpu_latency_ms`, the same PC for every model), and the artefacts
-  (weights, ONNX model, trials, Kaggle requirements, dvc.lock, params.yaml);
-- one child run per Optuna trial (`trial-NNN`, tag `stage=hpo`, MLflow parent link): its
-  hyperparameters, its validation metrics and its per-epoch history, so the UI's Compare and
-  Parallel Coordinates views show the search;
-- unless `--smoke` (or a smoke export): the ONNX model as an MLflow 3 LoggedModel, a new
-  version of `tujya-pill-detector` and `promote_if_better` on `test_v2_mAP50_95`
-  (params.yaml `compare.detector`), against a champion re-evaluated on the same split by
-  src/models/detection/evaluate_champion.py.
-
-A smoke export (local check of the code) gets the tag `smoke=true`, a `smoke-` run name, and
-never reaches the Model Registry.
+Exports are imported best first, so the result does not depend on the argument order.
+Run: `python -m src.models.detection.import_kaggle [--smoke] [--no-latency] <folder or .zip> ...`.
 """
 
 from __future__ import annotations
@@ -114,13 +86,8 @@ def peek_run(path: Path) -> dict[str, Any]:
 def promotion_order(exports: list[Path], metric: str) -> list[Path]:
     """The exports by decreasing promotion metric (final test score in run.json).
 
-    promote_if_better compares each candidate with the champion in place, with a minimal
-    gain, so a sequence of imports depends on its order: a candidate imported after a
-    slightly weaker one that was just promoted may no longer beat it by the minimal gain.
-    Imported best first, the result is the same for any order given on the command line:
-    the champion is the best candidate if it beats the champion in place by the minimal gain
-    (otherwise none does), and the challenger is the best of the others and of the former
-    champion (docs/decisions.md D98). Exports without the metric come last, in their order.
+    Imported best first, promote_if_better gives the same champion whatever the order given.
+    Exports without the metric come last, in their order.
     """
 
     def score(path: Path) -> float:
@@ -400,7 +367,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--keep-order",
         action="store_true",
-        help="import in the order given (default: best promotion metric first, D98)",
+        help="import in the order given (default: best promotion metric first)",
     )
     args = parser.parse_args(argv)
     console_utf8()
