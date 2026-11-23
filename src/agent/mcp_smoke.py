@@ -1,14 +1,6 @@
-"""Start the MCP server as a subprocess (stdio), list its tools and call them on real data.
+"""Start the MCP server (stdio), list its tools and call each one on real data.
 
-python -m src.agent.mcp_smoke
-(project venv; uses the TUJYA_* environment of this shell; the stack running: postgres,
-qdrant, ollama, and the served models in models/)
-
-1. identify_pills on a test-split photo of the demo gallery (never seen in training, D105),
-   preferably of one of the 230 classes added in v2 (class id 150 or more);
-2. check_interaction between the identified pill and warfarin;
-3. get_drug_info on its first active ingredient (says when no document is indexed for it);
-4. search_documents with the served retrieval setting (query rewriting on: `search_query`).
+Run: `python -m src.agent.mcp_smoke` (needs postgres, qdrant, ollama and the served models).
 """
 
 from __future__ import annotations
@@ -29,8 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]  # repository root
 
 
 def gallery_photo() -> tuple[Path, int]:
-    """A photo of the demo gallery (the API's own rule: v2 test split, never trained on,
-    D105), a class of v2 first."""
+    """A photo of the demo gallery (v2 test split, never trained on), a class of v2 first."""
     settings = Settings()
     photos = load_gallery(
         settings.demo_gallery_file,

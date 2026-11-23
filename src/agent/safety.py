@@ -1,17 +1,7 @@
-"""Safety rules applied to every agent answer (docs/project_rules.md), sentence by sentence.
+"""Safety rules applied to every agent answer, sentence by sentence.
 
-1. No dose: a sentence with a quantity of medicine ("50 mg", "2 comprimés", "deux fois
-   par jour") is removed. A question asking for a dose is refused before any LLM call.
-2. Never "safe": a sentence calling a combination safe ("sûr", "sans danger", "sans
-   risque", "safe") is removed; the standard wording is "aucune interaction connue dans
-   cette base de données".
-3. No invented timing advice: a timing sentence ("à 2 heures d'intervalle", "avant le
-   repas") is kept only if it cites a source.
-4. Citations: [n] must point to a numbered source; an answer citing nothing gets the list
-   of the sources it was given; an answer without any source is replaced by "no source".
-5. The disclaimer always ends the answer.
-6. No "non-toxic" claim (bonus toxicity tool): a model of in vitro assays never shows that a
-   molecule is harmless, so "non toxique", "not toxic", "sans toxicité" sentences are removed.
+No dose, never "safe", no unsourced timing advice, valid citations, no "non-toxic" claim,
+and the disclaimer always last. A dose question is refused before any LLM call.
 """
 
 from __future__ import annotations
@@ -245,12 +235,9 @@ async def attribute_by_meaning(
     threshold: float,
     margin: float = 0.03,
 ) -> tuple[str, int]:
-    """Cite, for each sentence the model left uncited, the source closest in meaning.
+    """Cite, for each uncited sentence, the source closest in meaning (multilingual bge-m3).
 
-    bge-m3 is multilingual, so a French sentence finds the English source it paraphrases,
-    which word overlap (`best_source`) cannot. A citation is added only when the closest
-    source is similar enough (`threshold`) and clearly closer than the next one (`margin`);
-    the benchmark's citation judge then checks that the cited source really supports it.
+    A citation is added only above `threshold` and `margin` ahead of the next source.
     Returns the new text and the number of citations added.
     """
     sentences = split_sentences(text.replace(DISCLAIMER, ""))

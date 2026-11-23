@@ -1,17 +1,7 @@
-"""Tujya MCP server: the agent's six tools for any MCP client (official Python MCP SDK).
+"""MCP server exposing the agent's six tools (same code and toolbox as the LangGraph agent).
 
-    # project venv (.venv) active, from any folder
-    python -m src.agent.mcp_server            # stdio (Claude Desktop, IDEs)
-    python -m src.agent.mcp_server --transport streamable-http --port 8765
-                                                           # http://127.0.0.1:8765/mcp
-
-Same tools, same code and the same toolbox as the LangGraph agent (agent/tools.py, built by
-agent/runtime.py): identify_pills (the served detector and 380-class classifier),
-check_interaction, get_drug_info, search_documents (the served retrieval setting of step 3.3:
-bge-m3 dense, ingredient filter, query rewriting by the LLM; D123), lookup_brand (medicine
-brands, step 2.7), predict_toxicity (bonus). Settings come from the TUJYA_* environment
-(database, Ollama URL for the query embeddings and the rewriting LLM, models directory); see
-docs/module2/mcp.md for client configuration.
+Run: `python -m src.agent.mcp_server` (stdio) or `--transport streamable-http --port 8765`.
+Settings come from the TUJYA_* environment.
 """
 
 from __future__ import annotations

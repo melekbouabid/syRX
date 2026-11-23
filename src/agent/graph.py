@@ -1,18 +1,7 @@
-"""The Tujya agent, a LangGraph graph:
+"""The agent as a LangGraph graph: understand -> tools -> retrieve -> answer -> safety.
 
-    understand -> tools -> retrieve -> answer -> safety
-        \\______________ dose question: refuse ______/
-
-- understand: drug names in the question (French or English) and in the confirmed pills,
-  language, and whether the question asks for a dose (refused without any LLM call).
-- tools: the LLM chooses tool calls (Ollama tool calling); the calls a question of that
-  kind always needs are added when the model forgets them (check_interaction for two or
-  more drugs, search_documents always), then every call is run.
-- retrieve: the documents found by search_documents (and DDInter rows, label excerpts)
-  become the numbered sources [1], [2], ...
-- answer: the LLM answers from those sources only, citing them; tokens are streamed
-  sentence by sentence through the safety filter.
-- safety: the rules of safety.py on the whole answer; rewrite or refuse.
+A dose question is refused before any LLM call; the answer cites numbered sources only and
+is streamed sentence by sentence through the safety rules.
 """
 
 from __future__ import annotations
@@ -165,7 +154,7 @@ def toxicity_sources(result: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def brand_sources(brands: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Each brand recognised in the question (brand table, step 2.7), as a citable source."""
+    """Each brand recognised in the question (brand table), as a citable source."""
     found = []
     for brand in brands:
         ingredients = ", ".join(brand["ingredients"])
@@ -198,8 +187,10 @@ def _without_source_list(answer: str) -> str:
 
 
 def brand_summary(state: AgentState) -> tuple[str, list[int]]:
-    """One fixed sentence per recognised brand, citing its brand-table source: a 3B model
-    often names the ingredient without citing where the link comes from (step 2.7)."""
+    """One fixed sentence per recognised brand, citing its brand-table source.
+
+    A 3B model often names the ingredient without citing where the link comes from.
+    """
     language = state.get("language", "fr")
     sentences, cited = [], []
     for source in state.get("sources", []):
@@ -217,8 +208,7 @@ def brand_summary(state: AgentState) -> tuple[str, list[int]]:
 
 
 def interaction_summary(state: AgentState) -> tuple[str, list[int]]:
-    """One fixed sentence per DDInter interaction found, for an answer that cites none of
-    them: the answer then always says the interaction the source lists (step 2.7)."""
+    """One fixed sentence per DDInter interaction found, for an answer that cites none of them."""
     language = state.get("language", "fr")
     sentences, cited = [], []
     for source in state.get("sources", []):
@@ -393,8 +383,7 @@ class TujyaAgent:
         }
 
     def _with_brand_ingredients(self, drugs: list[str], ingredients: list[str]) -> list[str]:
-        """The planner may pass a brand ("Augmentin"): it becomes its ingredients, and the
-        ingredients already understood are added, so the check covers the brand (step 2.7)."""
+        """A brand passed by the planner becomes its ingredients, plus those already understood."""
         found: list[str] = []
         for drug in drugs:
             try:

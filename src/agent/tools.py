@@ -1,13 +1,7 @@
-"""The agent's tools, written once and exposed twice: as LangChain tools (LangGraph agent)
-and as MCP tools (src/agent/mcp_server.py).
+"""The agent's tools, written once and exposed as LangChain tools and as MCP tools.
 
-Every tool returns plain JSON-serialisable data with the sources it used, never a dose
-(the corpus has no dosage section) and never the word "safe".
-
-Extension point: a new tool is one async method on `Toolbox` plus one entry in
-`TOOL_SPECS`. Bonus tool: `predict_toxicity` (Tox21 in vitro assays, docs/bonus/toxicity.md).
-`lookup_brand` (step 2.7) links a brand ("Panadol", "Doliprane") to its active ingredients
-with the source of the brand table (config/brand_aliases.csv), RxNav as a fallback.
+Tools return JSON-serialisable data with their sources, never a dose and never "safe".
+A new tool is one async method on `Toolbox` plus one entry in `TOOL_SPECS`.
 """
 
 from __future__ import annotations
@@ -58,7 +52,7 @@ class Toolbox:
     scanner: ScannerHolder | None = None
     toxicity: ToxHolder | None = None
     boxes: BoxReader | None = None
-    rewriter: QueryRewriter | None = None  # TUJYA_RAG_QUERY_REWRITE (D118)
+    rewriter: QueryRewriter | None = None  # TUJYA_RAG_QUERY_REWRITE
     _names: NameIndex | None = None
     _indexed: tuple[int, frozenset[str]] | None = None
 
@@ -121,10 +115,7 @@ class Toolbox:
         return retriever
 
     def indexed_ingredients(self) -> frozenset[str]:
-        """Active ingredients that have at least one indexed document (label, abstract or
-        DDInter row). The served corpus covers the 380 classes (D126): 175 of their 176 names,
-        the placebo tablets of a pack ("inert ingredients") being no medicine; an index of the
-        corpus of v1 (TUJYA_QDRANT_COLLECTION=tujya_chunks) covers 82."""
+        """Active ingredients with at least one indexed document (label, abstract, DDInter row)."""
         retriever = self.retriever()
         if self._indexed is None or self._indexed[0] != id(retriever):
             names = frozenset(i for chunk in retriever.chunks for i in chunk.ingredients)
@@ -243,10 +234,11 @@ class Toolbox:
         exclude_retracted: bool = True,
         mode: str | None = None,
     ) -> dict[str, Any]:
-        """Search labels, PubMed abstracts and DDInter (mode from settings: dense by default,
-        bm25 or hybrid on request), with the metadata filters; then, when the settings ask for
-        it, rerank by the cross-encoder (D117). With query rewriting (D118) the search runs on
-        the LLM's English query; `search_query` shows it."""
+        """Search labels, PubMed abstracts and DDInter with the metadata filters.
+
+        Mode from the settings (dense by default), optional cross-encoder reranking; with query
+        rewriting the search runs on the LLM's English query (`search_query`).
+        """
         filters = Filters(
             ingredients=tuple(self.normalise(ingredients or [])),
             doc_types=tuple(t for t in (doc_types or []) if t in DOC_TYPES),
