@@ -9,7 +9,7 @@ commerciale, totale ou partielle, est interdite sans l'autorisation écrite de l
 Les données utilisées par le projet (NLM C3PI, ePillID, DDInter, RxNorm, openFDA, PubMed,
 Tox21 et les autres sources citées) ne sont pas couvertes par ce fichier : chacune reste
 soumise à sa propre licence et à ses propres conditions d'utilisation, listées dans
-docs/data_pipeline/LICENSES.md.
+docs/data.md#sources-and-licences.
 
 ENGLISH
 
@@ -19,7 +19,7 @@ in part, is forbidden without the written permission of the author.
 
 The data used by the project (NLM C3PI, ePillID, DDInter, RxNorm, openFDA, PubMed, Tox21
 and the other sources cited) is not covered by this file: each source remains subject to its
-own licence and terms of use, listed in docs/data_pipeline/LICENSES.md.
+own licence and terms of use, listed in docs/data.md#sources-and-licences.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND. It gives information only
 and is not medical advice.
