@@ -12,7 +12,7 @@ reste décrit dans [benchmark.md](benchmark.md).
 
 ## Ce qui est mesuré
 
-- **Questions** : les **96** questions du jeu ([rag_questions.jsonl](../../src/benchmark/rag_questions.jsonl)),
+- **Questions** : les **96** questions du jeu ([questions.jsonl](../../src/evaluation/questions.jsonl)),
   à chaque configuration (aucun sous-ensemble). Les questions de dose sont refusées sans appel au
   LLM ; les questions sans référence (dose, « est-ce sûr ? », la plupart des marques) n'ont pas de
   note qui demande une référence.
@@ -34,14 +34,14 @@ reste décrit dans [benchmark.md](benchmark.md).
 
 ## MLflow : traces, prompts, évaluations
 
-- **Traces** (onglet *Traces* de `tujya-rag-generation`) : `bench_answers --trace` active
+- **Traces** (onglet *Traces* de `tujya-rag-generation`) : `benchmark_generation --trace` active
   `mlflow.langchain.autolog` ; chaque question est une trace `question` (tags : configuration,
   LLM, version du prompt, identifiant de la question) qui contient les nœuds LangGraph
   (`understand`, `tools`, `retrieve`, `answer`, `safety`), les appels au LLM et **un span par
   appel d'outil** (`check_interaction`, `get_drug_info`, `search_documents`...). MLflow 3.17 perd
   le span d'un run LangGraph lancé sans `serialized` (la trace restait « pas entièrement
   exportée ») : le script lui donne le nom par défaut.
-- **Prompts** (onglet *Prompts*) : [register_prompts.py](../../src/benchmark/register_prompts.py)
+- **Prompts** (onglet *Prompts*) : [register_prompts.py](../../src/evaluation/register_prompts.py)
   enregistre `tujya-answer-fr` et `tujya-answer-en` (version 1 = v1, version 2 = v2, gabarits de
   chat : message système + message utilisateur `{{sources}}` / `{{question}}`) et
   `tujya-tool-planner` (v1). Le texte de référence reste [prompts.py](../../src/agent/prompts.py)
@@ -71,7 +71,7 @@ enregistrés `tujya-rag-retrieval` [36](../screenshots/36-mlflow-rag-retrieval-m
 
 **phi4-mini** (3,8 B, Microsoft, 2,5 Go dans Ollama), une autre famille que les deux
 générateurs, servi comme **`phi4-mini-judge`** : le même modèle avec toutes ses couches sur le GPU
-([judge.Modelfile](../../infra/docker/ollama/judge.Modelfile)). Le placement automatique d'Ollama
+([judge.Modelfile](../../infra/ollama/judge.Modelfile)). Le placement automatique d'Ollama
 garde ~1 Go libre et laissait 6 couches sur 33 au CPU : 17 jetons/s générés et 119 jetons/s lus,
 contre 35 et 1 775 tout sur le GPU, soit ~6 fois plus rapide sur RAGAS (~50 s par question au
 lieu de ~5 min). Les embeddings bge-m3 de RAGAS tournent alors sur le CPU pour ne pas évincer le
@@ -112,7 +112,7 @@ llama3.2:3b avec le meilleur des deux prompts sur qwen2.5:3b.
 Une branche `experiment/rag-generation`, un run MLflow par configuration (96 questions
 chacune). Note = moyenne des cinq métriques de la règle ; « s / question » = temps médian de
 l'agent complet pendant la génération (modèles chargés). Tableau produit par les fichiers de
-[src/benchmark/generation/](../../src/benchmark/generation/).
+[src/evaluation/results/generation/](../../src/evaluation/results/generation/).
 
 | Configuration | Note | Fidélité | Pertinence | Précision ctx | Rappel ctx | Correctness | Safety | Citations soutenues | Phrases citées | s / question (méd.) | Run |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
@@ -170,7 +170,7 @@ Limites : un seul juge de 4 B (pas de juge humain), une seule exécution par con
 Le corpus servi est passé aux 380 classes (27 302 chunks au lieu de 8 661) et la récupération
 servie à la recherche hybride de la requête réécrite ([benchmark_retrieval.md](benchmark_retrieval.md#corpus-v2-380-classes-d126)).
 Seul le champion (qwen2.5:3b + prompt v1) est rejoué, sur les mêmes 96 questions, avec le même
-juge et la même règle (`bench_answers --corpus v2`, `bench_generation --corpus v2` : réponses et
+juge et la même règle (`benchmark_generation --corpus v2`, `ragas_evaluation --corpus v2` : réponses et
 notes à part, `qwen2.5-3b__v1__corpus-v2`) ; le challenger et llama3.2:3b ne le sont pas (environ
 1 h 30 d'évaluation chacun sur ce PC).
 
@@ -195,20 +195,20 @@ configuration mesurée sur v2, rien à départager) ; les deux runs sont dans l'
 ```bash
 # venv du projet `.venv`, depuis la racine ; pile lancée (postgres, qdrant, ollama, mlflow)
 docker compose exec ollama ollama pull phi4-mini      # le juge, puis sa variante tout GPU :
-docker compose cp infra/docker/ollama/judge.Modelfile ollama:/tmp/judge.Modelfile
+docker compose cp infra/ollama/judge.Modelfile ollama:/tmp/judge.Modelfile
 docker compose exec ollama ollama create phi4-mini-judge -f /tmp/judge.Modelfile
 export TUJYA_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
-python -m src.benchmark.register_prompts               # Prompt Registry
-python -m src.benchmark.bench_answers --llm qwen2.5:3b --prompt v1 --trace   # ~10 min
-python -m src.benchmark.bench_generation --llm qwen2.5:3b --prompt v1        # ~1 h 30
+python -m src.evaluation.register_prompts               # Prompt Registry
+python -m src.evaluation.benchmark_generation --llm qwen2.5:3b --prompt v1 --trace   # ~10 min
+python -m src.evaluation.ragas_evaluation --llm qwen2.5:3b --prompt v1        # ~1 h 30
 # ... les autres configurations de config/rag_generation.yaml, puis :
-python -m src.benchmark.bench_generation --select --register
+python -m src.evaluation.ragas_evaluation --select --register
 # corpus des 380 classes (D126) : mêmes commandes avec --corpus v2
-python -m src.benchmark.bench_answers --llm qwen2.5:3b --prompt v1 --corpus v2 --trace
-python -m src.benchmark.bench_generation --llm qwen2.5:3b --prompt v1 --corpus v2
+python -m src.evaluation.benchmark_generation --llm qwen2.5:3b --prompt v1 --corpus v2 --trace
+python -m src.evaluation.ragas_evaluation --llm qwen2.5:3b --prompt v1 --corpus v2
 ```
 
 Les réponses (avec le texte des sources) restent dans `data/processed/rag/bench/generation/`
 (non versionné, comme avant) ; les notes RAGAS y sont mises en cache par entrée : une évaluation
 interrompue reprend où elle s'était arrêtée. Les agrégats et les notes par question (sans texte
-des sources) sont versionnés dans [src/benchmark/generation/](../../src/benchmark/generation/).
+des sources) sont versionnés dans [src/evaluation/results/generation/](../../src/evaluation/results/generation/).

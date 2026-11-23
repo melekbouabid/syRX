@@ -51,8 +51,8 @@ jobs:
             file: frontend/Dockerfile
           # Spark for the Big Data jobs (compose profile `spark`, src/data/spark).
           - image: spark
-            context: infra/docker/spark
-            file: infra/docker/spark/Dockerfile
+            context: infra/spark
+            file: infra/spark/Dockerfile
     steps:
       - uses: actions/checkout@v4
 

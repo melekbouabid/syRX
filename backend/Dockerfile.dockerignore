@@ -6,7 +6,6 @@
 !src/__init__.py
 !src/rag/
 !src/agent/
-!src/mcp_server/
 !src/models/__init__.py
 !src/models/toxicity/__init__.py
 !src/models/toxicity/model.py

@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     # The default is a SQLite file under data/ so nothing else is needed for development.
     pharma_database_url: str = f"sqlite:///{(PROJECT_DIR / 'data' / 'tujya.db').as_posix()}"
     # ONNX models for /api/scan: detector.onnx, classifier.onnx and models.json, written by
-    # `python -m src.models.publish` (TUJYA_MODELS_DIR). Loaded on the first scan.
+    # `python -m src.models.registry publish` (TUJYA_MODELS_DIR). Loaded on the first scan.
     models_dir: Path = PROJECT_DIR / "models"
     # "cpu" always works; "auto" uses CUDA first when the installed onnxruntime has it.
     onnx_providers: str = "cpu"
@@ -106,7 +106,7 @@ class Settings(BaseSettings):
     )
 
     # Module 2: RAG and agent (docs/module2/rag.md, agent.md). The chunk index
-    # lives in Qdrant (D113); `python -m src.rag.index` fills it from these chunks: the corpus
+    # lives in Qdrant (D113); `python -m src.rag.init_qdrant` fills it from these chunks: the corpus
     # of the 380 served classes (Spark job `rag`, collection tujya_chunks_v2, D126). The
     # corpus of the 150 first classes (corpus/chunks.parquet, collection tujya_chunks) stays
     # in Qdrant: TUJYA_QDRANT_COLLECTION=tujya_chunks serves it again. "sql" keeps the index
@@ -145,8 +145,8 @@ class Settings(BaseSettings):
     # the LLM. fastembed models are downloaded once (Hugging Face, no account) into the cache.
     rag_sparse_model: str = "Qdrant/bm25"
     # Step 3.3 (docs/module2/benchmark_retrieval.md, D123, D126): the registered champion of
-    # `tujya-rag-retrieval` (src/benchmark/grid/champion.json, checked by the tests) is hybrid
-    # search of the rewritten query on the corpus v2, without reranker: every cross-encoder
+    # `tujya-rag-retrieval` (src/evaluation/results/grid/champion.json, checked by the tests) is
+    # hybrid search of the rewritten query on the corpus v2, without reranker: every cross-encoder
     # costs 3 to 11 s per question on this laptop's CPU. When turned on, the reranker is the
     # fastest one measured (ms-marco-MiniLM-L-6-v2 on 10 candidates: MRR 0.896 in hybrid
     # mode, about 3.5 s).

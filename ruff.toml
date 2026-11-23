@@ -5,7 +5,7 @@
 line-length = 100
 target-version = "py311"
 # Import roots: the repository root (package `src`, the root test suite `tests`) and
-# backend/ (package `app`, the shared test fixtures `tujya_testing`).
+# backend/ (package `app`).
 src = [".", "backend"]
 
 [lint]
@@ -19,11 +19,9 @@ ignore = [
 [lint.per-file-ignores]
 "**/tests/**" = ["S105", "S106", "S108"]
 # The data pipeline tests read small files synchronously inside async tests.
-"tests/data/pipeline/**" = ["S105", "S106", "S108", "ASYNC240"]
-# Test fixtures shared by the test suites (fake accounts and passwords).
-"backend/tujya_testing/**" = ["S105", "S106"]
+"tests/data/sources/**" = ["S105", "S106", "S108", "ASYNC240"]
 # One-off generator of the benchmark spec: its long lines are question and reference texts.
-"src/benchmark/make_spec.py" = ["E501"]
+"src/evaluation/generate_questions.py" = ["E501"]
 # Kaggle notebooks (step 2.2) run fixed commands: git clone of the project, pip install of
-# its pinned packages (notebooks/kaggle/requirements.txt).
-"notebooks/kaggle/*.ipynb" = ["S603", "S607"]
+# its pinned packages (notebooks/module1/kaggle/requirements.txt).
+"notebooks/module1/kaggle/*.ipynb" = ["S603", "S607"]

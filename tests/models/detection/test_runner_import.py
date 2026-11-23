@@ -21,6 +21,7 @@ pytest.importorskip("onnx")
 
 from mlflow import MlflowClient  # noqa: E402
 
+from src.models import registry as reg  # noqa: E402
 from src.models.detection import import_kaggle, runner  # noqa: E402
 from src.utils import mlflow_utils as mu  # noqa: E402
 from tests.models.detection.helpers import make_dataset, tiny_detector  # noqa: E402
@@ -200,7 +201,7 @@ def test_import_creates_parent_and_trial_runs_and_promotes(
     assert {"export", "onnx", "weights", "reproducibility"} <= artifacts
     # No champion yet: the first version becomes champion.
     assert result["version"] == 1
-    assert result["alias"] == mu.CHAMPION
+    assert result["alias"] == reg.CHAMPION
     # Same model again: equal score, not promoted (strictly better is required).
     again = import_kaggle.import_export(
         folder,
@@ -210,7 +211,7 @@ def test_import_creates_parent_and_trial_runs_and_promotes(
         summary_dir=None,
     )
     assert again["promoted"] is False
-    assert again["alias"] == mu.CHALLENGER
+    assert again["alias"] == reg.CHALLENGER
 
 
 def test_import_refuses_a_champion_not_scored_on_the_same_split(
@@ -220,7 +221,7 @@ def test_import_refuses_a_champion_not_scored_on_the_same_split(
     with mlflow.start_run():
         mlflow.log_metric("test_mAP50_95", 0.86)  # the v1 split only
         info = mu.log_model(tiny_detector(), name="detector")
-    mu.register(info.model_uri, tracking.model, alias=mu.CHAMPION)
+    reg.register(info.model_uri, tracking.model, alias=reg.CHAMPION)
     with pytest.raises(import_kaggle.ImportErrorKaggle, match="evaluate_champion"):
         import_kaggle.import_export(
             exported.base / "full",
@@ -238,7 +239,7 @@ def test_import_promotes_over_a_weaker_reevaluated_champion(
     with mlflow.start_run():
         mlflow.log_metrics({"test_mAP50_95": 0.86, "test_v2_mAP50_95": 0.0})
         info = mu.log_model(tiny_detector(), name="detector")
-    mu.register(info.model_uri, tracking.model, alias=mu.CHAMPION)
+    reg.register(info.model_uri, tracking.model, alias=reg.CHAMPION)
     result = import_kaggle.import_export(
         exported.base / "full",
         experiment=tracking.experiment,

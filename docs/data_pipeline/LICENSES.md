@@ -16,7 +16,7 @@ check the row of every source that contributed to it, and cite each one.
 
 ## Image datasets (module 1, not collected by the pipeline)
 
-Downloaded by `python -m src.data.data_cli` (C3PI) or by hand (ePillID), tracked with DVC in
+Downloaded by `python -m src.data.download` (C3PI) or by hand (ePillID), tracked with DVC in
 `data/raw/`, never committed. Data card: [docs/module1/big_data.md](../module1/big_data.md).
 
 | Source | Licence | Terms | Collected | Redistribution |

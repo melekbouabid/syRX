@@ -7,7 +7,7 @@ Same two stages and the same pre- and post-processing as the training code in `.
 `src.data.autolabel.square_crop` for the classifier), re-implemented with numpy and
 OpenCV so the API needs neither PyTorch nor Ultralytics.
 
-The model directory (`Settings.models_dir`) holds what `python -m src.models.publish`
+The model directory (`Settings.models_dir`) holds what `python -m src.models.registry publish`
 writes:
 
     detector.onnx     YOLO11 detection, one class "pill", input 1x3xSxS
@@ -197,7 +197,7 @@ class PillScanner:
         if missing:
             raise ModelsMissing(
                 f"Model files missing in {directory}: {', '.join(missing)}. "
-                "Export them with `python -m src.models.publish` "
+                "Export them with `python -m src.models.registry publish` "
                 "(see docs/module1/vision.md)."
             )
         manifest_path = directory / MANIFEST_FILE

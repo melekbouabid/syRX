@@ -21,12 +21,13 @@ onnx = pytest.importorskip("onnx")
 from mlflow import MlflowClient  # noqa: E402
 from onnx import TensorProto, helper  # noqa: E402
 
+from src.models import registry as reg  # noqa: E402
 from src.utils import mlflow_utils as mu  # noqa: E402
 
 LOCK = """schema: '2.0'
 stages:
   prepare:
-    cmd: python -m src.data.prepare
+    cmd: python -m src.data.prepare v1
     outs:
     - path: data/processed/c3pi/datasets
       hash: md5
@@ -98,7 +99,7 @@ def new_version(tracking: SimpleNamespace, metrics: dict[str, float]) -> str:
     with mlflow.start_run():
         mlflow.log_metrics(metrics)
         info = mu.log_model(tiny_onnx(), name="model")
-    return str(mu.register(info.model_uri, tracking.model).version)
+    return str(reg.register(info.model_uri, tracking.model).version)
 
 
 # --- provenance ---------------------------------------------------------------------------
@@ -188,10 +189,10 @@ def test_log_model_and_register_with_alias(tracking: SimpleNamespace) -> None:
     assert {m.key: m.value for m in logged.metrics} == {"test_mAP50_95": 0.86}
     assert tracking.client.get_run(run.info.run_id).data.metrics["test_mAP50_95"] == 0.86
 
-    version = mu.register(
+    version = reg.register(
         info.model_uri,
         tracking.model,
-        alias=mu.CHAMPION,
+        alias=reg.CHAMPION,
         tags={"task": "detect"},
         description="baseline",
     )
@@ -199,26 +200,26 @@ def test_log_model_and_register_with_alias(tracking: SimpleNamespace) -> None:
     assert version.run_id == run.info.run_id
     assert version.tags["task"] == "detect"
     assert version.description == "baseline"
-    assert mu.alias_version(tracking.model, mu.CHAMPION) == "1"
-    assert mu.alias_version(tracking.model, mu.CHALLENGER) is None
-    assert mu.version_metric(tracking.model, 1, "test_mAP50_95") == 0.86
+    assert reg.alias_version(tracking.model, reg.CHAMPION) == "1"
+    assert reg.alias_version(tracking.model, reg.CHALLENGER) is None
+    assert reg.version_metric(tracking.model, 1, "test_mAP50_95") == 0.86
 
 
 # --- promote_if_better --------------------------------------------------------------------
 
 
 def _status(tracking: SimpleNamespace, version: str) -> str | None:
-    return tracking.client.get_model_version(tracking.model, version).tags.get(mu.STATUS_TAG)
+    return tracking.client.get_model_version(tracking.model, version).tags.get(reg.STATUS_TAG)
 
 
 def test_first_version_becomes_champion(tracking: SimpleNamespace) -> None:
     v1 = new_version(tracking, {"top1": 0.90})
-    result = mu.promote_if_better(tracking.model, v1, "top1", min_gain=0.01)
+    result = reg.promote_if_better(tracking.model, v1, "top1", min_gain=0.01)
     assert result.promoted
-    assert result.status == mu.CHAMPION
+    assert result.status == reg.CHAMPION
     assert result.champion_before is None
-    assert mu.alias_version(tracking.model, mu.CHAMPION) == v1
-    assert _status(tracking, v1) == mu.CHAMPION
+    assert reg.alias_version(tracking.model, reg.CHAMPION) == v1
+    assert _status(tracking, v1) == reg.CHAMPION
     assert (
         "first champion" in tracking.client.get_model_version(tracking.model, v1).tags["promotion"]
     )
@@ -228,51 +229,51 @@ def test_better_version_is_promoted_and_old_champion_becomes_challenger(
     tracking: SimpleNamespace,
 ) -> None:
     v1 = new_version(tracking, {"top1": 0.90})
-    mu.promote_if_better(tracking.model, v1, "top1")
+    reg.promote_if_better(tracking.model, v1, "top1")
     v2 = new_version(tracking, {"top1": 0.95})
-    result = mu.promote_if_better(tracking.model, v2, "top1", min_gain=0.01)
+    result = reg.promote_if_better(tracking.model, v2, "top1", min_gain=0.01)
     assert result.promoted
     assert (result.champion_before, result.champion_value) == (v1, 0.90)
     assert result.value == 0.95
-    assert mu.alias_version(tracking.model, mu.CHAMPION) == v2
-    assert mu.alias_version(tracking.model, mu.CHALLENGER) == v1
-    assert _status(tracking, v2) == mu.CHAMPION
-    assert _status(tracking, v1) == mu.CHALLENGER
+    assert reg.alias_version(tracking.model, reg.CHAMPION) == v2
+    assert reg.alias_version(tracking.model, reg.CHALLENGER) == v1
+    assert _status(tracking, v2) == reg.CHAMPION
+    assert _status(tracking, v1) == reg.CHALLENGER
     tags = tracking.client.get_model_version(tracking.model, v2).tags
     assert tags["promoted_from"] == v1
     assert tags["promotion"].startswith("promoted")
 
     # A third, even better version: v2 becomes challenger, v1 loses every alias.
     v3 = new_version(tracking, {"top1": 0.97})
-    assert mu.promote_if_better(tracking.model, v3, "top1", min_gain=0.01).promoted
-    assert mu.alias_version(tracking.model, mu.CHAMPION) == v3
-    assert mu.alias_version(tracking.model, mu.CHALLENGER) == v2
-    assert _status(tracking, v1) == mu.ARCHIVED
+    assert reg.promote_if_better(tracking.model, v3, "top1", min_gain=0.01).promoted
+    assert reg.alias_version(tracking.model, reg.CHAMPION) == v3
+    assert reg.alias_version(tracking.model, reg.CHALLENGER) == v2
+    assert _status(tracking, v1) == reg.ARCHIVED
 
 
 def test_served_alias_does_not_keep_a_lost_status(tracking: SimpleNamespace) -> None:
     # Step 2.3: the v1 classifier still held `served` (step 2.4) when it lost `challenger`.
     v1 = new_version(tracking, {"top1": 0.90})
-    mu.promote_if_better(tracking.model, v1, "top1")
+    reg.promote_if_better(tracking.model, v1, "top1")
     tracking.client.set_registered_model_alias(tracking.model, "served", v1)
     v2 = new_version(tracking, {"top1": 0.95})
-    assert mu.promote_if_better(tracking.model, v2, "top1", min_gain=0.01).promoted
-    assert _status(tracking, v1) == mu.CHALLENGER
+    assert reg.promote_if_better(tracking.model, v2, "top1", min_gain=0.01).promoted
+    assert _status(tracking, v1) == reg.CHALLENGER
     v3 = new_version(tracking, {"top1": 0.93})
-    assert mu.promote_if_better(tracking.model, v3, "top1", min_gain=0.01).status == mu.CHALLENGER
-    assert mu.alias_version(tracking.model, "served") == v1
-    assert _status(tracking, v1) == mu.ARCHIVED
+    assert reg.promote_if_better(tracking.model, v3, "top1", min_gain=0.01).status == reg.CHALLENGER
+    assert reg.alias_version(tracking.model, "served") == v1
+    assert _status(tracking, v1) == reg.ARCHIVED
 
 
 def test_worse_version_is_not_promoted(tracking: SimpleNamespace) -> None:
     v1 = new_version(tracking, {"top1": 0.90})
-    mu.promote_if_better(tracking.model, v1, "top1")
+    reg.promote_if_better(tracking.model, v1, "top1")
     v2 = new_version(tracking, {"top1": 0.80})
-    result = mu.promote_if_better(tracking.model, v2, "top1", min_gain=0.0)
+    result = reg.promote_if_better(tracking.model, v2, "top1", min_gain=0.0)
     assert not result.promoted
-    assert result.status == mu.CHALLENGER  # no challenger yet: the runner-up
-    assert mu.alias_version(tracking.model, mu.CHAMPION) == v1
-    assert mu.alias_version(tracking.model, mu.CHALLENGER) == v2
+    assert result.status == reg.CHALLENGER  # no challenger yet: the runner-up
+    assert reg.alias_version(tracking.model, reg.CHAMPION) == v1
+    assert reg.alias_version(tracking.model, reg.CHALLENGER) == v2
     assert (
         tracking.client.get_model_version(tracking.model, v2)
         .tags["promotion"]
@@ -281,52 +282,52 @@ def test_worse_version_is_not_promoted(tracking: SimpleNamespace) -> None:
 
     # Worse than both the champion and the challenger: archived, aliases unchanged.
     v3 = new_version(tracking, {"top1": 0.70})
-    result = mu.promote_if_better(tracking.model, v3, "top1")
+    result = reg.promote_if_better(tracking.model, v3, "top1")
     assert not result.promoted
-    assert result.status == mu.ARCHIVED
-    assert mu.alias_version(tracking.model, mu.CHAMPION) == v1
-    assert mu.alias_version(tracking.model, mu.CHALLENGER) == v2
-    assert _status(tracking, v3) == mu.ARCHIVED
+    assert result.status == reg.ARCHIVED
+    assert reg.alias_version(tracking.model, reg.CHAMPION) == v1
+    assert reg.alias_version(tracking.model, reg.CHALLENGER) == v2
+    assert _status(tracking, v3) == reg.ARCHIVED
 
 
 def test_gain_below_min_gain_is_not_promoted(tracking: SimpleNamespace) -> None:
     v1 = new_version(tracking, {"top1": 0.900})
-    mu.promote_if_better(tracking.model, v1, "top1")
+    reg.promote_if_better(tracking.model, v1, "top1")
     v2 = new_version(tracking, {"top1": 0.903})  # better, but by less than min_gain
-    result = mu.promote_if_better(tracking.model, v2, "top1", min_gain=0.005)
+    result = reg.promote_if_better(tracking.model, v2, "top1", min_gain=0.005)
     assert not result.promoted
-    assert mu.alias_version(tracking.model, mu.CHAMPION) == v1
+    assert reg.alias_version(tracking.model, reg.CHAMPION) == v1
     # Equal score: not strictly better, never promoted even with min_gain = 0.
     v3 = new_version(tracking, {"top1": 0.900})
-    assert not mu.promote_if_better(tracking.model, v3, "top1", min_gain=0.0).promoted
-    assert mu.alias_version(tracking.model, mu.CHAMPION) == v1
+    assert not reg.promote_if_better(tracking.model, v3, "top1", min_gain=0.0).promoted
+    assert reg.alias_version(tracking.model, reg.CHAMPION) == v1
 
 
 def test_lower_is_better_metric(tracking: SimpleNamespace) -> None:
     v1 = new_version(tracking, {"latency_ms": 30.0})
-    mu.promote_if_better(tracking.model, v1, "latency_ms", greater_is_better=False)
+    reg.promote_if_better(tracking.model, v1, "latency_ms", greater_is_better=False)
     v2 = new_version(tracking, {"latency_ms": 20.0})
-    result = mu.promote_if_better(
+    result = reg.promote_if_better(
         tracking.model, v2, "latency_ms", min_gain=5.0, greater_is_better=False
     )
     assert result.promoted
-    assert mu.alias_version(tracking.model, mu.CHAMPION) == v2
+    assert reg.alias_version(tracking.model, reg.CHAMPION) == v2
 
 
 def test_champion_promoted_again_is_a_no_op(tracking: SimpleNamespace) -> None:
     v1 = new_version(tracking, {"top1": 0.9})
-    mu.promote_if_better(tracking.model, v1, "top1")
-    result = mu.promote_if_better(tracking.model, v1, "top1", min_gain=0.5)
+    reg.promote_if_better(tracking.model, v1, "top1")
+    result = reg.promote_if_better(tracking.model, v1, "top1", min_gain=0.5)
     assert result.promoted
     assert result.reason == "already champion"
-    assert mu.alias_version(tracking.model, mu.CHAMPION) == v1
+    assert reg.alias_version(tracking.model, reg.CHAMPION) == v1
 
 
 def test_missing_metric_raises(tracking: SimpleNamespace) -> None:
     v1 = new_version(tracking, {"top1": 0.9})
     with pytest.raises(ValueError, match="no metric 'top5'"):
-        mu.promote_if_better(tracking.model, v1, "top5")
-    assert mu.alias_version(tracking.model, mu.CHAMPION) is None
+        reg.promote_if_better(tracking.model, v1, "top5")
+    assert reg.alias_version(tracking.model, reg.CHAMPION) is None
 
 
 # Scores of step 2.2 on the comparison split (test_v2_mAP50_95, docs/decisions.md D98).
@@ -336,9 +337,9 @@ STEP_2_2 = {"yolov8s": 0.8830, "yolov10n": 0.8860, "yolo11s": 0.8885, "fasterrcn
 def _step_2_2_registry(tracking: SimpleNamespace) -> dict[str, str]:
     """Baseline (challenger) and YOLOv8n (champion in place) as before the four imports."""
     baseline = new_version(tracking, {"map": 0.7888})
-    mu.promote_if_better(tracking.model, baseline, "map")
+    reg.promote_if_better(tracking.model, baseline, "map")
     incumbent = new_version(tracking, {"map": 0.8774})
-    mu.promote_if_better(tracking.model, incumbent, "map", min_gain=0.005)
+    reg.promote_if_better(tracking.model, incumbent, "map", min_gain=0.005)
     return {"yolo11n": baseline, "yolov8n": incumbent}
 
 
@@ -346,11 +347,11 @@ def _import(tracking: SimpleNamespace, order: list[str]) -> tuple[str, str]:
     versions = _step_2_2_registry(tracking)
     for arch in order:
         versions[arch] = new_version(tracking, {"map": STEP_2_2[arch]})
-        mu.promote_if_better(tracking.model, versions[arch], "map", min_gain=0.005)
+        reg.promote_if_better(tracking.model, versions[arch], "map", min_gain=0.005)
     by_version = {v: arch for arch, v in versions.items()}
     return (
-        by_version[mu.alias_version(tracking.model, mu.CHAMPION) or ""],
-        by_version[mu.alias_version(tracking.model, mu.CHALLENGER) or ""],
+        by_version[reg.alias_version(tracking.model, reg.CHAMPION) or ""],
+        by_version[reg.alias_version(tracking.model, reg.CHALLENGER) or ""],
     )
 
 
@@ -373,18 +374,18 @@ def test_sequential_promotion_depends_on_the_import_order(tracking: SimpleNamesp
 def test_ineligible_version_is_archived_whatever_its_score(tracking: SimpleNamespace) -> None:
     # A guard checked by the caller failed (D100): never champion nor challenger.
     v1 = new_version(tracking, {"top1": 0.40})
-    mu.promote_if_better(tracking.model, v1, "top1")
+    reg.promote_if_better(tracking.model, v1, "top1")
     v2 = new_version(tracking, {"top1": 0.95})
-    result = mu.promote_if_better(
+    result = reg.promote_if_better(
         tracking.model, v2, "top1", min_gain=0.005, eligible=False, ineligible_reason="guard"
     )
     assert not result.promoted
-    assert result.status == mu.ARCHIVED
-    assert mu.alias_version(tracking.model, mu.CHAMPION) == v1
-    assert mu.alias_version(tracking.model, mu.CHALLENGER) is None
-    assert _status(tracking, v2) == mu.ARCHIVED
+    assert result.status == reg.ARCHIVED
+    assert reg.alias_version(tracking.model, reg.CHAMPION) == v1
+    assert reg.alias_version(tracking.model, reg.CHALLENGER) is None
+    assert _status(tracking, v2) == reg.ARCHIVED
     promotion = tracking.client.get_model_version(tracking.model, v2).tags["promotion"]
     assert promotion.startswith("not eligible: guard")
     # An eligible candidate is still compared as before.
     v3 = new_version(tracking, {"top1": 0.90})
-    assert mu.promote_if_better(tracking.model, v3, "top1", min_gain=0.005).promoted
+    assert reg.promote_if_better(tracking.model, v3, "top1", min_gain=0.005).promoted

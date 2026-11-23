@@ -10,7 +10,7 @@ configuration servable devient la version `champion` du modèle enregistré
 
 ## Protocole
 
-- **Questions** : les 85 questions du jeu ([rag_questions.jsonl](../../src/benchmark/rag_questions.jsonl))
+- **Questions** : les 85 questions du jeu ([questions.jsonl](../../src/evaluation/questions.jsonl))
   qui ont des chunks attendus (42 en français, 43 en anglais).
 - **Recherche comme l'agent** : les principes actifs trouvés dans la question servent de filtre
   de métadonnées (`names`, comme `search_documents` dans [tools.py](../../src/agent/tools.py)) ;
@@ -22,14 +22,14 @@ configuration servable devient la version `champion` du modèle enregistré
 - **Temps par question** : recherche (encodage de la requête, Qdrant, reranker) mesurée pendant
   le run, plus la médiane du temps de réécriture par qwen2.5:3b (326 ms) quand la configuration
   réécrit. Les configurations retenues pour le choix sont **remesurées avec le protocole D96**
-  (`bench_grid latency` : 12 questions, 3 tours dans un ordre décalé, pause de 10 s avant chaque
+  (`retrieval_grid latency` : 12 questions, 3 tours dans un ordre décalé, pause de 10 s avant chaque
   configuration, médiane des médianes), car ce portable ralentit sous charge continue.
 - **Découpage** : une variante (`chunk` autre que 1 500 caractères / 1 phrase de recouvrement) a
   d'autres identifiants de chunks ; ses chunks pertinents sont ceux qui viennent du même document
   et de la même section qu'un chunk attendu et partagent au moins la moitié de leur texte
-  ([rechunk.py](../../src/benchmark/rechunk.py), testé).
+  ([chunking_variants.py](../../src/evaluation/chunking_variants.py), testé).
 - **Embeddings sans version Ollama** (multilingual-e5-base, all-MiniLM-L6-v2, bge-m3 fine-tuné) :
-  chunks et requêtes encodés une fois sur le GPU par [encode_st.py](../../src/benchmark/encode_st.py)
+  chunks et requêtes encodés une fois sur le GPU par [encode_sentence_transformers.py](../../src/evaluation/encode_sentence_transformers.py)
   (vecteurs versionnés par DVC : `data/processed/rag/bench/vectors.dvc`), chargés dans une
   collection Qdrant à part et cherchés exactement comme l'index servi ; le temps d'encodage d'une
   requête sur le CPU (l'API n'a pas de GPU) est ajouté. `bge-m3-st` est le bge-m3 d'origine par ce
@@ -45,7 +45,7 @@ configuration servable devient la version `champion` du modèle enregistré
 ## Résultats
 
 Une branche `experiment/rag-<groupe>` par groupe, fusionnées dans `experiment/rag-retrieval`.
-Tableau produit par `python -m src.benchmark.bench_grid table` ; « (D96) » = temps remesuré avec
+Tableau produit par `python -m src.evaluation.retrieval_grid table` ; « (D96) » = temps remesuré avec
 le protocole D96, sinon temps du run. Run = identifiant MLflow.
 
 | Groupe | Configuration | R@1 | R@5 | R@10 | MRR | nDCG@10 | MRR fr | MRR en | ms / question | Run |
@@ -128,7 +128,7 @@ Le choix ci-dessous a été fait sur le corpus des 150 premières classes ; depu
 
 Chaque version enregistrée est un modèle pyfunc dont l'artefact est la configuration (sa
 prédiction renvoie les réglages de recherche) ; la description donne le MRR, le temps et le budget.
-[`src/benchmark/grid/champion.json`](../../src/benchmark/grid/champion.json) garde le champion, le
+[`src/evaluation/results/grid/champion.json`](../../src/evaluation/results/grid/champion.json) garde le champion, le
 challenger et les réglages de l'agent qu'il implique ; un test vérifie que les valeurs par défaut
 de [backend/app/config.py](../../backend/app/config.py) les suivent. **Réglage servi** : recherche
 dense bge-m3, filtre par principe actif, **réécriture de la requête activée**
@@ -225,16 +225,16 @@ l'écart des documents entiers et garder plusieurs positifs par question.
 export TUJYA_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
 export PYTHONIOENCODING=utf-8                       # console Windows (emoji de MLflow)
 dvc pull data/processed/rag/bench/queries.json.dvc data/processed/rag/bench/vectors.dvc
-python -m src.benchmark.bench_grid list             # les configurations de config/rag_grid.yaml
-python -m src.benchmark.bench_grid run --group bge-m3          # un run MLflow par configuration
-python -m src.benchmark.bench_grid latency --configs bge-m3-dense,bge-m3-dense-rewrite
-python -m src.benchmark.bench_grid select           # champion / challenger (sans enregistrer)
-python -m src.benchmark.bench_grid select --register # versions + alias dans le Registry
-python -m src.benchmark.bench_grid table            # tableau ci-dessus
+python -m src.evaluation.retrieval_grid list             # les configurations de config/rag_grid.yaml
+python -m src.evaluation.retrieval_grid run --group bge-m3          # un run MLflow par configuration
+python -m src.evaluation.retrieval_grid latency --configs bge-m3-dense,bge-m3-dense-rewrite
+python -m src.evaluation.retrieval_grid select           # champion / challenger (sans enregistrer)
+python -m src.evaluation.retrieval_grid select --register # versions + alias dans le Registry
+python -m src.evaluation.retrieval_grid table            # tableau ci-dessus
 # corpus v2 (D126) : index tujya_chunks_v2 (dvc pull data/processed/rag/corpus_v2), puis
-python -m src.benchmark.bench_grid run --group corpus-v2
-python -m src.benchmark.bench_grid latency --configs bge-m3-hybrid-rewrite-corpus-v2,bge-m3-dense-corpus-v2,bge-m3-dense-rewrite-corpus-v2
-python -m src.benchmark.bench_grid select --corpus v2 [--register]
+python -m src.evaluation.retrieval_grid run --group corpus-v2
+python -m src.evaluation.retrieval_grid latency --configs bge-m3-hybrid-rewrite-corpus-v2,bge-m3-dense-corpus-v2,bge-m3-dense-rewrite-corpus-v2
+python -m src.evaluation.retrieval_grid select --corpus v2 [--register]
 ```
 
 ### Ajouter un embedding (exemple : bge-m3 fine-tuné)
@@ -243,10 +243,10 @@ python -m src.benchmark.bench_grid select --corpus v2 [--register]
 # 1. importer l'export Kaggle (venv d'entraînement, branche experiment/fine-tuning-embedding)
 .venv-train/Scripts/python -m src.models.embedding.import_kaggle runs/kaggle/finetune_bge-m3_export.zip
 # 2. encoder chunks et requêtes sur le GPU (arrêter d'abord les modèles Ollama : 4 Go)
-.venv-train/Scripts/python -m src.benchmark.encode_st --model BAAI/bge-m3 --slug bge-m3-st
-.venv-train/Scripts/python -m src.benchmark.encode_st --model data/models/embeddings/finetune-bge-m3/model --slug bge-m3-finetuned
+.venv-train/Scripts/python -m src.evaluation.encode_sentence_transformers --model BAAI/bge-m3 --slug bge-m3-st
+.venv-train/Scripts/python -m src.evaluation.encode_sentence_transformers --model data/processed/models/embeddings/finetune-bge-m3/model --slug bge-m3-finetuned
 # 3. le groupe de la grille (déjà dans config/rag_grid.yaml)
-python -m src.benchmark.bench_grid run --group bge-m3-finetuned
+python -m src.evaluation.retrieval_grid run --group bge-m3-finetuned
 ```
 
 `rewrites` régénère `queries.json` avec le LLM servi (d'autres réécritures donnent d'autres

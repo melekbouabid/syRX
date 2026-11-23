@@ -162,7 +162,7 @@ classifieur « pas un comprimé » entraîné sur des négatifs annotés.
 ## 6. Qualité des réponses du chat
 
 Huit questions de type `brand` ajoutées au benchmark du module 2
-([src/benchmark/spec.json](../../src/benchmark/spec.json), 96 questions en tout, les 88 autres
+([src/evaluation/question_spec.json](../../src/evaluation/question_spec.json), 96 questions en tout, les 88 autres
 inchangées) : Panadol, Doliprane, Efferalgan (paracétamol), Nurofen, Advil (ibuprofène),
 Voltarène (diclofénac), Augmentin (amoxicilline + acide clavulanique) et Ixprim (tramadol +
 paracétamol), avec la warfarine, le lisinopril ou la sertraline. Six n'ont pas de chunk attendu
@@ -170,10 +170,10 @@ dans le corpus RAG (le paracétamol et l'ibuprofène ne sont pas des principes a
 indexées) : l'interaction vient de DDInter par `check_interaction`. Elles comptent donc dans le
 benchmark de génération, pas dans celui de la récupération.
 
-[src/benchmark/bench_brands.py](../../src/benchmark/bench_brands.py) passe ces questions dans
+[src/evaluation/benchmark_brands.py](../../src/evaluation/benchmark_brands.py) passe ces questions dans
 l'agent réel (qwen2.5:3b, index pgvector, tables DDInter), sans puis avec la table des marques
 (run MLflow `bench-brands`, expérience `tujya-rag`, `8051e66d956944c398f6eb99ba61209a` ;
-[results_brands.json](../../src/benchmark/results_brands.json)) :
+[results/brands.json](../../src/evaluation/results/brands.json)) :
 
 | Part des 8 questions | Sans la table (avant 2.7) | Avec la table |
 |---|---:|---:|

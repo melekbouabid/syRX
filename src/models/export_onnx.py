@@ -4,18 +4,18 @@
     python -m src.models.export_onnx --task detect    # one of them
 
 For each model described by models/train/<model>.json (written by src/models/train.py, or by
-src/models/register_baseline.py for the baseline):
+src/models/train.py for the baseline):
 1. exports weights/best.pt to ONNX (static input, simplified) as models/onnx/<model>.onnx;
 2. checks ONNX Runtime against PyTorch on test images (same top-1, same boxes);
 3. logs the ONNX file in the training run as an MLflow 3 LoggedModel (`name=<model>`) with the
    test and parity metrics, and registers it in the Model Registry
    (params.yaml registry.<model>.name: tujya-pill-detector / tujya-pill-classifier);
-4. calls promote_if_better (src/utils/mlflow_utils.py): the new version gets the alias
+4. calls promote_if_better (src/models/registry.py): the new version gets the alias
    `champion` only if it beats the current champion by params.yaml registry.<model>.min_gain
    on registry.<model>.metric; otherwise `challenger` or archived.
 
 Writes models/export.json (`dvc metrics show`): parity metrics, registered version, alias.
-The API serves the champions: `python -m src.models.publish` copies them into models/.
+The API serves the champions: `python -m src.models.registry publish` copies them into models/.
 """
 
 from __future__ import annotations
@@ -35,7 +35,8 @@ import onnxruntime as ort
 from ultralytics import YOLO
 
 from src.data.autolabel import read_image
-from src.data.prepare import CLASSIFY, DETECT
+from src.data.prepare.v1 import CLASSIFY, DETECT
+from src.models import registry as reg
 from src.models.train import MODELS, OUT, ROOT, load_params
 from src.utils import mlflow_utils as mu
 
@@ -152,7 +153,7 @@ def export_and_register(task: str, params: dict[str, Any]) -> dict[str, Any]:
             params={"arch": arch, "imgsz": imgsz, "task": task},
         )
         tags = run.data.tags
-    version = mu.register(
+    version = reg.register(
         info.model_uri,
         rules["name"],
         tags={
@@ -167,7 +168,7 @@ def export_and_register(task: str, params: dict[str, Any]) -> dict[str, Any]:
             f"{rules['metric']}={test[rules['metric']]:.4f}, run {summary['run_id']}"
         ),
     )
-    promotion = mu.promote_if_better(
+    promotion = reg.promote_if_better(
         rules["name"], version.version, rules["metric"], rules["min_gain"]
     )
     print(promotion.reason)

@@ -499,7 +499,7 @@ Task = Literal["detect", "classify"]
 
 
 class LoadedModel(Strict):
-    """One ONNX model as published in models.json (src/models/publish.py)."""
+    """One ONNX model as published in models.json (src/models/registry.py)."""
 
     task: Task
     file: str

@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app.models import AuthSession, User
-from tujya_testing.fixtures import ADMIN, USER, sign_in
+from tests.support.fixtures import ADMIN, USER, sign_in
 
 NEW_ACCOUNT = {"email": "Alice@Mail.com", "full_name": "  Alice Martin ", "password": "s3cret-pass"}
 

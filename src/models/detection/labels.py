@@ -1,6 +1,6 @@
 """YOLO detection datasets: label files, pixel boxes, splits and small subsets.
 
-Layout (src/data/prepare_detect_v2.py, also the Kaggle dataset of package_kaggle):
+Layout (src/data/prepare/detect_v2.py, also the Kaggle dataset of package_kaggle):
 
     <root>/images/<split>/<stem>.jpg   <root>/labels/<split>/<stem>.txt   <root>/data.yaml
     <root>/test_holdout.txt            (comparison split: file names of test images)

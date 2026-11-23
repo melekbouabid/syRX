@@ -1,10 +1,10 @@
 # The project's Python environment (one venv, `.venv` at the repository root, for the API, the
 # code under src/ and every test suite): `uv pip install -p .venv -r requirements-dev.txt`,
 # which includes `-e .`. The editable install adds two folders to sys.path: the repository
-# root (package `src`) and backend/ (package `app`, the FastAPI core, and the shared test
-# fixtures `tujya_testing`). The API dependencies stay in backend/requirements.txt, also used
-# by the Docker image, which sets PYTHONPATH instead of installing this file; the
-# dependencies below are those of the data collection pipeline (src/data/tujya_data).
+# root (package `src`) and backend/ (package `app`, the FastAPI core). The API dependencies stay
+# in backend/requirements.txt, also used by the Docker image, which sets PYTHONPATH instead of
+# installing this file; the dependencies below are those of the data collection pipeline
+# (src/data/sources).
 # Training (PyTorch, Ultralytics) has its own venv: src/models/requirements-train.txt.
 [build-system]
 requires = ["hatchling>=1.27"]
@@ -31,7 +31,7 @@ dependencies = [
 
 [project.scripts]
 # Polite data collection (DDInter, PubMed, openFDA): docs/data_pipeline/README.md.
-tujya-data = "src.data.tujya_data.cli:app"
+tujya-data = "src.data.sources.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src", "backend/app"]
@@ -52,7 +52,12 @@ markers = [
 [tool.mypy]
 python_version = "3.11"
 # The data pipeline and the module 2 corpus steps that run on it.
-files = ["src/data/tujya_data", "src/data/corpus"]
+files = [
+    "src/data/sources",
+    "src/rag/corpus.py",
+    "src/rag/chunking.py",
+    "tests/support/sources_fixtures.py",
+]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 check_untyped_defs = true
@@ -62,7 +67,7 @@ no_implicit_optional = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["pandas.*", "pyarrow.*", "dotenv.*"]
+module = ["pandas.*", "pyarrow.*", "dotenv.*", "app.*"]
 ignore_missing_imports = true
 follow_imports = "skip"
 

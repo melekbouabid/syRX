@@ -46,7 +46,7 @@ d'entraînement. Pour réentraîner (GPU, Kaggle) : `dvc unfreeze train_classifi
 .venv-train/Scripts/python -m dvc repro export_onnx evaluate  # export, Registry, évaluation
 .venv-train/Scripts/python -m dvc metrics show                # métriques des étapes
 .venv-train/Scripts/python -m dvc params diff                 # paramètres changés
-.venv-train/Scripts/python -m src.models.publish              # champions -> models/ (API)
+.venv-train/Scripts/python -m src.models.registry publish              # champions -> models/ (API)
 ```
 
 ## Model Registry et promotion
@@ -74,7 +74,7 @@ donne les métriques, le `run_id`, la version du Registry et le statut
 ## Baseline (étape 2.1)
 
 Les modèles servis depuis le 28/10 sont la version 1 des deux modèles enregistrés, alias
-`champion`, ré-enregistrés par `python -m src.models.register_baseline` sans réentraînement
+`champion`, ré-enregistrés par `python -m src.models.train baseline` sans réentraînement
 (D91) et réévalués sur le split de test :
 
 | Modèle | Version | Métriques de test (réévaluation) | Tag git |

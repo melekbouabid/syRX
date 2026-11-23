@@ -46,6 +46,7 @@ import mlflow
 import yaml
 from mlflow import MlflowClient
 
+from src.models import registry as reg
 from src.models.detection.labels import samples
 from src.models.detection.latency import cpu_name, isolated_latency
 from src.utils import mlflow_utils as mu
@@ -249,9 +250,9 @@ def import_export(
         raise ImportErrorKaggle(f"missing ONNX model {onnx_path}")
     rules = compare_rules(params_path)
     if register and not smoke:
-        champion = mu.alias_version(rules["name"], mu.CHAMPION, client)
+        champion = reg.alias_version(rules["name"], reg.CHAMPION, client)
         if champion is not None and (
-            mu.version_metric(rules["name"], champion, rules["metric"], client) is None
+            reg.version_metric(rules["name"], champion, rules["metric"], client) is None
         ):
             raise ImportErrorKaggle(
                 f"the champion (version {champion}) has no {rules['metric']}: re-evaluate it "
@@ -326,7 +327,7 @@ def import_export(
 
     if register and not smoke:
         imgsz = final.get("params", {}).get("imgsz", "")
-        version = mu.register(
+        version = reg.register(
             info.model_uri,
             rules["name"],
             tags={
@@ -346,7 +347,7 @@ def import_export(
             ),
             client=client,
         )
-        promotion = mu.promote_if_better(
+        promotion = reg.promote_if_better(
             rules["name"], version.version, rules["metric"], rules["min_gain"], client=client
         )
         result.update(

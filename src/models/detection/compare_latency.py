@@ -41,7 +41,7 @@ from mlflow import MlflowClient
 from src.models import optimize
 from src.models.detection.latency import cpu_name
 from src.models.quantize import size_mb
-from src.models.serving import PRECISION_TAG, REGISTERED
+from src.models.registry import PRECISION_TAG, REGISTERED
 from src.utils import mlflow_utils as mu
 from src.utils.console import console_utf8
 

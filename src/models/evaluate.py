@@ -23,7 +23,7 @@ import mlflow
 from ultralytics import YOLO
 
 from src.data.autolabel import read_image, square_crop
-from src.data.prepare import CROP_SIZE, SELECTED, Item
+from src.data.prepare.v1 import CROP_SIZE, SELECTED, Item
 from src.models.train import EXPERIMENT, ROOT, load_params
 from src.utils import mlflow_utils as mu
 

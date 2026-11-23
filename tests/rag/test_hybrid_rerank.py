@@ -15,14 +15,13 @@ from collections.abc import Iterator
 import pytest
 from langchain_core.messages import AIMessage
 
-from src.rag.embeddings import FakeEmbedder
-from src.rag.index import index_chunks
-from src.rag.qdrant_store import DENSE, QdrantStore
+from src.rag.init_qdrant import FakeEmbedder, index_chunks
+from src.rag.query_rewriting import QueryRewriter, clean
 from src.rag.retrieval import BM25, Retriever, rrf, tokenize
-from src.rag.rewrite import QueryRewriter, clean
-from src.rag.sparse import TokenBM25
-from src.rag.store import METADATA_COLUMNS, Filters
-from tujya_testing.rag_fakes import CORPUS, DIM, FakeChatModel
+from src.rag.stores.base import METADATA_COLUMNS, Filters
+from src.rag.stores.qdrant import DENSE, QdrantStore
+from src.rag.stores.sparse import TokenBM25
+from tests.support.rag_fakes import CORPUS, DIM, FakeChatModel
 
 SERVER = os.environ.get("TUJYA_TEST_QDRANT_URL")
 TARGETS = [":memory:"] + ([SERVER] if SERVER else [])

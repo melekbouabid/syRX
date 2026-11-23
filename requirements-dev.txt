@@ -14,7 +14,7 @@ onnx>=1.17
 # (src/models/requirements-train.txt installs the full package).
 mlflow-skinny==3.17.2
 alembic>=1.13,<2
-# Generation benchmark of step 3.4 (src/benchmark/bench_generation.py): RAGAS, pinned (its
+# Generation benchmark of step 3.4 (src/evaluation/ragas_evaluation.py): RAGAS, pinned (its
 # metrics and prompts change between versions; the scores of docs/module2 are from 0.4.4).
 ragas==0.4.4
 # Detector comparison (step 2.2, src/models/detection): Optuna search spaces and the

@@ -81,7 +81,7 @@ justes. En dessous, l'application demande à l'utilisateur de confirmer ou de ch
 le top-5.
 
 **12. Comment l'API sait-elle quelle version de modèle elle sert ?**
-`python -m src.models.publish` copie les versions enregistrées dans le Model Registry
+`python -m src.models.registry publish` copie les versions enregistrées dans le Model Registry
 MLflow (classifieur v2, détecteur v1) dans `models/` ; chaque réponse de `/api/scan` renvoie
 ces numéros de version.
 

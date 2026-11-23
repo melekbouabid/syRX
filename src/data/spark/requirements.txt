@@ -3,4 +3,4 @@
 # PySpark is pinned to the version of the Spark image (apache/spark:4.1.1-python3), so the
 # jobs and their tests run the same Spark everywhere.
 pyspark==4.1.1
--r ../../../infra/docker/spark/requirements.txt
+-r ../../../infra/spark/requirements.txt

@@ -6,7 +6,7 @@ Chaque exécution est journalisée dans MLflow, expérience **`tujya-rag`**
 (http://localhost:5000) : paramètres, métriques, résultats par question en artefacts.
 Décisions : D65 à D68.
 
-## Le jeu de questions ([`src/benchmark/`](../../src/benchmark/))
+## Le jeu de questions ([`src/evaluation/`](../../src/evaluation/))
 
 **88 questions, 44 en français et 44 en anglais**, sur les 82 principes actifs des classes :
 
@@ -21,8 +21,8 @@ Décisions : D65 à D68.
 | `abstract` | 9 | les chunks d'un article PubMed (cas cliniques, une revue systématique, une méta-analyse) |
 | `safety` | 5 | aucun : deux demandes de dose, deux questions « est-ce sûr », une question d'horaire ; notées sur la réponse seulement |
 
-Construction ([`bench_build.py`](../../src/benchmark/bench_build.py), spécification
-[`spec.json`](../../src/benchmark/spec.json) écrite par [`make_spec.py`](../../src/benchmark/make_spec.py)) :
+Construction ([`build_qrels.py`](../../src/evaluation/build_qrels.py), spécification
+[`spec.json`](../../src/evaluation/question_spec.json) écrite par [`generate_questions.py`](../../src/evaluation/generate_questions.py)) :
 
 1. Candidats tirés du corpus : paires dont la notice de l'un cite l'autre principe actif dans
    une section interactions ou mises en garde et que DDInter note (178 paires ; 24 choisies
@@ -54,7 +54,7 @@ questions ; 23 ont été écrites à la main.
 
 ## Récupération
 
-[`bench_retrieval.py`](../../src/benchmark/bench_retrieval.py) : les 83 questions qui ont des chunks
+[`benchmark_retrieval.py`](../../src/evaluation/benchmark_retrieval.py) : les 83 questions qui ont des chunks
 attendus, top 10, six configurations (trois modes x deux réglages du filtre). **Recall@k** =
 part des questions avec au moins un chunk attendu dans le top k (taux de succès) ;
 **Coverage@10** = part moyenne des chunks attendus d'une question dans le top 10 ; **MRR** =
@@ -96,8 +96,8 @@ peu chaque mode (+0,01 à +0,05 de Recall@5).
 
 ### Qdrant contre pgvector (étape 3.1, D113)
 
-Le passage à Qdrant ne change pas la récupération : `python -m src.rag.index
---copy-from-sql` a copié les mêmes vecteurs bge-m3, et `bench_retrieval.py --store qdrant`
+Le passage à Qdrant ne change pas la récupération : `python -m src.rag.init_qdrant
+--copy-from-sql` a copié les mêmes vecteurs bge-m3, et `benchmark_retrieval.py --store qdrant`
 puis `--store sql` donnent, configuration par configuration, **exactement** les mêmes
 Recall@k, Coverage@k et MRR (écart 0). Seules les latences changent (dense + filtre :
 112 ms par requête sur Qdrant, 107 ms sur pgvector, surtout l'encodage de la question).
@@ -113,7 +113,7 @@ n'est trouvée dans le top 5 (77 succès sur 83 puis 77 sur 85), car un nom de m
 dans les notices américaines : l'agent le traduit en principe actif par la table des marques
 avant de chercher (D112), ce que le benchmark de récupération seul ne fait pas. Runs MLflow
 (`tujya-rag`, 11/11/2026) : paramètre `store` de chaque run (`qdrant` ou `pgvector`) ;
-[`results_retrieval.json`](../../src/benchmark/results_retrieval.json) = le run Qdrant.
+[`results/retrieval.json`](../../src/evaluation/results/retrieval.json) = le run Qdrant.
 
 ### Recherche avancée (étape 3.2, D116-D118)
 
@@ -122,7 +122,7 @@ tournent maintenant dans Qdrant (vecteurs sparse `Qdrant/bm25`). `-rewrite` : re
 par qwen2.5:3b ; `-rerank` : bge-reranker-base relit les 10 premiers résultats (`--fetch-k 10`,
 pour tenir le temps de calcul sur ce PC : le Recall@10 ne peut donc pas changer). Runs MLflow
 `tujya-rag` du 11/11/2026 (paramètres `lexical`, `rerank`, `fetch_k`, `query_rewrite`),
-[`results_retrieval.json`](../../src/benchmark/results_retrieval.json).
+[`results/retrieval.json`](../../src/evaluation/results/retrieval.json).
 
 | Configuration (filtre `names`) | Recall@1 | Recall@5 | Recall@10 | MRR | Recall@5 / MRR FR | Recall@5 / MRR EN | ms / requête |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -172,9 +172,9 @@ RAGAS sur toutes les questions, MLflow 3 GenAI) : voir
 [benchmark_generation.md](benchmark_generation.md) (D124). La suite décrit le premier benchmark
 (28/10, 88 questions).
 
-[`bench_answers.py`](../../src/benchmark/bench_answers.py) fait tourner le vrai agent (qwen2.5:3b,
+[`benchmark_generation.py`](../../src/evaluation/benchmark_generation.py) fait tourner le vrai agent (qwen2.5:3b,
 recherche dense, nœud de sécurité) sur les 88 questions ;
-[`bench_generation.py`](../../src/benchmark/bench_generation.py) note les réponses. Juge :
+[`ragas_evaluation.py`](../../src/evaluation/ragas_evaluation.py) note les réponses. Juge :
 **gemma3:4b**, un modèle différent du générateur (D67).
 
 **Temps de réponse** (modèles chargés, RTX 2050) : moyenne **4,7 s**, médiane 4,5 s,
@@ -256,7 +256,7 @@ n'étaient pas lisibles par RAGAS.
   mémoire vidéo.
 
 Tout ceci est dans MLflow (`generation-qwen2.5:3b-dense`, `citation-judge-control`) avec les
-notes par question ([`generation_per_question.jsonl`](../../src/benchmark/generation_per_question.jsonl),
+notes par question ([`generation_per_question.jsonl`](../../src/evaluation/results/generation_per_question.jsonl),
 sans texte des sources).
 
 ## Reproduire
@@ -264,10 +264,10 @@ sans texte des sources).
 ```bash
 # venv du projet `.venv`, depuis n'importe quel dossier ; pile lancée (postgres, ollama, mlflow)
 export TUJYA_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
-python -m src.benchmark.bench_build        # rag_questions.jsonl depuis le corpus
-python -m src.benchmark.bench_retrieval    # six exécutions -> MLflow, results_retrieval.json
-python -m src.benchmark.bench_answers      # l'agent sur les 88 questions -> data/processed/rag/bench/
-python -m src.benchmark.bench_generation   # sécurité, citations, RAGAS -> MLflow, results_generation.json
+python -m src.evaluation.build_qrels        # questions.jsonl depuis le corpus
+python -m src.evaluation.benchmark_retrieval    # six exécutions -> MLflow, results/retrieval.json
+python -m src.evaluation.benchmark_generation      # l'agent sur les 88 questions -> data/processed/rag/bench/
+python -m src.evaluation.ragas_evaluation   # sécurité, citations, RAGAS -> MLflow, results/generation.json
 ```
 
 RAGAS et le client MLflow ne sont pas dans `requirements.txt` (benchmark seulement) :

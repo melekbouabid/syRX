@@ -60,7 +60,7 @@ et `served` ; `/predict` sur 30 photos : 34 comprimés sur 34 trouvés, détecti
 `server_ms` médian 66 ms (06/11, avec YOLOv8n FP16 v6 : `inference_ms` 49, `server_ms` 51 sur
 une photo).
 
-Tests : [`backend/tests/test_vision.py`](../backend/tests/test_vision.py), chaque route et
+Tests : [`backend/tests/test_api.py`](../backend/tests/test_api.py), chaque route et
 chaque code d'erreur avec les modèles ONNX factices ; test de fumée de l'image Docker dans
 [docker-build.yml](../.github/workflows/docker-build.yml) (`/health` dégradé et `/predict` 503
 sans modèles).
@@ -179,8 +179,8 @@ lancé) :
 
 ```bash
 # depuis la racine du dépôt, venv d'entraînement (.venv-train) actif
-python -m src.models.publish                 # dernières versions enregistrées
-python -m src.models.publish --from-runs     # ou les exports les plus récents de runs/
+python -m src.models.registry publish                 # dernières versions enregistrées
+python -m src.models.registry publish --from-runs     # ou les exports les plus récents de runs/
 ```
 
 Les fichiers ONNX enregistrés gardent leurs poids en données externes MLflow ; `publish`
@@ -243,12 +243,12 @@ section, title, text, content_hash = SHA-256), dans l'ordre du document ; les ph
 une dose chiffrée sont remplacées par « […] ». 404 si le document n'existe pas ; 503 (les
 deux routes) si l'index est vide ou si Qdrant ne répond pas.
 Code : [`backend/app/routers/documents.py`](../backend/app/routers/documents.py),
-[`src/rag/documents.py`](../src/rag/documents.py) ; tests :
-[`tests/rag/test_documents.py`](../tests/rag/test_documents.py).
+[`src/rag/chunking.py`](../src/rag/chunking.py) ; tests :
+[`tests/rag/test_chunking_documents.py`](../tests/rag/test_chunking_documents.py).
 
 ## Mesuré sur les vrais modèles
 
-`python -m src.models.evaluate_scan --split test` (venv du projet `.venv`) fait
+`python -m src.models.predict --split test` (venv du projet `.venv`) fait
 tourner exactement cette chaîne sur les 600 photos « consumer » du split de test : comprimé
 trouvé 98,5 %, top-1 89,3 %, top-5 95,8 %, comme l'évaluation d'Ultralytics
 ([vision.md](module1/vision.md)) ; environ 50 à 220 ms par photo sur le

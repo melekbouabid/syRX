@@ -8,7 +8,7 @@ from pathlib import Path
 import optuna
 import pytest
 
-from src.models.classification import data as D
+from src.data import dataset as D
 from src.models.classification import hpo
 
 FAKE = Path(__file__).parent / "configs" / "classifier_fake.yaml"

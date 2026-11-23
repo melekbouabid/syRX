@@ -12,10 +12,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.medicines import DISCLAIMER
+from backend.tests.support.fixtures import USER, sign_in
 from src.agent.runtime import AgentHolder
-from src.rag.embeddings import FakeEmbedder
-from tujya_testing.fixtures import USER, sign_in
-from tujya_testing.rag_fakes import DIM, FakeChatModel, build_index
+from src.rag.init_qdrant import FakeEmbedder
+from tests.support.rag_fakes import DIM, FakeChatModel, build_index
 
 
 @pytest.fixture
@@ -130,7 +130,7 @@ def test_no_index_answers_503(app: FastAPI, pharma: str, browser: Callable[[], T
         app.state.settings, app.state.pharma_engine, llm=FakeChatModel(), embedder=FakeEmbedder(DIM)
     )
     response = sign_in(browser(), USER).post("/api/chat", json={"question": "warfarine ?"})
-    assert response.status_code == 503 and "src.rag.index" in response.json()["detail"]
+    assert response.status_code == 503 and "src.rag.init_qdrant" in response.json()["detail"]
 
 
 def test_chat_route_in_openapi(chat_app: FastAPI, anonymous: TestClient) -> None:

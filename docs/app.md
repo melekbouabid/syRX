@@ -24,7 +24,7 @@ backend/
                     limits, schemas, inference (chaîne de scan ONNX Runtime), medicines,
                     pharma, pharma_loader, routers/
   tests/            tests de l'API (comptes, admin, démo, docs, médicaments, scan)
-  tujya_testing/    fixtures partagées avec les tests de src/ (plugin pytest, faux RAG)
+  tests/support/    fixtures partagées avec les tests de src/ (plugin pytest)
   requirements.txt  dépendances de l'API (aussi celles de l'image Docker)
   Dockerfile        image de l'API, construite depuis la racine du dépôt
 frontend/
@@ -184,7 +184,7 @@ cd frontend && npm run build                      # typage TypeScript et build d
 ```
 
 Les tests du chat, du RAG, du MCP, du corpus et de la toxicité sont dans [tests/](../tests/)
-(`agent/`, `rag/`, `mcp_server/`, `data/`, `models/`), avec le même venv.
+(`agent/`, `rag/`, `data/`, `models/`), avec le même venv.
 
 Le logo et le favicon sont découpés dans [docs/assets/logo-source.png](assets/logo-source.png) ;
 le nom est dans `frontend/src/brand.ts`, les couleurs (tirées du logo) en tête de

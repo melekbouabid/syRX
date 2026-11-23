@@ -1,6 +1,6 @@
 # Serveur MCP de Tujya
 
-[`src/mcp_server/server.py`](../../src/mcp_server/server.py) expose les six outils de l'agent par le
+[`src/agent/mcp_server.py`](../../src/agent/mcp_server.py) expose les six outils de l'agent par le
 Model Context Protocol, avec le SDK Python officiel (`mcp` 2.3, `MCPServer`, anciennement
 FastMCP). C'est le même code que les outils de l'agent LangGraph
 ([`src/agent/tools.py`](../../src/agent/tools.py)) et, depuis l'étape 3.6, **la même boîte à
@@ -43,13 +43,13 @@ quel dossier :
 ```bash
 # PowerShell : $env:TUJYA_PHARMA_DATABASE_URL = "postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya"
 export TUJYA_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya
-python -m src.mcp_server                      # transport stdio
-python -m src.mcp_server --transport streamable-http --port 8765
+python -m src.agent.mcp_server                      # transport stdio
+python -m src.agent.mcp_server --transport streamable-http --port 8765
                                                                  # http://127.0.0.1:8765/mcp
-python -m src.mcp_server.smoke                # le lance en stdio, liste, appelle
+python -m src.agent.mcp_smoke                # le lance en stdio, liste, appelle
 ```
 
-Essai du 2026-11-15 ([`src/mcp_server/smoke.py`](../../src/mcp_server/smoke.py), vrais modèles,
+Essai du 2026-11-15 ([`src/agent/mcp_smoke.py`](../../src/agent/mcp_smoke.py), vrais modèles,
 une photo du split de test de la galerie, jamais vue à l'entraînement, d'une classe ajoutée en
 v2) :
 
@@ -79,7 +79,7 @@ VS Code `mcp.json` avec `servers` au lieu de `mcpServers`) :
   "mcpServers": {
     "tujya": {
       "command": "C:/chemin/vers/tujya/.venv/Scripts/python.exe",
-      "args": ["-m", "src.mcp_server"],
+      "args": ["-m", "src.agent.mcp_server"],
       "env": {
         "TUJYA_PHARMA_DATABASE_URL": "postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya",
         "TUJYA_OLLAMA_URL": "http://127.0.0.1:11434"
@@ -93,7 +93,7 @@ VS Code `mcp.json` avec `servers` au lieu de `mcpServers`) :
 
 ```bash
 claude mcp add tujya --env TUJYA_PHARMA_DATABASE_URL=postgresql+psycopg://tujya:tujya@127.0.0.1:5432/tujya \
-  -- C:/chemin/vers/tujya/.venv/Scripts/python.exe -m src.mcp_server
+  -- C:/chemin/vers/tujya/.venv/Scripts/python.exe -m src.agent.mcp_server
 ```
 
 Aucun dossier de travail n'est nécessaire : l'installation éditable du venv du projet (`.venv`)
@@ -106,7 +106,7 @@ autre adresse est refusée) et n'a pas d'authentification : ne pas l'exposer.
 
 ## Tests
 
-[`tests/mcp_server/test_mcp.py`](../../tests/mcp_server/test_mcp.py) (client MCP dans le même processus, tables
+[`tests/agent/test_mcp_server.py`](../../tests/agent/test_mcp_server.py) (client MCP dans le même processus, tables
 SQLite, embeddings factices) : les outils sont listés avec leurs schémas d'entrée (cinq
 depuis la session 4) ; `check_interaction` (nom en français) renvoie DDInter Major pour
 warfarine + fluconazole ; `search_documents` avec un filtre `doc_types` ne renvoie que des

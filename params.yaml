@@ -34,15 +34,16 @@ bigdata:
     size: 512              # long side of the generated JPEGs
   rag:
     # Collection workspaces read by the job, and the ingredient list of their classes:
-    # data/rag (v1 classes) and data/rag_v2 (the 94 ingredients of the v2 classes that v1
+    # data/external/rag_v1 (v1 classes) and data/external/rag_v2 (the 94 ingredients of the v2
+    # classes that v1
     # lacks, `python -m src.data.spark.rag_sources`, D126); data/processed/pharma lists the
     # 176 ingredients of the 380 served classes (D119).
-    workspaces: [data/rag, data/rag_v2]
+    workspaces: [data/external/rag_v1, data/external/rag_v2]
     ingredient_files: [data/processed/pharma/pill_ingredients.csv]
     # Names of the class tables that are no medicine (placebo tablets of a pack): no ingredient
     # here, their PubMed queries ignored (src/data/spark/rag_sources.py NOT_DRUGS, same list).
     not_drugs: [inert ingredients]
-    # Chunks keep the size of the module 2 corpus (1,500 characters, src/data/corpus/corpus.py).
+    # Chunks keep the size of the module 2 corpus (1,500 characters, src/rag/chunking.py).
     min_chars: 80          # shorter cleaned texts are dropped
     near_duplicate: 0.2    # MinHash Jaccard distance under which two abstracts are duplicates
 
@@ -74,7 +75,7 @@ export:
   simplify: true           # onnxslim graph simplification
   parity_images: 50        # test images on which ONNX Runtime must agree with PyTorch
 # Model Registry: metric and minimum gain for promote_if_better (alias champion /
-# challenger, src/utils/mlflow_utils.py). mAP@[.5:.95] is the metric of the module guide.
+# challenger, src/models/registry.py). mAP@[.5:.95] is the metric of the module guide.
 registry:
   detector:
     name: tujya-pill-detector

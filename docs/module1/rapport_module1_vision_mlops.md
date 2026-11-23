@@ -168,7 +168,7 @@ principale 0,9999, même top-1 39/39. Temps : **≈ 50 à 220 ms par photo** (d�
 détection, identification), après avoir désactivé l'attente active des threads d'ONNX
 Runtime, qui rendait le processus environ 30 fois plus lent (D49).
 
-`python -m src.models.publish` copie les versions du Model Registry (classifieur v2,
+`python -m src.models.registry publish` copie les versions du Model Registry (classifieur v2,
 détecteur v1) dans `models/`, monté en lecture seule dans le conteneur ; chaque réponse de
 scan renvoie les versions servies.
 

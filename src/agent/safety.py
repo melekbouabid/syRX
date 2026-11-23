@@ -21,7 +21,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from app.medicines import DISCLAIMER, NO_KNOWN_INTERACTION
-from src.rag.embeddings import Embedder, fold
+from src.rag.chunking import fold
+from src.rag.init_qdrant import Embedder
+from src.rag.rag_chain import CROSS_REFERENCE
 
 _UNITS = (
     r"(?:mg|mcg|µg|μg|ug|g|ml|ui|iu|unites?|units?|gouttes?|drops?|comprimes?"
@@ -82,7 +84,6 @@ DOSE_QUESTION = re.compile(
 )
 CITATION = re.compile(r"\[(\d+)\]")
 _SPACE_BEFORE_PUNCT = re.compile(r"\s+([.,;:!?])")
-CROSS_REFERENCE = re.compile(r"\[\s*see [^\]]*\]|\(\s*\d+(?:\.\d+)*\s*\)", re.IGNORECASE)
 _WORDS = re.compile(r"[a-z0-9]+")
 _ONLY_CITATIONS = re.compile(r"^[\s.,;]*(?:\[\d+\][\s.,;]*)+$")
 _SENTENCE = re.compile(r"(?<=[.!?])\s+|\n+")

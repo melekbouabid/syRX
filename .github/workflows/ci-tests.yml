@@ -84,7 +84,8 @@ jobs:
             backend/requirements.txt
             pyproject.toml
       - run: pip install -r requirements-dev.txt
-      # tests/ (pyproject.toml): data (C3PI, corpus, pipeline), models, rag, agent, mcp_server.
+      # tests/ (pyproject.toml), the mirror of src/: data (C3PI, sources), models, rag, agent
+      # (and its MCP server), evaluation, utils.
       - run: python -m pytest
 
   backend:
@@ -105,7 +106,8 @@ jobs:
       - run: python -m pytest
         working-directory: backend
 
-  # The PySpark jobs of src/data/spark (tests/data/spark) need Java and pyspark, which the
+  # The PySpark jobs (src/data/spark, and cleaning / split / augmentation in src/data; tests in
+  # tests/data/spark) need Java and pyspark, which the
   # other jobs do not install: their own environment, as in the Spark image (same pins,
   # src/data/spark/requirements.txt). The fixtures are loaded without the root conftest
   # (web app fixtures); the job `src` skips these tests (no pyspark there).
@@ -125,7 +127,7 @@ jobs:
           cache: pip
           cache-dependency-path: |
             src/data/spark/requirements.txt
-            infra/docker/spark/requirements.txt
+            infra/spark/requirements.txt
       - run: pip install -r src/data/spark/requirements.txt
       - run: python -m pytest tests/data/spark --noconftest -p tests.data.spark.fixtures
 

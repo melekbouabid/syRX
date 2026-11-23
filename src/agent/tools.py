@@ -1,5 +1,5 @@
 """The agent's tools, written once and exposed twice: as LangChain tools (LangGraph agent)
-and as MCP tools (app/mcp_server.py).
+and as MCP tools (src/agent/mcp_server.py).
 
 Every tool returns plain JSON-serialisable data with the sources it used, never a dose
 (the corpus has no dosage section) and never the word "safe".
@@ -29,13 +29,12 @@ from app.inference import ScannerHolder
 from app.medicines import DISCLAIMER, PharmaUnavailable, search_pills
 from app.pharma import Ingredient
 from src.models.toxicity.model import ToxHolder, ToxicityUnavailable, predict_molecules
-from src.rag.names import NameIndex
+from src.rag.query_rewriting import NameIndex, QueryRewriter
+from src.rag.rag_chain import hit_source
 from src.rag.retrieval import Hit, Mode, RetrieverHolder
-from src.rag.rewrite import QueryRewriter
-from src.rag.store import Filters
+from src.rag.stores.base import Filters
 
 DOC_TYPES = ("label", "abstract", "interaction")
-SNIPPET_CHARS = 700
 INFO_SECTIONS = (
     "boxed_warning",
     "indications_and_usage",
@@ -49,32 +48,6 @@ INFO_SECTIONS = (
 
 class ToolError(RuntimeError):
     """A tool could not run (missing index, models or tables); the message says why."""
-
-
-def hit_source(hit: Hit) -> dict[str, Any]:
-    chunk = hit.chunk
-    return {
-        "chunk_id": chunk.chunk_id,
-        "doc_id": chunk.doc_id,
-        "doc_type": chunk.doc_type,
-        "title": chunk.title,
-        "section": chunk.section,
-        "url": chunk.url,
-        "source_name": chunk.source_name,
-        "date": chunk.date,
-        "version": chunk.version,
-        "license": chunk.license,
-        "language": chunk.language,
-        "ingredients": chunk.ingredients,
-        "is_retracted": chunk.is_retracted,
-        "article_type": chunk.article_type,
-        "text": chunk.text,
-        "snippet": chunk.text[:SNIPPET_CHARS],
-        "score": round(hit.score, 5),
-        # Cross-encoder score and the rank before reranking (None when not reranked).
-        "rerank_score": None if hit.rerank_score is None else round(hit.rerank_score, 4),
-        "retrieval_rank": hit.retrieval_rank,
-    }
 
 
 @dataclass
@@ -144,7 +117,7 @@ class Toolbox:
     def retriever(self) -> Any:
         retriever = self.retrievers.get()
         if retriever is None:
-            raise ToolError("the document index is empty: run `python -m src.rag.index`")
+            raise ToolError("the document index is empty: run `python -m src.rag.init_qdrant`")
         return retriever
 
     def indexed_ingredients(self) -> frozenset[str]:

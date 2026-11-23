@@ -4,7 +4,7 @@ Ce que contient l'archive du Computational Photography Project for Pill Identifi
 (C3PI), et comment Tujya l'utilise. Exploré le 2026-10-28 à partir des fichiers listés
 ci-dessous ; chaque chiffre de cette page a été calculé à partir des métadonnées téléchargées
 (`data/raw/c3pi/metadata/images.csv`, construit par
-`python -m src.data.data_cli index`).
+`python -m src.data.download index`).
 
 - Catalogue : https://catalog.data.gov/dataset/computational-photography-project-for-pill-identification-c3pi
 - Fichiers : https://data.lhncbc.nlm.nih.gov/public/Pills/ (bucket S3 public, simple index
@@ -137,12 +137,12 @@ celui des modèles servis.
 
 ```bash
 # depuis la racine du dépôt, venv d'entraînement (.venv-train) actif
-python -m src.data.data_cli metadata         # READMEs, index, ALLXML/*.xml (~130 Mo)
-python -m src.data.data_cli index            # ALLXML -> data/raw/c3pi/metadata/images.csv
-python -m src.data.data_cli select --max-classes 150 --min-images 20 --max-per-class 30 \
+python -m src.data.download metadata         # READMEs, index, ALLXML/*.xml (~130 Mo)
+python -m src.data.download index            # ALLXML -> data/raw/c3pi/metadata/images.csv
+python -m src.data.download select --max-classes 150 --min-images 20 --max-per-class 30 \
     --exclude-camera "Canon PowerShot G10 [14.7 megapixel CCD]" \
     --exclude-camera "Nikon S3000 Coolpix (12.0 megapixel)"
-python -m src.data.data_cli download --workers 6   # reprise possible, SHA-1 vérifié
+python -m src.data.download download --workers 6   # reprise possible, SHA-1 vérifié
 ```
 
 La première exploration avait récupéré les mêmes fichiers avec curl.

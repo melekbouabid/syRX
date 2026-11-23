@@ -1,4 +1,4 @@
-# Generation benchmark of step 3.4 (src/benchmark/bench_generation.py,
+# Generation benchmark of step 3.4 (src/evaluation/ragas_evaluation.py,
 # docs/module2/benchmark_generation.md). One configuration = the LLM that runs the whole agent
 # (tool planner, query rewriting, answer) + the version of the answer prompt
 # (src/agent/prompts.py); retrieval is the served setting of step 3.3 (D123: bge-m3 dense,
@@ -10,7 +10,7 @@
 # precision and context recall with the reference) and the MLflow judges (Correctness,
 # Safety). Questions without a reference (dose refusals, most brand questions) get no
 # reference-based score.
-# `phi4-mini-judge` = phi4-mini with every layer on the GPU (infra/docker/ollama/judge.Modelfile);
+# `phi4-mini-judge` = phi4-mini with every layer on the GPU (infra/ollama/judge.Modelfile);
 # the RAGAS embeddings (bge-m3) run on the CPU so that the judge stays on the GPU.
 judge: phi4-mini-judge
 judge_embeddings: bge-m3

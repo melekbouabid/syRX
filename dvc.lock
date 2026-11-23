@@ -1,7 +1,7 @@
 schema: '2.0'
 stages:
   prepare:
-    cmd: python -m src.data.prepare
+    cmd: python -m src.data.prepare v1
     deps:
     - path: config/splits/selected_images.csv
       hash: md5
@@ -14,12 +14,12 @@ stages:
       nfiles: 20330
     - path: src/data/autolabel.py
       hash: md5
-      md5: 42302ec12c5b8b3baa7c491bf09149a4
-      size: 11304
-    - path: src/data/prepare.py
+      md5: 4940e21f0aec6436b46d78b3f5a4a529
+      size: 11307
+    - path: src/data/prepare/v1.py
       hash: md5
-      md5: c18978a194c47736e6ea7dfb2161ca3a
-      size: 7971
+      md5: fd5c9d2422747ceeba2e239e51d2c95d
+      size: 7980
     outs:
     - path: data/processed/c3pi/datasets
       hash: md5
@@ -32,7 +32,7 @@ stages:
       size: 499041
       nfiles: 1
   rag_corpus:
-    cmd: python -m src.data.corpus corpus
+    cmd: python -m src.rag.corpus corpus
     deps:
     - path: data/processed/pharma/interactions_between_classes.csv
       hash: md5
@@ -42,17 +42,17 @@ stages:
       hash: md5
       md5: 6051d52004ad0d914547068491a20339
       size: 19017
-    - path: data/rag/interim
+    - path: data/external/rag_v1/interim
       hash: md5
       md5: 0419ea6313c8ca6eba822de3bd8c76be.dir
       size: 1858114
       nfiles: 4
-    - path: data/rag/raw/pubmed
+    - path: data/external/rag_v1/raw/pubmed
       hash: md5
       md5: c95d50e0b58af134900dc7d81420654a.dir
       size: 22134557
       nfiles: 164
-    - path: src/data/corpus/corpus.py
+    - path: src/rag/chunking.py
       hash: md5
       md5: 9d85a1cdf051850c775a51e602037eb3
       size: 11672
@@ -104,7 +104,7 @@ stages:
       md5: 62051ba2f27a8520e490f4de3467231b.dir
       size: 39542126444
       nfiles: 20330
-    - path: src/data/spark/quality_job.py
+    - path: src/data/cleaning.py
       hash: md5
       md5: c615913693eb200cb725fd00bf3ceb19
       size: 12010
@@ -139,7 +139,7 @@ stages:
       md5: be6878d8e709617d9a2975ef44975dd8.dir
       size: 5381805
       nfiles: 146
-    - path: src/data/spark/split_job.py
+    - path: src/data/split.py
       hash: md5
       md5: 0137f2bf9ccbc82a777e7681f46f76ee
       size: 11499
@@ -174,10 +174,10 @@ stages:
       md5: 62051ba2f27a8520e490f4de3467231b.dir
       size: 39542126444
       nfiles: 20330
-    - path: src/data/spark/augment_job.py
+    - path: src/data/augmentation.py
       hash: md5
-      md5: 7b24850ebf014717ab37a93fd9f96b72
-      size: 10614
+      md5: 9771c619a8611660463c9dd903b2a174
+      size: 10605
     params:
       params.yaml:
         bigdata.augment:
@@ -224,45 +224,45 @@ stages:
   spark_rag:
     cmd: python -m src.data.spark.submit rag
     deps:
+    - path: data/external/rag_v1/interim
+      hash: md5
+      md5: 0419ea6313c8ca6eba822de3bd8c76be.dir
+      size: 1858114
+      nfiles: 4
+    - path: data/external/rag_v1/raw/pubmed
+      hash: md5
+      md5: c95d50e0b58af134900dc7d81420654a.dir
+      size: 22134557
+      nfiles: 164
+    - path: data/external/rag_v2/interim
+      hash: md5
+      md5: be662520f59c9ae14a0982e86a448c81.dir
+      size: 3488468
+      nfiles: 4
+    - path: data/external/rag_v2/raw/pubmed
+      hash: md5
+      md5: cd56639a6d731c95a503167780365656.dir
+      size: 64776900
+      nfiles: 188
     - path: data/processed/pharma
       hash: md5
       md5: a684fe60d324e212b38b3a7a71922375.dir
       size: 20080598
       nfiles: 3
-    - path: data/rag/interim
-      hash: md5
-      md5: 0419ea6313c8ca6eba822de3bd8c76be.dir
-      size: 1858114
-      nfiles: 4
-    - path: data/rag/raw/pubmed
-      hash: md5
-      md5: c95d50e0b58af134900dc7d81420654a.dir
-      size: 22134557
-      nfiles: 164
-    - path: data/rag_v2/interim
-      hash: md5
-      md5: be662520f59c9ae14a0982e86a448c81.dir
-      size: 3488468
-      nfiles: 4
-    - path: data/rag_v2/raw/pubmed
-      hash: md5
-      md5: cd56639a6d731c95a503167780365656.dir
-      size: 64776900
-      nfiles: 188
-    - path: src/data/corpus/corpus.py
-      hash: md5
-      md5: 9d85a1cdf051850c775a51e602037eb3
-      size: 11672
     - path: src/data/spark/rag_job.py
       hash: md5
-      md5: 3408701905341333cdb30aaeabdbec11
-      size: 12455
+      md5: d1e8de0dbc6c8fbd57bb82ca070cef6d
+      size: 12522
+    - path: src/rag/chunking.py
+      hash: md5
+      md5: a718df904865f230738a74d37230ca0a
+      size: 16923
     params:
       params.yaml:
         bigdata.rag:
           workspaces:
-          - data/rag
-          - data/rag_v2
+          - data/external/rag_v1
+          - data/external/rag_v2
           ingredient_files:
           - data/processed/pharma/pill_ingredients.csv
           not_drugs:
@@ -431,12 +431,12 @@ stages:
       size: 343
     - path: src/models/export_onnx.py
       hash: md5
-      md5: 3af943d82e12a31dc41b255f3c1eedc7
-      size: 8353
+      md5: 829276b1df7438f5218c11ab324c9fb0
+      size: 8391
     - path: src/utils/mlflow_utils.py
       hash: md5
-      md5: 9ead052d36430cc9ca58bf448dd5434d
-      size: 15153
+      md5: 6a135117a18242461d441271964259ce
+      size: 8258
     params:
       params.yaml:
         export:
@@ -480,12 +480,12 @@ stages:
       nfiles: 2
     - path: src/data/autolabel.py
       hash: md5
-      md5: 42302ec12c5b8b3baa7c491bf09149a4
-      size: 11304
+      md5: 4940e21f0aec6436b46d78b3f5a4a529
+      size: 11307
     - path: src/models/evaluate.py
       hash: md5
-      md5: 11d7f596cc75b70c73f7a600ea1c556f
-      size: 4715
+      md5: 5b930d78a02fd7d7e04ef46c97f6d384
+      size: 4718
     params:
       params.yaml:
         evaluate:
@@ -498,7 +498,7 @@ stages:
       md5: b0bf79bc98614534b3e6d04417d80143
       size: 174
   prepare_detect_v2:
-    cmd: python -m src.data.prepare_detect_v2
+    cmd: python -m src.data.prepare detect-v2
     deps:
     - path: config/splits/selected_images.csv
       hash: md5
@@ -516,11 +516,11 @@ stages:
       nfiles: 20330
     - path: src/data/autolabel.py
       hash: md5
-      md5: 42302ec12c5b8b3baa7c491bf09149a4
-      size: 11304
-    - path: src/data/prepare_detect_v2.py
+      md5: 4940e21f0aec6436b46d78b3f5a4a529
+      size: 11307
+    - path: src/data/prepare/detect_v2.py
       hash: md5
-      md5: c4e4b01683781455879d114f3c346682
+      md5: df7d77efb3d610e0b1a56a3cefe2c742
       size: 8416
     outs:
     - path: data/processed/c3pi/datasets_v2/detect
@@ -529,7 +529,7 @@ stages:
       size: 756022335
       nfiles: 20756
   prepare_classify_v2:
-    cmd: python -m src.data.prepare_classify_v2
+    cmd: python -m src.data.prepare classify-v2
     deps:
     - path: config/pill_classes_v1.csv
       hash: md5
@@ -560,15 +560,15 @@ stages:
       nfiles: 20330
     - path: src/data/autolabel.py
       hash: md5
-      md5: 42302ec12c5b8b3baa7c491bf09149a4
-      size: 11304
-    - path: src/data/prepare_classify_v2.py
+      md5: 4940e21f0aec6436b46d78b3f5a4a529
+      size: 11307
+    - path: src/data/prepare/classify_v2.py
       hash: md5
-      md5: 6f13259ef22c9b61cb786f99dcd376d9
+      md5: cb5177b85c526193ee87ebf7816a7558
       size: 14257
-    - path: src/data/prepare_detect_v2.py
+    - path: src/data/prepare/detect_v2.py
       hash: md5
-      md5: c4e4b01683781455879d114f3c346682
+      md5: df7d77efb3d610e0b1a56a3cefe2c742
       size: 8416
     outs:
     - path: data/processed/c3pi/datasets_v2/classify
@@ -585,8 +585,8 @@ stages:
       size: 2803
     - path: backend/app/inference.py
       hash: md5
-      md5: 2bc8baeffe8df2f4a0fb000529d13483
-      size: 11923
+      md5: bf6f210820e9e9bee96425a2abddada0
+      size: 11941
     - path: config/demo_gallery.csv
       hash: md5
       md5: e243fe024a2e2234bf98fc617776eb92
@@ -627,8 +627,8 @@ stages:
       size: 321
     - path: src/models/gradcam_gallery.py
       hash: md5
-      md5: dfb044e353321ad867e69e01a1edad56
-      size: 11904
+      md5: 70f4d23f7857ea96eccdba9fdbb6eaad
+      size: 11928
     - path: src/utils/gradcam.py
       hash: md5
       md5: 7dde8c0d8d8a39cd1512fe7c8bc921a9
@@ -644,8 +644,8 @@ stages:
     deps:
     - path: backend/app/boxes.py
       hash: md5
-      md5: 92da3a1a31917c9e9a3e04976be99e4c
-      size: 22651
+      md5: 41c22c4bef23c6b6a162aa54adba76d9
+      size: 22648
     - path: config/brand_aliases.csv
       hash: md5
       md5: 75cbf74c2651943ace56395f7e308137
@@ -682,8 +682,8 @@ stages:
       size: 10870
     - path: backend/app/inference.py
       hash: md5
-      md5: 2bc8baeffe8df2f4a0fb000529d13483
-      size: 11923
+      md5: bf6f210820e9e9bee96425a2abddada0
+      size: 11941
     - path: data/processed/c3pi/datasets_v2/detect/index.csv
       hash: md5
       md5: 54be74bd56cc53c3a78059a86efde107

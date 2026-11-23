@@ -15,11 +15,10 @@ import pytest
 from sqlalchemy import MetaData, text
 
 from app.db import make_engine
-from src.rag.embeddings import FakeEmbedder
-from src.rag.index import index_chunks
+from src.rag.init_qdrant import FakeEmbedder, index_chunks
 from src.rag.retrieval import Retriever
-from src.rag.store import ChunkStore, Filters
-from tujya_testing.rag_fakes import CORPUS, DIM
+from src.rag.stores.base import ChunkStore, Filters
+from tests.support.rag_fakes import CORPUS, DIM
 
 URL = os.environ.get("TUJYA_TEST_PG_URL")
 pytestmark = pytest.mark.skipif(not URL, reason="TUJYA_TEST_PG_URL not set")

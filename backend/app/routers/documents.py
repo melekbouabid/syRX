@@ -1,7 +1,7 @@
 """GET /api/documents: the documents indexed for the RAG, their metadata and chunks (D114).
 
 The same chunks the agent searches (Qdrant collection tujya_chunks_v2 by default, D126), grouped
-into documents (src/rag/documents.py). Filters: type, ingredient, section, language,
+into documents (src/rag/chunking.py). Filters: type, ingredient, section, language,
 source, text query. Sign-in required, as for the chat that cites them.
 """
 
@@ -21,7 +21,7 @@ from app.schemas import (
 )
 from src.agent.runtime import AgentHolder
 from src.agent.safety import redact_doses
-from src.rag.documents import Document
+from src.rag.chunking import Document
 from src.rag.retrieval import Retriever
 from src.rag.stores import STORE_ERRORS
 
@@ -43,7 +43,8 @@ def get_retriever(request: Request) -> Retriever:
     if retriever is None:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
-            "The document index is empty. Run `python -m src.rag.index` (docs/module2/rag.md).",
+            "The document index is empty. Run `python -m src.rag.init_qdrant` "
+            "(docs/module2/rag.md).",
         )
     return retriever
 

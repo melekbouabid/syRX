@@ -16,7 +16,7 @@
 #
 # Before the first start, on the host (docs/infra.md):
 #   - `dvc pull` or the data steps, so data/processed/pharma/*.csv and data/raw/c3pi/images exist;
-#   - `python -m src.models.publish` (training venv, .venv-train) to fill models/ from the Model Registry.
+#   - `python -m src.models.registry publish` (training venv, .venv-train) to fill models/ from the Model Registry.
 # `pharma-init` reloads the medicine tables from data/processed/pharma on every start, then exits;
 # `rag-init` pulls the Ollama models (first start only) and indexes
 # data/processed/rag/corpus_v2 (corpus of the 380 classes, DVC stage spark_rag, D126) in Qdrant.
@@ -41,7 +41,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       # Runs once, on an empty volume: pgvector extension and the mlflow database.
-      - ./infra/docker/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -50,7 +50,7 @@ services:
     restart: unless-stopped
 
   mlflow:
-    build: ./infra/docker/mlflow
+    build: ./infra/mlflow
     image: tujia2-mlflow:3.17.2
     depends_on:
       postgres:
@@ -108,7 +108,7 @@ services:
   rag-init:
     image: ${BACKEND_IMAGE:-tujia2-backend:local}
     build: *backend-build
-    command: ["python", "-m", "src.rag.index", "--pull"]
+    command: ["python", "-m", "src.rag.init_qdrant", "--pull"]
     environment: *backend-env
     volumes: *backend-mounts
     depends_on:
@@ -157,7 +157,7 @@ services:
     restart: unless-stopped
 
   # Local LLM and embeddings (Module 2). GPU through Docker Desktop + WSL2 (NVIDIA); on a
-  # machine without one: `docker compose -f docker-compose.yml -f infra/docker/ollama/cpu.yml up -d`.
+  # machine without one: `docker compose -f docker-compose.yml -f infra/ollama/cpu.yml up -d`.
   # Models live in the `ollama` volume: `docker compose exec ollama ollama pull <model>`.
   ollama:
     image: ollama/ollama:0.40.12
@@ -200,7 +200,7 @@ services:
   # UIs on the host: master http://localhost:8090, worker http://localhost:8091, running
   # application http://localhost:4040 (the driver runs in the master container).
   spark-master:
-    build: ./infra/docker/spark
+    build: ./infra/spark
     image: tujia2-spark:4.1.1
     profiles: ["spark"]
     hostname: spark-master

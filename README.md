@@ -21,7 +21,7 @@ Projet étudiant solo, évalué dans deux modules : **Industrialisation Vision &
 
 | | Module 1 : Vision & MLOps | Module 2 : AI Engineering |
 |---|---|---|
-| Code | [src/data/](src/data/), [src/models/](src/models/), [backend/app/inference.py](backend/app/inference.py) | [src/data/corpus/](src/data/corpus/), [src/rag/](src/rag/), [src/agent/](src/agent/), [src/mcp_server/](src/mcp_server/), [src/benchmark/](src/benchmark/) |
+| Code | [src/data/](src/data/), [src/models/](src/models/), [backend/app/inference.py](backend/app/inference.py) | [src/rag/corpus.py](src/rag/corpus.py), [src/rag/](src/rag/), [src/agent/](src/agent/), [src/agent/mcp_server.py](src/agent/mcp_server.py), [src/evaluation/](src/evaluation/) |
 | Documentation | [docs/module1/](docs/module1/README.md) | [docs/module2/](docs/module2/README.md) |
 | Exigences → fichiers | [README du module 1](docs/module1/README.md#exigences-du-module-et-fichiers-correspondants) | [README du module 2](docs/module2/README.md#exigences-du-module-et-fichiers-correspondants) |
 | Rapport technique | [PDF](docs/module1/rapport_module1_vision_mlops.pdf) · [Markdown](docs/module1/rapport_module1_vision_mlops.md) | [PDF](docs/module2/rapport_module2_ai_engineering.pdf) · [Markdown](docs/module2/rapport_module2_ai_engineering.md) |
@@ -71,7 +71,7 @@ modèles publiés.
 ```bash
 git clone https://github.com/melekbouabid/syRX.git && cd syRX
 dvc pull data/processed/pharma.dvc spark_rag gradcam_gallery data/processed/c3pi/drift/reference.json
-python -m src.models.publish                       # modèles ONNX du Model Registry -> models/
+python -m src.models.registry publish                       # modèles ONNX du Model Registry -> models/
 python -m src.models.toxicity.train_tox21 publish  # modèle Tox21 (bonus) -> models/tox21
 docker compose up -d --build                       # toute l'application, en une commande
 ```
@@ -92,7 +92,7 @@ pile) : [docs/infra.md](docs/infra.md#installation-depuis-un-clone-neuf-étape-4
 
 Au premier démarrage, `rag-init` télécharge les modèles Ollama puis indexe le corpus dans
 Qdrant (quelques minutes ; tableau de bord <http://localhost:6333/dashboard>) ; scan et interactions marchent sans attendre. Sans GPU :
-`docker compose -f docker-compose.yml -f infra/docker/ollama/cpu.yml up -d`. Arrêt :
+`docker compose -f docker-compose.yml -f infra/ollama/cpu.yml up -d`. Arrêt :
 `docker compose down` (garde les volumes). Développement sans Docker : [docs/app.md](docs/app.md) ;
 script de la soutenance : [docs/demo.md](docs/demo.md).
 
@@ -129,12 +129,12 @@ Une exigence n'est marquée faite que lorsqu'elle est réellement satisfaite. Le
 
 | Exigence | État | Où |
 |---|:---:|---|
-| RAG avec gestion des documents, métadonnées, citations, documentation | ✅ | [src/data/corpus/](src/data/corpus/), [src/rag/](src/rag/), [docs/module2/rag.md](docs/module2/rag.md) ; corpus servi des 380 classes (27 302 chunks, 175 principes actifs, job Spark `rag`, D126) |
+| RAG avec gestion des documents, métadonnées, citations, documentation | ✅ | [src/rag/corpus.py](src/rag/corpus.py), [src/rag/](src/rag/), [docs/module2/rag.md](docs/module2/rag.md) ; corpus servi des 380 classes (27 302 chunks, 175 principes actifs, job Spark `rag`, D126) |
 | Recherche avancée : BM25 sparse et hybride dans Qdrant, reranker cross-encoder (bge-reranker-base), réécriture de requête, filtres de métadonnées, comparés dans le benchmark | ✅ | [src/rag/](src/rag/) (sparse.py, rerank.py, rewrite.py), [docs/module2/benchmark.md](docs/module2/benchmark.md#recherche-avancée-étape-32) (hybride + réécriture + reranker : Recall@5 0,965, MRR 0,889 ; D116-D118) |
-| Base vectorielle consultable : Qdrant (tableau de bord), page « Documents » et `GET /api/documents` (documents indexés, métadonnées, chunks) | ✅ | [src/rag/qdrant_store.py](src/rag/qdrant_store.py), [src/rag/documents.py](src/rag/documents.py), [backend/app/routers/documents.py](backend/app/routers/documents.py), [DocumentsPage.tsx](frontend/src/pages/DocumentsPage.tsx), [docs/module2/rag.md](docs/module2/rag.md#consulter-les-documents-indexés) (captures 27 à 29, D113-D114) |
-| Tool calling / MCP | ✅ | [src/agent/tools.py](src/agent/tools.py), [src/mcp_server/](src/mcp_server/) ; même boîte à outils pour le chat et le serveur MCP (récupération servie, classifieur à 380 classes), démonstration réelle : [docs/module2/mcp.md](docs/module2/mcp.md) (D125) |
+| Base vectorielle consultable : Qdrant (tableau de bord), page « Documents » et `GET /api/documents` (documents indexés, métadonnées, chunks) | ✅ | [src/rag/stores/qdrant.py](src/rag/stores/qdrant.py), [src/rag/chunking.py](src/rag/chunking.py), [backend/app/routers/documents.py](backend/app/routers/documents.py), [DocumentsPage.tsx](frontend/src/pages/DocumentsPage.tsx), [docs/module2/rag.md](docs/module2/rag.md#consulter-les-documents-indexés) (captures 27 à 29, D113-D114) |
+| Tool calling / MCP | ✅ | [src/agent/tools.py](src/agent/tools.py), [src/agent/mcp_server.py](src/agent/mcp_server.py) ; même boîte à outils pour le chat et le serveur MCP (récupération servie, classifieur à 380 classes), démonstration réelle : [docs/module2/mcp.md](docs/module2/mcp.md) (D125) |
 | LangChain et/ou LangGraph | ✅ | [src/agent/graph.py](src/agent/graph.py) |
-| Benchmark de la récupération et de la génération | ✅ | [src/benchmark/](src/benchmark/) ; grille de récupération de 27 configurations (embeddings, modes, découpage, réécriture, rerankers, bge-m3 fine-tuné), un run MLflow chacune (`tujya-rag-retrieval`), champion enregistré et servi : [docs/module2/benchmark_retrieval.md](docs/module2/benchmark_retrieval.md) (D123) ; génération : RAGAS 0.4.4 (fidélité, pertinence, précision et rappel du contexte) sur les 96 questions, 2 LLM et 2 versions du prompt, MLflow 3 GenAI (traces de l'agent, Prompt Registry, `mlflow.genai.evaluate` avec Correctness, Safety et scorers du projet), champion enregistré (`tujya-rag-generation`) : [docs/module2/benchmark_generation.md](docs/module2/benchmark_generation.md) (D124) |
+| Benchmark de la récupération et de la génération | ✅ | [src/evaluation/](src/evaluation/) ; grille de récupération de 27 configurations (embeddings, modes, découpage, réécriture, rerankers, bge-m3 fine-tuné), un run MLflow chacune (`tujya-rag-retrieval`), champion enregistré et servi : [docs/module2/benchmark_retrieval.md](docs/module2/benchmark_retrieval.md) (D123) ; génération : RAGAS 0.4.4 (fidélité, pertinence, précision et rappel du contexte) sur les 96 questions, 2 LLM et 2 versions du prompt, MLflow 3 GenAI (traces de l'agent, Prompt Registry, `mlflow.genai.evaluate` avec Correctness, Safety et scorers du projet), champion enregistré (`tujya-rag-generation`) : [docs/module2/benchmark_generation.md](docs/module2/benchmark_generation.md) (D124) |
 | Interface web | ✅ | chat dans [frontend/](frontend/) |
 | Dépôt GitHub documenté avec commits réguliers | ✅ | `git log`, tags git, [docs/git_workflow.md](docs/git_workflow.md) (branches, Conventional Commits, hooks) |
 | Rapport technique | ✅ | [rapport du module 2](docs/module2/rapport_module2_ai_engineering.pdf) |
@@ -172,16 +172,16 @@ Arborescence du guide des modules, commune aux deux modules (décision D86).
 ```
 src/                      code des deux modules (paquet Python `src`)
   data/                   C3PI (index, téléchargement, boîtes automatiques, jeux YOLO), corpus RAG,
-                          pipeline de collecte polie (tujya_data : DDInter, PubMed, openFDA)
+                          pipeline de collecte polie (sources/ : DDInter, PubMed, openFDA)
   models/                 entraînement, évaluation, export ONNX, publication ; toxicity/ (bonus Tox21)
-  rag/  agent/            récupération (Qdrant, dense + BM25), catalogue des documents ; agent LangGraph, outils, sécurité
-  mcp_server/  benchmark/ serveur MCP ; benchmark de la récupération et de la génération
+  rag/  agent/            récupération (Qdrant, dense + BM25), catalogue des documents ; agent LangGraph, outils, sécurité ; serveur MCP
+  evaluation/             benchmark de la récupération et de la génération
   utils/                  utilitaires partagés
 backend/                  API FastAPI : Dockerfile, requirements.txt, app/ (main, schemas, inference, routers), tests/
 frontend/                 site React : Dockerfile, package.json, src/ (components, services/api, pages)
-tests/                    tests du code de src/ (data, models, rag, agent, mcp_server)
+tests/                    tests du code de src/ (data, models, rag, agent, evaluation)
 notebooks/                notebooks d'entraînement (Kaggle)
-data/raw  data/processed  données (DVC, jamais dans git) ; data/rag : collecte des sources RAG
+data/raw  data/processed  données (DVC, jamais dans git) ; data/external/rag_v1 : collecte des sources RAG
 models/                   modèles servis par l'API (jamais dans git)
 config/                   listes tenues à la main : 150 classes, split, alias, galerie, réglages du pipeline
 docs/                     architecture, API, infra, CD, démo, décisions ; module1/, module2/, bonus/, data_pipeline/

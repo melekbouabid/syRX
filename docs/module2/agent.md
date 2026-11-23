@@ -4,7 +4,7 @@ L'agent répond aux questions sur les comprimés confirmés et leurs principes a
 des seuls documents retrouvés et résultats d'outils, avec des citations numérotées. Code :
 [`src/agent/`](../../src/agent/) ([graph.py](../../src/agent/graph.py), [tools.py](../../src/agent/tools.py),
 [safety.py](../../src/agent/safety.py), [runtime.py](../../src/agent/runtime.py)) et
-[`src/rag/names.py`](../../src/rag/names.py) ; route
+[`src/rag/query_rewriting.py`](../../src/rag/query_rewriting.py) ; route
 [`backend/app/routers/chat.py`](../../backend/app/routers/chat.py). Corpus et
 recherche : [docs/module2/rag.md](rag.md). Décisions D57 à D59 et D63 ([docs/decisions.md](../decisions.md)).
 
@@ -90,7 +90,7 @@ moment où il a lieu), `token` (texte de la réponse, une phrase vérifiée à l
 (`X-Accel-Buffering: no`).
 
 Erreurs : 401 si non connecté ; 503 si l'index est vide (« run
-`python -m src.rag.index` ») ou si Ollama est injoignable.
+`python -m src.rag.init_qdrant` ») ou si Ollama est injoignable.
 
 Configuration (`TUJYA_*`) : `OLLAMA_URL` (compose : `http://ollama:11434`), `LLM_MODEL`
 (`qwen2.5:3b`), `LLM_PROMPT_VERSION` (`v1` : version du prompt de réponse,
@@ -132,7 +132,7 @@ without coma [1]. » + avertissement ; environ 15 s au total sur la RTX 2050 (pl
 ## Tests (sans Ollama ni vrais embeddings)
 
 [`tests/agent/test_chat.py`](../../tests/agent/test_chat.py) : un modèle de chat scénarisé
-([`backend/tujya_testing/rag_fakes.py`](../../backend/tujya_testing/rag_fakes.py), appels d'outils et réponses diffusées) et
+([`tests/support/rag_fakes.py`](../../tests/support/rag_fakes.py), appels d'outils et réponses diffusées) et
 des embeddings factices par hachage sur un corpus de six chunks. Couvre : connexion
 obligatoire, choix des outils et appels ajoutés par règle, outils inconnus ignorés,
 correspondance des citations, articles rétractés exclus, réponses dangereuses réécrites

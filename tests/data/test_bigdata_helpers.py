@@ -6,11 +6,11 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
-from src.data import c3pi, data_cli
-from src.data.corpus.ingredients import IngredientRow
+from src.data import download
+from src.data.sources.config import load_settings
+from src.data.sources.literature.queries import read_ingredients
 from src.data.spark import log_stats, rag_sources, submit
-from src.data.tujya_data.config import load_settings
-from src.data.tujya_data.literature.queries import read_ingredients
+from src.rag.corpus import IngredientRow
 
 
 def test_submit_runs_the_job_in_the_master_container():
@@ -95,7 +95,7 @@ def test_v2_collection_targets_only_ingredients_absent_from_v1(tmp_path, monkeyp
 
 def test_download_list_selects_index_records(tmp_path: Path):
     records = [
-        c3pi.ImageRecord(
+        download.ImageRecord(
             disc="PillProjectDisc1",
             file_name=name,
             file_type="JPG",
@@ -120,10 +120,10 @@ def test_download_list_selects_index_records(tmp_path: Path):
         for name in ("A.JPG", "B.JPG", "C.JPG")
     ]
     index = tmp_path / "images.csv"
-    c3pi.write_index(records, index)
+    download.write_index(records, index)
     listing = tmp_path / "list.csv"
     listing.write_text(
         "path,sha1\nPillProjectDisc1/images/C.JPG,x\nPillProjectDisc1/images/A.JPG,x\n",
         encoding="utf-8",
     )
-    assert [r.file_name for r in data_cli._listed(index, listing)] == ["C.JPG", "A.JPG"]
+    assert [r.file_name for r in download._listed(index, listing)] == ["C.JPG", "A.JPG"]

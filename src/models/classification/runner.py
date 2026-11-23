@@ -4,8 +4,8 @@
         --data data/processed/c3pi/datasets_v2/classify --out runs/classifier-resnet50
     python -m src.models.classification.runner --config ... --smoke    # local check, tiny subset
 
-This is what each Kaggle notebook (notebooks/kaggle/classifier_<arch>.ipynb) runs on the GPU,
-the same steps as the detectors (src/models/detection/runner.py):
+This is what each Kaggle notebook (notebooks/module1/kaggle/classifier_<arch>.ipynb) runs on the
+GPU, the same steps as the detectors (src/models/detection/runner.py):
 
 1. Optuna study (seeded TPE sampler, config/hpo/classifier_<arch>.yaml): each trial trains the
    model for `search.epochs` epochs on `search.fraction` of the train crops of every class and
@@ -44,7 +44,7 @@ import numpy as np
 import optuna
 import yaml
 
-from src.models.classification import data as D
+from src.data import dataset as D
 from src.models.classification import hpo
 from src.models.classification.metrics import (
     confusion_matrix,

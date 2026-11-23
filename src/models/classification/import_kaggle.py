@@ -38,7 +38,8 @@ import mlflow
 import yaml
 from mlflow import MlflowClient
 
-from src.models.classification import data as D
+from src.data import dataset as D
+from src.models import registry as reg
 from src.models.detection.import_kaggle import (
     ImportErrorKaggle,
     _flat,
@@ -99,7 +100,7 @@ def check_guard(
     reference = guard_reference(rules["name"], client)
     if reference is None:
         return True, "no reference version", None
-    reference_value = mu.version_metric(rules["name"], reference, rules["guard_metric"], client)
+    reference_value = reg.version_metric(rules["name"], reference, rules["guard_metric"], client)
     if reference_value is None:
         raise ImportErrorKaggle(
             f"the reference (version {reference}) has no {rules['guard_metric']}: score it on "
@@ -205,9 +206,9 @@ def import_export(
     rules = compare_rules(params_path)
     eligible, guard_reason, reference = True, "", None
     if register and not smoke:
-        champion = mu.alias_version(rules["name"], mu.CHAMPION, client)
+        champion = reg.alias_version(rules["name"], reg.CHAMPION, client)
         if champion is not None and (
-            mu.version_metric(rules["name"], champion, rules["metric"], client) is None
+            reg.version_metric(rules["name"], champion, rules["metric"], client) is None
         ):
             raise ImportErrorKaggle(
                 f"the champion (version {champion}) has no {rules['metric']}: re-evaluate it "
@@ -289,7 +290,7 @@ def import_export(
 
     if register and not smoke:
         imgsz = final.get("params", {}).get("imgsz", "")
-        version = mu.register(
+        version = reg.register(
             info.model_uri,
             rules["name"],
             tags={
@@ -312,7 +313,7 @@ def import_export(
             ),
             client=client,
         )
-        promotion = mu.promote_if_better(
+        promotion = reg.promote_if_better(
             rules["name"],
             version.version,
             rules["metric"],

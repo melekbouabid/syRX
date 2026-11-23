@@ -14,7 +14,7 @@ import {
 
 describe("classColour", () => {
   it("gives the colours of POST /predict/visualize (backend class_colour)", () => {
-    // Same values as backend/tests/test_vision.py.
+    // Same values as backend/tests/test_api.py.
     expect(classColour(0)).toBe("#ff3838");
     expect(classColour(9)).toBe("#00d4bb");
     expect(classColour(120)).toBe(classColour(0)); // 120 mod 20

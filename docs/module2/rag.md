@@ -9,12 +9,12 @@ D118 (BM25 dans Qdrant, reranker, réécriture de requête) dans
 
 ```
 config/pill_classes.csv (82 principes actifs des 150 classes de comprimés)
-  -> notices openFDA        python -m src.data.corpus labels   -> data/rag/raw, interim
-  -> résumés PubMed         python -m src.data.corpus pubmed   -> data/rag/raw, interim
+  -> notices openFDA        python -m src.rag.corpus labels   -> data/external/rag_v1/raw, interim
+  -> résumés PubMed         python -m src.rag.corpus pubmed   -> data/external/rag_v1/raw, interim
   -> paires DDInter         data/processed/pharma/interactions_between_classes.csv (interactions.md)
-  -> chunks + métadonnées   dvc repro rag_corpus  (= python -m src.data.corpus corpus)
+  -> chunks + métadonnées   dvc repro rag_corpus  (= python -m src.rag.corpus corpus)
                             -> data/processed/rag/corpus/chunks.parquet, summary.json
-  -> embeddings + index     python -m src.rag.index  (venv du projet `.venv`)
+  -> embeddings + index     python -m src.rag.init_qdrant  (venv du projet `.venv`)
                             -> collection Qdrant tujya_chunks (http://localhost:6333/dashboard)
   -> consultation           page « Documents » de l'application, GET /api/documents
 ```
@@ -24,15 +24,15 @@ sans `.env`, ajouter `--set http.require_contact_email=false` (comme dans
 [docs/module2/interactions.md](interactions.md)). Les deux étapes de collecte réutilisent les connecteurs
 du pipeline ([docs/data_pipeline/](../data_pipeline/README.md) : PoliteClient avec limites de débit,
 reprises, cache HTTP, manifeste avec SHA-256 et provenance), dans leur propre dossier
-`data/rag/` avec leur propre manifeste `data/rag/manifest.json`, pour ne jamais se mêler aux
+`data/external/rag_v1/` avec leur propre manifeste `data/external/rag_v1/manifest.json`, pour ne jamais se mêler aux
 fichiers du projet d'origine sous `data/raw`.
 
 ## Corpus servi depuis le 2026-11-16 : v2, 380 classes (D126)
 
 Le classifieur servi reconnaît 380 classes (176 principes actifs, D119) ; le corpus décrit plus
 bas n'en couvrait que 82. Le corpus servi est maintenant le **corpus v2** construit par le job
-Spark `rag` ([big_data.md](../module1/big_data.md)) à partir de deux espaces de collecte : `data/rag`
-(les 82 principes actifs de v1, inchangés) et `data/rag_v2` (les **93 nouveaux principes
+Spark `rag` ([big_data.md](../module1/big_data.md)) à partir de deux espaces de collecte : `data/external/rag_v1`
+(les 82 principes actifs de v1, inchangés) et `data/external/rag_v2` (les **93 nouveaux principes
 actifs**, `python -m src.data.spark.rag_sources ingredients|labels|pubmed`, mêmes connecteurs
 polis, adresse de contact lue dans `.env`). Le nom « inert ingredients » (comprimés placebo d'une
 plaquette) n'est pas cherché : PubMed renvoie pour lui des études de pesticides
@@ -60,7 +60,7 @@ Réglage de recherche choisi sur ce corpus : hybride + réécriture
 ```
 python -m src.data.spark.rag_sources ingredients   # .venv ; puis labels, pubmed
 dvc repro spark_rag                                # job Spark -> data/processed/rag/corpus_v2
-python -m src.rag.index                            # -> collection tujya_chunks_v2 (rag-init dans Docker)
+python -m src.rag.init_qdrant                            # -> collection tujya_chunks_v2 (rag-init dans Docker)
 ```
 
 Les sections suivantes décrivent la construction du corpus v1 (150 classes), dont v2 reprend les
@@ -80,7 +80,7 @@ Longueur moyenne d'un chunk : 687 caractères (notices 1 164, résumés 627).
 
 ### Notices openFDA (connecteur `openfda_label`)
 
-[`src/data/tujya_data/connectors/openfda.py`](../../src/data/tujya_data/connectors/openfda.py),
+[`src/data/sources/connectors/openfda.py`](../../src/data/sources/connectors/openfda.py),
 enregistré avec les autres connecteurs (désactivé par défaut, pour que l'exécution
 `tujya-data update` ne le lance pas). Pour chaque principe actif, il demande à
 `api.fda.gov/drug/label.json` les 25 notices les plus récentes (`sort=effective_time:desc`)
@@ -103,7 +103,7 @@ Résultat : 81 notices sur ordonnance et 1 OTC (fexofénadine, vendue sans ordon
 États-Unis) ; 80 à un seul principe actif ; la pseudoéphédrine et la vitamine B6 n'existent
 qu'en association (brompheniramine + pseudoephedrine + dextromethorphan ; doxylamine +
 pyridoxine). Dates d'effet du 2021-09-30 au 2026-09-11, 80 sur 82 depuis 2024. Chaque fichier
-brut `data/rag/raw/openfda_label/current/labels/<principe actif>.json` garde la notice
+brut `data/external/rag_v1/raw/openfda_label/current/labels/<principe actif>.json` garde la notice
 choisie et la liste des candidates, pour que le choix soit vérifiable. Débit : 3 requêtes/s
 (openFDA autorise 240/min sans clé) ; les réponses sont en cache sur le disque.
 
@@ -151,7 +151,7 @@ DDInter does not grade », jamais « no interaction ». Les 40 508 paires avec n
 médicament restent hors de l'index texte (elles noieraient les autres documents sous des
 phrases presque identiques) ; l'outil `check_interaction` les lit toutes dans la base (D62).
 
-## Découpage ([`src/data/corpus/corpus.py`](../../src/data/corpus/corpus.py))
+## Découpage ([`src/rag/chunking.py`](../../src/rag/chunking.py))
 
 - **Notices : par section.** Un chunk par section ; une section de plus de 1 500 caractères
   est coupée en fins de phrase, en morceaux de 1 500 caractères au plus, la dernière phrase
@@ -193,12 +193,12 @@ phrases presque identiques) ; l'outil `check_interaction` les lit toutes dans la
 
 ## Versionnement (DVC)
 
-- `data/rag/raw.dvc`, `data/rag/interim.dvc`, `data/rag/manifest.json.dvc` : les notices et
+- `data/external/rag_v1/raw.dvc`, `data/external/rag_v1/interim.dvc`, `data/external/rag_v1/manifest.json.dvc` : les notices et
   le XML PubMed téléchargés, les tables analysées et le manifeste (URL, SHA-256, taille,
   licence, date de téléchargement de chaque fichier brut), suivis par `dvc add` (ils viennent
   du réseau, ce n'est donc pas une étape de pipeline).
-- Étape `rag_corpus` de [`dvc.yaml`](../../dvc.yaml) : `python -m src.data.corpus
-  corpus`, de `data/rag/interim`, `data/rag/raw/pubmed`, des deux tables DDInter et
+- Étape `rag_corpus` de [`dvc.yaml`](../../dvc.yaml) : `python -m src.rag.corpus
+  corpus`, de `data/external/rag_v1/interim`, `data/external/rag_v1/raw/pubmed`, des deux tables DDInter et
   principes actifs et du code de découpage vers `data/processed/rag/corpus` (`dvc.lock` enregistre les
   empreintes). `dvc repro rag_corpus` reconstruit les chunks dès qu'une entrée change.
 - Envoyé sur le remote DVC par défaut avec les images (dossier local hors du dépôt, D71,
@@ -212,7 +212,7 @@ phrases presque identiques) ; l'outil `check_interaction` les lit toutes dans la
 - **Stockage : Qdrant** (D113, comme dans le cours du module 2), service `qdrant` de
   [docker-compose.yml](../../docker-compose.yml) (`qdrant/qdrant:v1.20.0`, port
   127.0.0.1:6333, volume persistant, télémétrie coupée), code
-  [`src/rag/qdrant_store.py`](../../src/rag/qdrant_store.py). Collection `tujya_chunks` :
+  [`src/rag/stores/qdrant.py`](../../src/rag/stores/qdrant.py). Collection `tujya_chunks` :
   un point par chunk, vecteur nommé `dense` (1 024 dimensions, cosinus) ; identifiant du point
   = UUID v5 du `chunk_id` (Qdrant n'accepte que des entiers ou des UUID), le `chunk_id` reste
   dans le payload. **Payload = toutes les métadonnées du schéma ci-dessus** (source, type de
@@ -223,11 +223,11 @@ phrases presque identiques) ; l'outil `check_interaction` les lit toutes dans la
   `is_retracted`. Modèle, dimension, nombre de chunks et `indexed_at` dans les métadonnées de
   la collection.
 - **Ancien stockage, gardé** : table `rag_chunks` de la base PostgreSQL `tujya` (pgvector ;
-  SQLite dans les tests), même interface ([`src/rag/store.py`](../../src/rag/store.py),
-  choix par `TUJYA_VECTOR_STORE=qdrant|sql`, [`src/rag/stores.py`](../../src/rag/stores.py)).
-  `python -m src.rag.index --copy-from-sql` a copié ses 8 661 vecteurs dans Qdrant sans les
+  SQLite dans les tests), même interface ([`src/rag/stores/base.py`](../../src/rag/stores/base.py),
+  choix par `TUJYA_VECTOR_STORE=qdrant|sql`, [`src/rag/stores/__init__.py`](../../src/rag/stores/__init__.py)).
+  `python -m src.rag.init_qdrant --copy-from-sql` a copié ses 8 661 vecteurs dans Qdrant sans les
   réencoder : les deux index contiennent exactement les mêmes vecteurs.
-- **Indexation :** `python -m src.rag.index` (venv du projet `.venv` ; `--store`,
+- **Indexation :** `python -m src.rag.init_qdrant` (venv du projet `.venv` ; `--store`,
   `--qdrant-url`, `--database-url`, `--chunks`, `--pull` pour télécharger d'abord les modèles
   Ollama).
   Idempotente : un chunk n'est réencodé que si son empreinte (texte, métadonnées, modèle) a
@@ -254,7 +254,7 @@ par défaut). Dans Qdrant : filtre `should` (`ingredients` OU `mentioned_ingredi
 liste), `must` sur `doc_type` et `section`, `must_not` sur `is_retracted` ; en SQL :
 `ingredients && :names OR mentioned_ingredients && :names`.
 
-Pour essayer : `python -m src.rag.search "warfarin bleeding" --ingredient
+Pour essayer : `python -m src.rag.retrieval "warfarin bleeding" --ingredient
 fluconazole --doc-type label` (affiche les trois modes avec leurs rangs et leurs temps).
 
 Le meilleur mode est mesuré dans [docs/module2/benchmark.md](benchmark.md) : dense avec le filtre par
@@ -266,7 +266,7 @@ Ce que le cours du module 2 montre (BM25, hybride dense + sparse, reranking, ré
 requête, filtres de métadonnées), mesuré dans [benchmark.md](benchmark.md#recherche-avancée-étape-32).
 
 - **BM25 dans Qdrant (D116)** : chaque point a aussi un vecteur sparse `bm25`
-  ([`src/rag/sparse.py`](../../src/rag/sparse.py)), produit par le modèle `Qdrant/bm25` de
+  ([`src/rag/stores/sparse.py`](../../src/rag/stores/sparse.py)), produit par le modèle `Qdrant/bm25` de
   fastembed (celui qu'enveloppe `FastEmbedSparse` de LangChain dans le TP : mots vides anglais,
   racinisation Snowball, termes hachés) ; la collection lui applique le modificateur IDF, donc
   Qdrant calcule lui-même le BM25 complet. Le mode `bm25` et le mode `hybrid` tournent alors dans
@@ -276,7 +276,7 @@ requête, filtres de métadonnées), mesuré dans [benchmark.md](benchmark.md#re
   Qdrant compte les positions à partir de 0 : `k = 61` chez lui donne exactement 1 / (60 + rang),
   la fusion du stockage SQL (vérifié par un test, en mémoire et sur le serveur).
 - **Reranker cross-encoder (D117, D123)** : un cross-encoder ONNX par fastembed
-  ([`src/rag/rerank.py`](../../src/rag/rerank.py)), donc sans PyTorch dans l'API ;
+  ([`src/rag/reranking.py`](../../src/rag/reranking.py)), donc sans PyTorch dans l'API ;
   `Xenova/ms-marco-MiniLM-L-6-v2` par défaut depuis l'étape 3.3 (`TUJYA_RAG_RERANK_MODEL` ;
   `BAAI/bge-reranker-base`, le modèle du TP, reste possible). La recherche renvoie
   `max(k, fetch_k)` candidats (`fetch_k` 10 par défaut, `TUJYA_RAG_FETCH_K`), le cross-encoder
@@ -284,7 +284,7 @@ requête, filtres de métadonnées), mesuré dans [benchmark.md](benchmark.md#re
   score et son rang avant reranking. Désactivé par défaut (`TUJYA_RAG_RERANK`) : 3 à 11 s par
   question sur le processeur de ce PC ([benchmark_retrieval.md](benchmark_retrieval.md)).
 - **Réécriture de requête (D118)** : le LLM réécrit la question en une requête de recherche
-  anglaise courte qui garde les noms de médicaments ([`src/rag/rewrite.py`](../../src/rag/rewrite.py)) ;
+  anglaise courte qui garde les noms de médicaments ([`src/rag/query_rewriting.py`](../../src/rag/query_rewriting.py)) ;
   la recherche (et le reranking) portent sur cette requête, la réponse sur la question. Une
   réécriture vide, trop longue ou en erreur garde la question ; les mots collés par un petit
   LLM (`what_are_the_...`) sont séparés. **Activée par défaut depuis l'étape 3.3**
@@ -299,7 +299,7 @@ requête, filtres de métadonnées), mesuré dans [benchmark.md](benchmark.md#re
 
 Modèles fastembed téléchargés une fois depuis Hugging Face (sans compte) dans
 `TUJYA_RAG_MODEL_CACHE_DIR` (`models/fastembed`, git-ignoré ; volume `fastembed` dans Docker) :
-`Qdrant/bm25` (quelques ko), `BAAI/bge-reranker-base` (1,1 Go). `python -m src.rag.index` ajoute
+`Qdrant/bm25` (quelques ko), `BAAI/bge-reranker-base` (1,1 Go). `python -m src.rag.init_qdrant` ajoute
 les vecteurs sparse à une collection plus ancienne sans rien réencoder (copie des points, 9 s pour
 8 661 chunks le 2026-11-11), puis ne recalcule les vecteurs sparse que si le modèle change.
 
@@ -326,7 +326,7 @@ documents utilisés ». Trois façons de les voir (D114) :
   [docs/api.md](../api.md#get-apidocuments)).
 
 Les documents sont reconstruits à partir des chunks de l'index
-([`src/rag/documents.py`](../../src/rag/documents.py)) : la page montre exactement ce que
+([`src/rag/chunking.py`](../../src/rag/chunking.py)) : la page montre exactement ce que
 l'agent peut retrouver, pas une copie séparée. Les phrases de posologie chiffrée sont
 remplacées par « […] » à l'affichage, comme dans les réponses de l'agent. Vérification dans un
 vrai navigateur : `cd frontend && node scripts/documents-screenshots.mjs` (contrôle la carte
@@ -351,10 +351,10 @@ le 2026-11-11 : 28 notices sur 4 002 documents pour « notice + warfarine »).
   la nôtre, filtres sur sparse et hybride, reranking (fetch_k lus, k gardés, égalités), nettoyage
   et repli de la réécriture ; [`tests/agent/test_search_tool.py`](../../tests/agent/test_search_tool.py) :
   l'outil avec reranking, requête réécrite et métadonnées des sources.
-- [`tests/rag/test_documents.py`](../../tests/rag/test_documents.py) : regroupement des chunks
+- [`tests/rag/test_chunking_documents.py`](../../tests/rag/test_chunking_documents.py) : regroupement des chunks
   en documents, filtres et facettes, `/api/documents` (connexion exigée, filtres, détail avec
   chunks, posologie masquée, 503 si l'index est vide ou Qdrant injoignable), chat sur Qdrant.
-- [`tests/data/test_corpus.py`](../../tests/data/test_corpus.py) (respx, sans réseau) : règle de sélection
+- [`tests/rag/test_corpus.py`](../../tests/rag/test_corpus.py) (respx, sans réseau) : règle de sélection
   des notices, posologie jamais stockée, exécution du connecteur (une notice par principe
   actif, 404 géré, fichier brut réutilisé), requêtes PubMed par principe actif et leurs
   résultats, découpage et chevauchement, métadonnées des chunks, identifiants stables,

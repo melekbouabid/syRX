@@ -15,9 +15,9 @@ docker compose down                 # arrête ; les volumes sont gardés (down -
 |---|---|---|---|
 | `postgres` | `pgvector/pgvector:pg16` | 5432 | volume `pgdata` ; base `tujya` (comptes, tables des médicaments, ancien index pgvector `rag_chunks`) et base `mlflow` |
 | `qdrant` | `qdrant/qdrant:v1.20.0` | 6333 | base vectorielle du RAG (D113) : collection `tujya_chunks`, un point par chunk avec ses métadonnées en payload, vecteurs dense et sparse BM25 (D116) ; tableau de bord sur <http://localhost:6333/dashboard> ; volume `qdrant` ; télémétrie coupée |
-| `mlflow` | construite depuis [`infra/docker/mlflow/Dockerfile`](../infra/docker/mlflow/Dockerfile) (MLflow 3.17.2 + psycopg2) | 5000 | stockage du tracking dans PostgreSQL, artefacts dans le volume `mlartifacts`, Model Registry |
+| `mlflow` | construite depuis [`infra/mlflow/Dockerfile`](../infra/mlflow/Dockerfile) (MLflow 3.17.2 + psycopg2) | 5000 | stockage du tracking dans PostgreSQL, artefacts dans le volume `mlartifacts`, Model Registry |
 | `pharma-init` | image du backend | aucun | ponctuel : `python -m app.pharma_loader` reconstruit les tables des médicaments depuis `config/` et `data/processed/pharma/`, puis s'arrête ; le backend l'attend |
-| `rag-init` | image du backend | aucun | ponctuel : `python -m src.rag.index --pull` télécharge les modèles Ollama s'ils manquent, puis indexe `data/processed/rag/corpus` dans la collection Qdrant `tujya_chunks` (idempotent ; [rag.md](module2/rag.md)) ; le backend ne l'attend pas |
+| `rag-init` | image du backend | aucun | ponctuel : `python -m src.rag.init_qdrant --pull` télécharge les modèles Ollama s'ils manquent, puis indexe `data/processed/rag/corpus` dans la collection Qdrant `tujya_chunks` (idempotent ; [rag.md](module2/rag.md)) ; le backend ne l'attend pas |
 | `backend` | construite depuis [`backend/Dockerfile`](../backend/Dockerfile) (Python 3.12, FastAPI, ONNX Runtime CPU, LangGraph) | 8000 | l'API et l'agent (`/api/chat`, parle à `ollama`) ; Swagger sur `/docs` |
 | `frontend` | construite depuis [`frontend/Dockerfile`](../frontend/Dockerfile) (build Node 22, nginx 1.27) | 8080 | le site React ; nginx transmet `/api`, `/docs`, `/openapi.json` à `backend` ([`nginx.conf`](../frontend/nginx.conf)) |
 | `ollama` | `ollama/ollama:0.40.12` | 11434 | LLM local (`qwen2.5:3b`) et embeddings (`bge-m3`) ; modèles dans le volume `ollama` ; GPU NVIDIA réservé (D57) |
@@ -39,7 +39,7 @@ modèles fastembed de l'étape 3.2 (`Qdrant/bm25`, `BAAI/bge-reranker-base`), t�
    `data/processed/rag/corpus_v2` (corpus servi, D126), `data/processed/c3pi/gradcam` et
    `data/processed/c3pi/drift/reference.json` (commandes exactes : « Installation depuis un clone
    neuf » plus bas).
-2. Les modèles : `python -m src.models.publish` remplit
+2. Les modèles : `python -m src.models.registry publish` remplit
    `models/` depuis le Model Registry de MLflow (MLflow doit tourner :
    `docker compose up -d mlflow` d'abord) ; `python -m src.models.toxicity.train_tox21 publish`
    ajoute le modèle Tox21 du bonus (`models/tox21`).
@@ -60,7 +60,7 @@ Les images sont toujours construites en local par `docker compose up -d --build`
 `docker-build.yml` construit et teste les mêmes images sur GitHub mais ne les publie pas
 (D70, D87, [docs/cd.md](cd.md)).
 
-[`infra/docker/postgres/init/01-init.sql`](../infra/docker/postgres/init/01-init.sql) s'exécute
+[`infra/postgres/init/01-init.sql`](../infra/postgres/init/01-init.sql) s'exécute
 une fois, sur un volume vide : il active `vector` dans la base `tujya` et crée la base
 `mlflow`. Les identifiants sont des valeurs de développement (`tujya` / `tujya`) ; on peut
 surcharger `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`,
@@ -78,7 +78,7 @@ public (code et documentation seulement).
 | postgres, mlflow, backend, ollama, frontend (Docker) | `127.0.0.1:<port>` | `ports: ["127.0.0.1:${WEB_PORT:-8080}:80"]` etc. dans `docker-compose.yml` |
 | serveur Vite / `vite preview` | `127.0.0.1:5173` / `127.0.0.1:4173` | `server.host` et `preview.host` dans [`frontend/vite.config.ts`](../frontend/vite.config.ts) |
 | uvicorn (développement local) | `127.0.0.1:8000` | `uvicorn app.main:app --host 127.0.0.1 --reload` (aussi le défaut d'uvicorn) |
-| serveur MCP, transport HTTP | `127.0.0.1:8765` | `--host` n'accepte que `127.0.0.1`, `localhost` ou `::1` ([`src/mcp_server/server.py`](../src/mcp_server/server.py), testé) |
+| serveur MCP, transport HTTP | `127.0.0.1:8765` | `--host` n'accepte que `127.0.0.1`, `localhost` ou `::1` ([`src/agent/mcp_server.py`](../src/agent/mcp_server.py), testé) |
 | interface MLflow | `127.0.0.1:5000` | le port de compose ; ne jamais lancer `mlflow ui --host 0.0.0.0` sur la machine |
 
 Dans les conteneurs, uvicorn, MLflow et nginx écoutent toujours sur `0.0.0.0` : c'est
@@ -111,7 +111,7 @@ répondent 200 ; les mêmes ports sur les adresses réseau local et WSL du PC (1
 **Utiliser `127.0.0.1`, pas `localhost`, dans les chaînes de connexion des outils lancés
 sur la machine** (D72). Sur ce PC, `localhost` se résout d'abord en `::1`, et Docker n'écoute
 plus qu'en IPv4 : navigateurs et curl repassent aussitôt en `127.0.0.1`, mais libpq (psycopg)
-attendait **65 à 100 s** par connexion (`mcp_server/smoke.py` prenait 2 min 34 s au lieu de
+attendait **65 à 100 s** par connexion (`agent/mcp_smoke.py` prenait 2 min 34 s au lieu de
 5 s). Les valeurs par défaut et la documentation utilisent donc `127.0.0.1`
 (`TUJYA_OLLAMA_URL`, `MLFLOW_TRACKING_URI`, les URL PostgreSQL) ;
 `http://localhost:8080` dans un navigateur ne pose aucun problème.
@@ -130,8 +130,8 @@ dvc remote list     # localstore  C:\Users\msi\dvc-storage\tujya  (default)
 
 DVC est installé dans le venv d'entraînement
 (`.venv-train/Scripts/dvc.exe`, DVC 3.67.1). Ce qui est suivi :
-`data/raw/c3pi/images` et `metadata` (`dvc add`), `data/processed/pharma`, `data/rag/raw`,
-`data/rag/interim`, `data/rag/manifest.json`, `data/raw/tox21` (`dvc add`), et les
+`data/raw/c3pi/images` et `metadata` (`dvc add`), `data/processed/pharma`, `data/external/rag_v1/raw`,
+`data/external/rag_v1/interim`, `data/external/rag_v1/manifest.json`, `data/raw/tox21` (`dvc add`), et les
 sorties des étapes `prepare` (étiquettes, jeux YOLO) et `rag_corpus` (chunks) de
 [`dvc.yaml`](../dvc.yaml).
 
@@ -186,7 +186,7 @@ git clone https://github.com/melekbouabid/syRX.git && cd syRX
 dvc pull data/processed/pharma.dvc spark_rag gradcam_gallery data/processed/c3pi/drift/reference.json
 dvc pull $(tail -n +2 config/demo_gallery.csv | cut -d, -f1 | sed 's|/images/|/|; s|^|data/raw/c3pi/images/|')
 # 2. modèles servis depuis le Model Registry (MLflow du projet sur :5000)
-MLFLOW_TRACKING_URI=http://127.0.0.1:5000 python -m src.models.publish            # .venv-train
+MLFLOW_TRACKING_URI=http://127.0.0.1:5000 python -m src.models.registry publish            # .venv-train
 MLFLOW_TRACKING_URI=http://127.0.0.1:5000 python -m src.models.toxicity.train_tox21 publish   # .venv
 # 3. une commande
 docker compose up -d --build
@@ -211,7 +211,7 @@ citalopram : réponse en 5,2 s citant l'interaction DDInter « Major », nœud d
 Deux écarts trouvés et traités :
 - **Remote DVC** : le remote partagé `localstore` ne contient que les données d'avant novembre
   (aucun `dvc push` depuis : règle du projet, le remote est partagé avec l'ancienne copie). Les
-  données produites depuis (tables à 380 classes, corpus v2, Grad-CAM, dérive, `data/rag_v2`,
+  données produites depuis (tables à 380 classes, corpus v2, Grad-CAM, dérive, `data/external/rag_v2`,
   images v2) sont dans le cache DVC de la copie de travail. Pour le clone, un remote **local à la
   copie** (`.dvc/config.local`, jamais commité) pointe vers ce cache, en lecture :
   `dvc remote add --local devcache <copie de travail>/.dvc/cache` puis `dvc pull -r devcache
@@ -263,7 +263,7 @@ vivent dans les volumes `pgdata` et `mlartifacts` du projet compose.
 
 Un cluster Spark autonome (un master, un worker) pour les jobs PySpark de
 [src/data/spark/](../src/data/spark/) : image officielle `apache/spark:4.1.1-python3` plus
-Pillow, NumPy, pandas, PyArrow et PyYAML ([infra/docker/spark/](../infra/docker/spark/)),
+Pillow, NumPy, pandas, PyArrow et PyYAML ([infra/spark/](../infra/spark/)),
 image locale `tujia2-spark:4.1.1`. Pas de Java ni de winutils sous Windows : tout tourne dans
 les conteneurs, le dépôt est monté sur `/opt/tujia` (même chemin pour le driver et les
 executors). Il ne fait pas partie de l'application : il démarre seulement avec son profil.
@@ -299,7 +299,7 @@ docker compose exec ollama ollama pull bge-m3           # embeddings (D59)
 docker compose exec ollama ollama ps                    # ce qui est chargé, GPU ou CPU
 ```
 
-Sans GPU NVIDIA : `docker compose -f docker-compose.yml -f infra/docker/ollama/cpu.yml up -d`
+Sans GPU NVIDIA : `docker compose -f docker-compose.yml -f infra/ollama/cpu.yml up -d`
 (même service, sans réservation de périphérique ; les réponses sont alors plusieurs fois plus
 lentes).
 

@@ -21,9 +21,9 @@ from src.data.spark.session import load_params, spark_session
 
 JOBS = {
     "index": "src.data.spark.index_job",
-    "quality": "src.data.spark.quality_job",
-    "split": "src.data.spark.split_job",
-    "augment": "src.data.spark.augment_job",
+    "quality": "src.data.cleaning",
+    "split": "src.data.split",
+    "augment": "src.data.augmentation",
     "epillid": "src.data.spark.epillid_job",
     "rag": "src.data.spark.rag_job",
 }

@@ -17,12 +17,11 @@ from pathlib import Path
 import pytest
 
 from app.db import make_engine
-from src.rag.embeddings import FakeEmbedder
-from src.rag.index import copy_index, index_chunks
-from src.rag.qdrant_store import DENSE, QdrantStore, point_id, to_filter
+from src.rag.init_qdrant import FakeEmbedder, copy_index, index_chunks
 from src.rag.retrieval import Retriever, RetrieverHolder
-from src.rag.store import METADATA_COLUMNS, ChunkStore, Filters
-from tujya_testing.rag_fakes import CORPUS, DIM, build_index
+from src.rag.stores.base import METADATA_COLUMNS, ChunkStore, Filters
+from src.rag.stores.qdrant import DENSE, QdrantStore, point_id, to_filter
+from tests.support.rag_fakes import CORPUS, DIM, build_index
 
 SERVER = os.environ.get("TUJYA_TEST_QDRANT_URL")
 TARGETS = [":memory:"] + ([SERVER] if SERVER else [])

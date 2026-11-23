@@ -4,7 +4,7 @@
         --data data/processed/c3pi/datasets_v2/detect --out runs/detector-yolov8n
     python -m src.models.detection.runner --config ... --smoke     # local check, tiny subset
 
-This is what each Kaggle notebook (notebooks/kaggle/detector_<arch>.ipynb) runs on the GPU:
+This is what each Kaggle notebook (notebooks/module1/kaggle/detector_<arch>.ipynb) runs on the GPU:
 
 1. Optuna study (seeded TPE sampler, config/hpo/detector_<arch>.yaml): each trial trains the
    pretrained model for `search.epochs` epochs on `search.fraction` of the train images and is

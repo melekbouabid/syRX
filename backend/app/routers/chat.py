@@ -25,7 +25,7 @@ from app.schemas import ChatIn, ChatResult, CitationOut, CitationRef, ToolCallOu
 from src.agent.graph import AgentState, TujyaAgent
 from src.agent.runtime import AgentHolder
 from src.agent.safety import redact_doses
-from src.rag.embeddings import EmbeddingError
+from src.rag.init_qdrant import EmbeddingError
 from src.rag.stores import STORE_ERRORS
 
 router = APIRouter(prefix="/api", tags=["chat"], dependencies=[Depends(get_current_user)])
@@ -37,7 +37,8 @@ def get_agent(request: Request) -> tuple[AgentHolder, TujyaAgent]:
     if holder.toolbox().retrievers.get() is None:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
-            "The document index is empty. Run `python -m src.rag.index` (docs/module2/rag.md).",
+            "The document index is empty. Run `python -m src.rag.init_qdrant` "
+            "(docs/module2/rag.md).",
         )
     return holder, agent
 

@@ -13,9 +13,9 @@ project_root: ../..
 manifest_path: config/data_pipeline/manifest.json
 sources_doc_path: docs/data_pipeline/sources.md
 
-# Everything the pipeline writes lives under this one folder: data/raw (downloaded files),
-# data/interim (validated tables), data/cache and data/state.
-data_dir: data
+# Everything the pipeline writes lives under this one folder: data/external/raw (downloaded
+# files), data/external/interim (validated tables), data/external/cache and data/external/state.
+data_dir: data/external
 
 http:
   product: tujya-data
@@ -61,7 +61,7 @@ sources:
       max_records_per_query: 200
       start_date: "2000/01/01"
   openfda_label:
-    enabled: false               # Tujya RAG corpus: `python -m src.data.corpus labels`
+    enabled: false               # Tujya RAG corpus: `python -m src.rag.corpus labels`
 
 logging:
   level: INFO

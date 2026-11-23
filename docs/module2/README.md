@@ -19,23 +19,23 @@ Rapport technique : [docs/module2/rapport_module2_ai_engineering.pdf](rapport_mo
 
 | Exigence | Où la trouver |
 |---|---|
-| RAG : gestion des documents | collecte (notices openFDA, résumés PubMed, paires DDInter) et découpage en chunks : [src/data/corpus/](../../src/data/corpus/) ([corpus.py](../../src/data/corpus/corpus.py), [\_\_main\_\_.py](../../src/data/corpus/__main__.py)) sur les connecteurs du [pipeline](../data_pipeline/README.md) ; corpus versionné par DVC (étape `rag_corpus` de [dvc.yaml](../../dvc.yaml) pour les 150 premières classes, étape `spark_rag` et collecte [rag_sources.py](../../src/data/spark/rag_sources.py) pour les 380 classes servies, D126) ; indexation idempotente : [src/rag/index.py](../../src/rag/index.py) |
-| RAG : métadonnées | colonnes de chaque chunk (source, médicament, section, URL, date, licence, rétractation) : [src/data/corpus/corpus.py](../../src/data/corpus/corpus.py) ; payload Qdrant (toutes les métadonnées, `content_hash` SHA-256) et filtres : [src/rag/store.py](../../src/rag/store.py) ; [docs/module2/rag.md](rag.md) |
-| RAG : base vectorielle consultable | Qdrant (`docker compose` service `qdrant`, collection `tujya_chunks`, un point par chunk, index de payload sur les champs filtrés) : [src/rag/qdrant_store.py](../../src/rag/qdrant_store.py) ; catalogue des documents reconstruit depuis les chunks : [src/rag/documents.py](../../src/rag/documents.py) ; `GET /api/documents` (liste, filtres, facettes) et `GET /api/documents/{doc_id}` (métadonnées et chunks) : [backend/app/routers/documents.py](../../backend/app/routers/documents.py) ; page « Documents » : [frontend/src/pages/DocumentsPage.tsx](../../frontend/src/pages/DocumentsPage.tsx) ; [rag.md](rag.md#consulter-les-documents-indexés), captures [27](../screenshots/27-documents.jpg) à [29](../screenshots/29-qdrant-dashboard.jpg) (D113, D114) |
-| RAG : recherche | BM25 (vecteurs sparse `Qdrant/bm25` dans Qdrant), dense (bge-m3) et hybride RRF fait par Qdrant, reranker cross-encoder BAAI/bge-reranker-base ([src/rag/rerank.py](../../src/rag/rerank.py)), réécriture de requête par le LLM ([src/rag/rewrite.py](../../src/rag/rewrite.py)), filtres de métadonnées (principe actif, type, section, rétractation) ; [rag.md](rag.md#recherche-avancée-étape-32), mesures dans [benchmark.md](benchmark.md#recherche-avancée-étape-32) (D116-D118) : [src/rag/retrieval.py](../../src/rag/retrieval.py), [src/rag/embeddings.py](../../src/rag/embeddings.py), [src/rag/names.py](../../src/rag/names.py) |
+| RAG : gestion des documents | collecte (notices openFDA, résumés PubMed, paires DDInter) et découpage en chunks : [src/rag/corpus.py](../../src/rag/corpus.py) ([corpus.py](../../src/rag/chunking.py), [\_\_main\_\_.py](../../src/rag/corpus.py)) sur les connecteurs du [pipeline](../data_pipeline/README.md) ; corpus versionné par DVC (étape `rag_corpus` de [dvc.yaml](../../dvc.yaml) pour les 150 premières classes, étape `spark_rag` et collecte [rag_sources.py](../../src/data/spark/rag_sources.py) pour les 380 classes servies, D126) ; indexation idempotente : [src/rag/init_qdrant.py](../../src/rag/init_qdrant.py) |
+| RAG : métadonnées | colonnes de chaque chunk (source, médicament, section, URL, date, licence, rétractation) : [src/rag/chunking.py](../../src/rag/chunking.py) ; payload Qdrant (toutes les métadonnées, `content_hash` SHA-256) et filtres : [src/rag/stores/base.py](../../src/rag/stores/base.py) ; [docs/module2/rag.md](rag.md) |
+| RAG : base vectorielle consultable | Qdrant (`docker compose` service `qdrant`, collection `tujya_chunks`, un point par chunk, index de payload sur les champs filtrés) : [src/rag/stores/qdrant.py](../../src/rag/stores/qdrant.py) ; catalogue des documents reconstruit depuis les chunks : [src/rag/chunking.py](../../src/rag/chunking.py) ; `GET /api/documents` (liste, filtres, facettes) et `GET /api/documents/{doc_id}` (métadonnées et chunks) : [backend/app/routers/documents.py](../../backend/app/routers/documents.py) ; page « Documents » : [frontend/src/pages/DocumentsPage.tsx](../../frontend/src/pages/DocumentsPage.tsx) ; [rag.md](rag.md#consulter-les-documents-indexés), captures [27](../screenshots/27-documents.jpg) à [29](../screenshots/29-qdrant-dashboard.jpg) (D113, D114) |
+| RAG : recherche | BM25 (vecteurs sparse `Qdrant/bm25` dans Qdrant), dense (bge-m3) et hybride RRF fait par Qdrant, reranker cross-encoder BAAI/bge-reranker-base ([src/rag/reranking.py](../../src/rag/reranking.py)), réécriture de requête par le LLM ([src/rag/query_rewriting.py](../../src/rag/query_rewriting.py)), filtres de métadonnées (principe actif, type, section, rétractation) ; [rag.md](rag.md#recherche-avancée-étape-32), mesures dans [benchmark.md](benchmark.md#recherche-avancée-étape-32) (D116-D118) : [src/rag/retrieval.py](../../src/rag/retrieval.py), [src/rag/init_qdrant.py](../../src/rag/init_qdrant.py), [src/rag/query_rewriting.py](../../src/rag/query_rewriting.py) |
 | RAG : citations | citations numérotées, attribution et vérification : [src/agent/graph.py](../../src/agent/graph.py), [src/agent/safety.py](../../src/agent/safety.py) ; affichage cliquable : [frontend/src/pages/ChatPanel.tsx](../../frontend/src/pages/ChatPanel.tsx) ; capture [10](../screenshots/10-chat-citation.jpg) |
 | RAG : documentation | [docs/module2/rag.md](rag.md), [docs/module2/interactions.md](interactions.md), [docs/module2/agent.md](agent.md) |
 | Tool calling | outils LangChain `identify_pills`, `check_interaction`, `get_drug_info`, `search_documents` (et `predict_toxicity`, [docs/bonus/](../bonus/README.md)) : [src/agent/tools.py](../../src/agent/tools.py) |
-| MCP | serveur MCP (SDK officiel, stdio et HTTP limité à 127.0.0.1), mêmes outils, même code : [src/mcp_server/server.py](../../src/mcp_server/server.py) ; même boîte à outils que le chat (récupération servie D123, classifieur à 380 classes, D125) ; essai de bout en bout sur une photo du split de test : [src/mcp_server/smoke.py](../../src/mcp_server/smoke.py) ; [docs/module2/mcp.md](mcp.md) |
+| MCP | serveur MCP (SDK officiel, stdio et HTTP limité à 127.0.0.1), mêmes outils, même code : [src/agent/mcp_server.py](../../src/agent/mcp_server.py) ; même boîte à outils que le chat (récupération servie D123, classifieur à 380 classes, D125) ; essai de bout en bout sur une photo du split de test : [src/agent/mcp_smoke.py](../../src/agent/mcp_smoke.py) ; [docs/module2/mcp.md](mcp.md) |
 | LangChain et/ou LangGraph | graphe LangGraph comprendre → outils → récupération → réponse citée → contrôle de sécurité : [src/agent/graph.py](../../src/agent/graph.py) ; câblage pour l'API : [src/agent/runtime.py](../../src/agent/runtime.py) ; schéma : [docs/module2/assets/agent_graph.png](assets/agent_graph.png) |
-| Benchmark de la récupération | grille de 27 configurations (embeddings bge-m3 / multilingual-e5-base / all-MiniLM-L6-v2 / bge-m3 fine-tuné, dense / hybride / BM25, découpage, réécriture, 5 rerankers), Recall@k, MRR, nDCG@10, latence D96, un run MLflow par configuration (`tujya-rag-retrieval`), champion enregistré avec alias : [src/benchmark/bench_grid.py](../../src/benchmark/bench_grid.py), [config/rag_grid.yaml](../../config/rag_grid.yaml), [src/benchmark/grid/](../../src/benchmark/grid/) ; [benchmark_retrieval.md](benchmark_retrieval.md) (D123) ; mesures antérieures : [bench_retrieval.py](../../src/benchmark/bench_retrieval.py), [results_retrieval.json](../../src/benchmark/results_retrieval.json) |
-| Benchmark de la génération | grille LLM (qwen2.5:3b, llama3.2:3b) × prompt (v1, v2, [src/agent/prompts.py](../../src/agent/prompts.py)) sur les 96 questions : sécurité, citations vérifiées par un juge local, RAGAS 0.4.4 (4 métriques, toutes les réponses), MLflow 3 GenAI (traces LangGraph avec un span par outil, Prompt Registry, `mlflow.genai.evaluate` avec Correctness, Safety et 3 scorers du projet), un run par configuration (`tujya-rag-generation`), champion enregistré avec alias : [bench_answers.py](../../src/benchmark/bench_answers.py), [bench_generation.py](../../src/benchmark/bench_generation.py), [register_prompts.py](../../src/benchmark/register_prompts.py), [config/rag_generation.yaml](../../config/rag_generation.yaml), [src/benchmark/generation/](../../src/benchmark/generation/) ; [benchmark_generation.md](benchmark_generation.md) (D124) ; premier benchmark (88 questions) : [benchmark.md](benchmark.md) |
+| Benchmark de la récupération | grille de 27 configurations (embeddings bge-m3 / multilingual-e5-base / all-MiniLM-L6-v2 / bge-m3 fine-tuné, dense / hybride / BM25, découpage, réécriture, 5 rerankers), Recall@k, MRR, nDCG@10, latence D96, un run MLflow par configuration (`tujya-rag-retrieval`), champion enregistré avec alias : [src/evaluation/retrieval_grid.py](../../src/evaluation/retrieval_grid.py), [config/rag_grid.yaml](../../config/rag_grid.yaml), [src/evaluation/results/grid/](../../src/evaluation/results/grid/) ; [benchmark_retrieval.md](benchmark_retrieval.md) (D123) ; mesures antérieures : [benchmark_retrieval.py](../../src/evaluation/benchmark_retrieval.py), [results/retrieval.json](../../src/evaluation/results/retrieval.json) |
+| Benchmark de la génération | grille LLM (qwen2.5:3b, llama3.2:3b) × prompt (v1, v2, [src/agent/prompts.py](../../src/agent/prompts.py)) sur les 96 questions : sécurité, citations vérifiées par un juge local, RAGAS 0.4.4 (4 métriques, toutes les réponses), MLflow 3 GenAI (traces LangGraph avec un span par outil, Prompt Registry, `mlflow.genai.evaluate` avec Correctness, Safety et 3 scorers du projet), un run par configuration (`tujya-rag-generation`), champion enregistré avec alias : [benchmark_generation.py](../../src/evaluation/benchmark_generation.py), [ragas_evaluation.py](../../src/evaluation/ragas_evaluation.py), [register_prompts.py](../../src/evaluation/register_prompts.py), [config/rag_generation.yaml](../../config/rag_generation.yaml), [src/evaluation/results/generation/](../../src/evaluation/results/generation/) ; [benchmark_generation.md](benchmark_generation.md) (D124) ; premier benchmark (88 questions) : [benchmark.md](benchmark.md) |
 | Interface web | panneau « Ask about your pills » : [frontend/src/pages/ChatPanel.tsx](../../frontend/src/pages/ChatPanel.tsx) ; `POST /api/chat` (JSON ou flux SSE) : [backend/app/routers/chat.py](../../backend/app/routers/chat.py) ; captures [08](../screenshots/08-chat-empty.jpg) à [11](../screenshots/11-chat-dose-refused.jpg) |
 | Sécurité des réponses | jamais de dose, jamais « sûr », horaires seulement si la source les donne, avertissement : [src/agent/safety.py](../../src/agent/safety.py), [tests/agent/test_safety.py](../../tests/agent/test_safety.py) |
 | Dépôt GitHub documenté, commits réguliers | ce README, [README.md](../../README.md), `git log`, tags git, [docs/git_workflow.md](../git_workflow.md) (branches, Conventional Commits, hooks) |
 | Rapport technique | [docs/module2/rapport_module2_ai_engineering.pdf](rapport_module2_ai_engineering.pdf) |
 | Démonstration | [docs/demo.md](../demo.md) (étapes chat, dose refusée, MCP, benchmark) |
-| Tests | [tests/data/](../../tests/data/), [tests/rag/](../../tests/rag/), [tests/agent/](../../tests/agent/), [tests/mcp_server/](../../tests/mcp_server/) : corpus et connecteurs (HTTP simulé), recherche (SQLite, pgvector et Qdrant en mémoire), catalogue des documents et `/api/documents`, API de chat et agent avec un LLM factice, sécurité, MCP |
+| Tests | [tests/data/](../../tests/data/), [tests/rag/](../../tests/rag/), [tests/agent/](../../tests/agent/), [tests/agent/test_mcp_server.py](../../tests/agent/test_mcp_server.py) : corpus et connecteurs (HTTP simulé), recherche (SQLite, pgvector et Qdrant en mémoire), catalogue des documents et `/api/documents`, API de chat et agent avec un LLM factice, sécurité, MCP |
 
 ## Résultats du benchmark
 
@@ -79,12 +79,12 @@ Grille de l'étape 3.3 (85 questions, [benchmark_retrieval.md](benchmark_retriev
 Le module suit l'arborescence du guide, partagée avec le module 1 : tout le code est dans `src/`.
 
 ```
-src/data/corpus/  principes actifs (RxNav), interactions DDInter, notices openFDA, résumés PubMed -> chunks
+src/rag/corpus.py principes actifs (RxNav), interactions DDInter, notices openFDA, résumés PubMed -> chunks
 src/rag/          embeddings bge-m3, stockage Qdrant (ou SQL), recherche BM25 / dense / hybride, indexation, catalogue
 src/agent/        graphe LangGraph (graph.py), outils (tools.py), règles de sécurité (safety.py), câblage (runtime.py)
-src/mcp_server/   serveur MCP sur les mêmes outils
-src/benchmark/    questions, scripts bench_*.py, résultats
-tests/            tests (data, rag, agent, mcp_server), venv du projet
+src/agent/mcp_server.py serveur MCP sur les mêmes outils
+src/evaluation/   questions.jsonl, qrels.json, scripts, results/
+tests/            tests (data, rag, agent, evaluation), venv du projet
 docs/module2/     rag, agent, mcp, benchmark, interactions, rapport (md + pdf), diagrams/, assets/
 ```
 
@@ -102,19 +102,19 @@ docker compose up -d --build
 
 # Venv du projet (.venv) actif, depuis la racine du dépôt :
 python -m src.agent.ask "La warfarine interagit-elle avec le fluconazole ?"
-python -m src.rag.search "fluconazole warfarin" --ingredient warfarin --k 5
-python -m src.rag.index                 # réindexation dans Qdrant (idempotente)
-python -m src.rag.index --copy-from-sql # copie l'ancien index pgvector dans Qdrant, sans réencoder
-python -m src.mcp_server                # serveur MCP (stdio)
-python -m src.benchmark.bench_retrieval # benchmark de la récupération
+python -m src.rag.retrieval "fluconazole warfarin" --ingredient warfarin --k 5
+python -m src.rag.init_qdrant                 # réindexation dans Qdrant (idempotente)
+python -m src.rag.init_qdrant --copy-from-sql # copie l'ancien index pgvector dans Qdrant, sans réencoder
+python -m src.agent.mcp_server                # serveur MCP (stdio)
+python -m src.evaluation.benchmark_retrieval # benchmark de la récupération
 
 # Corpus (même venv), depuis la racine :
-python -m src.data.corpus labels     # notices openFDA
-python -m src.data.corpus pubmed     # résumés PubMed
+python -m src.rag.corpus labels     # notices openFDA
+python -m src.rag.corpus pubmed     # résumés PubMed
 dvc repro rag_corpus                 # chunks des 150 premières classes (étape DVC)
 python -m src.data.spark.rag_sources labels   # nouvelles classes (aussi ingredients, pubmed)
 dvc repro spark_rag                  # corpus servi des 380 classes (job Spark, D126)
 
 # Tests du module (pgvector : TUJYA_TEST_PG_URL, sinon ces deux tests sont ignorés)
-.venv/Scripts/python -m pytest tests/data tests/rag tests/agent tests/mcp_server
+.venv/Scripts/python -m pytest tests/data tests/rag tests/agent tests/evaluation
 ```

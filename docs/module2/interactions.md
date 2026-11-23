@@ -4,17 +4,17 @@ Comment chaque classe d'identification reçoit son ou ses principes actifs, et c
 construites les interactions entre ces principes actifs. Exécuté le 2026-10-28 pour les 150
 classes de v1, puis le 2026-11-11 pour les **380 classes de C3PI v2** que sert le classifieur
 de l'étape 2.3 (D119 dans [docs/decisions.md](../decisions.md)). Code :
-[`src/data/corpus/ingredients.py`](../../src/data/corpus/ingredients.py),
-[`src/data/corpus/interactions.py`](../../src/data/corpus/interactions.py),
-[`src/data/corpus/__main__.py`](../../src/data/corpus/__main__.py).
+[`src/rag/corpus.py`](../../src/rag/corpus.py),
+[`src/rag/corpus.py`](../../src/rag/corpus.py),
+[`src/rag/corpus.py`](../../src/rag/corpus.py).
 
 ```
 config/splits/c3pi_v2/classes.csv (380 classes v2)
-  -> config/pill_classes.csv (`python -m src.data.corpus classes` : identifiants v2, NDC11 par classe)
+  -> config/pill_classes.csv (`python -m src.rag.corpus classes` : identifiants v2, NDC11 par classe)
   -> RxNav ndcstatus      NDC11 -> RxCUI du produit (NDC obsolètes compris, par leur historique)
   -> RxNav historystatus  RxCUI -> principes actifs de base (RxNorm IN), dosages retirés
   -> data/processed/pharma/pill_ingredients.csv  + colonnes de principes actifs dans config/pill_classes.csv
-  -> DDInter 2.0 (14 fichiers ATC, `python -m src.data.corpus ddinter`)
+  -> DDInter 2.0 (14 fichiers ATC, `python -m src.rag.corpus ddinter`)
   -> config/ingredient_aliases.csv (11 noms DDInter différents de RxNorm)
   -> data/processed/pharma/interactions_between_classes.csv, data/processed/pharma/interactions_with_any_drug.csv
 ```
@@ -22,10 +22,10 @@ config/splits/c3pi_v2/classes.csv (380 classes v2)
 Commandes (venv du projet `.venv`, depuis la racine du dépôt) :
 
 ```bash
-python -m src.data.corpus ddinter
-python -m src.data.corpus classes        # 380 classes v2 (D119)
-python -m src.data.corpus ingredients
-python -m src.data.corpus interactions
+python -m src.rag.corpus ddinter
+python -m src.rag.corpus classes        # 380 classes v2 (D119)
+python -m src.rag.corpus ingredients
+python -m src.rag.corpus interactions
 .venv-train/Scripts/python -m dvc add data/processed/pharma
 cd backend && ../.venv/Scripts/python -m app.pharma_loader   # recharge les tables de l'API
 ```

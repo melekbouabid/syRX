@@ -1,10 +1,10 @@
-"""Build the Kaggle notebooks of step 2.2 (notebooks/kaggle/detector_<arch>.ipynb).
+"""Build the Kaggle notebooks of step 2.2 (notebooks/module1/kaggle/detector_<arch>.ipynb).
 
-    python -m src.models.detection.notebook yolov8n        # writes notebooks/kaggle/...
+    python -m src.models.detection.notebook yolov8n        # writes notebooks/module1/kaggle/...
     python -m src.models.detection.notebook --all
 
 Every notebook is the same short driver: clone the experiment branch, install the pinned
-packages (notebooks/kaggle/requirements.txt), find the private dataset, run
+packages (notebooks/module1/kaggle/requirements.txt), find the private dataset, run
 src/models/detection/runner.py with config/hpo/detector_<arch>.yaml, zip the export folder.
 Only the architecture changes, so they are generated from one template (a test checks that
 the committed notebooks are exactly the generated ones). Notebooks are committed without
@@ -23,7 +23,7 @@ import nbformat
 from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook
 
 ROOT = Path(__file__).resolve().parents[3]
-FOLDER = ROOT / "notebooks" / "kaggle"
+FOLDER = ROOT / "notebooks" / "module1" / "kaggle"
 REPO = "https://github.com/melekbouabid/syRX.git"
 DATASET = "tujya-c3pi-detect-v2"
 # Architecture -> (description, estimated duration on a Kaggle T4, recommended accelerator).
@@ -93,7 +93,7 @@ if ON_KAGGLE:
     if not REPO_DIR.exists():
         clone = ["git", "clone", "--depth", "1", "--branch", BRANCH, REPO, str(REPO_DIR)]
         subprocess.run(clone, check=True)
-    requirements = REPO_DIR / "notebooks" / "kaggle" / "requirements.txt"
+    requirements = REPO_DIR / "notebooks" / "module1" / "kaggle" / "requirements.txt"
     pip = [sys.executable, "-m", "pip", "install", "-q", "-r", str(requirements)]
     subprocess.run(pip, check=True)
 else:  # local smoke run, from the repository

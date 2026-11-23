@@ -11,10 +11,10 @@ ce texte.
 ```mermaid
 flowchart TD
     node1["data/processed/pharma.dvc"]
-    node2["data/rag/interim.dvc"]
-    node3["data/rag/raw.dvc"]
-    node4["data/rag_v2/interim.dvc"]
-    node5["data/rag_v2/raw.dvc"]
+    node2["data/external/rag_v1/interim.dvc"]
+    node3["data/external/rag_v1/raw.dvc"]
+    node4["data/external/rag_v2/interim.dvc"]
+    node5["data/external/rag_v2/raw.dvc"]
     node6["data/raw/c3pi/images.dvc"]
     node7["data/raw/c3pi/metadata.dvc"]
     node8["data/raw/epillid.dvc"]
@@ -80,15 +80,15 @@ flowchart TD
     node26-->node13
     node26-->node14
     node27-->node13
-    node28["data/models/classifiers/classifier-efficientnetv2s.dvc"]
-    node29["data/models/detectors/detector-yolo11s.dvc"]
+    node28["data/processed/models/classifiers/classifier-efficientnetv2s.dvc"]
+    node29["data/processed/models/detectors/detector-yolo11s.dvc"]
     node30["data/processed/rag/bench/queries.json.dvc"]
     node31["data/processed/rag/bench/vectors.dvc"]
-    node32["data/rag/manifest.json.dvc"]
-    node33["data/rag_v2/class_ingredients.csv.dvc"]
-    node34["data/rag_v2/ingredients.csv.dvc"]
-    node35["data/rag_v2/manifest.json.dvc"]
-    node36["data/rag_v2/new_ingredients.csv.dvc"]
+    node32["data/external/rag_v1/manifest.json.dvc"]
+    node33["data/external/rag_v2/class_ingredients.csv.dvc"]
+    node34["data/external/rag_v2/ingredients.csv.dvc"]
+    node35["data/external/rag_v2/manifest.json.dvc"]
+    node36["data/external/rag_v2/new_ingredients.csv.dvc"]
     node37["data/raw/off_topic.dvc"]
     node38["data/raw/tox21.dvc"]
     node39["data/raw/medicine_boxes/web_commons.dvc"]

@@ -8,10 +8,10 @@ import asyncio
 from fastapi import FastAPI
 
 from src.agent.tools import Toolbox
-from src.rag.embeddings import FakeEmbedder
+from src.rag.init_qdrant import FakeEmbedder
+from src.rag.query_rewriting import QueryRewriter
 from src.rag.retrieval import RetrieverHolder
-from src.rag.rewrite import QueryRewriter
-from tujya_testing.rag_fakes import DIM, FakeChatModel, build_index
+from tests.support.rag_fakes import DIM, FakeChatModel, build_index
 
 
 class WordReranker:

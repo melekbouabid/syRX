@@ -5,7 +5,7 @@
 modules » du [README](../README.md#exigences-des-modules).
 
 ## Déjà fait (hérité du projet d'origine, synergie de médicaments)
-- [x] Pipeline de données `src/data/tujya_data` (14 connecteurs, 270 tests ; réduit à DDInter, PubMed et openFDA à l'étape 1.1, D85)
+- [x] Pipeline de données `src/data/sources` (14 connecteurs, 270 tests ; réduit à DDInter, PubMed et openFDA à l'étape 1.1, D85)
 - [x] Backend FastAPI : comptes, sessions, administration (le catalogue des médicaments et des lignées du projet d'origine a été retiré à l'étape 1.1, D85)
 - [x] Ébauche de frontend React + Vite à l'image de Tujya (prédictions factices)
 - [x] Planification de la nouvelle orientation (deux modules, périmètre, choix techniques)
@@ -50,7 +50,7 @@ modules » du [README](../README.md#exigences-des-modules).
 ## 3. API
 - [x] Schéma SQL (pills, ingredients, pill_ingredients, interactions, sources) + chargeur
 - [x] `POST /api/scan` asynchrone (image -> boîtes, top-5, confiance ; confirmation sous 0,85, [docs/api.md](api.md))
-- [x] `python -m src.models.publish` : modèles enregistrés -> `models/` pour l'API
+- [x] `python -m src.models.registry publish` : modèles enregistrés -> `models/` pour l'API
 - [x] Endpoints du guide (étape 2.5) : `GET /health`, `GET /model/metadata`, `POST /predict`, `POST /predict/visualize`, erreurs 400 / 413 / 503, schémas stricts, tests de chaque route et code d'erreur ([api.md](api.md#endpoints-du-guide-du-module-1-sans-compte), D97)
 - [x] `POST /api/interactions` asynchrone (sévérité DDInter, description, source ; jamais « sûr »)
 - [x] `GET /api/pills?q=` : recherche parmi les 150 classes (confirmation manuelle)
@@ -63,11 +63,11 @@ modules » du [README](../README.md#exigences-des-modules).
 - [x] Résumés PubMed : jusqu'à 20 par principe actif sur les interactions et les effets indésirables (D61)
 - [x] Découpage avec métadonnées (source, médicament, section, URL, date, licence, rétractation ; [rag.md](module2/rag.md))
 - [x] Embeddings bge-m3 dans PostgreSQL + pgvector, recherche hybride BM25 (RRF), filtres (D59)
-- [x] Corpus versionné par DVC (`data/rag/*.dvc`, étape `rag_corpus`)
+- [x] Corpus versionné par DVC (`data/external/rag_v1/*.dvc`, étape `rag_corpus`)
 - [x] Base vectorielle consultable (étape 3.1, remarque 7) : index dans Qdrant (tableau de bord sur :6333/dashboard, payload = toutes les métadonnées + SHA-256, index de payload), copie des vecteurs pgvector sans réencodage, même Recall@5 / MRR (écart 0), page « Documents » et `GET /api/documents` ; captures 27 à 29 ([rag.md](module2/rag.md#consulter-les-documents-indexés), D113-D114)
 - [x] Recherche avancée (étape 3.2, remarque 13) : BM25 sparse `Qdrant/bm25` et hybride RRF dans Qdrant, reranker bge-reranker-base (ONNX, désactivé par défaut : 13-18 s par question sur ce CPU), réécriture de requête par le LLM, sources avec métadonnées dans le chat ; meilleur : hybride + réécriture + reranker Recall@5 0,965 / MRR 0,889 ([benchmark.md](module2/benchmark.md#recherche-avancée-étape-32), D116-D118)
 - [x] Benchmark de la récupération (étape 3.3) : grille de 27 configurations, un run MLflow chacune (`tujya-rag-retrieval`), champion dense + réécriture (MRR 0,834, 389 ms) enregistré avec l'alias `champion` et servi, rerankers trop lents sur ce CPU (3,6 à 11 s), bge-m3 fine-tuné comparé et non servi ([benchmark_retrieval.md](module2/benchmark_retrieval.md), D123)
-- [x] Corpus RAG v2 des 380 classes servies : collecte polie des 93 nouveaux principes actifs (90 notices openFDA, 3 413 résumés PubMed, espace `data/rag_v2` versionné par DVC), job Spark `rag` sur les deux espaces (27 302 chunks, 13 660 documents, 175 principes actifs sur 176), collection Qdrant `tujya_chunks_v2` servie (v1 gardée), grille bge-m3 rejouée : champion hybride + réécriture (MRR 0,844 ; dense + réécriture 0,831, écart non significatif) ([rag.md](module2/rag.md#corpus-servi-depuis-le-2026-11-16--v2-380-classes-d126), [benchmark_retrieval.md](module2/benchmark_retrieval.md#corpus-v2-380-classes-d126), D126)
+- [x] Corpus RAG v2 des 380 classes servies : collecte polie des 93 nouveaux principes actifs (90 notices openFDA, 3 413 résumés PubMed, espace `data/external/rag_v2` versionné par DVC), job Spark `rag` sur les deux espaces (27 302 chunks, 13 660 documents, 175 principes actifs sur 176), collection Qdrant `tujya_chunks_v2` servie (v1 gardée), grille bge-m3 rejouée : champion hybride + réécriture (MRR 0,844 ; dense + réécriture 0,831, écart non significatif) ([rag.md](module2/rag.md#corpus-servi-depuis-le-2026-11-16--v2-380-classes-d126), [benchmark_retrieval.md](module2/benchmark_retrieval.md#corpus-v2-380-classes-d126), D126)
 
 ## 5. Agent
 - [x] Graphe LangGraph : comprendre -> outils -> récupérer -> répondre avec citations -> contrôle de sécurité ([agent.md](module2/agent.md))
