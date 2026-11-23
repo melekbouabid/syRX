@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parent / "spec.json"  # next to this script
+OUT = Path(__file__).resolve().parent / "question_spec.json"  # next to this script
 
 FR_SECTION = {
     "contraindications": "Quelles sont les contre-indications {de}{d} ?",

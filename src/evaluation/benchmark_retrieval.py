@@ -4,14 +4,14 @@ Each configuration is one MLflow run in the experiment `tujya-rag` (params, metr
 per-question results as an artifact). Results: docs/module2/benchmark.md.
 
     # from the repository root, project venv (.venv) active
-    python -m src.benchmark.bench_retrieval                 # Qdrant (TUJYA_QDRANT_URL)
-    python -m src.benchmark.bench_retrieval --store sql     # pgvector, the store before D113
+    python -m src.evaluation.benchmark_retrieval                 # Qdrant (TUJYA_QDRANT_URL)
+    python -m src.evaluation.benchmark_retrieval --store sql     # pgvector, the store before D113
     # step 3.2: reranking and query rewriting (D117, D118), merged into the results file
-    python -m src.benchmark.bench_retrieval --configs dense-names-rerank,hybrid-names-rerank
-    python -m src.benchmark.bench_retrieval --configs dense-names-rewrite --fetch-k 10
+    python -m src.evaluation.benchmark_retrieval --configs dense-names-rerank,hybrid-names-rerank
+    python -m src.evaluation.benchmark_retrieval --configs dense-names-rewrite --fetch-k 10
     # needs TUJYA_PHARMA_DATABASE_URL (ingredient names) and MLFLOW_TRACKING_URI
 
-Metrics, over the questions that have expected chunks (benchmark/rag_questions.jsonl):
+Metrics, over the questions that have expected chunks (src/evaluation/questions.jsonl):
 - Recall@k: share of questions with at least one expected chunk in the top k (hit rate);
 - Coverage@k: mean share of a question's expected chunks found in the top k;
 - MRR@10: mean of 1 / rank of the first expected chunk (0 if none in the top 10).
@@ -40,6 +40,7 @@ from sqlalchemy.orm import Session
 from app.config import Settings
 from app.db import make_engine
 from app.pharma import Ingredient
+from src.evaluation import build_qrels
 from src.rag.init_qdrant import OllamaEmbedder
 from src.rag.query_rewriting import NameIndex, QueryRewriter
 from src.rag.reranking import CrossEncoderReranker
@@ -49,14 +50,14 @@ from src.rag.stores.base import Filters
 from src.rag.stores.sparse import FastEmbedBM25
 
 ROOT = Path(__file__).resolve().parents[2]
-QUESTIONS = ROOT / "src" / "benchmark" / "rag_questions.jsonl"
+QUESTIONS = ROOT / "src" / "evaluation" / "questions.jsonl"
 KS = (1, 3, 5, 10)
 EXPERIMENT = "tujya-rag"
 BASE_CONFIGS = [f"{m}-{f}" for f in ("none", "names") for m in ("bm25", "dense", "hybrid")]
 
 
 def load_questions() -> list[dict[str, Any]]:
-    items = [json.loads(line) for line in QUESTIONS.read_text(encoding="utf-8").splitlines()]
+    items = build_qrels.load_questions(QUESTIONS)
     return [item for item in items if item["expected_chunks"]]
 
 
@@ -154,7 +155,7 @@ def log_mlflow(name: str, params: dict[str, Any], metrics: dict[str, float], row
 
 
 async def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m src.benchmark.bench_retrieval")
+    parser = argparse.ArgumentParser(prog="python -m src.evaluation.benchmark_retrieval")
     parser.add_argument("--store", choices=["qdrant", "sql"], default=None)
     parser.add_argument(
         "--configs",
@@ -163,7 +164,7 @@ async def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument("--fetch-k", type=int, default=None, help="candidates reranked")
     parser.add_argument(
-        "--out", type=Path, default=ROOT / "src" / "benchmark" / "results_retrieval.json"
+        "--out", type=Path, default=ROOT / "src" / "evaluation" / "results" / "retrieval.json"
     )
     args = parser.parse_args(argv)
     settings = Settings()

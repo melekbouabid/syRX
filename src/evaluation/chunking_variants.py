@@ -15,7 +15,7 @@ pieces of at most 1,500 characters that repeat one sentence (src/rag/chunking.py
 `max_chars=1500, overlap=1` gives back the served corpus exactly (tested), so a variant
 changes the chunking and nothing else.
 
-The benchmark questions name their expected chunks by id (src/benchmark/rag_questions.jsonl),
+The benchmark questions name their expected chunks by id (src/evaluation/questions.jsonl),
 ids of the served corpus. In a variant, a chunk is relevant to a question when it comes from
 the same document and section as an expected chunk and at least half of the smaller of the two
 is text they share (whole sentences: a smaller piece cut from the expected chunk, or a larger

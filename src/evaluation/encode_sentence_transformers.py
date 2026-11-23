@@ -4,17 +4,19 @@ The served embeddings (bge-m3) come from Ollama. The other models of the retriev
 (multilingual-e5-base, all-MiniLM-L6-v2, and the bge-m3 fine-tuned on Kaggle in step 3.5, an
 export of sentence-transformers weights) have no Ollama build: this script encodes the chunks
 and every query of the benchmark once, on the GPU of the training venv, and writes them to
-`data/processed/rag/bench/vectors/<slug>.npz`. `bench_grid.py` (project venv) then loads the
+`data/processed/rag/bench/vectors/<slug>.npz`. `retrieval_grid.py` (project venv) then loads the
 vectors into a Qdrant collection of their own and searches it exactly like the served index.
 
     # training venv (torch, sentence-transformers); stop the Ollama models first (4 GB GPU)
-    .venv-train/Scripts/python -m src.benchmark.encode_st --model intfloat/multilingual-e5-base
-    .venv-train/Scripts/python -m src.benchmark.encode_st --model BAAI/bge-m3 --slug bge-m3-st
-    .venv-train/Scripts/python -m src.benchmark.encode_st \
+    .venv-train/Scripts/python -m src.evaluation.encode_sentence_transformers --model \
+        intfloat/multilingual-e5-base
+    .venv-train/Scripts/python -m src.evaluation.encode_sentence_transformers --model BAAI/bge-m3 \
+        --slug bge-m3-st
+    .venv-train/Scripts/python -m src.evaluation.encode_sentence_transformers \
         --model runs/kaggle/finetune_bge-m3/model --slug bge-m3-finetuned
 
 Queries: the questions and their rewritten English queries (`queries.json`, written by
-`bench_grid.py --rewrites`). The latency of one query on the CPU (the API has no GPU) is
+`retrieval_grid.py --rewrites`). The latency of one query on the CPU (the API has no GPU) is
 measured here too, median of 3 interleaved passes over 20 questions (protocol of D96), and
 stored with the vectors.
 """
@@ -30,7 +32,7 @@ from typing import Any
 
 import numpy as np
 
-from src.benchmark.rechunk import load_variant
+from src.evaluation.chunking_variants import load_variant
 
 ROOT = Path(__file__).resolve().parents[2]
 BENCH = ROOT / "data" / "processed" / "rag" / "bench"
@@ -75,7 +77,7 @@ def cpu_latency_ms(model_name: str, queries: list[str], rounds: int = 3) -> floa
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m src.benchmark.encode_st")
+    parser = argparse.ArgumentParser(prog="python -m src.evaluation.encode_sentence_transformers")
     parser.add_argument("--model", required=True, help="Hugging Face name or local folder")
     parser.add_argument("--slug", default="", help="name of the output (default: model name)")
     parser.add_argument("--max-chars", type=int, default=1500)

@@ -1,9 +1,10 @@
-"""Scores of the brand benchmark (src/benchmark/bench_brands.py, step 2.7) and its questions."""
+"""Scores of the brand benchmark (src/evaluation/benchmark_brands.py, step 2.7) and its
+questions."""
 
 from __future__ import annotations
 
 from app.medicines import DISCLAIMER
-from src.benchmark import bench_brands as bb
+from src.evaluation import benchmark_brands as bb
 
 ITEM = {
     "id": "brand-panadol-warfarin-fr",

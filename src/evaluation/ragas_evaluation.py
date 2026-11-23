@@ -1,4 +1,4 @@
-"""Generation benchmark, step 2: score the answers of bench_answers.py (step 3.4, D124).
+"""Generation benchmark, step 2: score the answers of benchmark_generation.py (step 3.4, D124).
 
 For one configuration (LLM + answer prompt version, config/rag_generation.yaml):
 1. Safety (all questions): no dose sentence, no "safe"/"sûr", disclaimer at the end, dose
@@ -12,18 +12,19 @@ For one configuration (LLM + answer prompt version, config/rag_generation.yaml):
 4. MLflow 3 GenAI: `mlflow.genai.evaluate` with the built-in judges Correctness and Safety and
    three project scorers (citation present, no dose, disclaimer present), in the same run.
 One MLflow run per configuration in the experiment `tujya-rag-generation`; aggregates in
-src/benchmark/generation/<config>.json, per-question scores (no source text) in
-src/benchmark/generation/<config>.jsonl. `--select` applies the rule of the configuration file
+src/evaluation/results/generation/<config>.json, per-question scores (no source text) in
+src/evaluation/results/generation/<config>.jsonl. `--select` applies the rule of the configuration
+file
 and `--register` registers the champion and challenger (registered model
 `tujya-rag-generation`, prompt aliases in the Prompt Registry).
 
     # from the repository root, project venv (.venv) active; Ollama and MLflow running
-    python -m src.benchmark.bench_generation --llm qwen2.5:3b --prompt v1
-    python -m src.benchmark.bench_generation --select [--register]
+    python -m src.evaluation.ragas_evaluation --llm qwen2.5:3b --prompt v1
+    python -m src.evaluation.ragas_evaluation --select [--register]
     # the champion again on the corpus of the 380 classes (D126): answers with
-    # `bench_answers --corpus v2`, then
-    python -m src.benchmark.bench_generation --llm qwen2.5:3b --prompt v1 --corpus v2
-    python -m src.benchmark.bench_generation --select --corpus v2   # compared per corpus
+    # `benchmark_generation --corpus v2`, then
+    python -m src.evaluation.ragas_evaluation --llm qwen2.5:3b --prompt v1 --corpus v2
+    python -m src.evaluation.ragas_evaluation --select --corpus v2   # compared per corpus
 """
 
 from __future__ import annotations
@@ -53,15 +54,15 @@ from src.agent.safety import (
     sentence_problems,
     split_sentences,
 )
-from src.benchmark.bench_answers import COLLECTIONS, EXPERIMENT, answers_path, config_name
+from src.evaluation.benchmark_generation import COLLECTIONS, EXPERIMENT, answers_path, config_name
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = ROOT / "config" / "rag_generation.yaml"
-RESULTS = ROOT / "src" / "benchmark" / "generation"
+RESULTS = ROOT / "src" / "evaluation" / "results" / "generation"
 CHAMPION = RESULTS / "champion.json"
 CACHE = ROOT / "data" / "processed" / "rag" / "bench" / "generation" / "ragas_cache.jsonl"
 # The answers of the first generation benchmark (88 questions, 28/10), still read by
-# bench_judge_control.py.
+# judge_control.py.
 ANSWERS = ROOT / "data" / "processed" / "rag" / "bench" / "answers.jsonl"
 REGISTERED = "tujya-rag-generation"
 RAGAS_VERSION = "0.4.4"
@@ -476,7 +477,7 @@ def evaluate_config(
     # RAGAS runs in a child process and fills the cache; here every score comes from the cache.
     # After real RAGAS calls, mlflow.genai.evaluate in the same process stopped responding
     # twice (on the 3rd and the 43rd of 96 answers): the two never share a process now.
-    command = [sys.executable, "-m", "src.benchmark.bench_generation", "--ragas-only"]
+    command = [sys.executable, "-m", "src.evaluation.ragas_evaluation", "--ragas-only"]
     subprocess.run(  # noqa: S603 (this module, with the configuration's own names)
         [*command, "--llm", llm, "--prompt", prompt, "--corpus", corpus], check=True, cwd=ROOT
     )

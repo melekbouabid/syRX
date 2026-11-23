@@ -1,0 +1,541 @@
+{
+  "contraindications-metformin-fr": [
+    "bf7d5d059aee77ba"
+  ],
+  "contraindications-amoxicillin-en": [
+    "e33144869025ff06"
+  ],
+  "contraindications-carbamazepine-fr": [
+    "41343c41b01d74de"
+  ],
+  "contraindications-simvastatin-en": [
+    "68416735ddf0b4e2"
+  ],
+  "contraindications-lisinopril-fr": [
+    "e1b01a767951e93b"
+  ],
+  "contraindications-allopurinol-en": [
+    "3daf2448a1cd275b"
+  ],
+  "contraindications-levothyroxine-fr": [
+    "7018f46291ad03db"
+  ],
+  "contraindications-nitrofurantoin-en": [
+    "01905b72217c3c47"
+  ],
+  "contraindications-fluconazole-fr": [
+    "c4c8361c56a0a8e6"
+  ],
+  "contraindications-hydroxychloroquine-en": [
+    "3c862ceff8ba618d"
+  ],
+  "contraindications-methyldopa-fr": [
+    "d7ce1e73861ff235"
+  ],
+  "contraindications-finasteride-en": [
+    "7069ad6e97654f56"
+  ],
+  "boxed_warning-citalopram-fr": [
+    "ca0536f58c38e038"
+  ],
+  "boxed_warning-lamotrigine-en": [
+    "5cafa2e4ea46fc71",
+    "a6323185a5e9d38c",
+    "47a06336cc487cbb"
+  ],
+  "boxed_warning-flecainide-fr": [
+    "b11fa1f53dd0ab9c",
+    "40da44bee32e61cb"
+  ],
+  "boxed_warning-flutamide-en": [
+    "d1d693346729f931"
+  ],
+  "boxed_warning-diclofenac-fr": [
+    "fc235b150787b8be"
+  ],
+  "boxed_warning-haloperidol-en": [
+    "12fe72014551cbb8"
+  ],
+  "boxed_warning-carbamazepine-fr": [
+    "aea845f93de10242",
+    "d1c6ed2b1970f06e"
+  ],
+  "boxed_warning-baclofen-en": [
+    "544116319d071100",
+    "97ea7677da5c9140"
+  ],
+  "boxed_warning-imipramine-fr": [
+    "132b8a26ebaebe11"
+  ],
+  "boxed_warning-benazepril-en": [
+    "db5305edb6c6f26f"
+  ],
+  "mechanism-allopurinol-fr": [
+    "1016a37706f91bf2"
+  ],
+  "mechanism-amlodipine-en": [
+    "27aa99d171d0c7e1",
+    "b62cae9e8c876aed"
+  ],
+  "mechanism-finasteride-fr": [
+    "53b66a9ef430d297"
+  ],
+  "mechanism-fluconazole-en": [
+    "b50943450ab9b015"
+  ],
+  "mechanism-gabapentin-fr": [
+    "8cc76993f16e66cd"
+  ],
+  "mechanism-fenofibrate-en": [
+    "c0df442ee56ca3e1"
+  ],
+  "mechanism-carvedilol-fr": [
+    "1e9e834e7e584672"
+  ],
+  "mechanism-clindamycin-en": [
+    "a10ac2449973ec50"
+  ],
+  "mechanism-desloratadine-fr": [
+    "8f59a677adcfb046"
+  ],
+  "mechanism-baclofen-en": [
+    "bdb70b047d0d50b4"
+  ],
+  "adverse_reactions-losartan-fr": [
+    "7000ec4ff722c7d9",
+    "69d7b651d0279108",
+    "5e4df9b8856a260a",
+    "a5ee16b1e897cdcd",
+    "8ca19d74a1fca837"
+  ],
+  "adverse_reactions-trazodone-en": [
+    "b18f56f4e5ab21eb",
+    "f1af927ce52c8fd7",
+    "31af5dece4f0190a",
+    "7a636284686a4123"
+  ],
+  "adverse_reactions-metoclopramide-fr": [
+    "30bb5c629f8c0550",
+    "667b1e3a29139cb7",
+    "3d9f83b25b951fe2"
+  ],
+  "adverse_reactions-cyclobenzaprine-en": [
+    "62031803fc0f66ff",
+    "d56610200707c1ae",
+    "06e51d201aaa067d",
+    "9147922a651e15d2"
+  ],
+  "adverse_reactions-glipizide-fr": [
+    "73693f9cb3c72366",
+    "14d0c50c025c4583",
+    "ca3c33ea64619b1b"
+  ],
+  "adverse_reactions-paroxetine-en": [
+    "228ade1bba5f22b2",
+    "a2223807c39b3097",
+    "a7c66481bdc9caa4",
+    "a58974575911df43",
+    "b9fd3bd8fc109e15",
+    "001f7d7df2919036",
+    "911a5038c2ec3e64",
+    "952ceea23155e561",
+    "0bb0c316349bc18d",
+    "e04d689cd25f89e5",
+    "bfa50c3688216418",
+    "9d2a8e016c130a2d",
+    "d662284b327ad7a1",
+    "b8ce673f7709b8c5",
+    "469231a4495461c1",
+    "5930ee7156e92ac0",
+    "04542fb8fac1c3a7",
+    "1e652b7aaf444157",
+    "90fcdb6ba3a98b24"
+  ],
+  "adverse_reactions-olanzapine-fr": [
+    "3aaefc44184be2f5",
+    "280948f449d61787",
+    "f55886d0d12e5f5d",
+    "08489adb7d7a8415",
+    "5e4a1d03ec1a9aba",
+    "0811bd5199d72477",
+    "d1a5e447c4d9f1a5",
+    "6ff872115129a82e",
+    "f934c11e46a875c3",
+    "5f78d3114413ed8e",
+    "0a1e07815d4cc158",
+    "04f57d7aba8dc33e",
+    "3dd5a6cf7ee28c25",
+    "02de94dd39d86f76",
+    "a02045da26893241",
+    "800bf3c11cde5e06",
+    "b582785fa2fb0fb5",
+    "e5fa3b71ddabc116",
+    "57f665d7009c250f",
+    "ccad90dadf9dfaba",
+    "df2b36ad5a6f1f9e",
+    "2b13840a05e7318b",
+    "5ddc9f244967dacb",
+    "61901888ac1366e6",
+    "654ee75d48890f4a",
+    "73d5d7305720b0b4",
+    "b79c7d75436b2f19"
+  ],
+  "adverse_reactions-hydralazine-en": [
+    "bb38626633d41ca1"
+  ],
+  "adverse_reactions-cefuroxime-fr": [
+    "3978a3fe39a7aa47",
+    "52828d3493451483",
+    "d1cb0fea2bb4cdcd"
+  ],
+  "adverse_reactions-allopurinol-en": [
+    "d6c0710b6f574d08",
+    "09c73b92e28d1226",
+    "2bcbdc2c5a973ec7"
+  ],
+  "warnings-warfarin-fr": [
+    "e98a23048ccd1230",
+    "2cbb857fe590292f",
+    "08128bb5806980e3",
+    "ef2ec65e2567ca28",
+    "72fddd651ff25ee3",
+    "c6e471c89f92e4cc",
+    "543c808b2b8116d5"
+  ],
+  "warnings-tramadol-en": [
+    "4a8ed645b64ffaf0",
+    "9bc894e39d95dac2",
+    "f4867e0deffd726b",
+    "d0bc0581dcb682bf",
+    "c19354aba108c012",
+    "a78fa1c16099ecbf",
+    "aa66aab645984e68",
+    "91f55638ae050f10",
+    "db7b44c3f5cd5d3f",
+    "f2010a17fad391d6",
+    "66ca23ed5a8ed2aa",
+    "78835dd3f4d04f22",
+    "95f45b5f26d707ae",
+    "56b51a9771842a02",
+    "87140c982d72a2dc",
+    "dbc3216f4489a853",
+    "d2ff948edd5c8e55",
+    "867e7474a8fe2393",
+    "3b11a7664be54568",
+    "4bc75854f60db9d4",
+    "3affe93fab1d8427",
+    "082cb56a62514bfa",
+    "836ef2e8e7e96297",
+    "55551b91e80f82b8",
+    "c5f5111fbdfbd2fe",
+    "da4b5f199abf7c5b",
+    "86ac77a16301fddc",
+    "913107cc17be3bca"
+  ],
+  "warnings-venlafaxine-fr": [
+    "02e731c96422080e",
+    "60993670cd771be0",
+    "1c3b90419fcdbb35",
+    "1c37d000248dda10",
+    "25b09ed533b444f0",
+    "55bfc788be5b6fe3",
+    "0c41a3fa580a1e83",
+    "439c4c7c58a11401",
+    "9ca2e4653aa1209c",
+    "59af77f5ebe40d20",
+    "d7211fcc75ec6bcf"
+  ],
+  "warnings-sotalol-en": [
+    "603e2ef5205c9662",
+    "7fbf36547cfbd643",
+    "5f30f56ca6f19aa2",
+    "c16cf6c295402e81",
+    "76aee5fa4cfd7ad0"
+  ],
+  "warnings-metronidazole-fr": [
+    "5eef5c32c67e425f",
+    "33d66a85588b5bb6",
+    "c6349b6f07954424"
+  ],
+  "warnings-glimepiride-en": [
+    "83e0950331284b0a",
+    "249674177ccbaaee",
+    "8e0f408d0df4e7c5",
+    "505449d62895edd9",
+    "1caf8c20715b9bae"
+  ],
+  "warnings-valproate-fr": [
+    "510f23df87583b59",
+    "46cd53b6fa4ce8a5",
+    "5a9aeeaafbcd692c",
+    "763a00a4cebcc30a",
+    "a74c453b9b7b3a35",
+    "3d77e2fd60ad21c2",
+    "610f9e36e9daf90a",
+    "836493ca80db4ad8",
+    "9cc7902254ea32d6",
+    "c3b67a2233c7232f",
+    "80335ac0eb0ecce5",
+    "e59aed8813022233",
+    "eda0a3ff4ff40666",
+    "3ac43dd907c1fd01",
+    "61787e5e61619bd4",
+    "16a3f202166b2e2f",
+    "d1f0256e5e39c91e",
+    "c0771307ba270ea4",
+    "793f5f935985bda7",
+    "64327b21df02ef17",
+    "f847db4359b8609e",
+    "d42903a7d4d2dd7e"
+  ],
+  "warnings-labetalol-en": [
+    "22c5599f5cae949c",
+    "f7965b98a6b56a93",
+    "8865dca3b86a052a",
+    "0759e0b61ec1e808"
+  ],
+  "interaction-clarithromycin-carbamazepine-fr": [
+    "1d208dca27d7063b",
+    "60b7d2623219e353",
+    "9ab4d7c56887cfa0",
+    "28c61b32604eb73d",
+    "12155d5acf4654be",
+    "596a1b42536f7032",
+    "e66e647736adc72a",
+    "295cf35326e79bcd",
+    "a78008dc3e30c5ec"
+  ],
+  "interaction-venlafaxine-tramadol-en": [
+    "83dcc37b5ab608b0",
+    "110722d0b0ea1e9a",
+    "fac4204d0eae537c",
+    "ed5bb113dcc1b85c",
+    "55bfc788be5b6fe3",
+    "0c41a3fa580a1e83",
+    "439c4c7c58a11401",
+    "c807847eda9ea3de"
+  ],
+  "interaction-gemfibrozil-simvastatin-fr": [
+    "5dd3d9846c949af2",
+    "c4cbcb1a8882b590",
+    "1f0e7261233e5928",
+    "af374fafae1bd3ba",
+    "e936eadff7446279",
+    "b0d5d417d48073bd",
+    "71fd40d2f6d018d2",
+    "35196cca2a14a4c7",
+    "f60f53c91f3bbe6c",
+    "b90a66ded2b3b212",
+    "68416735ddf0b4e2",
+    "dd967c2894e209b8"
+  ],
+  "interaction-propranolol-verapamil-en": [
+    "80ee53536b28e6c3",
+    "1d6f3cf98341feb2",
+    "ac0ded965b223492",
+    "3aecb6afe2291fed",
+    "cd0bdd631ed63891",
+    "044a03c45a9eb285",
+    "6bb7586b3502f03e",
+    "ad1d6eed6ca7ab2e",
+    "2bb8371646edc0e3"
+  ],
+  "interaction-valproate-lamotrigine-fr": [
+    "e7842ed934364dc1",
+    "abb7b1dd030a07e0",
+    "93c55ad7ae5bd02d",
+    "3d77e2fd60ad21c2",
+    "610f9e36e9daf90a",
+    "88da66b2293b9d67",
+    "855d92d2d891bb91",
+    "ba5e443fa8785ab0",
+    "e5032daec1ac14d3",
+    "5cafa2e4ea46fc71",
+    "a6323185a5e9d38c",
+    "e94c9b2e2dc565f3"
+  ],
+  "interaction-citalopram-tramadol-en": [
+    "6e071d033cebd975",
+    "fe05bf43641af065",
+    "91aca32bf19baa99",
+    "7779fc89025a48d5",
+    "b2a8759edca5b5ba"
+  ],
+  "interaction-cyclobenzaprine-tramadol-fr": [
+    "3c1d193b4452e9c2",
+    "d5525985bb963b47",
+    "3f664908c2922079",
+    "f4089b7a981229f9",
+    "611c644743a08aad",
+    "2e44132f87782b30",
+    "3b11a7664be54568",
+    "4bc75854f60db9d4",
+    "4be0a455ca1184c9"
+  ],
+  "interaction-diclofenac-warfarin-en": [
+    "0b0a8fcca2b277ab",
+    "4a090ce4101077d5",
+    "2c6afb7ffe21cd7e",
+    "7d1f327cdd554ed3",
+    "c9a941a197bdb508",
+    "00c0a5416d28f741"
+  ],
+  "interaction-flecainide-verapamil-fr": [
+    "17506f163cb1a430",
+    "af3c103ab52bb1eb",
+    "af5bca98f8af2aef",
+    "486a5408a89d7376",
+    "0fc7bac0b799dcc8",
+    "ce37c46ce2aa2f4e",
+    "fbe7ee4f9e226bda"
+  ],
+  "interaction-gemfibrozil-warfarin-en": [
+    "5dd3d9846c949af2",
+    "1f0e7261233e5928",
+    "8efd8a4d4a8a5ef8",
+    "e936eadff7446279",
+    "445d05a6ca0f1add"
+  ],
+  "interaction-gemfibrozil-pravastatin-fr": [
+    "a4ab35ee61776620",
+    "c4cbcb1a8882b590",
+    "af374fafae1bd3ba",
+    "b0d5d417d48073bd",
+    "27c27c994e67a5fe",
+    "30b6f8c3cac8f800",
+    "eed12bd2516a909e",
+    "f05d41db69c05f16"
+  ],
+  "interaction-metronidazole-warfarin-en": [
+    "8a2d81912e8a4aec",
+    "af89ae8fd0183d37",
+    "2455828be22bcb00",
+    "bf48ceaa182e8945",
+    "01d1e54fbaa1996a",
+    "476640cb65c7f7cb"
+  ],
+  "interaction-venlafaxine-imipramine-fr": [
+    "3bd38b6a956a3fe1",
+    "a592f031e2d91dc6",
+    "18b00fc403b39e6f",
+    "a125e020509d295d",
+    "29bb95904e4c7bf0"
+  ],
+  "interaction-citalopram-fluvoxamine-en": [
+    "cc74e66489403e66",
+    "e1fa4acdae3a72f9",
+    "2ddb81a820cea498",
+    "a7cdaed063480e91"
+  ],
+  "interaction-imipramine-paroxetine-fr": [
+    "8b0b1a5748588b8d",
+    "b149a352854d5c71",
+    "ee2ae6aa6236e701",
+    "48c9fbb2021e3ed9"
+  ],
+  "interaction-piroxicam-warfarin-en": [
+    "421fec46a3969f13",
+    "a5b6e869c1879480",
+    "1a95a2a37d85be60",
+    "c9a941a197bdb508",
+    "6c50de034afd1c00"
+  ],
+  "interaction-simvastatin-amlodipine-fr": [
+    "35196cca2a14a4c7",
+    "f173f42b30be152d",
+    "b90a66ded2b3b212",
+    "ac145092060fdf28",
+    "f0e4859def57d8a7"
+  ],
+  "interaction-fluconazole-warfarin-en": [
+    "dde20033edbf45b6",
+    "84211972c2fa37ee",
+    "01d1e54fbaa1996a",
+    "e1346ad50a26837e"
+  ],
+  "interaction-fluconazole-glyburide-fr": [
+    "2a689258a214bc5d",
+    "5618b27773e78db3",
+    "863d8469f5330e2c"
+  ],
+  "interaction-lisinopril-losartan-en": [
+    "e0817f49e24e67c8",
+    "f5839794b0bdbd2f",
+    "93442f6d421537e2",
+    "79224a8f113584f7"
+  ],
+  "interaction-trazodone-sotalol-fr": [
+    "bd93df3c01607fe2",
+    "7ed471b25ab93fc4",
+    "e4c0dac3c5853c2f"
+  ],
+  "interaction-carbamazepine-haloperidol-en": [
+    "0895657e1123a398",
+    "6954dcd1207bde60"
+  ],
+  "interaction-nortriptyline-paroxetine-fr": [
+    "44db191dbde8027c",
+    "3cc3be6db8fa39ee",
+    "aa8584946fbcf625"
+  ],
+  "interaction-benazepril-amiloride-en": [
+    "f3d13524b272b23b",
+    "8fb52d2435c5a288"
+  ],
+  "abstract-32290673-fr": [
+    "62249b513385cfce"
+  ],
+  "abstract-24102182-en": [
+    "1e4d0860f963b66c"
+  ],
+  "abstract-17122536-fr": [
+    "1d77ab0cbb478ee9"
+  ],
+  "abstract-14651149-en": [
+    "b187b64c35cfa530"
+  ],
+  "abstract-30536109-fr": [
+    "7a7aca5e2715f735",
+    "8eb1b214a29007c1",
+    "161bf3b5deb8a099",
+    "11a8a8910be5ba47"
+  ],
+  "abstract-10863228-en": [
+    "fd2dbfd705e679f7",
+    "1ea91929ff5164c9",
+    "7e16014ed7b69e00",
+    "e44c0158f1ea6361",
+    "61955daf1685fb35"
+  ],
+  "abstract-22840347-en": [
+    "88f54b0abdf45a43"
+  ],
+  "abstract-28682284-fr": [
+    "ec1109001fd05703"
+  ],
+  "abstract-20065830-en": [
+    "ace2aa93bf92f2dd"
+  ],
+  "safety-0-fr": [],
+  "safety-1-en": [],
+  "safety-2-fr": [],
+  "safety-3-en": [],
+  "safety-4-fr": [],
+  "brand-panadol-warfarin-fr": [],
+  "brand-doliprane-warfarin-en": [],
+  "brand-nurofen-warfarin-fr": [],
+  "brand-advil-lisinopril-en": [],
+  "brand-voltarene-warfarin-fr": [
+    "0b0a8fcca2b277ab",
+    "4a090ce4101077d5",
+    "2c6afb7ffe21cd7e",
+    "7d1f327cdd554ed3",
+    "c9a941a197bdb508",
+    "00c0a5416d28f741"
+  ],
+  "brand-augmentin-warfarin-en": [
+    "673c01cb9d2fa34a"
+  ],
+  "brand-ixprim-sertraline-fr": [],
+  "brand-efferalgan-warfarin-fr": []
+}

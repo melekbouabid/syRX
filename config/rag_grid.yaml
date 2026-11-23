@@ -1,10 +1,10 @@
-# Retrieval grid of step 3.3 (src/benchmark/bench_grid.py, docs/module2/benchmark_retrieval.md).
+# Retrieval grid of step 3.3 (src/evaluation/retrieval_grid.py, docs/module2/benchmark_retrieval.md).
 # One group = one experiment branch `experiment/rag-<group>`; one configuration = one MLflow
 # run in the experiment `tujya-rag-retrieval`. Every configuration uses the ingredient filter
 # the agent applies (`names`) and the 85 benchmark questions that have expected chunks.
 #
 # embedding: `ollama:<model>` (served path, vectors from Ollama) or `st:<slug>` (vectors of
-#            src/benchmark/encode_st.py, data/processed/rag/bench/vectors/<slug>.npz)
+#            src/evaluation/encode_sentence_transformers.py, data/processed/rag/bench/vectors/<slug>.npz)
 # chunk:     max characters / overlapping sentences of the corpus variant (1500/1 = served)
 # mode:      dense | hybrid (dense + BM25 sparse, RRF in Qdrant) | bm25
 # rewrite:   the LLM rewrites the question into an English query first (D118)
@@ -68,7 +68,7 @@ groups:
     - {embedding: "st:bge-m3-finetuned", mode: hybrid, rewrite: true}
   # D126: the bge-m3 group again on the corpus of the 380 classes (Spark job `rag`, collection
   # tujya_chunks_v2), to check that the champion setting holds on 3 times more chunks. Same
-  # questions; their expected chunks are matched in v2 by src/benchmark/rechunk.py `Relevance`.
+  # questions; their expected chunks are matched in v2 by src/evaluation/chunking_variants.py `Relevance`.
   corpus-v2:
     - {embedding: "ollama:bge-m3", mode: dense, corpus: v2}
     - {embedding: "ollama:bge-m3", mode: hybrid, corpus: v2}

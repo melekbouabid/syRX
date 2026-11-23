@@ -5,7 +5,7 @@ Sub-packages:
   collection pipeline of the external sources (openFDA labels, PubMed abstracts, DDInter);
 - `models`: training, evaluation, ONNX export and publication of the vision models, and the
   Tox21 toxicity model (bonus);
-- `rag`, `agent`, `benchmark`: module 2 (RAG corpus, retrieval and chain, LangGraph agent and
+- `rag`, `agent`, `evaluation`: module 2 (RAG corpus, retrieval and chain, LangGraph agent and
   its MCP server, retrieval and generation benchmarks);
 - `utils`: helpers shared by the others.
 

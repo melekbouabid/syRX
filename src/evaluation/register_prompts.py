@@ -8,7 +8,7 @@ Already registered versions are checked, not registered twice: a text that diffe
 registry stops the script (a registered version is immutable; a new text is a new version).
 
     # from the repository root, project venv (.venv) active, MLflow running
-    python -m src.benchmark.register_prompts
+    python -m src.evaluation.register_prompts
 """
 
 from __future__ import annotations

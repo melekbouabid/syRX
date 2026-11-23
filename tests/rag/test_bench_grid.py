@@ -1,5 +1,5 @@
 """Retrieval grid of step 3.3: corpus variants, relevance of their chunks, metrics, selection
-of the agent's setting (src/benchmark/rechunk.py, src/benchmark/bench_grid.py)."""
+of the agent's setting (src/evaluation/chunking_variants.py, src/evaluation/retrieval_grid.py)."""
 
 from __future__ import annotations
 
@@ -13,8 +13,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.benchmark import bench_grid as G
-from src.benchmark import rechunk as R
+from src.evaluation import chunking_variants as R
+from src.evaluation import retrieval_grid as G
 from src.rag import chunking
 
 SENTENCES = [f"Sentence number {i} of the warnings about warfarin and aspirin." for i in range(12)]

@@ -1,11 +1,11 @@
 """Brand questions of the benchmark (step 2.7): the real agent with and without the brand table.
 
     # from the repository root, project venv (.venv) active; Ollama running and
-    # TUJYA_PHARMA_DATABASE_URL set (as for bench_answers.py)
-    python -m src.benchmark.bench_brands               # logs to MLflow (tujya-rag)
-    python -m src.benchmark.bench_brands --no-mlflow
+    # TUJYA_PHARMA_DATABASE_URL set (as for benchmark_generation.py)
+    python -m src.evaluation.benchmark_brands               # logs to MLflow (tujya-rag)
+    python -m src.evaluation.benchmark_brands --no-mlflow
 
-Every `brand` question of rag_questions.jsonl ("Puis-je prendre du Panadol avec de la
+Every `brand` question of questions.jsonl ("Puis-je prendre du Panadol avec de la
 warfarine ?") goes twice through the full agent (TujyaAgent.run, Ollama LLM):
 
 - `without`: an empty brand table, i.e. the agent before step 2.7;
@@ -20,7 +20,7 @@ Scores of each variant (share of the questions):
 - `brand_cited`: the answer cites the brand's source ([n] of the brand table entry);
 - `cited`: the answer cites at least one source; `disclaimer`: it ends with the disclaimer.
 
-Results: src/benchmark/results_brands.json (no source text) and an MLflow run `bench-brands`.
+Results: src/evaluation/results/brands.json (no source text) and an MLflow run `bench-brands`.
 """
 
 from __future__ import annotations
@@ -38,10 +38,11 @@ from app.config import Settings
 from app.db import make_engine
 from app.medicines import DISCLAIMER
 from src.agent.runtime import AgentHolder
+from src.evaluation import build_qrels
 
 ROOT = Path(__file__).resolve().parents[2]
-QUESTIONS = ROOT / "src" / "benchmark" / "rag_questions.jsonl"
-OUT = ROOT / "src" / "benchmark" / "results_brands.json"
+QUESTIONS = ROOT / "src" / "evaluation" / "questions.jsonl"
+OUT = ROOT / "src" / "evaluation" / "results" / "brands.json"
 CITATION = re.compile(r"\[(\d+)\]")
 METRICS = (
     "brand_found",
@@ -55,12 +56,14 @@ METRICS = (
 
 
 def brand_questions(path: Path = QUESTIONS) -> list[dict[str, Any]]:
-    items = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    items = build_qrels.load_questions(path)
     return [item for item in items if item["type"] == "brand"]
 
 
 def pair_of(item: dict[str, Any]) -> set[str]:
-    spec = json.loads((ROOT / "src" / "benchmark" / "spec.json").read_text(encoding="utf-8"))
+    spec = json.loads(
+        (ROOT / "src" / "evaluation" / "question_spec.json").read_text(encoding="utf-8")
+    )
     pairs = {s["id"]: s.get("pair") for s in spec}
     return set(pairs.get(item["id"]) or item["ingredients"][:2])
 
@@ -143,7 +146,7 @@ def main(argv: list[str] | None = None) -> None:
     from src.utils.console import console_utf8
 
     console_utf8()  # MLflow prints its run link with an emoji (cp1252 console on Windows)
-    parser = argparse.ArgumentParser(prog="python -m src.benchmark.bench_brands")
+    parser = argparse.ArgumentParser(prog="python -m src.evaluation.benchmark_brands")
     parser.add_argument("--no-mlflow", action="store_true")
     args = parser.parse_args(argv)
     results = asyncio.run(main_async(args.no_mlflow))

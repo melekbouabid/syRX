@@ -7,7 +7,7 @@
   which src/agent/safety.py enforces after generation anyway.
 
 The same texts are registered in the MLflow Prompt Registry by
-`python -m src.benchmark.register_prompts` (names in `REGISTRY_NAMES`); the app reads them from
+`python -m src.evaluation.register_prompts` (names in `REGISTRY_NAMES`); the app reads them from
 this file, so it never needs the MLflow server to answer.
 """
 
@@ -92,7 +92,7 @@ Absolute rules:
 
 ANSWER_PROMPTS: dict[str, dict[str, str]] = {"v1": _V1, "v2": _V2}
 
-# MLflow Prompt Registry names (src/benchmark/register_prompts.py); registry version n = "vn".
+# MLflow Prompt Registry names (src/evaluation/register_prompts.py); registry version n = "vn".
 REGISTRY_NAMES = {"fr": "tujya-answer-fr", "en": "tujya-answer-en", "tools": "tujya-tool-planner"}
 
 

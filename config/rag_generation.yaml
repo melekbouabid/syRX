@@ -1,4 +1,4 @@
-# Generation benchmark of step 3.4 (src/benchmark/bench_generation.py,
+# Generation benchmark of step 3.4 (src/evaluation/ragas_evaluation.py,
 # docs/module2/benchmark_generation.md). One configuration = the LLM that runs the whole agent
 # (tool planner, query rewriting, answer) + the version of the answer prompt
 # (src/agent/prompts.py); retrieval is the served setting of step 3.3 (D123: bge-m3 dense,

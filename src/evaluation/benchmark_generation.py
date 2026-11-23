@@ -2,7 +2,7 @@
 
 Writes one answers file per configuration (git-ignored: it holds the source texts, some from
 PubMed abstracts): question, draft (before the safety node), answer, sources with their
-text, tool calls, safety report, timings. Step 2 is bench_generation.py.
+text, tool calls, safety report, timings. Step 2 is ragas_evaluation.py.
 
 A configuration is the LLM (`--llm`, an Ollama model) and the answer prompt version
 (`--prompt`, src/agent/prompts.py); retrieval is the agent's served setting (step 3.3, D123),
@@ -13,7 +13,7 @@ autolog records the LangGraph nodes, the LLM calls and one span per tool call, u
 span `question` tagged with the configuration and the question id.
 
     # from the repository root, project venv (.venv) active; Ollama, Qdrant, postgres running
-    python -m src.benchmark.bench_answers --llm qwen2.5:3b --prompt v1 --trace [--resume]
+    python -m src.evaluation.benchmark_generation --llm qwen2.5:3b --prompt v1 --trace [--resume]
     # needs TUJYA_PHARMA_DATABASE_URL (docs/demo.md)
 """
 
@@ -30,12 +30,13 @@ from typing import Any
 from app.config import Settings
 from app.db import make_engine
 from src.agent.runtime import AgentHolder
+from src.evaluation import build_qrels
 
 ROOT = Path(__file__).resolve().parents[2]
-QUESTIONS = ROOT / "src" / "benchmark" / "rag_questions.jsonl"
+QUESTIONS = ROOT / "src" / "evaluation" / "questions.jsonl"
 GENERATION_DIR = ROOT / "data" / "processed" / "rag" / "bench" / "generation"
 EXPERIMENT = "tujya-rag-generation"
-# Qdrant collection of each corpus (src/benchmark/bench_grid.py COLLECTIONS, same names).
+# Qdrant collection of each corpus (src/evaluation/retrieval_grid.py COLLECTIONS, same names).
 COLLECTIONS = {"v1": "tujya_chunks", "v2": "tujya_chunks_v2"}
 
 
@@ -129,7 +130,7 @@ async def main(argv: list[str] | None = None) -> None:
     settings = Settings(**overrides)
     out = answers_path(settings.llm_model, settings.llm_prompt_version, args.corpus)
     agent = AgentHolder(settings, make_engine(settings.pharma_database_url)).agent()
-    items = [json.loads(line) for line in QUESTIONS.read_text(encoding="utf-8").splitlines()]
+    items = build_qrels.load_questions(QUESTIONS)
     if args.limit:
         items = items[: args.limit]
     out.parent.mkdir(parents=True, exist_ok=True)

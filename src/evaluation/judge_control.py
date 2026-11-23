@@ -3,7 +3,7 @@ claim? Pairs cited answer sentences with the first source of another question (a
 drug) and counts the judge's "yes" (its false-positive rate). Logged to MLflow.
 
     # from the repository root, project venv (.venv) active
-    python -m src.benchmark.bench_judge_control [--judge gemma3:4b] [--n 40]
+    python -m src.evaluation.judge_control [--judge gemma3:4b] [--n 40]
 """
 
 from __future__ import annotations
@@ -15,13 +15,13 @@ import os
 import random
 from pathlib import Path
 
-from bench_generation import ANSWERS, JUDGE_PROMPT, claims
 from langchain_core.messages import HumanMessage
 from langchain_ollama import ChatOllama
 
 from src.agent.safety import CITATION
+from src.evaluation.ragas_evaluation import ANSWERS, JUDGE_PROMPT, claims
 
-OUT = Path(__file__).resolve().parent / "results_judge_control.json"
+OUT = Path(__file__).resolve().parent / "results" / "judge_control.json"
 
 
 async def main() -> None:

@@ -1,4 +1,4 @@
-"""Generation benchmark of step 3.4 (src/benchmark/bench_generation.py): RAGAS inputs and cache,
+"""Generation benchmark of step 3.4 (src/evaluation/ragas_evaluation.py): RAGAS inputs and cache,
 project scorers, selection rule. No LLM: the RAGAS call is replaced by a fake."""
 
 from __future__ import annotations
@@ -11,9 +11,9 @@ import pytest
 
 from app.medicines import DISCLAIMER
 from src.agent.safety import REFUSAL_DOSE
-from src.benchmark import bench_generation as bg
-from src.benchmark import register_prompts as rp
-from src.benchmark.bench_answers import answers_path, config_name
+from src.evaluation import ragas_evaluation as bg
+from src.evaluation import register_prompts as rp
+from src.evaluation.benchmark_generation import answers_path, config_name
 
 CFG = {"judge": "judge-x", "judge_embeddings": "emb", "ragas": {"contexts": 2, "batch": 2}}
 

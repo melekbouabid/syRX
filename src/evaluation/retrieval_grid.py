@@ -2,21 +2,22 @@
 
 The configurations are in config/rag_grid.yaml, by group (one experiment branch
 `experiment/rag-<group>` per group). Results: docs/module2/benchmark_retrieval.md, MLflow
-experiment `tujya-rag-retrieval`, `src/benchmark/grid/<group>.json`.
+experiment `tujya-rag-retrieval`, `src/evaluation/results/grid/<group>.json`.
 
     # project venv (.venv), from the repository root; stack running (qdrant, ollama, postgres,
     # mlflow), TUJYA_PHARMA_DATABASE_URL set (ingredient names of the filter)
-    python -m src.benchmark.bench_grid rewrites            # once: queries.json (LLM rewrites)
-    python -m src.benchmark.bench_grid run --group bge-m3  # the group's configurations
-    python -m src.benchmark.bench_grid latency --configs a,b,c   # interleaved rounds (D96)
-    python -m src.benchmark.bench_grid select              # champion / challenger (D123)
+    python -m src.evaluation.retrieval_grid rewrites            # once: queries.json (LLM rewrites)
+    python -m src.evaluation.retrieval_grid run --group bge-m3  # the group's configurations
+    python -m src.evaluation.retrieval_grid latency --configs a,b,c   # interleaved rounds (D96)
+    python -m src.evaluation.retrieval_grid select              # champion / challenger (D123)
 
 Every configuration searches like the agent (src/agent/tools.py `search_documents`): the
 ingredients found in the question are a metadata filter (`names`), top 10 kept. Metrics over
 the questions that have expected chunks: Recall@k (k = 1, 3, 5, 10: at least one expected
 chunk in the top k), MRR@10, nDCG@10 (binary relevance) and Coverage@10, by language too.
 A corpus variant (`chunk` other than 1500/1) has other chunk ids: its relevant chunks are
-found by src/benchmark/rechunk.py `Relevance`. `corpus: v2` runs a configuration on the corpus
+found by src/evaluation/chunking_variants.py `Relevance`. `corpus: v2` runs a configuration on the
+corpus
 of the 380 classes (Spark job `rag`, data/processed/rag/corpus_v2, collection tujya_chunks_v2,
 D126): the questions keep their expected chunks of v1, matched in v2 by the same `Relevance`
 rule (same document and section, shared text), since the Spark cleaning can cut a text a
@@ -24,7 +25,8 @@ little differently.
 
 Time per question: the search (embedding of the query, Qdrant, reranker) is timed during the
 run; the rewrite is the median time the LLM took in `rewrites`; for a sentence-transformers
-embedding the query vector is precomputed, so its CPU encoding time measured by encode_st.py
+embedding the query vector is precomputed, so its CPU encoding time measured by
+encode_sentence_transformers.py
 is added. The `latency` command measures the shortlisted configurations again in interleaved
 rounds after a pause (D96: this laptop slows down under sustained load).
 """
@@ -47,16 +49,17 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from src.benchmark.rechunk import Relevance, load_variant
+from src.evaluation import build_qrels
+from src.evaluation.chunking_variants import Relevance, load_variant
 from src.rag import chunking
 
 ROOT = Path(__file__).resolve().parents[2]
 GRID = ROOT / "config" / "rag_grid.yaml"
-QUESTIONS = ROOT / "src" / "benchmark" / "rag_questions.jsonl"
+QUESTIONS = ROOT / "src" / "evaluation" / "questions.jsonl"
 BENCH = ROOT / "data" / "processed" / "rag" / "bench"
 QUERIES = BENCH / "queries.json"
 VECTORS = BENCH / "vectors"
-RESULTS = ROOT / "src" / "benchmark" / "grid"
+RESULTS = ROOT / "src" / "evaluation" / "results" / "grid"
 CHAMPION = RESULTS / "champion.json"
 EXPERIMENT = "tujya-rag-retrieval"
 REGISTERED = "tujya-rag-retrieval"
@@ -160,7 +163,7 @@ def load_grid(path: Path = GRID) -> tuple[dict[str, Any], dict[str, list[Config]
 
 
 def load_questions(path: Path = QUESTIONS) -> list[dict[str, Any]]:
-    items = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    items = build_qrels.load_questions(path)
     return [item for item in items if item["expected_chunks"]]
 
 
@@ -202,7 +205,8 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, float]:
 
 
 class PrecomputedEmbedder:
-    """Vectors of encode_st.py: chunks by their indexed text, queries by their text."""
+    """Vectors of encode_sentence_transformers.py: chunks by their indexed text, queries by their
+    text."""
 
     def __init__(self, path: Path, chunk_texts: dict[str, str]) -> None:
         data = np.load(path)
@@ -223,7 +227,9 @@ class PrecomputedEmbedder:
             if vector is None:
                 vector = self.queries.get(text)
             if vector is None:
-                raise KeyError(f"no precomputed vector for {text[:60]!r}: run encode_st.py")
+                raise KeyError(
+                    f"no precomputed vector for {text[:60]!r}: run encode_sentence_transformers.py"
+                )
             out.append([float(x) for x in vector])
         return out
 
@@ -348,7 +354,9 @@ class Runtime:
 
 def read_queries() -> dict[str, Any]:
     if not QUERIES.is_file():
-        raise SystemExit("no rewritten queries: run `python -m src.benchmark.bench_grid rewrites`")
+        raise SystemExit(
+            "no rewritten queries: run `python -m src.evaluation.retrieval_grid rewrites`"
+        )
     data: dict[str, Any] = json.loads(QUERIES.read_text(encoding="utf-8"))
     return data
 
@@ -802,7 +810,7 @@ def pick(groups: dict[str, list[Config]], group: str, names: str) -> list[Config
 
 
 async def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m src.benchmark.bench_grid")
+    parser = argparse.ArgumentParser(prog="python -m src.evaluation.retrieval_grid")
     parser.add_argument(
         "command", choices=["rewrites", "run", "latency", "select", "list", "table"]
     )

@@ -1,8 +1,9 @@
-"""Build the RAG benchmark set from the corpus: benchmark/rag_questions.jsonl.
+"""Build the RAG benchmark set from the corpus: src/evaluation/questions.jsonl and qrels.json.
 
-Each item comes from a hand-written spec (`benchmark/spec.json`: question type, ingredients,
-language, question text) and gets, from data/processed/rag/corpus/chunks.parquet:
-- `expected_chunks`: every chunk that answers it (rules per type below);
+Each item comes from a hand-written spec (`src/evaluation/question_spec.json`: question type,
+ingredients, language, question text) and gets, from data/processed/rag/corpus/chunks.parquet:
+- `expected_chunks`: every chunk that answers it (rules per type below), written to
+  qrels.json (question id -> chunk ids, as in labs/05-Evaluation);
 - `reference`: an extractive reference answer (sentences of the expected label chunks).
 The candidates were then read one by one and corrected or dropped
 (docs/module2/benchmark.md).
@@ -16,7 +17,9 @@ Types and their expected chunks:
 - safety: no expected chunk (dose requests, "is it safe"), scored on the answer only.
 
     # from the repository root, project venv (.venv) active
-    python -m src.benchmark.bench_build   # writes rag_questions.jsonl here
+    python -m src.evaluation.build_qrels   # writes questions.jsonl and qrels.json here
+
+`load_questions` joins the two files again: one item per question, with its expected chunks.
 """
 
 from __future__ import annotations
@@ -32,8 +35,9 @@ from src.agent.safety import CROSS_REFERENCE, sentence_problems
 
 ROOT = Path(__file__).resolve().parents[2]
 CHUNKS = ROOT / "data" / "processed" / "rag" / "corpus" / "chunks.parquet"
-SPEC = ROOT / "src" / "benchmark" / "spec.json"
-OUT = ROOT / "src" / "benchmark" / "rag_questions.jsonl"
+SPEC = ROOT / "src" / "evaluation" / "question_spec.json"
+QUESTIONS = ROOT / "src" / "evaluation" / "questions.jsonl"
+QRELS = ROOT / "src" / "evaluation" / "qrels.json"
 
 SECTIONS = {
     "contraindications": ("contraindications",),
@@ -138,6 +142,21 @@ def build_item(spec: dict[str, Any], chunks: list[dict[str, Any]]) -> dict[str, 
     return item
 
 
+def load_questions(questions: Path = QUESTIONS, qrels: Path = QRELS) -> list[dict[str, Any]]:
+    """Every benchmark question with its `expected_chunks` (from qrels.json), in file order."""
+    relevant = json.loads(qrels.read_text(encoding="utf-8"))
+    items = []
+    for line in questions.read_text(encoding="utf-8").splitlines():
+        item = json.loads(line)
+        merged: dict[str, Any] = {}
+        for key, value in item.items():
+            if key == "expected_titles":  # expected_chunks comes before it, as built
+                merged["expected_chunks"] = relevant[item["id"]]
+            merged[key] = value
+        items.append(merged)
+    return items
+
+
 def main() -> None:
     chunks = pq.read_table(CHUNKS).to_pylist()
     specs = json.loads(SPEC.read_text(encoding="utf-8"))
@@ -150,14 +169,17 @@ def main() -> None:
     ]
     if missing:
         raise SystemExit(f"no expected chunk for {missing}")
-    with OUT.open("w", encoding="utf-8", newline="\n") as handle:
+    with QUESTIONS.open("w", encoding="utf-8", newline="\n") as handle:
         for item in items:
-            handle.write(json.dumps(item, ensure_ascii=False) + "\n")
+            question = {k: v for k, v in item.items() if k != "expected_chunks"}
+            handle.write(json.dumps(question, ensure_ascii=False) + "\n")
+    qrels = {item["id"]: item["expected_chunks"] for item in items}
+    QRELS.write_text(json.dumps(qrels, indent=2) + "\n", encoding="utf-8", newline="\n")
     by_type: dict[str, int] = {}
     for item in items:
         by_type[item["type"]] = by_type.get(item["type"], 0) + 1
     langs = {lang: sum(1 for i in items if i["language"] == lang) for lang in ("fr", "en")}
-    print(f"{len(items)} questions -> {OUT}; {by_type}; {langs}")
+    print(f"{len(items)} questions -> {QUESTIONS}, {QRELS}; {by_type}; {langs}")
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ extend-exclude =
 per-file-ignores =
     # One-off generator of the benchmark spec: its long lines are question and reference
     # texts (same exception as ruff.toml).
-    src/benchmark/make_spec.py: E501
+    src/evaluation/generate_questions.py: E501
     # OPENCV_IO_MAX_IMAGE_PIXELS must be set before cv2 is imported (ruff accepts an
     # os.environ line above the imports, flake8 does not).
     backend/app/inference.py: E402
