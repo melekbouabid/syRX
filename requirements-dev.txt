@@ -15,7 +15,7 @@ onnx>=1.17
 mlflow-skinny==3.17.2
 alembic>=1.13,<2
 # Generation benchmark (src/evaluation/ragas_evaluation.py): RAGAS, pinned (its
-# metrics and prompts change between versions; the scores of docs/module2 are from 0.4.4).
+# metrics and prompts change between versions; the scores of docs/module2/results.md are from 0.4.4).
 ragas==0.4.4
 # Model comparison (src/models/detection, classification): Optuna search spaces and the
 # notebook generator are tested here (same Optuna version as the training venv and Kaggle).

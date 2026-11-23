@@ -100,11 +100,11 @@ class Settings(BaseSettings):
     rag_query_rewrite: bool = True
     rag_model_cache_dir: Path = PROJECT_DIR / "models" / "fastembed"
     # An uncited answer sentence gets the source closest in meaning (bge-m3 cosine) above
-    # this; calibrated on the first benchmark run (docs/module2/benchmark.md).
+    # this; calibrated on the first benchmark run (docs/module2/results.md).
     # 0 disables it.
     rag_attribution_threshold: float = 0.65
 
-    # Bonus: single-molecule toxicity (docs/bonus/toxicity.md). The model bundle is published by
+    # Bonus: single-molecule toxicity (docs/module2/README.md). The model bundle is published by
     # `python -m src.models.toxicity.train_tox21 publish`; ingredient names -> SMILES from PubChem.
     tox_model_dir: Path = PROJECT_DIR / "models" / "tox21"
     ingredient_smiles_file: Path = PROJECT_DIR / "config" / "ingredient_smiles.csv"

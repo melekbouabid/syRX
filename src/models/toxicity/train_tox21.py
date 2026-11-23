@@ -70,7 +70,7 @@ def download() -> None:
                 "sha256": digest,
                 "bytes": RAW.stat().st_size,
                 "retrieved_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                "licence": "see docs/bonus/toxicity.md (Tox21: US federal data; MoleculeNet copy)",
+                "licence": "see docs/module2/README.md (Tox21: US federal data; MoleculeNet copy)",
             },
             indent=2,
         ),

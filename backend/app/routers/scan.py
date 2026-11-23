@@ -63,7 +63,7 @@ MAX_TEXT_LINES = 40
 def pharma_unavailable() -> HTTPException:
     return HTTPException(
         status.HTTP_503_SERVICE_UNAVAILABLE,
-        "The medicine tables are not loaded. Run `python -m app.pharma_loader` (docs/infra.md).",
+        "The medicine tables are not loaded. Run `python -m app.pharma_loader` (README.md).",
     )
 
 

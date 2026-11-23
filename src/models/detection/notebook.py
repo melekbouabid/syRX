@@ -62,7 +62,7 @@ Settings before running: **Accelerator** {accelerator}; **Internet** on (clone a
 Then **Save Version > Save & Run All (Commit)**: the run continues in the background
 ({duration}). Download `detector_{arch}_export.zip` from the Output tab and import it:
 `python -m src.models.detection.import_kaggle detector_{arch}_export.zip`
-(docs/module1/kaggle_detecteurs.md). No secret is needed: never put a token in a notebook."""),
+(docs/module1/README.md). No secret is needed: never put a token in a notebook."""),
         new_code_cell(f"""import os
 
 ARCH = "{arch}"
@@ -134,7 +134,7 @@ print(archive, round(Path(archive).stat().st_size / 1e6, 1), "MB")"""),
    (parent run + one child run per trial in `tujya-vision`, Registry version,
    `promote_if_better` against the champion re-evaluated on the same split).
 3. Weights: `dvc add` of the imported export folder (never git), see
-   docs/module1/kaggle_detecteurs.md."""),
+   docs/module1/README.md."""),
     ]
     for index, cell in enumerate(cells):
         cell["id"] = str(index)  # the ids nbstripout gives (pre-commit hook)

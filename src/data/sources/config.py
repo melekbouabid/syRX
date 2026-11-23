@@ -115,7 +115,7 @@ class Settings(_Model):
     project_root: Path = Field(default_factory=Path.cwd)
     data_dir: Path = Path("data")
     manifest_path: Path = Path("manifest.json")
-    sources_doc_path: Path = Path("docs/sources.md")
+    sources_doc_path: Path = Path("docs/data_sources.md")
 
     sample: int | None = Field(None, ge=1)
     dry_run: bool = False

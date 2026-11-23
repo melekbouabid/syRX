@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.scripts]
-# Polite data collection (DDInter, PubMed, openFDA): docs/data_pipeline/README.md.
+# Polite data collection (DDInter, PubMed, openFDA): docs/data.md#collection-pipeline.
 tujya-data = "src.data.sources.cli:app"
 
 [tool.hatch.build.targets.wheel]

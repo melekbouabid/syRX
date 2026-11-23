@@ -27,6 +27,6 @@ qdrant-client>=1.20.0,<1.21
 # BM25 sparse vectors (Qdrant/bm25) and the bge-reranker-base cross-encoder, both
 # in ONNX Runtime (no PyTorch in the image); models cached in TUJYA_RAG_MODEL_CACHE_DIR.
 fastembed==0.9.1
-# Bonus: toxicity tool (Tox21 model, docs/bonus/toxicity.md)
+# Bonus: toxicity tool (Tox21 model, docs/module2/README.md)
 rdkit>=2025.3
 lightgbm>=4.5

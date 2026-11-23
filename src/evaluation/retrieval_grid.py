@@ -745,7 +745,7 @@ class RetrievalConfig:  # a minimal mlflow.pyfunc.PythonModel, imported lazily
 
 
 def table(results: dict[str, dict[str, Any]], groups: dict[str, list[Config]]) -> str:
-    """Markdown table of the results, in the order of the grid file (docs/module2)."""
+    """Markdown table of the results, in the order of the grid file (docs/module2/results.md)."""
     head = (
         "| Group | Configuration | R@1 | R@5 | R@10 | MRR | nDCG@10 | MRR fr | MRR en "
         "| ms / question | Run |\n|---|---|---|---|---|---|---|---|---|---|---|"

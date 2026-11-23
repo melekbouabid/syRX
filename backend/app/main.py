@@ -106,7 +106,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     # Data drift: statistics of the scanned photos in a sliding window, in memory.
     app.state.drift = DriftMonitor.from_file(settings.drift_reference_file)
-    # Bonus: Tox21 toxicity model, loaded on first use (models/tox21, docs/bonus/toxicity.md).
+    # Bonus: Tox21 toxicity model, loaded on first use (models/tox21, docs/module2/README.md).
     app.state.toxicity = ToxHolder(settings.tox_model_dir, settings.ingredient_smiles_file)
     # Module 2 agent: built on the first /api/chat call (Ollama, chunk index in Qdrant).
     app.state.agents = AgentHolder(

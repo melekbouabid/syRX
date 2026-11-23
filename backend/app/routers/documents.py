@@ -36,13 +36,13 @@ def get_retriever(request: Request) -> Retriever:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             f"The vector store is not reachable ({type(exc).__name__}). Is the qdrant service "
-            "running? See docs/infra.md.",
+            "running? See README.md.",
         ) from exc
     if retriever is None:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             "The document index is empty. Run `python -m src.rag.init_qdrant` "
-            "(docs/module2/rag.md).",
+            "(docs/module2/README.md).",
         )
     return retriever
 

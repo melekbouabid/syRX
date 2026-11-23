@@ -286,7 +286,7 @@ def run_ragas(
 
 
 def project_scorers() -> list[Any]:
-    """The project's own scorers (mlflow.genai.scorer): rules of docs/project_rules.md."""
+    """The project's own scorers (mlflow.genai.scorer): rules of docs/decisions.md."""
     from mlflow.genai.scorers import scorer
 
     @scorer

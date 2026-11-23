@@ -433,7 +433,7 @@ export class ApiError extends Error {
   }
 }
 
-// Bonus toxicity tool (POST /api/toxicity, docs/bonus/toxicity.md): each molecule on its own.
+// Bonus toxicity tool (POST /api/toxicity, docs/module2/README.md): each molecule on its own.
 export interface ToxPrediction {
   task: string;
   assay: string;
