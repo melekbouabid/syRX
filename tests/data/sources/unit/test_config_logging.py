@@ -24,7 +24,7 @@ from src.data.sources.logging_utils import (
     register_secrets,
     setup_logging,
 )
-from src.data.sources.testing import FAKE_API_KEY, TEST_EMAIL
+from tests.support.sources_fixtures import FAKE_API_KEY, TEST_EMAIL
 
 REPO = Path(__file__).resolve().parents[4]  # the repository
 SHIPPED = REPO / "config" / "data_pipeline" / "config.yaml"

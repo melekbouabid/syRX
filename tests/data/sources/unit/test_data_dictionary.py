@@ -14,7 +14,7 @@ from src.data.sources import pipeline
 from src.data.sources.config import Settings, SourceConfig
 from src.data.sources.manifest import ManifestEntry
 from src.data.sources.provenance import PROVENANCE_COLUMNS
-from tests.data.pipeline.unit.test_connectors_lookup import PUBMED_XML
+from tests.data.sources.unit.test_connectors_lookup import PUBMED_XML
 
 DICTIONARY = Path(__file__).resolve().parents[4] / "docs" / "data_pipeline" / "data_dictionary.md"
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"

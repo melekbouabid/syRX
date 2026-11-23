@@ -15,7 +15,7 @@ from pydantic import SecretStr
 from src.data.sources import pipeline
 from src.data.sources.config import Settings, SourceConfig
 from src.data.sources.state import MANUAL_STEP, NEEDS_ATTENTION
-from src.data.sources.testing import FAKE_API_KEY, TEST_EMAIL
+from tests.support.sources_fixtures import FAKE_API_KEY, TEST_EMAIL
 
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 

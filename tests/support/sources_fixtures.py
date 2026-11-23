@@ -2,7 +2,7 @@
 with respx.
 
 Used by the pipeline tests (tests/conftest.py) and by the module 2 corpus tests, which run
-on this pipeline: `pytest_plugins = ["src.data.sources.testing"]`. Needs the `dev` extra
+on this pipeline: `pytest_plugins = ["tests.support.sources_fixtures"]`. Needs the `dev` extra
 (pytest, respx); nothing else in the package imports this module.
 """
 
@@ -22,7 +22,7 @@ from src.data.sources.http.client import PoliteClient
 TEST_EMAIL = "pipeline-tests@example.org"
 # The shipped configuration, loaded explicitly: the fixtures must not depend on the folder
 # pytest is started from (a config.yaml in the working directory would otherwise be used).
-SHIPPED_CONFIG = Path(__file__).resolve().parents[3] / "config" / "data_pipeline" / "config.yaml"
+SHIPPED_CONFIG = Path(__file__).resolve().parents[2] / "config" / "data_pipeline" / "config.yaml"
 FAKE_API_KEY = "0123456789abcdef0123456789abcdef0000"  # pragma: allowlist secret
 
 

@@ -7,7 +7,6 @@ from pathlib import Path
 import pandas as pd
 import respx
 
-from src.data.sources.testing import ClientFactory
 from src.rag import corpus as ing
 from src.rag.corpus import (
     ddinter_names,
@@ -16,6 +15,7 @@ from src.rag.corpus import (
     served_classes,
     update_class_file,
 )
+from tests.support.sources_fixtures import ClientFactory
 
 R = ing.RXNAV
 

@@ -16,7 +16,7 @@ from src.data.sources.cli import app
 from src.data.sources.config import ConfigError, load_settings
 from src.data.sources.manifest import Manifest
 from src.data.sources.quality.drift import DriftTracker, compare, snapshot
-from src.data.sources.testing import TEST_EMAIL
+from tests.support.sources_fixtures import TEST_EMAIL
 
 runner = CliRunner()
 DDINTER = "https://ddinter2.scbdd.com/static/media/download/ddinter_downloads_code_A.csv"

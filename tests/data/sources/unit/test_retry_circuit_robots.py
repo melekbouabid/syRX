@@ -20,7 +20,7 @@ from src.data.sources.http.retry import (
     wait_seconds,
 )
 from src.data.sources.http.robots import RobotsChecker, RobotsPolicy
-from src.data.sources.testing import FakeClock
+from tests.support.sources_fixtures import FakeClock
 
 # ------------------------------------------------------------------- retry
 

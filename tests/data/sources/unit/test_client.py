@@ -23,7 +23,7 @@ from src.data.sources.http.errors import (
     RobotsDisallowedError,
 )
 from src.data.sources.http.guardrails import build_user_agent, strip_secret_params
-from src.data.sources.testing import TEST_EMAIL, ClientFactory, FakeClock
+from tests.support.sources_fixtures import TEST_EMAIL, ClientFactory, FakeClock
 
 API = "https://example.org/api/item"
 JSON = {"content-type": "application/json"}

@@ -16,8 +16,8 @@ from src.data.sources import cli
 from src.data.sources.cli import app
 from src.data.sources.connectors import all_links
 from src.data.sources.quality.linkcheck import ENDPOINTS
-from src.data.sources.testing import TEST_EMAIL
-from tests.data.pipeline.unit.test_connectors_lookup import PUBMED_XML
+from tests.data.sources.unit.test_connectors_lookup import PUBMED_XML
+from tests.support.sources_fixtures import TEST_EMAIL
 
 runner = CliRunner()
 PIPELINE = Path(__file__).resolve().parents[4] / "config" / "data_pipeline"

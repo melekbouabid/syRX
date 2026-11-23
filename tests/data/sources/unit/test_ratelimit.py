@@ -10,7 +10,7 @@ import pytest
 
 from src.data.sources.config import HostLimit
 from src.data.sources.http.ratelimit import HostRateLimiter, TokenBucket
-from src.data.sources.testing import FakeClock
+from tests.support.sources_fixtures import FakeClock
 
 
 def max_in_any_window(times: list[float], window: float) -> int:

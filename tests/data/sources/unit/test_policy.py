@@ -16,7 +16,9 @@ SRC = Path(__file__).resolve().parents[4] / "src" / "data" / "sources"
 CONNECTOR_FILES = sorted((SRC / "connectors").glob("*.py"))
 # The module 2 corpus steps run on this pipeline and follow the same network policy.
 RAG = Path(__file__).resolve().parents[4] / "src" / "rag"
-NETWORK_CHECKED = [*sorted(SRC.rglob("*.py")), RAG / "corpus.py", RAG / "chunking.py"]
+# The pipeline test plugin (tests/support) was part of the package and stays checked.
+SUPPORT = Path(__file__).resolve().parents[3] / "support" / "sources_fixtures.py"
+NETWORK_CHECKED = [*sorted(SRC.rglob("*.py")), RAG / "corpus.py", RAG / "chunking.py", SUPPORT]
 # The links of the original brief for the sources that remain (the original synergy sources
 # were removed, decision D85).
 BRIEF_LINKS = [
