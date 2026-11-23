@@ -62,9 +62,16 @@ The selection is registered as `tujya-rag-retrieval` ([grid/champion.json](../..
 
 ## Embedding fine-tuning (not served)
 
-bge-m3 fine-tuned on Kaggle (MLflow run `03c72c9c`, experiment `tujya-rag-finetuning`): MRR@10
-on its own validation pairs 0.784 -> 0.960. On the 85 benchmark questions, through the same
-sentence-transformers path ([grid/bge-m3-finetuned.json](../../src/evaluation/results/grid/bge-m3-finetuned.json)):
+bge-m3 fine-tuned on Kaggle (MLflow run `03c72c9c`, experiment `tujya-rag-finetuning`, Tesla T4,
+151.7 min of training, final loss 0.0917). On its own 1,007 validation questions:
+
+| Validation pairs | Recall@1 | Recall@5 | Recall@10 | MRR@10 | nDCG@10 |
+|---|---:|---:|---:|---:|---:|
+| bge-m3 base | 0.655 | 0.930 | 0.967 | 0.784 | 0.830 |
+| bge-m3 fine-tuned | 0.930 | 0.999 | 1.000 | 0.960 | 0.970 |
+
+On the 85 benchmark questions, through the same sentence-transformers path
+([grid/bge-m3-finetuned.json](../../src/evaluation/results/grid/bge-m3-finetuned.json)):
 
 | Configuration | Recall@1 | Recall@5 | Recall@10 | MRR | nDCG@10 | MLflow run |
 |---|---:|---:|---:|---:|---:|---|

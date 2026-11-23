@@ -4,7 +4,8 @@ A LangGraph agent answers questions about the scanned pills from a cited RAG cor
 labels, PubMed abstracts, DDInter interactions), with safety rules enforced in code. The steps
 follow the order of the labs. Results: [results.md](results.md). Commands run from the
 repository root in the project venv (`.venv`) with the stack running
-(`docker compose up -d`).
+(`docker compose up -d`). Executed notebooks of each step:
+[notebooks/](../../notebooks/README.md).
 
 ## 1. Corpus
 
