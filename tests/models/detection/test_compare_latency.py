@@ -147,6 +147,7 @@ def test_collect_reads_candidates_and_baseline_without_smoke_runs(
     tracking.client.set_tag(champion_run, "stage", "compare")
     tracking.client.set_tag(champion_run, "smoke", "false")
     tracking.client.set_tag(champion_run, "arch", "yolo11s")
+    tracking.client.set_tag(champion_run, "task", "detect")
     tracking.client.log_metric(champion_run, "test_v2_mAP50_95", 0.8885)
     tracking.client.log_metric(champion_run, "model_size_mb", 37.9)
     # Final validation score at step 0, then a per-epoch history under the same key.
@@ -159,13 +160,18 @@ def test_collect_reads_candidates_and_baseline_without_smoke_runs(
             "stage": "compare-eval",
             "smoke": "false",
             "arch": "yolo11n",
+            "task": "detect",
             "evaluated_run_id": baseline_run,
         }
     ):
         mlflow.log_metric("test_v2_mAP50_95", 0.7888)
-    with mlflow.start_run(tags={"stage": "compare", "smoke": "true", "arch": "smoke"}):
+    with mlflow.start_run(
+        tags={"stage": "compare", "smoke": "true", "arch": "smoke", "task": "detect"}
+    ):
         mlflow.log_metric("test_v2_mAP50_95", 0.1)
-    with mlflow.start_run(tags={"stage": "optimize", "smoke": "false", "arch": "other"}):
+    with mlflow.start_run(
+        tags={"stage": "optimize", "smoke": "false", "arch": "other", "task": "detect"}
+    ):
         mlflow.log_metric("test_v2_mAP50_95", 0.9)
 
     rows = compare.collect(tracking.experiment, tracking.model, tracking.client)
@@ -174,6 +180,36 @@ def test_collect_reads_candidates_and_baseline_without_smoke_runs(
     assert (rows[0].status, rows[0].version, rows[0].size_mb) == ("champion", champion, 37.9)
     assert rows[0].val_map == 0.8063  # the retained checkpoint, not the last epoch
     assert (rows[1].status, rows[1].version) == ("archived", baseline)
+
+
+def test_collect_leaves_the_classifier_runs_out_of_the_detector_table(
+    tracking: SimpleNamespace,
+) -> None:
+    # Classifier runs share the experiment and the stage tags; only their task differs.
+    mlflow.set_experiment(tracking.experiment)
+    with mlflow.start_run(
+        tags={"stage": "compare", "smoke": "false", "arch": "yolo11s", "task": "detect"}
+    ):
+        mlflow.log_metric("test_v2_mAP50_95", 0.8885)
+    with mlflow.start_run(
+        tags={"stage": "compare", "smoke": "false", "arch": "efficientnetv2s", "task": "classify"}
+    ):
+        mlflow.log_metrics({"test_v2_top1": 0.9089, "onnx_cpu_latency_ms": 17.6})
+    with mlflow.start_run(
+        tags={
+            "stage": "compare-eval",
+            "smoke": "false",
+            "arch": "yolo11s-cls",
+            "task": "classify",
+            "evaluated_run_id": "unknown",
+        }
+    ):
+        mlflow.log_metric("test_v2_top1", 0.1830)
+
+    rows = compare.collect(tracking.experiment, tracking.model, tracking.client)
+
+    assert [r.arch for r in rows] == ["yolo11s"]
+    assert "efficientnetv2s" not in compare.markdown_table(rows)
 
 
 def test_classifiers_are_timed_with_their_task(
