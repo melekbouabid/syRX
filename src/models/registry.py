@@ -273,11 +273,11 @@ def _set_status(client: MlflowClient, name: str, version: str, alias: str) -> No
 # --- Publication of the served models ----------------------------------------------------------
 # Copy the deployment models into the directory the API loads them from.
 #
-#     python -m src.models.publish                          # served variant of each champion
-#     python -m src.models.publish --exact                  # the champions themselves (FP32)
-#     python -m src.models.publish --alias challenger       # another alias (MLflow Registry)
-#     python -m src.models.publish --classifier-version 2 --detector-version 1
-#     python -m src.models.publish --from-runs              # newest runs/*/weights/best.onnx
+#     python -m src.models.registry publish                  # served variant of each champion
+#     python -m src.models.registry publish --exact          # the champions themselves (FP32)
+#     python -m src.models.registry publish --alias challenger # another alias (MLflow Registry)
+#     python -m src.models.registry publish --classifier-version 2 --detector-version 1
+#     python -m src.models.registry publish --from-runs      # newest runs/*/weights/best.onnx
 #
 # Writes `detector.onnx`, `classifier.onnx` and `models.json` (origin and SHA-256 of each file)
 # into `--out` (default `models/` at the repository root, git-ignored; the API reads it from
@@ -285,7 +285,7 @@ def _set_status(client: MlflowClient, name: str, version: str, alias: str) -> No
 # `src.models.export_onnx`, so the API serves exactly the versions shown in the Model Registry:
 # by default the champions chosen by promote_if_better (above), in the
 # precision chosen by `python -m src.models.optimize` (alias `served`: FP32, FP16 or INT8 variant
-# of the champion, src/models/serving.py). `--exact` publishes the alias as it is.
+# of the champion, above). `--exact` publishes the alias as it is.
 #
 # A classifier that carries its class list (ONNX metadata `class_keys`, the C3PI product of
 # every output: the classifiers of step 2.3, D101) is published only if its `names` point, for
@@ -340,7 +340,7 @@ def from_registry(
     """The registered ONNX model of `task`: version `version`, else the one holding `alias`.
 
     With `exact=False` and the alias `champion`, the served variant of the champion
-    (src/models/serving.py) instead of the champion itself.
+    (served_version above) instead of the champion itself.
     """
     import mlflow
     from mlflow import MlflowClient
