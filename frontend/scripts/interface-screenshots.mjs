@@ -1,13 +1,6 @@
-// Before / after screenshots of the interface step (docs/screenshots/interface/): the start
-// page, the sign-in page, the scanner with a demo result and the chat panel, in light and
-// dark mode.
-//
-//   BASE=http://localhost:8080 TAG=avant node scripts/interface-screenshots.mjs
-//   BASE=http://localhost:8080 TAG=apres LANG_UI=fr node scripts/interface-screenshots.mjs
-//
-// The theme follows the browser's colour scheme until someone presses the toggle, so the
-// two modes are taken with Playwright's `colorScheme`. LANG_UI sets the browser language
-// (the interface follows it until a language is picked); the selectors below work in both.
+// Screenshots of the main pages in light and dark mode (docs/screenshots/interface/).
+// LANG_UI sets the browser language; TAG names the set.
+//   BASE=http://localhost:8080 TAG=<name> [LANG_UI=fr] node scripts/interface-screenshots.mjs
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";

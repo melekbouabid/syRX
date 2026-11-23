@@ -1,13 +1,6 @@
-// The animated 3D scene of the start page and the sign-in page (three.js), loaded only on
-// those pages and only when the visitor accepts motion (components/Scene3D.tsx).
-//
-// It shows what Tujya does: a big glossy capsule in the logo's colours, a detection box and a
-// scan line sweeping it (the vision step), small capsules and tablets orbiting it, and glowing
-// links with pulses running between them (the interaction check). Everything is built from
-// code: no model or texture is downloaded.
-//
-// Cost control: frames are drawn only while the canvas is on screen and the tab is visible,
-// the pixel ratio is capped at 2, and destroy() frees every GPU resource.
+// The animated three.js scene of the start and sign-in pages (only when motion is accepted),
+// built from code. Frames are drawn only while visible, the pixel ratio is capped at 2, and
+// destroy() frees every GPU resource.
 
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";

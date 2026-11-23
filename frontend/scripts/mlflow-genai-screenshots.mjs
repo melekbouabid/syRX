@@ -1,12 +1,6 @@
-// Screenshots of the MLflow UI for module 2 (GenAI) and of the model comparisons of module 1
-// (docs/screenshots/32 to 39).
-//
+// Screenshots of the MLflow UI: agent traces, generation evaluation runs, Prompt Registry, RAG
+// models and the vision model comparisons (docs/screenshots/). Fails on a missing page.
 //   MLFLOW=http://127.0.0.1:5000 node scripts/mlflow-genai-screenshots.mjs
-//
-// Traces of the agent, the evaluation runs of the generation benchmark, the Prompt Registry, the
-// two registered RAG models (retrieval and generation, aliases champion / challenger), then the
-// comparison view of the detector and classifier candidates of steps 2.2 and 2.3 (their
-// registered versions). Fails if a page does not show what it should.
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";

@@ -211,7 +211,7 @@ export interface ScannedPill {
   needs_confirmation: boolean;
 }
 
-/** An active ingredient read on a medicine box (step 2.7), with where the link comes from. */
+/** An active ingredient read on a medicine box, with where the link comes from. */
 export interface BoxIngredient {
   name: string;
   /** brand table, ingredient name printed on the box, or RxNorm (RxNav). */
@@ -322,11 +322,11 @@ export interface DemoImage {
   why: string;
   url: string;
   thumbnail_url: string;
-  /** Grad-CAM precomputed for this photo (D104), null when there is none. */
+  /** Grad-CAM precomputed for this photo, null when there is none. */
   gradcam_url: string | null;
 }
 
-/** GET /api/catalog/summary: public figures and one real scan of a test photo (D128). */
+/** GET /api/catalog/summary: public figures and one real scan of a test photo. */
 export interface CatalogSummary {
   counts: { pills: number; ingredients: number; interaction_pairs: number } | null;
   confirm_threshold: number;
@@ -389,7 +389,7 @@ export interface ChatCitation {
   cited: boolean;
   doc_id?: string;
   license?: string;
-  /** Cross-encoder score when the search was reranked (D117). */
+  /** Cross-encoder score when the search was reranked. */
   rerank_score?: number | null;
 }
 
@@ -462,7 +462,7 @@ export interface ToxicityResult {
   disclaimer: string;
 }
 
-// Indexed documents of the RAG (GET /api/documents, docs/api.md, D114).
+// Indexed documents of the RAG (GET /api/documents).
 export interface IndexInfo {
   store: string;
   collection: string;
@@ -526,7 +526,7 @@ export interface DocumentFilters {
   offset: number;
 }
 
-// Data drift of the scanned photos (GET /monitoring/drift, docs/module1/derive.md, step 2.8).
+// Data drift of the scanned photos (GET /monitoring/drift).
 export interface DriftFeature {
   feature: string;
   description: string;

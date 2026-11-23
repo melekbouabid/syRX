@@ -1,6 +1,5 @@
-// Vision components of the Scanner page (course guide, step 2.6), styled with Tailwind CSS
-// (D106): boxes coloured by class on a canvas, animated probability bars, client and server
-// latency, and the champion models served by the API.
+// Vision components of the Scanner page (Tailwind CSS): boxes coloured by class on a canvas,
+// animated probability bars, client and server latency, and the served models.
 import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 import { api, type ModelMetadata, type ScannedPill } from "../services/api";

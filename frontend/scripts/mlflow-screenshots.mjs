@@ -1,10 +1,6 @@
-// Save screenshots of the MLflow UI for the demo script and the reports (docs/screenshots/).
-//
+// Screenshots of the MLflow UI: the vision, RAG and toxicity experiments and the Model Registry
+// (docs/screenshots/). Fails on a missing page.
 //   MLFLOW=http://127.0.0.1:5000 node scripts/mlflow-screenshots.mjs
-//
-// Opens the vision, RAG and toxicity experiments (run tables, "Model training" view) and the Model
-// Registry (both registered models, then the classifier), closing MLflow 3's guidance
-// pop-ups and assistant panel. Fails if a page does not show what it should.
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";

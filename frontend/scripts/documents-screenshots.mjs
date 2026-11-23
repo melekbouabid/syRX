@@ -1,13 +1,6 @@
-// Drive the Documents page and the Qdrant dashboard, save screenshots (docs/screenshots/27-29).
-//
-//   node scripts/documents-screenshots.mjs                  # app on http://localhost:5173
-//   BASE=http://localhost:8080 node scripts/documents-screenshots.mjs   # the docker compose app
-//   QDRANT=http://localhost:6333 node scripts/documents-screenshots.mjs
-//
-// Signs in, opens Documents and checks the index card (Qdrant, points), the three document
-// types, the filters by type and by active ingredient, and one document with its metadata and
-// chunks (SHA-256 shown). Then the Qdrant dashboard: the collection tujya_chunks_v2 and its
-// points with their payload. Fails if a step does not show what it should.
+// Drive the Documents page (index card, filters, one document) and the Qdrant dashboard, and
+// save screenshots to docs/screenshots/. Fails on a missing step.
+//   [BASE=http://localhost:8080] [QDRANT=http://localhost:6333] node scripts/documents-screenshots.mjs
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";
@@ -17,7 +10,7 @@ const QDRANT = process.env.QDRANT ?? "http://localhost:6333";
 const OUT = resolve(process.env.OUT ?? "../docs/screenshots");
 const EMAIL = process.env.DEMO_EMAIL ?? "user@gmail.com";
 const PASSWORD = process.env.DEMO_PASSWORD ?? "user";
-// The served collection (D126); the corpus of the 150 first classes stays in tujya_chunks.
+// The served collection; the corpus of the 150 first classes stays in tujya_chunks.
 const COLLECTION = process.env.COLLECTION ?? "tujya_chunks_v2";
 
 function check(condition, message) {

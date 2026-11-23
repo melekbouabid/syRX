@@ -1,13 +1,6 @@
-// Medicine boxes in the Scanner (step 2.7): screenshots for docs/screenshots/ (22 to 25).
-//
-//   node scripts/box-screenshots.mjs           # app on http://localhost:5173 (npm run dev)
-//   BOXES=../data/raw/medicine_boxes/italian_otc/out OFF_TOPIC=../data/raw/off_topic \
-//     node scripts/box-screenshots.mjs
-//
-// Uploads real box photos of Italian-OTC-medicines (DVC data, Apache-2.0): a brand of the brand
-// table (Efferalgan), a box whose brand is not in the table but prints its INN (Brufen:
-// "Ibuprofene"), then an off-topic photo (scikit-image's coffee, CC0) that must be refused;
-// finally the two boxes added to My pills and checked for interactions. Fails if a step does not show what it should.
+// Medicine boxes in the Scanner: two box photos, an off-topic photo that must be refused,
+// then an interaction check; screenshots for docs/screenshots/. Fails on a missing step.
+//   [BOXES=<dir>] [OFF_TOPIC=<dir>] node scripts/box-screenshots.mjs
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";

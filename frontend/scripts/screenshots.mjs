@@ -1,17 +1,6 @@
-// Drive the Scanner page in a real browser and save screenshots (docs/screenshots/).
-//
-//   npx playwright install chromium            # once
-//   node scripts/screenshots.mjs                # app on http://localhost:5173 (npm run dev)
-//   BASE=http://localhost:8080 node scripts/screenshots.mjs   # the docker compose app
-//   FAKE_VIDEO=/tmp/pills.y4m node scripts/screenshots.mjs    # webcam fed by a video file
-//
-// Signs in with the demo account and shows the three input modes of the course guide: a photo
-// dropped on the drop zone and one chosen with the file dialog, the demo gallery in one click
-// and the webcam in continuous inference (Chromium's fake camera, fed by FAKE_VIDEO when given:
-// a .y4m or .mjpeg file made from C3PI test photos, kept out of git). Then the Grad-CAM of a
-// gallery photo, the champion models with the client and server latency, two more demo photos,
-// the interaction check, the confirmation step and Swagger. Fails if a step does not show what
-// it should.
+// Drive the Scanner page in a real browser (upload, gallery, webcam, Grad-CAM, interaction
+// check, Swagger) and save screenshots to docs/screenshots/. Fails on a missing step.
+//   [BASE=http://localhost:8080] [FAKE_VIDEO=pills.y4m] node scripts/screenshots.mjs
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";

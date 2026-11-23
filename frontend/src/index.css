@@ -1,9 +1,6 @@
-/* Entry stylesheet. Tailwind CSS v4 (docs/decisions.md D106) next to the Tujya design of
-   styles.css, ordered by cascade layers:
-   - theme: Tailwind's variables, plus the Tujya tokens below as Tailwind colours;
-   - legacy: styles.css, the design of every page (unchanged);
-   - utilities: Tailwind classes, which win over legacy rules where a component uses them.
-   No Tailwind preflight (base reset): it would restyle the pages built on styles.css. */
+/* Entry stylesheet: Tailwind CSS v4 next to styles.css, in cascade layers theme, legacy
+   (styles.css) and utilities (Tailwind classes win). No Tailwind preflight: it would restyle
+   the pages built on styles.css. */
 @layer theme, base, legacy, components, utilities;
 
 @import "tailwindcss/theme.css" layer(theme);

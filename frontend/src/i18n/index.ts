@@ -3,14 +3,9 @@ import en, { type Messages } from "./en";
 import fr from "./fr";
 
 /**
- * The interface language: English or French. Until someone picks one with the language
- * button, the browser's first language decides (French when it is French, English
- * otherwise); the choice is then kept in this browser, like the theme (services/theme.ts),
- * inside try/catch. Components read their texts with `useT()`, which re-renders them when
- * the language changes; code outside React calls `messages()`.
- *
- * What the API writes (error details, agent answers, source excerpts) is shown as it comes:
- * only the interface itself is translated (docs/decisions.md D128).
+ * The interface language (English or French): the browser's language until one is picked,
+ * then kept in this browser. Components use `useT()`; code outside React calls `messages()`.
+ * Only the interface is translated: API texts (errors, answers, sources) are shown as they come.
  */
 export type Lang = "en" | "fr";
 export type { Messages };
