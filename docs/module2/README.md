@@ -1,120 +1,145 @@
-# Module 2 : AI Engineering
+# Module 2: AI engineering
 
-Un agent **LangGraph** répond aux questions sur les comprimés identifiés, avec un **RAG**
-sur trois sources documentées (notices officielles openFDA, résumés PubMed, interactions
-DDInter) et des **citations numérotées** vérifiées. Le corpus des 380 classes de comprimés
-(27 302 chunks pour 13 660 documents, avec leurs métadonnées, construit par un job Spark : D126)
-est indexé dans **Qdrant** avec des embeddings **bge-m3**
-(tableau de bord sur <http://localhost:6333/dashboard>, page « Documents » de l'application) ; le LLM local **qwen2.5:3b** tourne dans **Ollama**. L'agent appelle
-des **outils** (identifier, vérifier une interaction, notice d'un médicament, recherche
-documentaire), exposés aussi par un **serveur MCP**. Un **benchmark** de 88 questions
-mesure la récupération et la génération. Le tout est servi dans l'interface web, en flux
-SSE. Évaluation : dépôt GitHub et historique des commits, rapport technique, démonstration.
+A LangGraph agent answers questions about the scanned pills from a cited RAG corpus (openFDA
+labels, PubMed abstracts, DDInter interactions), with safety rules enforced in code. The steps
+follow the order of the labs. Results: [results.md](results.md). Commands run from the
+repository root in the project venv (`.venv`) with the stack running
+(`docker compose up -d`).
 
-Rapport technique : [docs/module2/rapport_module2_ai_engineering.pdf](rapport_module2_ai_engineering.pdf)
-(source [Markdown](rapport_module2_ai_engineering.md)). Vue d'ensemble du projet :
-[README principal](../../README.md).
+## 1. Corpus
 
-## Exigences du module et fichiers correspondants
-
-| Exigence | Où la trouver |
+| | |
 |---|---|
-| RAG : gestion des documents | collecte (notices openFDA, résumés PubMed, paires DDInter) et découpage en chunks : [src/rag/corpus.py](../../src/rag/corpus.py) ([corpus.py](../../src/rag/chunking.py), [\_\_main\_\_.py](../../src/rag/corpus.py)) sur les connecteurs du [pipeline](../data_pipeline/README.md) ; corpus versionné par DVC (étape `rag_corpus` de [dvc.yaml](../../dvc.yaml) pour les 150 premières classes, étape `spark_rag` et collecte [rag_sources.py](../../src/data/spark/rag_sources.py) pour les 380 classes servies, D126) ; indexation idempotente : [src/rag/init_qdrant.py](../../src/rag/init_qdrant.py) |
-| RAG : métadonnées | colonnes de chaque chunk (source, médicament, section, URL, date, licence, rétractation) : [src/rag/chunking.py](../../src/rag/chunking.py) ; payload Qdrant (toutes les métadonnées, `content_hash` SHA-256) et filtres : [src/rag/stores/base.py](../../src/rag/stores/base.py) ; [docs/module2/rag.md](rag.md) |
-| RAG : base vectorielle consultable | Qdrant (`docker compose` service `qdrant`, collection `tujya_chunks`, un point par chunk, index de payload sur les champs filtrés) : [src/rag/stores/qdrant.py](../../src/rag/stores/qdrant.py) ; catalogue des documents reconstruit depuis les chunks : [src/rag/chunking.py](../../src/rag/chunking.py) ; `GET /api/documents` (liste, filtres, facettes) et `GET /api/documents/{doc_id}` (métadonnées et chunks) : [backend/app/routers/documents.py](../../backend/app/routers/documents.py) ; page « Documents » : [frontend/src/pages/DocumentsPage.tsx](../../frontend/src/pages/DocumentsPage.tsx) ; [rag.md](rag.md#consulter-les-documents-indexés), captures [27](../screenshots/27-documents.jpg) à [29](../screenshots/29-qdrant-dashboard.jpg) (D113, D114) |
-| RAG : recherche | BM25 (vecteurs sparse `Qdrant/bm25` dans Qdrant), dense (bge-m3) et hybride RRF fait par Qdrant, reranker cross-encoder BAAI/bge-reranker-base ([src/rag/reranking.py](../../src/rag/reranking.py)), réécriture de requête par le LLM ([src/rag/query_rewriting.py](../../src/rag/query_rewriting.py)), filtres de métadonnées (principe actif, type, section, rétractation) ; [rag.md](rag.md#recherche-avancée-étape-32), mesures dans [benchmark.md](benchmark.md#recherche-avancée-étape-32) (D116-D118) : [src/rag/retrieval.py](../../src/rag/retrieval.py), [src/rag/init_qdrant.py](../../src/rag/init_qdrant.py), [src/rag/query_rewriting.py](../../src/rag/query_rewriting.py) |
-| RAG : citations | citations numérotées, attribution et vérification : [src/agent/graph.py](../../src/agent/graph.py), [src/agent/safety.py](../../src/agent/safety.py) ; affichage cliquable : [frontend/src/pages/ChatPanel.tsx](../../frontend/src/pages/ChatPanel.tsx) ; capture [10](../screenshots/10-chat-citation.jpg) |
-| RAG : documentation | [docs/module2/rag.md](rag.md), [docs/module2/interactions.md](interactions.md), [docs/module2/agent.md](agent.md) |
-| Tool calling | outils LangChain `identify_pills`, `check_interaction`, `get_drug_info`, `search_documents` (et `predict_toxicity`, [docs/bonus/](../bonus/README.md)) : [src/agent/tools.py](../../src/agent/tools.py) |
-| MCP | serveur MCP (SDK officiel, stdio et HTTP limité à 127.0.0.1), mêmes outils, même code : [src/agent/mcp_server.py](../../src/agent/mcp_server.py) ; même boîte à outils que le chat (récupération servie D123, classifieur à 380 classes, D125) ; essai de bout en bout sur une photo du split de test : [src/agent/mcp_smoke.py](../../src/agent/mcp_smoke.py) ; [docs/module2/mcp.md](mcp.md) |
-| LangChain et/ou LangGraph | graphe LangGraph comprendre → outils → récupération → réponse citée → contrôle de sécurité : [src/agent/graph.py](../../src/agent/graph.py) ; câblage pour l'API : [src/agent/runtime.py](../../src/agent/runtime.py) ; schéma : [docs/module2/assets/agent_graph.png](assets/agent_graph.png) |
-| Benchmark de la récupération | grille de 27 configurations (embeddings bge-m3 / multilingual-e5-base / all-MiniLM-L6-v2 / bge-m3 fine-tuné, dense / hybride / BM25, découpage, réécriture, 5 rerankers), Recall@k, MRR, nDCG@10, latence D96, un run MLflow par configuration (`tujya-rag-retrieval`), champion enregistré avec alias : [src/evaluation/retrieval_grid.py](../../src/evaluation/retrieval_grid.py), [config/rag_grid.yaml](../../config/rag_grid.yaml), [src/evaluation/results/grid/](../../src/evaluation/results/grid/) ; [benchmark_retrieval.md](benchmark_retrieval.md) (D123) ; mesures antérieures : [benchmark_retrieval.py](../../src/evaluation/benchmark_retrieval.py), [results/retrieval.json](../../src/evaluation/results/retrieval.json) |
-| Benchmark de la génération | grille LLM (qwen2.5:3b, llama3.2:3b) × prompt (v1, v2, [src/agent/prompts.py](../../src/agent/prompts.py)) sur les 96 questions : sécurité, citations vérifiées par un juge local, RAGAS 0.4.4 (4 métriques, toutes les réponses), MLflow 3 GenAI (traces LangGraph avec un span par outil, Prompt Registry, `mlflow.genai.evaluate` avec Correctness, Safety et 3 scorers du projet), un run par configuration (`tujya-rag-generation`), champion enregistré avec alias : [benchmark_generation.py](../../src/evaluation/benchmark_generation.py), [ragas_evaluation.py](../../src/evaluation/ragas_evaluation.py), [register_prompts.py](../../src/evaluation/register_prompts.py), [config/rag_generation.yaml](../../config/rag_generation.yaml), [src/evaluation/results/generation/](../../src/evaluation/results/generation/) ; [benchmark_generation.md](benchmark_generation.md) (D124) ; premier benchmark (88 questions) : [benchmark.md](benchmark.md) |
-| Interface web | panneau « Ask about your pills » : [frontend/src/pages/ChatPanel.tsx](../../frontend/src/pages/ChatPanel.tsx) ; `POST /api/chat` (JSON ou flux SSE) : [backend/app/routers/chat.py](../../backend/app/routers/chat.py) ; captures [08](../screenshots/08-chat-empty.jpg) à [11](../screenshots/11-chat-dose-refused.jpg) |
-| Sécurité des réponses | jamais de dose, jamais « sûr », horaires seulement si la source les donne, avertissement : [src/agent/safety.py](../../src/agent/safety.py), [tests/agent/test_safety.py](../../tests/agent/test_safety.py) |
-| Dépôt GitHub documenté, commits réguliers | ce README, [README.md](../../README.md), `git log`, tags git, [docs/git_workflow.md](../git_workflow.md) (branches, Conventional Commits, hooks) |
-| Rapport technique | [docs/module2/rapport_module2_ai_engineering.pdf](rapport_module2_ai_engineering.pdf) |
-| Démonstration | [docs/demo.md](../demo.md) (étapes chat, dose refusée, MCP, benchmark) |
-| Tests | [tests/data/](../../tests/data/), [tests/rag/](../../tests/rag/), [tests/agent/](../../tests/agent/), [tests/agent/test_mcp_server.py](../../tests/agent/test_mcp_server.py) : corpus et connecteurs (HTTP simulé), recherche (SQLite, pgvector et Qdrant en mémoire), catalogue des documents et `/api/documents`, API de chat et agent avec un LLM factice, sécurité, MCP |
+| Code | [src/rag/corpus.py](../../src/rag/corpus.py), [src/data/sources/](../../src/data/sources/), [src/data/spark/rag_sources.py](../../src/data/spark/rag_sources.py), [src/data/spark/rag_job.py](../../src/data/spark/rag_job.py) |
+| Command | `python -m src.rag.corpus ingredients`, `interactions`, `labels`, `pubmed`; `python -m src.data.spark.rag_sources labels` and `pubmed` (new ingredients); `dvc repro spark_rag` |
+| Result | `data/processed/rag/corpus_v2`: 13,660 documents of 175 ingredients ([data.md](../data.md#rag-corpus)) |
 
-## Résultats du benchmark
+Sources are collected by the polite pipeline (official APIs, rate limits, cache, manifest);
+dosage sections are never stored. The Spark job cleans and deduplicates the texts (exact and
+MinHash).
 
-88 questions (44 en français, 44 en anglais) construites à partir du corpus et relues à la
-main. Détails, limites et commandes : [docs/module2/benchmark.md](benchmark.md) ; chaque run est
-dans MLflow (expérience `tujya-rag`).
+## 2. Chunking
 
-| Récupération (83 questions, top 10) | Recall@1 | Recall@3 | Recall@5 | Recall@10 | MRR |
-|---|---:|---:|---:|---:|---:|
-| BM25 + filtre principe actif | 0,566 | 0,747 | 0,783 | 0,819 | 0,660 |
-| hybride (RRF) + filtre | 0,711 | 0,892 | 0,904 | 0,928 | 0,796 |
-| **dense (bge-m3) + filtre, retenu** | **0,795** | **0,880** | **0,928** | **0,976** | **0,852** |
+| | |
+|---|---|
+| Code | [src/rag/chunking.py](../../src/rag/chunking.py), variants in [src/evaluation/chunking_variants.py](../../src/evaluation/chunking_variants.py) |
+| Command | part of `dvc repro spark_rag` (same functions inside Spark) |
+| Result | 27,302 chunks of at most 1,500 characters, one sentence of overlap, each with its metadata (source, type, section, ingredients, language, URL, licence) |
 
-Grille de l'étape 3.3 (85 questions, [benchmark_retrieval.md](benchmark_retrieval.md), D123) :
+Labels: one chunk per section, long sections split on sentences; abstracts: one chunk per
+paragraph; DDInter: one chunk per pair.
 
-| Récupération (85 questions, top 10) | Recall@1 | Recall@5 | MRR | ms / question (D96) |
-|---|---:|---:|---:|---:|
-| dense bge-m3 + filtre (challenger) | 0,776 | 0,906 | 0,832 | 63 |
-| **dense bge-m3 + filtre + réécriture (champion, servi)** | **0,765** | **0,941** | **0,834** | **389** |
-| hybride + réécriture + reranker MiniLM-L6 (10 candidats) | 0,859 | 0,941 | 0,896 | 3 617 |
-| hybride + réécriture + reranker MiniLM-L12 (20 candidats) | 0,894 | 0,965 | 0,922 | 11 251 |
-| bge-m3 fine-tuné, dense (non servi) | 0,906 | 0,929 | 0,916 | 393 (run) |
+## 3. Vector index in Qdrant
 
-| Génération, grille de l'étape 3.4 (96 questions, juge phi4-mini, D124) | Note | Fidélité | Pertinence | Correctness | s / question |
-|---|---:|---:|---:|---:|---:|
-| **qwen2.5:3b + prompt v1 (champion, servi)** | **0,761** | **0,931** | **0,704** | **0,536** | **4,9** |
-| qwen2.5:3b + prompt v2 (challenger) | 0,708 | 0,880 | 0,673 | 0,378 | 4,5 |
-| llama3.2:3b + prompt v1 (hors budget de 15 s) | 0,768 | 0,906 | 0,747 | 0,512 | 24,2 |
+| | |
+|---|---|
+| Code | [src/rag/init_qdrant.py](../../src/rag/init_qdrant.py), [src/rag/stores/qdrant.py](../../src/rag/stores/qdrant.py), [src/rag/stores/sparse.py](../../src/rag/stores/sparse.py) |
+| Command | `python -m src.rag.init_qdrant` (run by the `rag-init` container at start-up) |
+| Result | http://localhost:6333/dashboard, collection `tujya_chunks_v2`; the Documents page of the app |
 
-| Premier benchmark de génération (qwen2.5:3b, juge gemma3:4b, 88 questions) | Résultat |
-|---|---:|
-| Phrases citées soutenues par leur source | 94,0 % |
-| Phrases avec citation | 69,8 % |
-| Doses chiffrées / « sûr » dans les réponses | 0 / 0 |
-| Avertissement présent ; questions de dose refusées | 100 % ; 2/2 |
-| RAGAS (8 questions) : fidélité / précision du contexte | 0,979 / 0,809 |
-| Temps de réponse moyen (RTX 2050) | 4,7 s |
+One point per chunk: a dense bge-m3 vector (served by Ollama), a BM25 sparse vector and the
+metadata as payload. Indexing is idempotent: a chunk is embedded again only if its content hash
+changes.
 
-## Organisation
+![Qdrant dashboard](../screenshots/29-qdrant-dashboard.jpg)
 
-Le module suit l'arborescence du guide, partagée avec le module 1 : tout le code est dans `src/`.
+![Documents page](../screenshots/27-documents.jpg)
 
+## 4. Retrieval: dense, BM25 and hybrid
+
+| | |
+|---|---|
+| Code | [src/rag/retrieval.py](../../src/rag/retrieval.py) |
+| Command | `python -m src.rag.retrieval "fluconazole warfarin" --ingredient warfarin --k 5` |
+| Result | first retrieval table of [results.md](results.md) |
+
+Hybrid search fuses the dense and BM25 lists by reciprocal rank fusion inside Qdrant. The
+ingredients found in the question are a metadata filter.
+
+## 5. Query rewriting
+
+| | |
+|---|---|
+| Code | [src/rag/query_rewriting.py](../../src/rag/query_rewriting.py) |
+| Setting | `TUJYA_RAG_QUERY_REWRITE=true` (default) |
+
+The LLM rewrites the question into a short English query that keeps every drug name; an empty,
+too long or failed rewrite keeps the question.
+
+## 6. Reranking
+
+| | |
+|---|---|
+| Code | [src/rag/reranking.py](../../src/rag/reranking.py) |
+| Setting | `TUJYA_RAG_RERANK=true`, `TUJYA_RAG_RERANK_MODEL`, `TUJYA_RAG_FETCH_K` |
+
+A cross-encoder (ONNX through fastembed) rescores the first candidates. Measured, but off by
+default: it costs seconds per question on the CPU ([results.md](results.md#retrieval-configuration-grid)).
+
+## 7. RAG chain
+
+| | |
+|---|---|
+| Code | [src/rag/rag_chain.py](../../src/rag/rag_chain.py), prompts in [src/agent/prompts.py](../../src/agent/prompts.py) |
+
+Search -> numbered sources -> prompt -> answer citing `[1]`, `[2]`... The prompts are versioned
+and registered in the MLflow Prompt Registry (`python -m src.evaluation.register_prompts`).
+
+## 8. Agent, tools and MCP
+
+| | |
+|---|---|
+| Code | [src/agent/graph.py](../../src/agent/graph.py), [src/agent/tools.py](../../src/agent/tools.py), [src/agent/safety.py](../../src/agent/safety.py), [src/agent/mcp_server.py](../../src/agent/mcp_server.py), [backend/app/routers/chat.py](../../backend/app/routers/chat.py) |
+| Command | `python -m src.agent.ask "Does warfarin interact with fluconazole?"`; `python -m src.agent.mcp_server` (stdio) or `--transport streamable-http --port 8765`; `python -m src.agent.mcp_smoke` |
+| Result | the chat panel of the app (`POST /api/chat`, streamed); MLflow traces |
+
+```mermaid
+flowchart LR
+  u["understand"] -- "dose question" --> refuse["refused"]
+  u --> tools["tools<br/>(tool calling + rules)"]
+  tools --> retrieve["retrieve<br/>numbered sources"]
+  retrieve --> answer["answer<br/>qwen2.5:3b"]
+  answer --> safety["safety<br/>rewrite or refuse"]
 ```
-src/rag/corpus.py principes actifs (RxNav), interactions DDInter, notices openFDA, résumés PubMed -> chunks
-src/rag/          embeddings bge-m3, stockage Qdrant (ou SQL), recherche BM25 / dense / hybride, indexation, catalogue
-src/agent/        graphe LangGraph (graph.py), outils (tools.py), règles de sécurité (safety.py), câblage (runtime.py)
-src/agent/mcp_server.py serveur MCP sur les mêmes outils
-src/evaluation/   questions.jsonl, qrels.json, scripts, results/
-tests/            tests (data, rag, agent, evaluation), venv du projet
-docs/module2/     rag, agent, mcp, benchmark, interactions, rapport (md + pdf), diagrams/, assets/
-```
 
-Le corpus s'appuie sur le pipeline de collecte `tujya-data` ([docs/data_pipeline/](../data_pipeline/README.md)) :
-client HTTP poli, connecteurs DDInter, PubMed et openFDA, manifeste et provenance. Le corpus
-dépend du pipeline, jamais l'inverse.
+Tools: `identify_pills` (the served vision models), `check_interaction` (DDInter tables),
+`get_drug_info`, `search_documents`, `lookup_brand` (brand table, RxNav fallback) and
+`predict_toxicity` (bonus). The MCP server exposes the same six tools with the same code. The
+safety node removes dose and "safe" sentences and uncited timing advice, checks every citation
+and always ends with the disclaimer.
 
-## Commandes
+![Cited answer](../screenshots/09-chat-answer.jpg)
 
-```bash
-# Tout est lancé par docker compose (racine) : rag-init télécharge les modèles Ollama et
-# indexe data/processed/rag/corpus_v2 (collection tujya_chunks_v2) dans Qdrant au premier démarrage
-# (tableau de bord : http://localhost:6333/dashboard).
-docker compose up -d --build
+![Dose question refused](../screenshots/11-chat-dose-refused.jpg)
 
-# Venv du projet (.venv) actif, depuis la racine du dépôt :
-python -m src.agent.ask "La warfarine interagit-elle avec le fluconazole ?"
-python -m src.rag.retrieval "fluconazole warfarin" --ingredient warfarin --k 5
-python -m src.rag.init_qdrant                 # réindexation dans Qdrant (idempotente)
-python -m src.rag.init_qdrant --copy-from-sql # copie l'ancien index pgvector dans Qdrant, sans réencoder
-python -m src.agent.mcp_server                # serveur MCP (stdio)
-python -m src.evaluation.benchmark_retrieval # benchmark de la récupération
+## 9. Evaluation
 
-# Corpus (même venv), depuis la racine :
-python -m src.rag.corpus labels     # notices openFDA
-python -m src.rag.corpus pubmed     # résumés PubMed
-dvc repro rag_corpus                 # chunks des 150 premières classes (étape DVC)
-python -m src.data.spark.rag_sources labels   # nouvelles classes (aussi ingredients, pubmed)
-dvc repro spark_rag                  # corpus servi des 380 classes (job Spark, D126)
+| | |
+|---|---|
+| Code | [src/evaluation/](../../src/evaluation/): `build_qrels.py`, `benchmark_retrieval.py`, `retrieval_grid.py`, `encode_sentence_transformers.py`, `benchmark_generation.py`, `ragas_evaluation.py`, `benchmark_brands.py`, `judge_control.py` |
+| Command | `python -m src.evaluation.retrieval_grid run --group bge-m3`, `... select`; `python -m src.evaluation.benchmark_generation --llm qwen2.5:3b --prompt v1 --trace`; `python -m src.evaluation.ragas_evaluation --llm qwen2.5:3b --prompt v1`, `... --select --register` |
+| Result | [results.md](results.md); MLflow experiments `tujya-rag-retrieval` and `tujya-rag-generation`; registered models `tujya-rag-retrieval` and `tujya-rag-generation` |
 
-# Tests du module (pgvector : TUJYA_TEST_PG_URL, sinon ces deux tests sont ignorés)
-.venv/Scripts/python -m pytest tests/data tests/rag tests/agent tests/evaluation
-```
+Retrieval: Recall@k, MRR and nDCG on 85 questions with expected chunks. Generation: RAGAS
+(faithfulness, answer relevancy, context precision and recall), a citation judge and the MLflow
+GenAI judges, with safety gates. The embedding fine-tuning (Kaggle) is evaluated on the same
+grid.
+
+![MLflow traces](../screenshots/32-mlflow-traces.jpg)
+
+![MLflow evaluations](../screenshots/33-mlflow-evaluations.jpg)
+
+## Bonus: toxicity tool (Tox21)
+
+| | |
+|---|---|
+| Code | [src/models/toxicity/](../../src/models/toxicity/), [backend/app/routers/toxicity.py](../../backend/app/routers/toxicity.py) |
+| Command | `python -m src.models.toxicity.train_tox21 download`, `train`, `publish` |
+| Result | `POST /api/toxicity`, the Toxicity page, the `predict_toxicity` tool; MLflow experiment `tujya-tox` |
+
+One LightGBM model per Tox21 in vitro assay on RDKit Morgan fingerprints, scaffold split.
+Each molecule is predicted on its own, never a mixture, and the answer always says it is a
+model prediction on in vitro tests, not a clinical judgement; "non-toxic" claims are removed
+by the safety node.
+
+![Toxicity page](../screenshots/16-toxicity.jpg)
