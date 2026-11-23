@@ -1,8 +1,4 @@
-"""Pydantic row schemas, one per source table.
-
-Every schema includes the five provenance fields, so a record without provenance cannot
-pass validation.
-"""
+"""Pydantic row schemas, one per source table, each with the five provenance fields."""
 
 from __future__ import annotations
 

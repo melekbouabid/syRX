@@ -381,13 +381,6 @@ class Connector(ABC):
             dest, url, refreshed=True, etag=result.etag, last_modified=result.last_modified
         )
 
-    def manual_artifact(self, filename: str, url: str) -> Artifact | None:
-        """A file a person placed under `data/manual/<source>/`, if present."""
-        path = self.manual_dir / filename
-        if not path.is_file():
-            return None
-        return self.record_raw(path, url, status="manual", layer="manual")
-
     def plan_file(
         self, url: str, filename: str, est_bytes: int | None, *, sample_rows: int | None = None
     ) -> PlannedAction:

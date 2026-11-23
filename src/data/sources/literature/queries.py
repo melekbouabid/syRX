@@ -1,8 +1,6 @@
-"""PubMed query builder for the active ingredients of the Tujya pill classes.
+"""PubMed query builder for the active ingredients of the pill classes.
 
-A query is the AND of one block per ingredient (name and synonyms in title/abstract, plus
-MeSH and substance-name tags), a topic block (interactions, adverse effects) and filters.
-Every query that is sent is appended to a JSON Lines log.
+Every query sent is appended to a JSON Lines log.
 """
 
 from __future__ import annotations

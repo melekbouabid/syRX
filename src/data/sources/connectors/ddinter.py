@@ -1,7 +1,6 @@
 """DDInter 2.0 drug-drug interactions (optional, disabled by default).
 
-DDInter is licensed CC BY-NC-SA 4.0: non-commercial and share-alike. The connector refuses
-to download anything until someone has read the terms and set `terms_acknowledged: true`.
+CC BY-NC-SA 4.0: nothing is downloaded until `terms_acknowledged: true` is set.
 """
 
 from __future__ import annotations

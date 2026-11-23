@@ -1,28 +1,7 @@
-"""Job `split`: train / val / test of the C3PI dataset v2, stratified by class, without leakage.
+"""Spark job `split`: train / val / test of the C3PI dataset v2, stratified, without leakage.
 
-Inputs: index/selection and index/classes (job `index`), quality/judged and
-quality/near_duplicates (job `quality`), config/pill_classes_v1.csv (the 150 classes of v1,
-only to flag them).
-
-1. Classes: candidates that still have at least `min_images` usable consumer photos after
-   the quality checks; class ids 0..K-1 by number of usable photos (ties: class key).
-2. Groups. C3PI gives no identifier of the physical pill photographed: one package (NDC11)
-   is one specimen, and almost every class has a single package, so keeping a whole
-   specimen in one split would leave the class out of val and test. The unit kept together
-   is the shooting session: the photos of one package with one camera, one background, one
-   lighting and one date (front and back, repeated shots). Groups linked by a near-identical
-   photo (perceptual hash, job `quality`) or by an identical file are merged (union-find),
-   so a duplicate can never sit on both sides of a split.
-3. Each class's groups are shuffled (seeded hash of the group, independent of Spark's
-   partitioning) and fill test, then val, best fit up to each split's share of the class's
-   consumer photos; the rest is train. Studio and challenge images (reference, seg,
-   challenge roles) stay in train unless a near-duplicate ties them to a val/test group.
-4. `check_leakage` verifies that no group, file (SHA-1) or near-duplicate pair spans train
-   and val/test; the job fails otherwise.
-
-Outputs: data/processed/c3pi/bigdata/split/images (Parquet, every kept image with its
-split, class_id and group, DVC) and config/splits/c3pi_v2/ (git): classes.csv, val.csv,
-test.csv (train = every other image of images/), summary.json.
+Shooting sessions linked by duplicates stay in one split; `check_leakage` fails the job
+otherwise. Output: config/splits/c3pi_v2/ and data/processed/c3pi/bigdata/split.
 """
 
 from __future__ import annotations
@@ -108,13 +87,10 @@ def _order(seed: int, group_id: str) -> str:
 
 
 def assign_groups(groups: pd.DataFrame, val: float, test: float, seed: int) -> pd.DataFrame:
-    """Split the groups of ONE class; used per class with Spark's applyInPandas.
+    """Split the groups of one class (used per class with applyInPandas).
 
-    Groups are visited in a seeded pseudo-random order (independent of the row order). Test
-    is filled first, then val, each with the groups that still fit in its share of the
-    class's consumer photos (best fit: a large session is skipped rather than overshooting);
-    a split that no group fits gets the smallest one. At least one group with consumer
-    photos always stays in train; groups without consumer photos are train.
+    Seeded order; test then val are filled best fit up to their share, the rest is train.
+    At least one group with consumer photos always stays in train.
     """
     groups = groups.copy()
     groups["_order"] = [_order(seed, g) for g in groups["group_id"]]

@@ -1,31 +1,7 @@
-"""Build the detection dataset of C3PI v2 (DVC stage prepare_detect_v2, step 2.2).
+"""Build the YOLO detection dataset of C3PI v2 (DVC stage prepare_detect_v2).
 
-    python -m src.data.prepare detect-v2             # training venv (.venv-train) or .venv
-    python -m src.data.prepare detect-v2 --limit 50  # first 50 photos of each split (tests)
-
-The detectors of step 2.2 are trained and compared on C3PI v2 (380 classes, step 1.4,
-docs/module1/big_data.md; decision D93 in docs/decisions.md). Detection has a single class,
-"pill", so only the consumer photos matter (`C3PI_Test`: one or two pills on a real
-background; the studio, RxImage and challenge images show a pill on a uniform background and
-stay with the classifier). The boxes come from the same automatic labelling as v1
-(src/data/autolabel.py), with the same rule: doubtful photos are left out.
-
-Inputs: the split of v2 (data/processed/c3pi/bigdata/split, stage spark_split: split, session
-group of every photo), the v1 list (config/splits/selected_images.csv) and the images.
-Outputs, under data/processed/c3pi/datasets_v2/detect/ (DVC, never git):
-
-- images/<split>/*.jpg, labels/<split>/*.txt   YOLO layout, long side resized to 640 px;
-- data.yaml                                    Ultralytics dataset file (absolute path);
-- index.csv                                    one row per kept photo: split, class, session
-                                               group, number of boxes, `holdout` flag;
-- test_holdout.txt                             the comparison split (file names): the v2 test
-                                               photos whose session holds no photo the
-                                               baseline (trained on v1) saw in train or val;
-- summary.json                                 counts per split, autolabel flags.
-
-Why a holdout: the v1 split was not made by session, and 436 v1 training photos fall in the
-v2 test split. Every model of step 2.2, the baseline included, is compared on `test_holdout`
-(metric `test_v2_mAP50_95`); the full v2 test is also reported (`test_v2_all_*`).
+Consumer photos only, boxes from src/data/autolabel.py, and a holdout of test sessions the
+v1 baseline never saw (metric `test_v2_mAP50_95`).
 """
 
 from __future__ import annotations

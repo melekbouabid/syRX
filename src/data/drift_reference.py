@@ -1,24 +1,7 @@
-"""Reference statistics of the data drift monitor (step 2.8, docs/module1/derive.md).
+"""Reference statistics of the data drift monitor (DVC stage drift_reference).
 
-    # training venv (.venv-train), served models in models/, MLflow server running
-    PYTHONPATH="backend;." python -m src.data.drift_reference
-    # or through DVC: dvc repro drift_reference
-
-Takes `drift.reference_images` photos spread over the `drift.reference_split` split of the
-detection dataset of C3PI v2 (consumer photos, the kind of photo a user takes), runs the served
-scan on each (app/inference.py: the models the API serves), and computes the statistics of
-app/drift.py `scan_stats`. The split is `val`, not `train` (D122): on the training photos the
-models are more confident than on any new photo (classifier 0.93 against 0.81 on the test
-split), and the split job leaves the largest shooting sessions (12-megapixel cameras) in train,
-so the test photos themselves drifted from a train reference; val holds photos never trained
-on, chosen like the test ones. Writes data/processed/c3pi/drift/reference.json
-(per-statistic sample and the thresholds of params.yaml `drift`, read by the API) and
-summary.json (the DVC metrics), and logs one MLflow run in the experiment `tujya-monitoring`
-(thresholds as params, mean / quantiles as metrics, the files and a histogram per statistic
-as artifacts, provenance tags of src/utils/mlflow_utils.py).
-
-The reference depends on the served models (the two confidences): publishing a new model
-makes `dvc status` show this stage, and it is run again.
+Runs the served scan on photos of the v2 validation split, writes
+data/processed/c3pi/drift/reference.json and logs one run in MLflow `tujya-monitoring`.
 """
 
 from __future__ import annotations
@@ -134,7 +117,7 @@ def histograms(reference: Reference, path: Path) -> Path | None:
         ax.set_title(name, fontsize=9)
         ax.tick_params(labelsize=7)
     split = reference.meta.get("split", "val")
-    fig.suptitle(f"Référence de la dérive : photos {split} de C3PI v2", x=0.01, ha="left")
+    fig.suptitle(f"Drift reference: C3PI v2 {split} photos", x=0.01, ha="left")
     fig.tight_layout()
     fig.savefig(path)
     plt.close(fig)

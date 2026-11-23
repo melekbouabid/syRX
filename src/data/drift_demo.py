@@ -1,25 +1,7 @@
-"""Reproducible demonstration of the data drift monitor (step 2.8, docs/module1/derive.md).
+"""Reproducible demonstration of the data drift monitor on five photo scenarios.
 
-    # training venv, served models in models/, reference of `dvc repro drift_reference`
-    PYTHONPATH="backend;." python -m src.data.drift_demo                 # in process
-    PYTHONPATH="backend;." python -m src.data.drift_demo --api http://127.0.0.1:8000
-    PYTHONPATH="backend;." python -m src.data.drift_demo --mlflow        # one run per scenario
-
-Five scenarios of `--photos` photos each, every one scored like a window of the API (the
-served scan of app/inference.py, the statistics and tests of app/drift.py):
-
-- `test-v2`: photos of the C3PI v2 test split (never trained on): no drift expected;
-- `train-v2`: photos the models were trained on: drift (the models are more confident on them
-  and the split left the largest 12-megapixel sessions in train), why the reference is the
-  validation split (D122);
-- `dark`: the same photos, grey levels multiplied by 0.35 (a dim room);
-- `blurred`: the same photos, Gaussian blur of 2 % of the long side (camera out of focus);
-- `out-of-distribution`: photos that are not pills on a plain background (medicine boxes of
-  step 2.7 and the off-topic pictures of data/raw/off_topic).
-
-With `--api`, each scenario is sent to POST /predict of a running API instead, and the
-report is GET /monitoring/drift (the window of the API: the drifted photos must fill most of
-it; `--photos` defaults to the window size). The alert is then visible in the app.
+Scenarios: test-v2 (no drift), train-v2, dark, blurred and out-of-distribution photos.
+Run: `PYTHONPATH="backend;." python -m src.data.drift_demo [--api URL] [--mlflow]`.
 """
 
 from __future__ import annotations

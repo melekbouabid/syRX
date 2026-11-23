@@ -1,8 +1,6 @@
-"""Compliance guardrails enforced before and after every request.
+"""Compliance guardrails checked before and after every request.
 
-The client refuses to: talk to a host no connector declared, send credentials or cookies,
-pretend to be a browser, forward-spoof an IP address, or carry on past a login wall,
-CAPTCHA or bot check. There is deliberately no proxy pool and no way to add one.
+Refuses undeclared hosts, credentials, browser spoofing and access walls (login, CAPTCHA).
 """
 
 from __future__ import annotations

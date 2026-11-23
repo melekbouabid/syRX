@@ -38,9 +38,7 @@ def hash_file(path: Path, chunk_size: int = 1 << 20) -> tuple[str, str]:
 def file_lock(target: Path, *, timeout: float = 30.0, stale_after: float = 120.0) -> Iterator[None]:
     """Hold `<target>.lock` while reading, changing and rewriting `target`.
 
-    Two pipeline processes can run at once (a long download next to a `clean`). Each keeps
-    its own copy of the manifest and state in memory, so every save re-reads the file under
-    this lock and merges, instead of overwriting what the other process recorded.
+    Two pipeline processes may run at once, so each save re-reads and merges under this lock.
     """
     lock = target.with_name(target.name + ".lock")
     lock.parent.mkdir(parents=True, exist_ok=True)

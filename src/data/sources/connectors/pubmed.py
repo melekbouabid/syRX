@@ -1,8 +1,6 @@
 """PubMed through NCBI E-utilities: ESearch on the history server, EFetch XML in batches.
 
-Each query keeps the last date it was searched up to. The next run only asks for records
-entered since then (minus a small overlap), and articles are deduplicated by PMID, so
-scheduled runs are incremental.
+Runs are incremental: each query keeps the last date searched; articles are deduplicated by PMID.
 """
 
 from __future__ import annotations
@@ -108,12 +106,7 @@ class PubMedConnector(Connector):
 
     @property
     def state_path(self) -> Path:
-        """Where each query's last searched date is kept.
-
-        Sample runs keep their own file. A sample only fetches a few records per query, so
-        if it advanced the real state, the next full run would start from today and never
-        fetch the older records the sample skipped.
-        """
+        """Where each query's last searched date is kept; sample runs keep their own file."""
         name = "pubmed_queries.sample.json" if self.sample else "pubmed_queries.json"
         return self.settings.state_dir / name
 
@@ -124,7 +117,6 @@ class PubMedConnector(Connector):
     def queries(self) -> list[Query]:
         limit = min(self.options["max_queries"], 3) if self.sample else self.options["max_queries"]
         if self.options["mode"] != "ingredients":
-            # The original `pairs` and `drugs` modes read the synergy tables, removed (D85).
             raise ValueError(f"unknown PubMed query mode {self.options['mode']!r}")
         names = read_ingredients(self.settings.resolve(Path(self.options["ingredients_file"])))
         return build_ingredient_queries(

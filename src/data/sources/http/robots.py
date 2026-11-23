@@ -1,8 +1,4 @@
-"""robots.txt handling following RFC 9309 (wildcards, `$`, longest match wins).
-
-The standard-library parser does plain prefix matching in file order, which gets real files
-wrong: Zenodo disallows `/api` but allows `/api/records/*/files`.
-"""
+"""robots.txt matching per RFC 9309 (wildcards, `$`, longest match wins)."""
 
 from __future__ import annotations
 

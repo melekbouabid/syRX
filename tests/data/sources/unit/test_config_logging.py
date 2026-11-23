@@ -65,17 +65,16 @@ def test_relative_project_root_is_relative_to_the_config_file(
     assert load_settings(config, project_root=elsewhere, environ={}).project_root == elsewhere
 
 
-def test_config_path_from_the_environment_with_the_legacy_name_as_fallback(
+def test_config_path_from_the_environment_wins_over_the_working_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    new, old = tmp_path / "new.yaml", tmp_path / "old.yaml"
-    for path in (new, old):
+    new, local = tmp_path / "new.yaml", tmp_path / "config.yaml"
+    for path in (new, local):
         path.write_text("data_dir: data\n", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("TUJYA_CONFIG", raising=False)
-    monkeypatch.setenv("SYNERGYRX_CONFIG", str(old))  # name before the rename (D86)
-    assert find_config() == old
-    monkeypatch.setenv("TUJYA_CONFIG", str(new))  # the current name wins
+    assert find_config() == local  # config.yaml of the working directory
+    monkeypatch.setenv("TUJYA_CONFIG", str(new))  # the environment wins
     assert find_config() == new
 
 

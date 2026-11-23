@@ -1,10 +1,4 @@
-"""Schema drift detection between data versions.
-
-Every time a table is written, its column names, types and row count are compared with the
-previous snapshot of the same table. A renamed column in a new DDInter release is then
-recorded with the source state (`data/state/connectors.json`) instead of silently producing an
-all-null column downstream.
-"""
+"""Schema drift between data versions: columns, types and row count of each table."""
 
 from __future__ import annotations
 
@@ -111,17 +105,6 @@ class DriftTracker:
         if not self.directory.is_dir():
             return []
         return sorted(p.stem.replace("__", "/") for p in self.directory.glob("*.json"))
-
-    def last_change(self, table: str) -> list[DriftFinding]:
-        """Differences between the two most recent snapshots of `table`, dated."""
-        history = self.history(table)
-        if len(history) < 2:
-            return []
-        previous, current = history[-2], history[-1]
-        when = f" [{previous['tag']}, {previous['taken_at'][:10]} -> {current['tag']}, "
-        when += f"{current['taken_at'][:10]}]"
-        findings = compare(table, previous, current)
-        return [DriftFinding(f.table, f.kind, f.detail + when, f.severity) for f in findings]
 
     def history(self, table: str) -> list[dict[str, Any]]:
         path = self._path(table)

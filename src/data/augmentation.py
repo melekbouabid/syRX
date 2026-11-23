@@ -1,24 +1,7 @@
-"""Job `augment`: offline augmentation of the rare classes, on the train split only.
+"""Spark job `augment`: offline augmentation of the rare classes, from train images only.
 
-Input: data/processed/c3pi/bigdata/split/images (job `split`). The sources are the TRAIN
-images of each class with role consumer (photos) or seg (segmented studio PNGs); val and
-test images are never read, so nothing generated can leak into them.
-
-A class with fewer sources than `target_per_class` gets new images up to the target. The
-plan (which source, which operations, with which random values) is a Spark DataFrame built
-from a seeded hash of (class, index), so a rerun gives the same files; the images are then
-written in parallel by the executors (`mapInPandas`). Operations:
-
-- rotation by a random angle, the corners filled with a generated background;
-- background: a segmented pill (alpha mask, NLM banner cut off) is pasted on a generated
-  background (plain colour, gradient and noise); a photo is rotated onto one;
-- brightness (x0.6 to x1.4) and, one time in two, a Gaussian blur (radius 0.5 to 2 px);
-- the long side is resized to `size` px, JPEG quality 90.
-
-Online augmentation (RandAugment, MixUp, CutMix) stays in the training code (step 2.3).
-
-Outputs (data/processed/c3pi/bigdata/augmented, DVC): images/<class_id>/<name>.jpg,
-manifest/ (Parquet: path, source, class, operations), summary.json.
+Rotation, generated background, brightness and blur, planned from a seeded hash so reruns
+give the same files. Output: data/processed/c3pi/bigdata/augmented (DVC).
 """
 
 from __future__ import annotations

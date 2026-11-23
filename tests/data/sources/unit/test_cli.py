@@ -49,7 +49,6 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("CONTACT_EMAIL", TEST_EMAIL)
     monkeypatch.delenv("NCBI_API_KEY", raising=False)
     monkeypatch.delenv("TUJYA_CONFIG", raising=False)
-    monkeypatch.delenv("SYNERGYRX_CONFIG", raising=False)  # legacy name (D86)
     return tmp_path
 
 

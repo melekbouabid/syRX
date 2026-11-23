@@ -1,25 +1,6 @@
-"""Job `rag`: the RAG corpus of module 2 at a larger scale, cleaned, deduplicated, chunked.
+"""Spark job `rag`: the RAG corpus cleaned, deduplicated (exact and MinHash) and chunked.
 
-Inputs (DVC): the collection workspaces listed in params.yaml (`bigdata.rag.workspaces`):
-data/external/rag_v1 (v1: 150 classes, 20 abstracts per ingredient) and, once collected,
-data/external/rag_v2 (classes of the C3PI dataset v2, 40 abstracts per ingredient,
-`python -m src.data.spark.rag_sources`): openFDA label sections, PubMed articles, query hits
-and the queries (raw/pubmed/*/*/query.json, which ingredient each query is about); the
-ingredients of both class lists; DDInter pairs (data/processed/pharma).
-
-1. Cleaning (Spark SQL): HTML entities and tags removed, spaces collapsed (paragraph breaks
-   kept), texts shorter than `min_chars` dropped; label sections about doses are refused
-   (docs/project_rules.md); retraction notices and abstracts outside English dropped.
-   Names of the class tables that are no medicine (`not_drugs`) are not ingredients here and
-   their PubMed queries are ignored.
-2. Deduplication: labels by (ingredient, section, text); articles by PMID, then by
-   identical normalised abstract, then near-duplicates with MinHash LSH (pyspark.ml: word
-   3-shingles, Jaccard distance under `near_duplicate`), keeping the smallest PMID.
-3. Chunking: the functions of the v1 corpus (src/rag/chunking.py: same splitter, same
-   metadata columns) run on every partition (`mapInPandas`).
-
-Outputs: data/processed/rag/corpus_v2/chunks (Parquet partitioned by doc_type) and
-summary.json. The served index still reads the v1 corpus until module 2 switches (step 3.x).
+Output: data/processed/rag/corpus_v2/chunks (Parquet by doc_type) and summary.json.
 """
 
 from __future__ import annotations
@@ -148,11 +129,7 @@ def pmid_ingredients(
     workspaces: tuple[Path, ...] = WORKSPACES,
     not_drugs: tuple[str, ...] = (),
 ) -> DataFrame:
-    """PMID -> ingredients whose query returned it (query.json of each raw query folder).
-
-    The queries of `not_drugs` (names in the class tables that are no medicine, such as the
-    "inert ingredients" of a pack's placebo tablets) are left out: their hits are about
-    something else (pesticide formulations)."""
+    """PMID -> ingredients whose query returned it, without the `not_drugs` queries."""
     files = _existing([w / "raw" / "pubmed" for w in workspaces])
     queries = spark.read.option("multiLine", True).json([f"{f}/*/*/query.json" for f in files])
     queries = queries.where(F.col("kind") == "ingredient").select(
