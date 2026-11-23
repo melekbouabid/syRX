@@ -15,6 +15,6 @@ Ultralytics; Faster R-CNN with torchvision), so the comparison is fair:
                    run per Optuna trial), registers the ONNX model and calls promote_if_better;
 - `evaluate_champion`  re-evaluates the current champion on the same comparison split;
 - `package_kaggle` packs the dataset to upload as a private Kaggle dataset;
-- `notebook`       builds notebooks/kaggle/detector_<arch>.ipynb;
+- `notebook`       builds notebooks/module1/kaggle/detector_<arch>.ipynb;
 - `compare`        comparison table and figure for docs/.
 """

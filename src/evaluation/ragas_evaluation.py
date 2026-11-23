@@ -13,9 +13,8 @@ For one configuration (LLM + answer prompt version, config/rag_generation.yaml):
    three project scorers (citation present, no dose, disclaimer present), in the same run.
 One MLflow run per configuration in the experiment `tujya-rag-generation`; aggregates in
 src/evaluation/results/generation/<config>.json, per-question scores (no source text) in
-src/evaluation/results/generation/<config>.jsonl. `--select` applies the rule of the configuration
-file
-and `--register` registers the champion and challenger (registered model
+src/evaluation/results/generation/<config>.jsonl. `--select` applies the rule of the
+configuration file and `--register` registers the champion and challenger (registered model
 `tujya-rag-generation`, prompt aliases in the Prompt Registry).
 
     # from the repository root, project venv (.venv) active; Ollama and MLflow running

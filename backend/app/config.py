@@ -146,8 +146,7 @@ class Settings(BaseSettings):
     rag_sparse_model: str = "Qdrant/bm25"
     # Step 3.3 (docs/module2/benchmark_retrieval.md, D123, D126): the registered champion of
     # `tujya-rag-retrieval` (src/evaluation/results/grid/champion.json, checked by the tests) is
-    # hybrid
-    # search of the rewritten query on the corpus v2, without reranker: every cross-encoder
+    # hybrid search of the rewritten query on the corpus v2, without reranker: every cross-encoder
     # costs 3 to 11 s per question on this laptop's CPU. When turned on, the reranker is the
     # fastest one measured (ms-marco-MiniLM-L-6-v2 on 10 candidates: MRR 0.896 in hybrid
     # mode, about 3.5 s).

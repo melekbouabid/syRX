@@ -1,10 +1,10 @@
-"""Build the Kaggle notebooks of step 2.3 (notebooks/kaggle/classifier_<arch>.ipynb).
+"""Build the Kaggle notebooks of step 2.3 (notebooks/module1/kaggle/classifier_<arch>.ipynb).
 
-    python -m src.models.classification.notebook resnet50        # writes notebooks/kaggle/...
+    python -m src.models.classification.notebook resnet50  # writes notebooks/module1/kaggle/...
     python -m src.models.classification.notebook --all
 
 Same driver as the detectors' notebooks (src/models/detection/notebook.py): clone the
-experiment branch, install the pinned packages (notebooks/kaggle/requirements.txt), find the
+experiment branch, install the pinned packages (notebooks/module1/kaggle/requirements.txt), find the
 private crop dataset, run src/models/classification/runner.py with
 config/hpo/classifier_<arch>.yaml, zip the export folder. Only the architecture changes, so
 they are generated from one template (a test checks that the committed notebooks are exactly
@@ -23,7 +23,7 @@ import nbformat
 from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook
 
 ROOT = Path(__file__).resolve().parents[3]
-FOLDER = ROOT / "notebooks" / "kaggle"
+FOLDER = ROOT / "notebooks" / "module1" / "kaggle"
 REPO = "https://github.com/melekbouabid/syRX.git"
 DATASET = "tujya-c3pi-classify-v2"
 DATASET_NAME = "c3pi-v2-classify"  # `name` in the dataset's MANIFEST.json
@@ -114,7 +114,7 @@ if ON_KAGGLE:
     if not REPO_DIR.exists():
         clone = ["git", "clone", "--depth", "1", "--branch", BRANCH, REPO, str(REPO_DIR)]
         subprocess.run(clone, check=True)
-    requirements = REPO_DIR / "notebooks" / "kaggle" / "requirements.txt"
+    requirements = REPO_DIR / "notebooks" / "module1" / "kaggle" / "requirements.txt"
     pip = [sys.executable, "-m", "pip", "install", "-q", "-r", str(requirements)]
     subprocess.run(pip, check=True)
 else:  # local smoke run, from the repository

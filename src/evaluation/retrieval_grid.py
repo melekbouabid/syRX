@@ -11,24 +11,21 @@ experiment `tujya-rag-retrieval`, `src/evaluation/results/grid/<group>.json`.
     python -m src.evaluation.retrieval_grid latency --configs a,b,c   # interleaved rounds (D96)
     python -m src.evaluation.retrieval_grid select              # champion / challenger (D123)
 
-Every configuration searches like the agent (src/agent/tools.py `search_documents`): the
-ingredients found in the question are a metadata filter (`names`), top 10 kept. Metrics over
-the questions that have expected chunks: Recall@k (k = 1, 3, 5, 10: at least one expected
-chunk in the top k), MRR@10, nDCG@10 (binary relevance) and Coverage@10, by language too.
-A corpus variant (`chunk` other than 1500/1) has other chunk ids: its relevant chunks are
-found by src/evaluation/chunking_variants.py `Relevance`. `corpus: v2` runs a configuration on the
-corpus
-of the 380 classes (Spark job `rag`, data/processed/rag/corpus_v2, collection tujya_chunks_v2,
-D126): the questions keep their expected chunks of v1, matched in v2 by the same `Relevance`
-rule (same document and section, shared text), since the Spark cleaning can cut a text a
-little differently.
+Every configuration searches like the agent (src/agent/tools.py `search_documents`): the ingredients
+found in the question are a metadata filter (`names`), top 10 kept. Metrics over the questions that
+have expected chunks: Recall@k (k = 1, 3, 5, 10: at least one expected chunk in the top k), MRR@10,
+nDCG@10 (binary relevance) and Coverage@10, by language too. A corpus variant (`chunk` other than
+1500/1) has other chunk ids: its relevant chunks are found by src/evaluation/chunking_variants.py
+`Relevance`. `corpus: v2` runs a configuration on the corpus of the 380 classes (Spark job `rag`,
+data/processed/rag/corpus_v2, collection tujya_chunks_v2, D126): the questions keep their expected
+chunks of v1, matched in v2 by the same `Relevance` rule (same document and section, shared text),
+since the Spark cleaning can cut a text a little differently.
 
-Time per question: the search (embedding of the query, Qdrant, reranker) is timed during the
-run; the rewrite is the median time the LLM took in `rewrites`; for a sentence-transformers
-embedding the query vector is precomputed, so its CPU encoding time measured by
-encode_sentence_transformers.py
-is added. The `latency` command measures the shortlisted configurations again in interleaved
-rounds after a pause (D96: this laptop slows down under sustained load).
+Time per question: the search (embedding of the query, Qdrant, reranker) is timed during the run;
+the rewrite is the median time the LLM took in `rewrites`; for a sentence-transformers embedding the
+query vector is precomputed, so its CPU encoding time measured by encode_sentence_transformers.py is
+added. The `latency` command measures the shortlisted configurations again in interleaved rounds
+after a pause (D96: this laptop slows down under sustained load).
 """
 
 from __future__ import annotations

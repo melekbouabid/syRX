@@ -19,6 +19,6 @@ comparison is fair:
                    trial), registers the ONNX model and calls promote_if_better;
 - `evaluate_champion`  scores the current champion (150 classes of v1) on the same split;
 - `package_kaggle` packs the crop dataset for a private Kaggle dataset;
-- `notebook`       builds notebooks/kaggle/classifier_<arch>.ipynb;
+- `notebook`       builds notebooks/module1/kaggle/classifier_<arch>.ipynb;
 - `compare`        comparison table and figure for docs/.
 """

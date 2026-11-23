@@ -1,7 +1,7 @@
 # The local judge of the generation benchmark (step 3.4, docs/module2/benchmark_generation.md):
 # phi4-mini with every layer on the GPU. Ollama's automatic placement keeps ~1 GB of the 4 GB
 # free and leaves 6 of its 33 layers on the CPU, which makes the judge 2 to 15 times slower.
-#   docker compose cp infra/docker/ollama/judge.Modelfile ollama:/tmp/judge.Modelfile
+#   docker compose cp infra/ollama/judge.Modelfile ollama:/tmp/judge.Modelfile
 #   docker compose exec ollama ollama create phi4-mini-judge -f /tmp/judge.Modelfile
 FROM phi4-mini
 PARAMETER num_gpu 99
