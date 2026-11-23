@@ -21,6 +21,12 @@ ragas==0.4.4
 # notebook generator are tested here (same Optuna version as the training venv and Kaggle).
 optuna==5.0.0
 nbformat>=5.10
+# Summary notebooks (notebooks/module1, notebooks/module2): executed with this venv
+# (jupyter nbconvert --execute), charts with matplotlib.
+nbconvert>=7.16
+nbclient>=0.10
+ipykernel>=6.29
+matplotlib>=3.9
 # Medicine box photos (src/data/medicine_boxes.py): anonymous Hugging Face download.
 # Below 2.0: fastembed (backend/requirements.txt) needs huggingface_hub<2.
 huggingface_hub>=1.33,<2
