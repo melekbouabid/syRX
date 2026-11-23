@@ -18,7 +18,7 @@ pytest.importorskip("torchvision")
 onnxruntime = pytest.importorskip("onnxruntime")
 onnx = pytest.importorskip("onnx")
 
-from src.models.classification import data as D  # noqa: E402
+from src.data import dataset as D  # noqa: E402
 from src.models.classification import torch_backend as T  # noqa: E402
 from tests.models.classification.helpers import make_dataset  # noqa: E402
 

@@ -5,7 +5,7 @@ six candidates (a small CNN trained from scratch as the baseline, ResNet-50, Eff
 ConvNeXt-Tiny, ViT-B/16 and YOLO11s-cls, all built by src/models/architecture.py), so the
 comparison is fair:
 
-- `data`           the crop dataset of stage prepare_classify_v2: index, classes, subsets,
+- `src.data.dataset`  the crop dataset of stage prepare_classify_v2: index, classes, subsets,
                    the preprocessing of the API (square crop resized, RGB in [0, 1]);
 - `metrics`        top-1, top-5, macro F1, confusion matrix, per-class scores, computed the same
                    way for every model and for the v1 champion;

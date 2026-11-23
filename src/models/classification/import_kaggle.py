@@ -38,7 +38,7 @@ import mlflow
 import yaml
 from mlflow import MlflowClient
 
-from src.models.classification import data as D
+from src.data import dataset as D
 from src.models.detection.import_kaggle import (
     ImportErrorKaggle,
     _flat,

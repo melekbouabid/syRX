@@ -14,28 +14,28 @@ from typing import Any, ClassVar
 
 import pandas as pd
 
-from src.data.tujya_data.connectors.base import (
+from src.data.sources.connectors.base import (
     Artifact,
     Connector,
     Link,
     PlannedAction,
     SourceInfo,
 )
-from src.data.tujya_data.connectors.schemas import ArticleRecord, Record
-from src.data.tujya_data.http.cache import atomic_write_bytes
-from src.data.tujya_data.http.errors import HttpError
-from src.data.tujya_data.literature.abstracts import (
+from src.data.sources.connectors.schemas import ArticleRecord, Record
+from src.data.sources.http.cache import atomic_write_bytes
+from src.data.sources.http.errors import HttpError
+from src.data.sources.literature.abstracts import (
     articles_frame,
     deduplicate,
     parse_pubmed_xml,
 )
-from src.data.tujya_data.literature.queries import (
+from src.data.sources.literature.queries import (
     Query,
     append_query_log,
     build_ingredient_queries,
     read_ingredients,
 )
-from src.data.tujya_data.manifest import utc_now_iso
+from src.data.sources.manifest import utc_now_iso
 
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 DATE_FORMAT = "%Y/%m/%d"

@@ -5,7 +5,7 @@
     python -m src.data.spark.rag_sources pubmed        # PubMed, up to 40 per ingredient
 
 Run from the repository root with the project venv (.venv): network access goes through the
-polite client of the data pipeline (src/data/tujya_data: rate limits per host, retries,
+polite client of the data pipeline (src/data/sources: rate limits per host, retries,
 cache, manifest). Everything is written to its own workspace, data/rag_v2 (raw, interim,
 manifest.json, DVC), so the corpus of v1 (data/rag, stage `rag_corpus`) is left as it is.
 The Spark job `rag` (src/data/spark/rag_job.py) then cleans, deduplicates and chunks both.
@@ -35,11 +35,11 @@ from dataclasses import replace
 from pathlib import Path
 
 from src.data.corpus import ingredients as ing
-from src.data.tujya_data import pipeline
-from src.data.tujya_data.config import Settings, load_settings
-from src.data.tujya_data.http.client import PoliteClient
-from src.data.tujya_data.literature.queries import read_ingredients
-from src.data.tujya_data.logging_utils import setup_logging
+from src.data.sources import pipeline
+from src.data.sources.config import Settings, load_settings
+from src.data.sources.http.client import PoliteClient
+from src.data.sources.literature.queries import read_ingredients
+from src.data.sources.logging_utils import setup_logging
 
 ROOT = Path(__file__).resolve().parents[3]
 CONFIG = ROOT / "config" / "data_pipeline" / "config.yaml"

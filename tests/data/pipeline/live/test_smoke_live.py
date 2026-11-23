@@ -12,10 +12,10 @@ from pathlib import Path
 
 import pytest
 
-from src.data.tujya_data.config import Settings, load_settings
-from src.data.tujya_data.connectors import allowed_hosts
-from src.data.tujya_data.http.client import PoliteClient
-from src.data.tujya_data.literature.abstracts import parse_pubmed_xml
+from src.data.sources.config import Settings, load_settings
+from src.data.sources.connectors import allowed_hosts
+from src.data.sources.http.client import PoliteClient
+from src.data.sources.literature.abstracts import parse_pubmed_xml
 
 pytestmark = pytest.mark.live
 PIPELINE = Path(__file__).resolve().parents[4] / "config" / "data_pipeline"

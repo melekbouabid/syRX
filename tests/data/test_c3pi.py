@@ -1,4 +1,4 @@
-"""Tests for src.data.c3pi on a tiny hand-written ALLXML file (no network)."""
+"""Tests for src.data.download on a tiny hand-written ALLXML file (no network)."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from src.data import c3pi
+from src.data import download
 
 
 def _image(
@@ -41,7 +41,7 @@ def _write_disc(tmp_path: Path, images: list[str], disc: int = 1) -> Path:
 
 
 @pytest.fixture
-def records(tmp_path: Path) -> list[c3pi.ImageRecord]:
+def records(tmp_path: Path) -> list[download.ImageRecord]:
     images = []
     # Pill A: 30 consumer photos over two package NDCs, one reference JPG, one raw file.
     for i in range(30):
@@ -56,10 +56,10 @@ def records(tmp_path: Path) -> list[c3pi.ImageRecord]:
     # Pill C: too few photos.
     for i in range(5):
         images.append(_image(f"C{i}.JPG", "33333333301", "C3PI_Test"))
-    return c3pi.build_index(_write_disc(tmp_path, images))
+    return download.build_index(_write_disc(tmp_path, images))
 
 
-def test_parse_fields(records: list[c3pi.ImageRecord]) -> None:
+def test_parse_fields(records: list[download.ImageRecord]) -> None:
     first = records[0]
     assert first.disc == "PillProjectDisc1"
     assert first.path == "PillProjectDisc1/images/A0.JPG"
@@ -71,14 +71,14 @@ def test_parse_fields(records: list[c3pi.ImageRecord]) -> None:
     assert records[30].image_type == "MC_API_RXNAV_V1.3"
 
 
-def test_index_round_trip(records: list[c3pi.ImageRecord], tmp_path: Path) -> None:
+def test_index_round_trip(records: list[download.ImageRecord], tmp_path: Path) -> None:
     out = tmp_path / "images.csv"
-    c3pi.write_index(records, out)
-    assert c3pi.read_index(out) == records
+    download.write_index(records, out)
+    assert download.read_index(out) == records
 
 
-def test_select_ranks_and_filters(records: list[c3pi.ImageRecord]) -> None:
-    classes, chosen = c3pi.select_classes(
+def test_select_ranks_and_filters(records: list[download.ImageRecord]) -> None:
+    classes, chosen = download.select_classes(
         records, max_classes=10, min_images=20, max_images_per_class=40, budget_bytes=10**9
     )
     assert [c.class_key for c in classes] == ["111111111_1", "222222222_1"]
@@ -90,8 +90,8 @@ def test_select_ranks_and_filters(records: list[c3pi.ImageRecord]) -> None:
     assert not any(r.class_key.startswith("333") for r in chosen)
 
 
-def test_select_caps_images_and_respects_budget(records: list[c3pi.ImageRecord]) -> None:
-    classes, chosen = c3pi.select_classes(
+def test_select_caps_images_and_respects_budget(records: list[download.ImageRecord]) -> None:
+    classes, chosen = download.select_classes(
         records, max_classes=10, min_images=20, max_images_per_class=10, budget_bytes=12_000
     )
     # Pill A needs 11 files (10 photos + 1 reference) = 11,000 bytes; B no longer fits.
@@ -99,11 +99,11 @@ def test_select_caps_images_and_respects_budget(records: list[c3pi.ImageRecord])
     assert sum(r.file_size for r in chosen) <= 12_000
 
 
-def test_split_never_shares_a_photo(records: list[c3pi.ImageRecord]) -> None:
-    _, chosen = c3pi.select_classes(
+def test_split_never_shares_a_photo(records: list[download.ImageRecord]) -> None:
+    _, chosen = download.select_classes(
         records, max_classes=10, min_images=20, max_images_per_class=40, budget_bytes=10**9
     )
-    split = c3pi.split_images(chosen, val=0.15, test=0.15, seed=1)
+    split = download.split_images(chosen, val=0.15, test=0.15, seed=1)
     assert set(split) == {r.path for r in chosen}
     by_sha: dict[str, set[str]] = {}
     for r in chosen:
@@ -116,23 +116,23 @@ def test_split_never_shares_a_photo(records: list[c3pi.ImageRecord]) -> None:
         if r.class_key == "111111111_1" and r.image_type == "C3PI_Test"
     )
     assert counts == {"train": 22, "val": 4, "test": 4}  # round(4.5) == 4
-    assert split == c3pi.split_images(chosen, val=0.15, test=0.15, seed=1)  # reproducible
+    assert split == download.split_images(chosen, val=0.15, test=0.15, seed=1)  # reproducible
 
 
-def test_download_skips_good_files(records: list[c3pi.ImageRecord], tmp_path: Path) -> None:
+def test_download_skips_good_files(records: list[download.ImageRecord], tmp_path: Path) -> None:
     payload = b"jpeg bytes"
     record = records[0]
     import hashlib
 
-    good = c3pi.ImageRecord(**{**record.__dict__, "sha1": hashlib.sha1(payload).hexdigest()})
-    target = c3pi.local_path(good, tmp_path / "img")
+    good = download.ImageRecord(**{**record.__dict__, "sha1": hashlib.sha1(payload).hexdigest()})
+    target = download.local_path(good, tmp_path / "img")
     target.parent.mkdir(parents=True)
     target.write_bytes(payload)
-    assert c3pi.download([good], tmp_path / "img", workers=1) == (0, 1, 0)
+    assert download.download([good], tmp_path / "img", workers=1) == (0, 1, 0)
 
 
-def test_excluded_cameras_are_not_eligible(records: list[c3pi.ImageRecord]) -> None:
-    classes, chosen = c3pi.select_classes(
+def test_excluded_cameras_are_not_eligible(records: list[download.ImageRecord]) -> None:
+    classes, chosen = download.select_classes(
         records,
         max_classes=10,
         min_images=20,
@@ -143,9 +143,9 @@ def test_excluded_cameras_are_not_eligible(records: list[c3pi.ImageRecord]) -> N
     assert classes == [] and chosen == []
 
 
-def test_a_file_listed_twice_counts_once(records: list[c3pi.ImageRecord]) -> None:
+def test_a_file_listed_twice_counts_once(records: list[download.ImageRecord]) -> None:
     doubled = [*records, records[0]]
-    classes, chosen = c3pi.select_classes(
+    classes, chosen = download.select_classes(
         doubled, max_classes=10, min_images=20, max_images_per_class=40, budget_bytes=10**9
     )
     assert classes[0].n_consumer_available == 30

@@ -8,15 +8,15 @@ from pathlib import Path
 import pytest
 import yaml
 
-from src.data.tujya_data.config import (
+from src.data.sources.config import (
     ConfigError,
     apply_overrides,
     find_config,
     load_secrets,
     load_settings,
 )
-from src.data.tujya_data.http.client import PoliteClient
-from src.data.tujya_data.logging_utils import (
+from src.data.sources.http.client import PoliteClient
+from src.data.sources.logging_utils import (
     JsonFormatter,
     get_logger,
     log_event,
@@ -24,7 +24,7 @@ from src.data.tujya_data.logging_utils import (
     register_secrets,
     setup_logging,
 )
-from src.data.tujya_data.testing import FAKE_API_KEY, TEST_EMAIL
+from src.data.sources.testing import FAKE_API_KEY, TEST_EMAIL
 
 REPO = Path(__file__).resolve().parents[4]  # the repository
 SHIPPED = REPO / "config" / "data_pipeline" / "config.yaml"

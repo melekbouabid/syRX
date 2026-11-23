@@ -10,8 +10,8 @@ import httpx
 import pytest
 import respx
 
-from src.data.tujya_data.config import Secrets, Settings
-from src.data.tujya_data.http.errors import (
+from src.data.sources.config import Secrets, Settings
+from src.data.sources.http.errors import (
     AccessControlError,
     CircuitOpenError,
     ContentTypeError,
@@ -22,8 +22,8 @@ from src.data.tujya_data.http.errors import (
     ResponseTooLargeError,
     RobotsDisallowedError,
 )
-from src.data.tujya_data.http.guardrails import build_user_agent, strip_secret_params
-from src.data.tujya_data.testing import TEST_EMAIL, ClientFactory, FakeClock
+from src.data.sources.http.guardrails import build_user_agent, strip_secret_params
+from src.data.sources.testing import TEST_EMAIL, ClientFactory, FakeClock
 
 API = "https://example.org/api/item"
 JSON = {"content-type": "application/json"}

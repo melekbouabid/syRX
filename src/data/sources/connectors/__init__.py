@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from src.data.tujya_data.config import Settings
-from src.data.tujya_data.connectors.base import Connector, Context, Link, SourceInfo
-from src.data.tujya_data.connectors.ddinter import DDInterConnector
-from src.data.tujya_data.connectors.openfda import OpenFdaLabelConnector
-from src.data.tujya_data.connectors.pubmed import PubMedConnector
+from src.data.sources.config import Settings
+from src.data.sources.connectors.base import Connector, Context, Link, SourceInfo
+from src.data.sources.connectors.ddinter import DDInterConnector
+from src.data.sources.connectors.openfda import OpenFdaLabelConnector
+from src.data.sources.connectors.pubmed import PubMedConnector
 
 # The sources the Tujya module 2 corpus uses (the original synergy sources were removed,
 # decision D85). Adding a source = writing one Connector subclass and listing it here.

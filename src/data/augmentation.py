@@ -36,7 +36,7 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
 
-from src.data.spark.quality_job import local_file
+from src.data.cleaning import local_file
 from src.data.spark.session import BIGDATA, C3PI_RAW, ROOT, write_json
 
 IMAGES = C3PI_RAW / "images"

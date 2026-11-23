@@ -37,7 +37,7 @@ import onnx
 import onnxruntime as ort
 from mlflow import MlflowClient
 
-from src.models.classification import data as D
+from src.data import dataset as D
 from src.models.classification.import_kaggle import (
     EXPERIMENT,
     LOCAL_DATA,

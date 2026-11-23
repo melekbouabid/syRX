@@ -38,7 +38,7 @@ import torch
 import yaml
 from ultralytics import YOLO, settings
 
-from src.data.prepare import CLASSIFY, DETECT
+from src.data.prepare.v1 import CLASSIFY, DETECT
 from src.utils import mlflow_utils as mu
 
 ROOT = Path(__file__).resolve().parents[2]  # repository root

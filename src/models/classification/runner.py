@@ -44,7 +44,7 @@ import numpy as np
 import optuna
 import yaml
 
-from src.models.classification import data as D
+from src.data import dataset as D
 from src.models.classification import hpo
 from src.models.classification.metrics import (
     confusion_matrix,

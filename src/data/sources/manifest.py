@@ -14,8 +14,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from src.data.tujya_data import __version__
-from src.data.tujya_data.config import Settings
+from src.data.sources import __version__
+from src.data.sources.config import Settings
 
 Layer = Literal["raw", "interim", "processed", "export", "report", "manual"]
 

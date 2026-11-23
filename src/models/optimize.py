@@ -202,7 +202,7 @@ def score_classifier(model: Path, data: Path) -> dict[str, float]:
 def score_classifier_v2(model: Path, data: Path) -> dict[str, float]:
     """test_v2_* (comparison split), test_v2_all_* and test_v2_v1c_* of a 380-class model,
     computed like the candidates of step 2.3 (output index = v2 class id)."""
-    from src.models.classification import data as D
+    from src.data import dataset as D
     from src.models.classification.runner import split_scores
 
     session = ort.InferenceSession(str(model), providers=["CPUExecutionProvider"])

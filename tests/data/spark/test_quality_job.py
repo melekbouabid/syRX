@@ -12,7 +12,7 @@ from PIL import Image
 
 pytest.importorskip("pyspark")
 
-from src.data.spark import quality_job
+from src.data import cleaning
 from tests.data.spark.fixtures import photo, segmented
 
 
@@ -65,16 +65,16 @@ def fake(tmp_path):
 
 
 def test_inspect_image_measures_and_flags(tmp_path):
-    ok = quality_job.inspect_image(photo(tmp_path / "ok.JPG", 1), 16)
+    ok = cleaning.inspect_image(photo(tmp_path / "ok.JPG", 1), 16)
     assert ok["exists"] and not ok["corrupt"]
     assert (ok["width"], ok["height"], ok["mode"]) == (120, 90, "RGB")
     assert 40 < ok["brightness"] < 215 and ok["contrast"] > 0 and ok["sharpness"] > 0
     assert len(ok["dhash"]) == 64  # 256 bits in hex
     broken = tmp_path / "broken.JPG"
     broken.write_bytes((tmp_path / "ok.JPG").read_bytes()[:300])
-    assert quality_job.inspect_image(broken)["corrupt"]
-    assert not quality_job.inspect_image(tmp_path / "none.JPG")["exists"]
-    seg = quality_job.inspect_image(segmented(tmp_path / "seg.PNG"))
+    assert cleaning.inspect_image(broken)["corrupt"]
+    assert not cleaning.inspect_image(tmp_path / "none.JPG")["exists"]
+    seg = cleaning.inspect_image(segmented(tmp_path / "seg.PNG"))
     assert seg["mode"] == "RGBA" and not seg["corrupt"]
 
 
@@ -82,10 +82,10 @@ def test_dhash_is_stable_and_hamming_counts_bits(tmp_path):
     first = photo(tmp_path / "1.JPG", 1)
     again = resave(first, tmp_path / "1b.JPG")
     other = photo(tmp_path / "2.JPG", 2)
-    h1, h1b, h2 = (quality_job.inspect_image(p)["dhash"] for p in (first, again, other))
-    assert quality_job.hamming(h1, h1b) <= 3
-    assert quality_job.hamming(h1, h2) > 40
-    assert quality_job.hamming("f0", "0f") == 8
+    h1, h1b, h2 = (cleaning.inspect_image(p)["dhash"] for p in (first, again, other))
+    assert cleaning.hamming(h1, h1b) <= 3
+    assert cleaning.hamming(h1, h2) > 40
+    assert cleaning.hamming("f0", "0f") == 8
 
 
 def test_banding_needs_fewer_bits_than_blocks(spark):
@@ -93,7 +93,7 @@ def test_banding_needs_fewer_bits_than_blocks(spark):
         [("p", "X", "0" * 64)], "path string, class_key string, dhash string"
     )
     with pytest.raises(ValueError):
-        quality_job.near_duplicates(table, 4, 16)
+        cleaning.near_duplicates(table, 4, 16)
 
 
 def test_job_rejects_with_reasons_and_records_near_duplicates(spark, params, tmp_path, fake):
@@ -101,7 +101,7 @@ def test_job_rejects_with_reasons_and_records_near_duplicates(spark, params, tmp
     selection_dir = tmp_path / "selection"
     spark.createDataFrame(rows).write.parquet(str(selection_dir))
     out = tmp_path / "quality"
-    summary = quality_job.run(
+    summary = cleaning.run(
         spark, params, selection_dir=selection_dir, images=images, out=out, partitions=3
     )
     with (out / "rejected.csv").open(encoding="utf-8") as handle:

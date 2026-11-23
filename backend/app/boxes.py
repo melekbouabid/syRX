@@ -494,7 +494,7 @@ def rxnav_terms(lines: Sequence[OcrLine], limit: int = RXNAV_TERMS) -> list[str]
 class RxNavClient:
     """Minimal polite client of the public RxNav REST API (no key; contact email required).
 
-    Same rule as the data pipeline (src/data/tujya_data): no request without a contact
+    Same rule as the data pipeline (src/data/sources): no request without a contact
     address in the User-Agent. Without one the fallback is off and says so.
     """
 

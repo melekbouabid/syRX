@@ -6,7 +6,7 @@ src/models/classification/runner.py (the same functions as the detectors' backen
 - `train(hp, data_root, work, ...)` -> `TrainResult` (best weights on the validation top-1,
   per-epoch history);
 - `predict(weights, files, imgsz)` -> class probabilities, one row per crop, with the API's
-  preprocessing (src/models/classification/data.py `crop_tensor`);
+  preprocessing (src/data/dataset.py `crop_tensor`);
 - `export_onnx(weights, imgsz, target, metadata)` -> ONNX file with the API's input
   (1x3xSxS RGB in [0, 1]) and output (1xN probabilities), class list in the metadata;
 - `gradcam_pictures(...)` -> PNG pictures of Grad-CAM (src/utils/gradcam.py) on test crops.
@@ -44,8 +44,8 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
 
+from src.data import dataset as D
 from src.models import architecture as A
-from src.models.classification import data as D
 from src.models.classification.backend import TrainResult
 from src.models.detection.labels import read_bgr
 

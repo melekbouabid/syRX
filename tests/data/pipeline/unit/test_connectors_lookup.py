@@ -12,10 +12,10 @@ import pytest
 import respx
 from pydantic import SecretStr
 
-from src.data.tujya_data import pipeline
-from src.data.tujya_data.config import Settings, SourceConfig
-from src.data.tujya_data.state import MANUAL_STEP, NEEDS_ATTENTION
-from src.data.tujya_data.testing import FAKE_API_KEY, TEST_EMAIL
+from src.data.sources import pipeline
+from src.data.sources.config import Settings, SourceConfig
+from src.data.sources.state import MANUAL_STEP, NEEDS_ATTENTION
+from src.data.sources.testing import FAKE_API_KEY, TEST_EMAIL
 
 EUTILS = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 
@@ -181,7 +181,7 @@ async def test_pubmed_api_key_is_sent_but_never_stored(
     tmp_path: Path,
     capfd: pytest.CaptureFixture[str],
 ) -> None:
-    from src.data.tujya_data.logging_utils import setup_logging
+    from src.data.sources.logging_utils import setup_logging
 
     settings.secrets.ncbi_api_key = SecretStr(FAKE_API_KEY)
     setup_logging("DEBUG", json_logs=True, secrets=settings.secrets.values_to_redact())

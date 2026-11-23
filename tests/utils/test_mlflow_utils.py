@@ -26,7 +26,7 @@ from src.utils import mlflow_utils as mu  # noqa: E402
 LOCK = """schema: '2.0'
 stages:
   prepare:
-    cmd: python -m src.data.prepare
+    cmd: python -m src.data.prepare v1
     outs:
     - path: data/processed/c3pi/datasets
       hash: md5

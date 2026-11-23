@@ -9,8 +9,8 @@ from urllib.parse import urlsplit
 
 import pytest
 
-from src.data.tujya_data.connectors import REGISTRY, all_links, allowed_hosts
-from src.data.tujya_data.quality.linkcheck import ENDPOINTS
+from src.data.sources.connectors import REGISTRY, all_links, allowed_hosts
+from src.data.sources.quality.linkcheck import ENDPOINTS
 
 SRC = Path(__file__).resolve().parents[4] / "src" / "data" / "tujya_data"
 CONNECTOR_FILES = sorted((SRC / "connectors").glob("*.py"))

@@ -12,13 +12,13 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from src.data.tujya_data import __version__, pipeline
-from src.data.tujya_data.config import ConfigError, Settings, load_settings
-from src.data.tujya_data.connectors import REGISTRY, is_enabled, source_names
-from src.data.tujya_data.logging_utils import setup_logging
-from src.data.tujya_data.manifest import Manifest
-from src.data.tujya_data.preflight import run_preflight
-from src.data.tujya_data.state import MANUAL_STEP, NEEDS_ATTENTION
+from src.data.sources import __version__, pipeline
+from src.data.sources.config import ConfigError, Settings, load_settings
+from src.data.sources.connectors import REGISTRY, is_enabled, source_names
+from src.data.sources.logging_utils import setup_logging
+from src.data.sources.manifest import Manifest
+from src.data.sources.preflight import run_preflight
+from src.data.sources.state import MANUAL_STEP, NEEDS_ATTENTION
 
 app = typer.Typer(
     add_completion=False,
@@ -136,7 +136,7 @@ def sources(
         ],
     )
     if check:
-        from src.data.tujya_data.quality import linkcheck
+        from src.data.sources.quality import linkcheck
 
         rows = asyncio.run(linkcheck.check_links(settings))
         path = linkcheck.write_sources_doc(settings, rows)

@@ -5,22 +5,22 @@ from datetime import UTC, datetime
 import httpx
 import pytest
 
-from src.data.tujya_data.config import RetrySettings
-from src.data.tujya_data.http.circuit import CircuitBreaker
-from src.data.tujya_data.http.errors import (
+from src.data.sources.config import RetrySettings
+from src.data.sources.http.circuit import CircuitBreaker
+from src.data.sources.http.errors import (
     AccessControlError,
     CircuitOpenError,
     NotFoundError,
     RetryableHttpError,
 )
-from src.data.tujya_data.http.retry import (
+from src.data.sources.http.retry import (
     backoff_delay,
     is_retryable,
     parse_retry_after,
     wait_seconds,
 )
-from src.data.tujya_data.http.robots import RobotsChecker, RobotsPolicy
-from src.data.tujya_data.testing import FakeClock
+from src.data.sources.http.robots import RobotsChecker, RobotsPolicy
+from src.data.sources.testing import FakeClock
 
 # ------------------------------------------------------------------- retry
 

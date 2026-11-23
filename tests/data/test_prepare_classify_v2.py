@@ -1,4 +1,4 @@
-"""Classification dataset of C3PI v2 (src/data/prepare_classify_v2.py) on synthetic images
+"""Classification dataset of C3PI v2 (src/data/prepare/classify_v2.py) on synthetic images
 and rows."""
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ import cv2
 import numpy as np
 import pytest
 
-from src.data import prepare_classify_v2 as P
+from src.data.prepare import classify_v2 as P
 
 
 def test_segmented_pill_box_above_the_banner() -> None:

@@ -35,7 +35,7 @@ import onnxruntime as ort
 from ultralytics import YOLO
 
 from src.data.autolabel import read_image
-from src.data.prepare import CLASSIFY, DETECT
+from src.data.prepare.v1 import CLASSIFY, DETECT
 from src.models.train import MODELS, OUT, ROOT, load_params
 from src.utils import mlflow_utils as mu
 

@@ -1,4 +1,4 @@
-"""The crop dataset of stage prepare_classify_v2 (src/data/prepare_classify_v2.py).
+"""The crop dataset of stage prepare_classify_v2 (src/data/prepare/classify_v2.py).
 
 Layout (also the private Kaggle dataset of package_kaggle):
 
@@ -29,7 +29,7 @@ import yaml
 
 from src.models.detection.labels import read_bgr
 
-ROOT = Path(__file__).resolve().parents[3]  # repository root
+ROOT = Path(__file__).resolve().parents[2]  # repository root
 DATASET_PATH = "data/processed/c3pi/datasets_v2/classify"  # DVC output (dvc.lock)
 DEFAULT_DATA = ROOT / DATASET_PATH
 DATASET_NAME = "c3pi-v2-classify"

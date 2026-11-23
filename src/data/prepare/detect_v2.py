@@ -1,7 +1,7 @@
 """Build the detection dataset of C3PI v2 (DVC stage prepare_detect_v2, step 2.2).
 
-    python -m src.data.prepare_detect_v2             # training venv (.venv-train) or .venv
-    python -m src.data.prepare_detect_v2 --limit 50  # first 50 photos of each split (tests)
+    python -m src.data.prepare detect-v2             # training venv (.venv-train) or .venv
+    python -m src.data.prepare detect-v2 --limit 50  # first 50 photos of each split (tests)
 
 The detectors of step 2.2 are trained and compared on C3PI v2 (380 classes, step 1.4,
 docs/module1/big_data.md; decision D93 in docs/decisions.md). Detection has a single class,
@@ -45,7 +45,7 @@ import pandas as pd
 
 from src.data.autolabel import Box, detect_pills, read_image
 
-ROOT = Path(__file__).resolve().parents[2]  # repository root
+ROOT = Path(__file__).resolve().parents[3]  # repository root
 IMAGES = ROOT / "data" / "raw" / "c3pi" / "images"
 SPLIT = ROOT / "data" / "processed" / "c3pi" / "bigdata" / "split" / "images"
 V1_LIST = ROOT / "config" / "splits" / "selected_images.csv"
@@ -170,7 +170,7 @@ def write_outputs(rows: list[dict[str, str]], seen_groups: set[str], out: Path =
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m src.data.prepare_detect_v2")
+    parser = argparse.ArgumentParser(prog="python -m src.data.prepare detect-v2")
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--limit", type=int, default=0, help="first N photos per split (tests)")
     parser.add_argument("--out", type=Path, default=OUT, help="default: the DVC output")

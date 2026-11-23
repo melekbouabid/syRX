@@ -1,7 +1,7 @@
 """Build the classification dataset of C3PI v2 (DVC stage prepare_classify_v2, step 2.3).
 
-    python -m src.data.prepare_classify_v2             # training venv (.venv-train) or .venv
-    python -m src.data.prepare_classify_v2 --limit 20  # first 20 images of each split and role
+    python -m src.data.prepare classify-v2             # training venv (.venv-train) or .venv
+    python -m src.data.prepare classify-v2 --limit 20  # first 20 images of each split and role
 
 The classifiers of step 2.3 are trained and compared on C3PI v2 (380 classes, step 1.4,
 docs/module1/big_data.md), like the detectors of step 2.2 (decision D99 in
@@ -32,7 +32,7 @@ Outputs, under data/processed/c3pi/datasets_v2/classify/ (DVC, never git):
                      number of crops per split;
 - test_holdout.txt   the comparison split (relative file names): test crops whose session
                      holds no photo the v1 champion saw in train or val (same rule as the
-                     detection holdout of D93, src/data/prepare_detect_v2.py);
+                     detection holdout of D93, src/data/prepare/detect_v2.py);
 - summary.json       counts per split and role, failures.
 
 No image is moved between splits: the v2 split is by session (D89), and the augmented images
@@ -56,9 +56,9 @@ import numpy as np
 import pandas as pd
 
 from src.data.autolabel import Box, detect_pills, detect_reference, read_image, square_crop
-from src.data.prepare_detect_v2 import baseline_groups
+from src.data.prepare.detect_v2 import baseline_groups
 
-ROOT = Path(__file__).resolve().parents[2]  # repository root
+ROOT = Path(__file__).resolve().parents[3]  # repository root
 IMAGES = ROOT / "data" / "raw" / "c3pi" / "images"
 SPLIT = ROOT / "data" / "processed" / "c3pi" / "bigdata" / "split" / "images"
 AUGMENTED = ROOT / "data" / "processed" / "c3pi" / "bigdata" / "augmented"
@@ -281,7 +281,7 @@ def write_outputs(
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m src.data.prepare_classify_v2")
+    parser = argparse.ArgumentParser(prog="python -m src.data.prepare classify-v2")
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--limit", type=int, default=0, help="first N images per split and role")
     parser.add_argument("--out", type=Path, default=OUT, help="default: the DVC output")

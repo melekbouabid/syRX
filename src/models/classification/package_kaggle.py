@@ -29,7 +29,7 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-from src.models.classification import data as D
+from src.data import dataset as D
 from src.models.detection.runner import code_info
 
 SOURCE = D.DEFAULT_DATA

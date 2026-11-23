@@ -13,16 +13,16 @@ import numpy as np
 import pandas as pd
 from pydantic import TypeAdapter, ValidationError
 
-from src.data.tujya_data.config import Settings
-from src.data.tujya_data.connectors.schemas import Record
-from src.data.tujya_data.http.cache import atomic_write_bytes
-from src.data.tujya_data.http.client import Kind, PoliteClient
-from src.data.tujya_data.logging_utils import get_logger
-from src.data.tujya_data.manifest import Manifest, utc_now_iso
-from src.data.tujya_data.preflight import ensure_disk_space
-from src.data.tujya_data.progress import ProgressReporter
-from src.data.tujya_data.provenance import PROVENANCE_COLUMNS, Provenance
-from src.data.tujya_data.state import StateStore
+from src.data.sources.config import Settings
+from src.data.sources.connectors.schemas import Record
+from src.data.sources.http.cache import atomic_write_bytes
+from src.data.sources.http.client import Kind, PoliteClient
+from src.data.sources.logging_utils import get_logger
+from src.data.sources.manifest import Manifest, utc_now_iso
+from src.data.sources.preflight import ensure_disk_space
+from src.data.sources.progress import ProgressReporter
+from src.data.sources.provenance import PROVENANCE_COLUMNS, Provenance
+from src.data.sources.state import StateStore
 
 # Bump when a parser changes shape, so cached interim tables are rebuilt.
 PARSER_VERSION = "1"

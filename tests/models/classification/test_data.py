@@ -1,5 +1,5 @@
 """The crop dataset of stage prepare_classify_v2 as the classifiers read it
-(src/models/classification/data.py)."""
+(src/data/dataset.py)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
-from src.models.classification import data as D
+from src.data import dataset as D
 from tests.models.classification.helpers import make_dataset
 
 

@@ -12,11 +12,11 @@ import respx
 from rich.console import Console
 from typer.testing import CliRunner
 
-from src.data.tujya_data import cli
-from src.data.tujya_data.cli import app
-from src.data.tujya_data.connectors import all_links
-from src.data.tujya_data.quality.linkcheck import ENDPOINTS
-from src.data.tujya_data.testing import TEST_EMAIL
+from src.data.sources import cli
+from src.data.sources.cli import app
+from src.data.sources.connectors import all_links
+from src.data.sources.quality.linkcheck import ENDPOINTS
+from src.data.sources.testing import TEST_EMAIL
 from tests.data.pipeline.unit.test_connectors_lookup import PUBMED_XML
 
 runner = CliRunner()

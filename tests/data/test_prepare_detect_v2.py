@@ -1,4 +1,4 @@
-"""Detection dataset of C3PI v2 (src/data/prepare_detect_v2.py) on synthetic rows."""
+"""Detection dataset of C3PI v2 (src/data/prepare/detect_v2.py) on synthetic rows."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.data.prepare_detect_v2 import Photo, baseline_groups, write_outputs, yolo_lines
+from src.data.prepare.detect_v2 import Photo, baseline_groups, write_outputs, yolo_lines
 
 
 def test_yolo_lines_are_normalised() -> None:

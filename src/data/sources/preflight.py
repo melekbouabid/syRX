@@ -7,7 +7,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from src.data.tujya_data.config import Settings
+from src.data.sources.config import Settings
 
 # Raw file + parsed copy + working room.
 SPACE_FACTOR = 2.5

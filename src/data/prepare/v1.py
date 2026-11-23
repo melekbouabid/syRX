@@ -1,7 +1,7 @@
 """Build the training datasets from the downloaded C3PI subset.
 
-    python -m src.data.prepare            # labels + both datasets
-    python -m src.data.prepare --sheet    # also a contact sheet of boxes to check by eye
+    python -m src.data.prepare v1            # labels + both datasets
+    python -m src.data.prepare v1 --sheet    # also a contact sheet of boxes to check by eye
 
 Input: the C3PI photos in data/raw/c3pi/images. Outputs (all under data/processed/c3pi/,
 tracked by DVC, never by git):
@@ -29,7 +29,7 @@ import numpy as np
 
 from src.data.autolabel import Box, detect_pills, detect_reference, read_image, square_crop
 
-ROOT = Path(__file__).resolve().parents[2]  # repository root
+ROOT = Path(__file__).resolve().parents[3]  # repository root
 IMAGES = ROOT / "data" / "raw" / "c3pi" / "images"
 PROCESSED = ROOT / "data" / "processed" / "c3pi"
 SELECTED = ROOT / "config" / "splits" / "selected_images.csv"
@@ -171,7 +171,7 @@ def contact_sheet(rows: list[dict[str, str]], out: Path, n: int = 48, seed: int 
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m src.data.prepare")
+    parser = argparse.ArgumentParser(prog="python -m src.data.prepare v1")
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--limit", type=int, default=0, help="only the first N images (tests)")
     parser.add_argument("--sheet", type=Path, default=None, help="write a QA contact sheet")

@@ -10,7 +10,7 @@ import pytest
 
 pytest.importorskip("pyspark")
 
-from src.data.spark import split_job
+from src.data import split
 
 
 def test_assign_groups_fills_test_then_val_by_photo_share():
@@ -21,11 +21,11 @@ def test_assign_groups_fills_test_then_val_by_photo_share():
             "n_consumer": [2] * 10 + [0],  # the last group has no consumer photo
         }
     )
-    out = split_job.assign_groups(groups, val=0.2, test=0.2, seed=0)
+    out = split.assign_groups(groups, val=0.2, test=0.2, seed=0)
     photos = out.groupby("split")["n_consumer"].sum().to_dict()
     assert photos == {"test": 4, "val": 4, "train": 12}
     assert out.loc[out["n_consumer"] == 0, "split"].tolist() == ["train"]
-    again = split_job.assign_groups(groups.sample(frac=1, random_state=3), 0.2, 0.2, 0)
+    again = split.assign_groups(groups.sample(frac=1, random_state=3), 0.2, 0.2, 0)
     assert dict(zip(out["group_id"], out["split"], strict=True)) == dict(
         zip(again["group_id"], again["split"], strict=True)
     )  # independent of the row order (Spark partitioning)
@@ -36,7 +36,7 @@ def test_assign_groups_skips_a_session_too_large_for_the_share():
     groups = pd.DataFrame(
         {"class_key": "X", "group_id": [f"g{i}" for i in range(13)], "n_consumer": sizes}
     )
-    out = split_job.assign_groups(groups, val=0.15, test=0.15, seed=0)
+    out = split.assign_groups(groups, val=0.15, test=0.15, seed=0)
     photos = out.groupby("split")["n_consumer"].sum().to_dict()
     assert photos["test"] == photos["val"] == 4  # never above the share of 5
     assert out.loc[out["n_consumer"] == 12, "split"].item() == "train"
@@ -44,7 +44,7 @@ def test_assign_groups_skips_a_session_too_large_for_the_share():
 
 def test_assign_groups_keeps_one_group_for_train():
     two = pd.DataFrame({"class_key": "X", "group_id": ["a", "b"], "n_consumer": [5, 5]})
-    assert sorted(split_job.assign_groups(two, 0.15, 0.15, 0)["split"]) == ["test", "train"]
+    assert sorted(split.assign_groups(two, 0.15, 0.15, 0)["split"]) == ["test", "train"]
 
 
 def test_merge_groups_follows_near_duplicates_and_identical_files():
@@ -56,7 +56,7 @@ def test_merge_groups_follows_near_duplicates_and_identical_files():
         }
     )
     pairs = pd.DataFrame({"path_a": ["p2", "p9"], "path_b": ["p4", "p1"]})
-    merged = split_job.merge_groups(images, pairs).tolist()
+    merged = split.merge_groups(images, pairs).tolist()
     assert merged[0] == merged[1] == merged[3]  # p4 near-identical to p2
     assert merged[2] == merged[4]  # p3 and p5 are the same file
     assert merged[0] != merged[2]
@@ -148,7 +148,7 @@ def result(spark, params, tmp_path):
     v1 = tmp_path / "pill_classes.csv"
     v1.write_text("class_id,class_key\n0,X\n", encoding="utf-8")
     params["index"]["min_images"] = 3
-    summary = split_job.run(
+    summary = split.run(
         spark,
         params,
         index=index,
@@ -206,4 +206,4 @@ def test_check_leakage_reports_a_shared_file(spark):
         "path string, group_id string, sha1 string, split string",
     )
     pairs = spark.createDataFrame([], "path_a string, path_b string")
-    assert split_job.check_leakage(images, pairs)["files_in_train_and_heldout"] == 1
+    assert split.check_leakage(images, pairs)["files_in_train_and_heldout"] == 1
