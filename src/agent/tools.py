@@ -1,5 +1,5 @@
 """The agent's tools, written once and exposed twice: as LangChain tools (LangGraph agent)
-and as MCP tools (app/mcp_server.py).
+and as MCP tools (src/agent/mcp_server.py).
 
 Every tool returns plain JSON-serialisable data with the sources it used, never a dose
 (the corpus has no dosage section) and never the word "safe".

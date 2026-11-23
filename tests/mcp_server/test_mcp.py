@@ -11,7 +11,7 @@ import pytest
 from mcp import Client
 
 from app.config import Settings
-from src.mcp_server.server import build_server, default_toolbox, main
+from src.agent.mcp_server import build_server, default_toolbox, main
 from src.rag.init_qdrant import FakeEmbedder
 from tujya_testing.pharma_data import load_pharma
 from tujya_testing.rag_fakes import DIM, FakeChatModel, build_index

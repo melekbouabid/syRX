@@ -1,8 +1,8 @@
 """Tujya MCP server: the agent's six tools for any MCP client (official Python MCP SDK).
 
     # project venv (.venv) active, from any folder
-    python -m src.mcp_server            # stdio (Claude Desktop, IDEs)
-    python -m src.mcp_server --transport streamable-http --port 8765
+    python -m src.agent.mcp_server            # stdio (Claude Desktop, IDEs)
+    python -m src.agent.mcp_server --transport streamable-http --port 8765
                                                            # http://127.0.0.1:8765/mcp
 
 Same tools, same code and the same toolbox as the LangGraph agent (agent/tools.py, built by
@@ -134,7 +134,7 @@ LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "::1")
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m src.mcp_server")
+    parser = argparse.ArgumentParser(prog="python -m src.agent.mcp_server")
     parser.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
     parser.add_argument("--host", default="127.0.0.1", choices=LOOPBACK_HOSTS)
     parser.add_argument("--port", type=int, default=8765)

@@ -16,8 +16,8 @@ from mcp import Client
 
 from app.config import Settings
 from app.medicines import DISCLAIMER
+from src.agent.mcp_server import build_server, default_toolbox
 from src.agent.runtime import AgentHolder
-from src.mcp_server.server import build_server, default_toolbox
 from src.models.toxicity.model import (
     FP_BITS,
     MIXTURE_NOTE,

@@ -1,6 +1,6 @@
 """Start the MCP server as a subprocess (stdio), list its tools and call them on real data.
 
-python -m src.mcp_server.smoke
+python -m src.agent.mcp_smoke
 (project venv; uses the TUJYA_* environment of this shell; the stack running: postgres,
 qdrant, ollama, and the served models in models/)
 
@@ -55,7 +55,7 @@ def payload(result: Any) -> dict[str, Any]:
 async def main() -> None:
     params = StdioServerParameters(
         command=sys.executable,
-        args=["-m", "src.mcp_server"],
+        args=["-m", "src.agent.mcp_server"],
         cwd=str(ROOT),
         env=dict(os.environ),
     )
