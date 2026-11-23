@@ -1,4 +1,4 @@
-"""Served variant of the champion (src/models/serving.py) and its publication (publish.py).
+"""Served variant of the champion (src/models/registry.py) and its publication (reg.py).
 
 MLflow runs on a temporary SQLite store (never the project's server), as in
 tests/utils/test_mlflow_utils.py; the models are tiny ONNX graphs tagged like the FP16 / INT8
@@ -20,7 +20,7 @@ onnx = pytest.importorskip("onnx")
 from mlflow import MlflowClient  # noqa: E402
 from onnx import TensorProto, helper  # noqa: E402
 
-from src.models import publish, serving  # noqa: E402
+from src.models import registry as reg  # noqa: E402
 from src.utils import mlflow_utils as mu  # noqa: E402
 
 
@@ -59,11 +59,11 @@ def tiny_onnx(op: str = "Identity") -> onnx.ModelProto:
 def version(tracking: SimpleNamespace, op: str = "Identity", **tags: str) -> str:
     with mlflow.start_run():
         info = mu.log_model(tiny_onnx(op), name="model")
-    return str(mu.register(info.model_uri, tracking.model, tags=tags or None).version)
+    return str(reg.register(info.model_uri, tracking.model, tags=tags or None).version)
 
 
 def champion(tracking: SimpleNamespace, v: str) -> None:
-    tracking.client.set_registered_model_alias(tracking.model, serving.CHAMPION, v)
+    tracking.client.set_registered_model_alias(tracking.model, reg.CHAMPION, v)
 
 
 def variant(tracking: SimpleNamespace, of: str, precision: str = "int8-static") -> str:
@@ -73,7 +73,7 @@ def variant(tracking: SimpleNamespace, of: str, precision: str = "int8-static") 
 def test_without_served_alias_the_champion_is_served(tracking: SimpleNamespace) -> None:
     v1 = version(tracking)
     champion(tracking, v1)
-    resolved = serving.served_version(tracking.model, tracking.client)
+    resolved = reg.served_version(tracking.model, tracking.client)
     assert (resolved.version, resolved.precision, resolved.variant_of) == (v1, "fp32", None)
 
 
@@ -81,30 +81,30 @@ def test_served_variant_of_the_champion(tracking: SimpleNamespace) -> None:
     v1 = version(tracking)
     champion(tracking, v1)
     v2 = variant(tracking, v1)
-    serving.set_served(tracking.model, v2, v1, "int8-static", tracking.client)
-    resolved = serving.served_version(tracking.model, tracking.client)
+    reg.set_served(tracking.model, v2, v1, "int8-static", tracking.client)
+    resolved = reg.served_version(tracking.model, tracking.client)
     assert (resolved.version, resolved.precision, resolved.variant_of) == (v2, "int8-static", v1)
     tags = tracking.client.get_model_version(tracking.model, v1).tags
-    assert tags[serving.SERVED_PRECISION_TAG] == "int8-static"
+    assert tags[reg.SERVED_PRECISION_TAG] == "int8-static"
     # The champion alias never moves to the quantized copy (promote_if_better compares FP32).
-    assert mu.alias_version(tracking.model, serving.CHAMPION, tracking.client) == v1
+    assert reg.alias_version(tracking.model, reg.CHAMPION, tracking.client) == v1
 
 
 def test_served_equal_to_champion_is_fp32(tracking: SimpleNamespace) -> None:
     v1 = version(tracking)
     champion(tracking, v1)
-    serving.set_served(tracking.model, v1, v1, "fp32", tracking.client)
-    assert serving.served_version(tracking.model, tracking.client).version == v1
+    reg.set_served(tracking.model, v1, v1, "fp32", tracking.client)
+    assert reg.served_version(tracking.model, tracking.client).version == v1
 
 
 def test_variant_of_a_former_champion_is_not_served(tracking: SimpleNamespace) -> None:
     v1 = version(tracking)
     champion(tracking, v1)
     v2 = variant(tracking, v1)
-    serving.set_served(tracking.model, v2, v1, "int8-static", tracking.client)
+    reg.set_served(tracking.model, v2, v1, "int8-static", tracking.client)
     v3 = version(tracking)  # a new FP32 champion, not optimised yet
     champion(tracking, v3)
-    resolved = serving.served_version(tracking.model, tracking.client)
+    resolved = reg.served_version(tracking.model, tracking.client)
     assert (resolved.version, resolved.precision) == (v3, "fp32")
     assert "optimize" in resolved.note
 
@@ -112,7 +112,7 @@ def test_variant_of_a_former_champion_is_not_served(tracking: SimpleNamespace) -
 def test_no_champion_raises(tracking: SimpleNamespace) -> None:
     version(tracking)
     with pytest.raises(LookupError):
-        serving.served_version(tracking.model, tracking.client)
+        reg.served_version(tracking.model, tracking.client)
 
 
 def test_publish_copies_the_served_variant(
@@ -121,15 +121,15 @@ def test_publish_copies_the_served_variant(
     v1 = version(tracking)
     champion(tracking, v1)
     v2 = variant(tracking, v1)
-    serving.set_served(tracking.model, v2, v1, "int8-static", tracking.client)
-    monkeypatch.setitem(publish.REGISTERED, "detect", tracking.model)
-    monkeypatch.setitem(publish.REGISTERED, "classify", tracking.model)
+    reg.set_served(tracking.model, v2, v1, "int8-static", tracking.client)
+    monkeypatch.setitem(reg.REGISTERED, "detect", tracking.model)
+    monkeypatch.setitem(reg.REGISTERED, "classify", tracking.model)
 
     out = tmp_path / "models"
-    manifest = publish.publish(out, use_runs=False, versions={"detect": None, "classify": None})
+    manifest = reg.publish(out, use_runs=False, versions={"detect": None, "classify": None})
     saved = json.loads((out / "models.json").read_text(encoding="utf-8"))
     assert saved == manifest
-    for task, filename in publish.FILES.items():
+    for task, filename in reg.FILES.items():
         entry = manifest[task]
         assert (entry["version"], entry["precision"], entry["variant_of"]) == (
             int(v2),
@@ -138,14 +138,14 @@ def test_publish_copies_the_served_variant(
         )
         model = onnx.load(str(out / filename))
         assert model.graph.node[0].op_type == "Relu"
-        assert entry["sha256"] == publish.sha256(out / filename)
+        assert entry["sha256"] == reg.sha256(out / filename)
 
-    exact = publish.publish(
+    exact = reg.publish(
         tmp_path / "exact", use_runs=False, versions={"detect": None, "classify": None}, exact=True
     )
     assert exact["detect"]["version"] == int(v1)
     assert exact["detect"]["precision"] == "fp32"
-    pinned = publish.publish(
+    pinned = reg.publish(
         tmp_path / "pinned", use_runs=False, versions={"detect": int(v1), "classify": int(v2)}
     )
     assert (pinned["detect"]["version"], pinned["classify"]["version"]) == (int(v1), int(v2))
@@ -158,18 +158,18 @@ def test_manifest_carries_architecture_and_metrics(
         mlflow.log_metrics({"val_mAP50_95": 0.85, "test_v2_mAP50_95": 0.87, "train_box_loss": 1.0})
         mlflow.log_metric("val_box_loss", 0.5)
         info = mu.log_model(tiny_onnx("Identity"), name="model")
-    v1 = str(mu.register(info.model_uri, tracking.model, tags={"arch": "yolov8n"}).version)
+    v1 = str(reg.register(info.model_uri, tracking.model, tags={"arch": "yolov8n"}).version)
     champion(tracking, v1)
     with mlflow.start_run():
         mlflow.log_metrics({"test_v2_mAP50_95": 0.86, "onnx_cpu_latency_ms": 20.0, "time": 3.0})
         info = mu.log_model(tiny_onnx("Relu"), name="model")
     tags = {"arch": "yolov8n", "precision": "fp16", "variant_of": v1}
-    v2 = str(mu.register(info.model_uri, tracking.model, tags=tags).version)
-    serving.set_served(tracking.model, v2, v1, "fp16", tracking.client)
-    monkeypatch.setitem(publish.REGISTERED, "detect", tracking.model)
-    monkeypatch.setitem(publish.REGISTERED, "classify", tracking.model)
+    v2 = str(reg.register(info.model_uri, tracking.model, tags=tags).version)
+    reg.set_served(tracking.model, v2, v1, "fp16", tracking.client)
+    monkeypatch.setitem(reg.REGISTERED, "detect", tracking.model)
+    monkeypatch.setitem(reg.REGISTERED, "classify", tracking.model)
 
-    manifest = publish.publish(
+    manifest = reg.publish(
         tmp_path / "models", use_runs=False, versions={"detect": None, "classify": None}
     )
 

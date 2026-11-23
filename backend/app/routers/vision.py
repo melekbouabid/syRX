@@ -6,7 +6,7 @@ and the confirmation rule on top of the same ONNX Runtime scan (app/inference.py
 
 Errors: 400 when the upload is not a readable image, 413 when it is too large, 503 when the
 models are not loaded (no `models/detector.onnx` / `classifier.onnx`: `python -m
-src.models.publish`).
+src.models.registry publish`).
 """
 
 from __future__ import annotations
@@ -57,7 +57,9 @@ FILES = {"detect": DETECTOR_FILE, "classify": CLASSIFIER_FILE}
 ERRORS: dict[int | str, dict[str, Any]] = {
     400: {"description": "Not a readable JPEG, PNG or WebP image"},
     413: {"description": "Image larger than the upload limit"},
-    503: {"description": "Models not loaded (publish them with python -m src.models.publish)"},
+    503: {
+        "description": "Models not loaded (publish them with python -m src.models.registry publish)"
+    },
 }
 
 
@@ -170,7 +172,7 @@ async def metadata(request: Request) -> MetadataOut:
     """Name, architecture, Registry version and aliases, validation and test metrics, classes.
 
     The metrics are those of the published version in the MLflow Model Registry (models.json,
-    written by `python -m src.models.publish`); an FP16 / INT8 variant shows its own test
+    written by `python -m src.models.registry publish`); an FP16 / INT8 variant shows its own test
     scores and latency next to the validation scores of the champion it comes from.
     """
     scanner = await run_in_threadpool(loaded_scanner, request)

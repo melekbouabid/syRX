@@ -16,7 +16,8 @@ Models are logged with the MLflow 3 API (`name=`, one LoggedModel per call, metr
 it), registered in the Model Registry, and promoted with aliases (the stages Staging /
 Production are deprecated since MLflow 2.9): `champion` is the version the API serves,
 `challenger` the runner-up. `promote_if_better` is the guard rail of the lab: a new version
-replaces the champion only if it beats it by at least `min_gain` on a given metric.
+replaces the champion only if it beats it by at least `min_gain` on a given metric. The
+registration, the aliases and promote_if_better are in src/models/registry.py.
 """
 
 from __future__ import annotations
@@ -27,26 +28,18 @@ import subprocess
 import tempfile
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
-from dataclasses import dataclass
 from importlib import metadata
 from pathlib import Path
 from typing import Any
 
 import mlflow
 import yaml
-from mlflow import MlflowClient
 from mlflow.entities import Run
-from mlflow.entities.model_registry import ModelVersion
 from mlflow.models.model import ModelInfo
 
 ROOT = Path(__file__).resolve().parents[2]  # repository root
 DEFAULT_TRACKING_URI = "http://127.0.0.1:5000"  # docker compose up -d mlflow
 
-CHAMPION = "champion"
-CHALLENGER = "challenger"
-# Tag set on registered versions by promote_if_better: champion / challenger / archived.
-STATUS_TAG = "status"
-ARCHIVED = "archived"
 
 # Files of the repository logged with every run (when they exist).
 REPRODUCIBILITY_FILES = ("dvc.lock", "params.yaml")
@@ -231,165 +224,3 @@ def log_model(
     if metrics:
         mlflow.log_metrics(dict(metrics), model_id=info.model_id)
     return info
-
-
-def register(
-    model_uri: str,
-    name: str,
-    *,
-    alias: str | None = None,
-    tags: Mapping[str, str] | None = None,
-    description: str | None = None,
-    client: MlflowClient | None = None,
-) -> ModelVersion:
-    """Register `model_uri` as a new version of `name`, optionally under an alias."""
-    client = client or MlflowClient()
-    version = mlflow.register_model(model_uri, name, tags=dict(tags) if tags else None)
-    if description:
-        client.update_model_version(name, version.version, description=description)
-    if alias:
-        client.set_registered_model_alias(name, alias, version.version)
-    return client.get_model_version(name, version.version)
-
-
-def alias_version(name: str, alias: str, client: MlflowClient | None = None) -> str | None:
-    """Version number holding `alias`, or None."""
-    client = client or MlflowClient()
-    try:
-        return str(client.get_model_version_by_alias(name, alias).version)
-    except mlflow.exceptions.MlflowException:
-        return None
-
-
-def version_metric(
-    name: str, version: str | int, metric: str, client: MlflowClient | None = None
-) -> float | None:
-    """Value of `metric` for a registered version: its run's metric, else its LoggedModel's."""
-    client = client or MlflowClient()
-    mv = client.get_model_version(name, str(version))
-    if mv.run_id:
-        value = client.get_run(mv.run_id).data.metrics.get(metric)
-        if value is not None:
-            return float(value)
-    model_id = getattr(mv, "model_id", None)
-    if model_id:
-        for item in client.get_logged_model(model_id).metrics or []:
-            if item.key == metric:
-                return float(item.value)
-    return None
-
-
-@dataclass(frozen=True)
-class Promotion:
-    """Outcome of promote_if_better."""
-
-    name: str
-    version: str
-    metric: str
-    value: float
-    promoted: bool  # the candidate is now the champion
-    status: str  # champion / challenger / archived: alias given to the candidate
-    champion_before: str | None = None
-    champion_value: float | None = None
-    reason: str = ""
-
-
-def promote_if_better(
-    name: str,
-    version: str | int,
-    metric: str,
-    min_gain: float = 0.0,
-    *,
-    greater_is_better: bool = True,
-    eligible: bool = True,
-    ineligible_reason: str = "",
-    client: MlflowClient | None = None,
-) -> Promotion:
-    """Give the alias `champion` to `version` only if it beats the champion by `min_gain`.
-
-    - no champion yet: the candidate becomes champion;
-    - candidate better by at least `min_gain` (and strictly better): it becomes champion and
-      the former champion becomes challenger;
-    - otherwise the champion stays; the candidate becomes challenger if there is none or if
-      it beats the current challenger, else it is archived.
-
-    The versions involved get the tag `status` (champion / challenger / archived) and the
-    candidate a tag `promotion` explaining the decision, so the Registry shows the history.
-
-    `eligible=False` (a guard the caller checked failed, `ineligible_reason` says which) keeps
-    the candidate away from both aliases: it is archived whatever its score (D100).
-    """
-    client = client or MlflowClient()
-    version = str(version)
-    value = version_metric(name, version, metric, client)
-    if value is None:
-        raise ValueError(f"{name} version {version} has no metric {metric!r}")
-    sign = 1.0 if greater_is_better else -1.0
-
-    def gain_over(other: float) -> float:
-        return sign * (value - other)
-
-    champion = alias_version(name, CHAMPION, client)
-    if not eligible:
-        reason = (
-            f"not eligible: {ineligible_reason or 'guard failed'} ({metric}={value:.4f}); archived"
-        )
-        client.set_model_version_tag(name, version, STATUS_TAG, ARCHIVED)
-        client.set_model_version_tag(name, version, "promotion", reason)
-        return Promotion(name, version, metric, value, False, ARCHIVED, champion, None, reason)
-    if champion == version:
-        return Promotion(
-            name, version, metric, value, True, CHAMPION, champion, value, "already champion"
-        )
-    champion_value = (
-        version_metric(name, champion, metric, client) if champion is not None else None
-    )
-
-    if champion is None or champion_value is None:
-        reason = f"first champion ({metric}={value:.4f})"
-        _set_status(client, name, version, CHAMPION)
-        client.set_model_version_tag(name, version, "promotion", reason)
-        return Promotion(name, version, metric, value, True, CHAMPION, champion, None, reason)
-
-    gain = gain_over(champion_value)
-    if gain > 0 and gain >= min_gain:
-        reason = (
-            f"promoted: {metric}={value:.4f} vs {champion_value:.4f} (v{champion}), "
-            f"gain {gain:+.4f} >= {min_gain}"
-        )
-        _set_status(client, name, champion, CHALLENGER)
-        _set_status(client, name, version, CHAMPION)
-        client.set_model_version_tag(name, version, "promotion", reason)
-        client.set_model_version_tag(name, version, "promoted_from", champion)
-        return Promotion(
-            name, version, metric, value, True, CHAMPION, champion, champion_value, reason
-        )
-
-    challenger = alias_version(name, CHALLENGER, client)
-    challenger_value = (
-        version_metric(name, challenger, metric, client) if challenger is not None else None
-    )
-    if challenger_value is None or gain_over(challenger_value) > 0:
-        status = CHALLENGER
-        _set_status(client, name, version, CHALLENGER)
-    else:
-        status = ARCHIVED
-        client.set_model_version_tag(name, version, STATUS_TAG, ARCHIVED)
-    reason = (
-        f"not promoted: {metric}={value:.4f} vs champion {champion_value:.4f} (v{champion}), "
-        f"gain {gain:+.4f} < {min_gain}; {status}"
-    )
-    client.set_model_version_tag(name, version, "promotion", reason)
-    return Promotion(name, version, metric, value, False, status, champion, champion_value, reason)
-
-
-def _set_status(client: MlflowClient, name: str, version: str, alias: str) -> None:
-    """Move `alias` to `version`, archive the version that loses it, tag the new holder."""
-    previous = alias_version(name, alias, client)
-    client.set_registered_model_alias(name, alias, version)
-    client.set_model_version_tag(name, version, STATUS_TAG, alias)
-    if previous is not None and previous != version:
-        holder = client.get_model_version(name, previous)
-        # Only champion / challenger are statuses: `served` (step 2.4) does not keep one.
-        if not set(holder.aliases or []) & {CHAMPION, CHALLENGER}:
-            client.set_model_version_tag(name, previous, STATUS_TAG, ARCHIVED)

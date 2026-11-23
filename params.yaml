@@ -75,7 +75,7 @@ export:
   simplify: true           # onnxslim graph simplification
   parity_images: 50        # test images on which ONNX Runtime must agree with PyTorch
 # Model Registry: metric and minimum gain for promote_if_better (alias champion /
-# challenger, src/utils/mlflow_utils.py). mAP@[.5:.95] is the metric of the module guide.
+# challenger, src/models/registry.py). mAP@[.5:.95] is the metric of the module guide.
 registry:
   detector:
     name: tujya-pill-detector

@@ -19,6 +19,7 @@ onnx = pytest.importorskip("onnx")
 from mlflow import MlflowClient  # noqa: E402
 
 from src.models import optimize  # noqa: E402
+from src.models import registry as reg  # noqa: E402
 from src.models.detection import compare, compare_latency  # noqa: E402
 from src.utils import mlflow_utils as mu  # noqa: E402
 from tests.models.detection.helpers import make_dataset, tiny_detector  # noqa: E402
@@ -54,7 +55,7 @@ def _version(tracking: SimpleNamespace, arch: str, size: int, tags: dict[str, st
     with mlflow.start_run(run_name=f"detector-{arch}") as run:
         mlflow.log_metric("onnx_cpu_latency_ms", 999.0)  # an older single timing
         info = mu.log_model(tiny_detector(size), name="detector")
-    version = mu.register(info.model_uri, tracking.model, tags={"arch": arch, **tags})
+    version = reg.register(info.model_uri, tracking.model, tags={"arch": arch, **tags})
     assert version.run_id == run.info.run_id
     return str(version.version)
 

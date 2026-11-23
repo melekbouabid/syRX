@@ -658,6 +658,7 @@ def register_configs(
     import mlflow
     from mlflow.tracking import MlflowClient
 
+    from src.models import registry as reg
     from src.utils import mlflow_utils as mu
 
     mu.configure()
@@ -673,7 +674,7 @@ def register_configs(
                 input_example=pd.DataFrame({"question": ["contre-indications de la metformine"]}),
                 pip_requirements=["mlflow", "pandas"],
             )
-        version = mu.register(
+        version = reg.register(
             info.model_uri,
             REGISTERED,
             alias=status,

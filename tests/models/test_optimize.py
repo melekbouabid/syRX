@@ -22,8 +22,9 @@ onnx = pytest.importorskip("onnx")
 
 from mlflow import MlflowClient  # noqa: E402
 
-from src.models import optimize, publish, serving  # noqa: E402
+from src.models import optimize  # noqa: E402
 from src.models import quantize as q  # noqa: E402
+from src.models import registry as reg  # noqa: E402
 from src.utils import mlflow_utils as mu  # noqa: E402
 from tests.models.detection.helpers import make_dataset, tiny_detector  # noqa: E402
 from tests.models.test_quantize import tiny_classifier  # noqa: E402
@@ -115,7 +116,7 @@ def tracking(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.Monke
     mlflow.set_registry_uri(uri)
     mlflow.create_experiment(optimize.EXPERIMENT, artifact_location=(base / "art").as_uri())
     name = f"pill-{uuid.uuid4().hex[:8]}"
-    monkeypatch.setitem(serving.REGISTERED, "classify", name)
+    monkeypatch.setitem(reg.REGISTERED, "classify", name)
     yield SimpleNamespace(model=name, client=MlflowClient())
     while mlflow.active_run():
         mlflow.end_run()
@@ -127,7 +128,7 @@ def test_optimise_registers_variants_and_sets_served(
     mlflow.set_experiment(optimize.EXPERIMENT)
     with mlflow.start_run():
         info = mu.log_model(tiny_classifier(), name="classifier")
-    champion = mu.register(info.model_uri, tracking.model, alias=serving.CHAMPION).version
+    champion = reg.register(info.model_uri, tracking.model, alias=reg.CHAMPION).version
 
     report = optimize.optimise("classify", settings=SETTINGS, data=crops, client=tracking.client)
 
@@ -137,8 +138,8 @@ def test_optimise_registers_variants_and_sets_served(
     for precision in (q.FP16, q.INT8_STATIC, q.INT8_DYNAMIC):
         v = report["variants"][precision]["version"]
         tags = tracking.client.get_model_version(tracking.model, v).tags
-        assert tags[serving.PRECISION_TAG] == precision
-        assert tags[serving.VARIANT_OF_TAG] == str(champion)
+        assert tags[reg.PRECISION_TAG] == precision
+        assert tags[reg.VARIANT_OF_TAG] == str(champion)
         run = tracking.client.get_run(report["variants"][precision]["run_id"])
         assert run.data.tags["stage"] == "optimize"
         assert "git_commit" in run.data.tags and "dvc_rev" in run.data.tags
@@ -151,8 +152,8 @@ def test_optimise_registers_variants_and_sets_served(
             "accuracy_drop",
         } <= set(run.data.metrics)
     # The champion alias stays on the FP32 model; `served` names the chosen precision.
-    assert mu.alias_version(tracking.model, serving.CHAMPION, tracking.client) == str(champion)
-    resolved = serving.served_version(tracking.model, tracking.client)
+    assert reg.alias_version(tracking.model, reg.CHAMPION, tracking.client) == str(champion)
+    resolved = reg.served_version(tracking.model, tracking.client)
     assert resolved.precision == report["chosen"]
     assert resolved.version == (report["variants"][report["chosen"]]["version"] or str(champion))
 
@@ -160,9 +161,9 @@ def test_optimise_registers_variants_and_sets_served(
     assert table.count("\n") == 2 + len(q.PRECISIONS)
     assert "(servie)" in table
 
-    monkeypatch.setitem(publish.REGISTERED, "detect", tracking.model)
+    monkeypatch.setitem(reg.REGISTERED, "detect", tracking.model)
     out = tmp_path / "models"
-    manifest = publish.publish(out, use_runs=False, versions={"detect": None, "classify": None})
+    manifest = reg.publish(out, use_runs=False, versions={"detect": None, "classify": None})
     assert manifest["classify"]["precision"] == report["chosen"]
     assert json.loads((out / "models.json").read_text(encoding="utf-8")) == manifest
 
@@ -197,7 +198,7 @@ def test_a_new_optimisation_supersedes_the_older_variants(
     mlflow.set_experiment(optimize.EXPERIMENT)
     with mlflow.start_run():
         info = mu.log_model(tiny_classifier(), name="classifier")
-    champion = mu.register(info.model_uri, tracking.model, alias=serving.CHAMPION).version
+    champion = reg.register(info.model_uri, tracking.model, alias=reg.CHAMPION).version
 
     first = optimize.optimise("classify", settings=SETTINGS, data=crops, client=tracking.client)
     second = optimize.optimise("classify", settings=SETTINGS, data=crops, client=tracking.client)
@@ -211,7 +212,7 @@ def test_a_new_optimisation_supersedes_the_older_variants(
 
     assert status(first) == {"superseded"}
     assert status(second) == {"variant"}
-    assert mu.alias_version(tracking.model, serving.CHAMPION, tracking.client) == str(champion)
+    assert reg.alias_version(tracking.model, reg.CHAMPION, tracking.client) == str(champion)
 
 
 def test_latency_budget_reaches_every_timing(
@@ -247,10 +248,10 @@ def test_a_v2_champion_is_scored_on_the_comparison_split_of_step_2_3(
     mlflow.set_experiment(optimize.EXPERIMENT)
     with mlflow.start_run():
         info = mu.log_model(v2, name="classifier")
-    mu.register(
-        info.model_uri, tracking.model, alias=serving.CHAMPION, tags={"label_space": "c3pi-v2"}
+    reg.register(
+        info.model_uri, tracking.model, alias=reg.CHAMPION, tags={"label_space": "c3pi-v2"}
     )
-    champion = tracking.client.get_model_version_by_alias(tracking.model, serving.CHAMPION)
+    champion = tracking.client.get_model_version_by_alias(tracking.model, reg.CHAMPION)
     assert optimize.task_spec("classify", champion) is optimize.CLASSIFY_V2
     assert optimize.task_spec("classify") is optimize.SPECS["classify"]  # v1 model of step 2.1
 

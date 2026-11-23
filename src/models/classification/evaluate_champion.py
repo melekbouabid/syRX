@@ -38,6 +38,7 @@ import onnxruntime as ort
 from mlflow import MlflowClient
 
 from src.data import dataset as D
+from src.models import registry as reg
 from src.models.classification.import_kaggle import (
     EXPERIMENT,
     LOCAL_DATA,
@@ -86,14 +87,14 @@ def score_onnx(model: Path, data_dir: Path) -> dict[str, float]:
 def evaluate_version(
     version: str | None = None,
     *,
-    alias: str = mu.CHAMPION,
+    alias: str = reg.CHAMPION,
     data_dir: Path = LOCAL_DATA,
     client: MlflowClient | None = None,
 ) -> dict[str, Any]:
     client = client or MlflowClient()
     rules = compare_rules()
     name = rules["name"]
-    version = version or mu.alias_version(name, alias, client)
+    version = version or reg.alias_version(name, alias, client)
     if version is None:
         raise SystemExit(f"no version of {name} holds the alias {alias!r}")
     mv = client.get_model_version(name, str(version))
@@ -158,7 +159,7 @@ def evaluate_version(
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m src.models.classification.evaluate_champion")
     parser.add_argument("--version", help="registered version (default: the alias)")
-    parser.add_argument("--alias", default=mu.CHAMPION)
+    parser.add_argument("--alias", default=reg.CHAMPION)
     parser.add_argument("--data", type=Path, default=LOCAL_DATA)
     parser.add_argument("--dry-run", action="store_true", help="score only, log nothing")
     args = parser.parse_args(argv)
@@ -168,7 +169,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.dry_run:
         client = MlflowClient()
         name = compare_rules()["name"]
-        version = args.version or mu.alias_version(name, args.alias, client)
+        version = args.version or reg.alias_version(name, args.alias, client)
         with tempfile.TemporaryDirectory() as tmp:
             folder = Path(
                 mlflow.artifacts.download_artifacts(f"models:/{name}/{version}", dst_path=tmp)

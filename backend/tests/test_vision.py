@@ -82,7 +82,7 @@ def test_health_without_models_is_degraded_not_an_error(anonymous: TestClient) -
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "degraded" and body["model_loaded"] is False
-    assert "python -m src.models.publish" in body["detail"]
+    assert "python -m src.models.registry publish" in body["detail"]
     assert body["models"] == [] and body["gpu"]["active_providers"] == []
 
 
@@ -123,7 +123,7 @@ def test_model_metadata_without_a_manifest(anonymous: TestClient, app: FastAPI) 
 def test_model_metadata_without_models_is_503(anonymous: TestClient) -> None:
     response = anonymous.get("/model/metadata")
     assert response.status_code == 503
-    assert "python -m src.models.publish" in response.json()["detail"]
+    assert "python -m src.models.registry publish" in response.json()["detail"]
 
 
 # --- POST /predict --------------------------------------------------------------------------

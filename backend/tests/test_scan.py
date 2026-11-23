@@ -112,7 +112,7 @@ def test_photo_without_pills(app: FastAPI, user: TestClient, pharma: str) -> Non
 def test_missing_models_answer_503(user: TestClient, pharma: str) -> None:
     response = upload(user, photo())
     assert response.status_code == 503
-    assert "src.models.publish" in response.json()["detail"]
+    assert "src.models.registry" in response.json()["detail"]
 
 
 def test_missing_medicine_tables_answer_503(user: TestClient, models: Path) -> None:

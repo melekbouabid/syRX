@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     # The default is a SQLite file under data/ so nothing else is needed for development.
     pharma_database_url: str = f"sqlite:///{(PROJECT_DIR / 'data' / 'tujya.db').as_posix()}"
     # ONNX models for /api/scan: detector.onnx, classifier.onnx and models.json, written by
-    # `python -m src.models.publish` (TUJYA_MODELS_DIR). Loaded on the first scan.
+    # `python -m src.models.registry publish` (TUJYA_MODELS_DIR). Loaded on the first scan.
     models_dir: Path = PROJECT_DIR / "models"
     # "cpu" always works; "auto" uses CUDA first when the installed onnxruntime has it.
     onnx_providers: str = "cpu"

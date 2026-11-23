@@ -22,12 +22,12 @@ For the version holding the alias `champion` of each registered model:
    of src/utils/mlflow_utils.py) and registers each FP16 / INT8 variant as a new version of
    the same registered model, tagged `precision` and `variant_of`;
 4. picks the served variant (`choose_variant`, params.yaml `optimize`) and gives it the alias
-   `served` (src/models/serving.py): the alias `champion` stays on the FP32 model, so
+   `served` (src/models/registry.py): the alias `champion` stays on the FP32 model, so
    promote_if_better keeps comparing FP32 candidates with an FP32 champion.
 
 Writes models/optimize.json (git-ignored) and prints the comparison table of
 docs/module1/optimisation_onnx.md. A new champion (step 2.2 or 2.3) only needs this command
-again, then `python -m src.models.publish`.
+again, then `python -m src.models.registry publish`.
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ import yaml
 from mlflow import MlflowClient
 
 from src.models import quantize as q
-from src.models import serving
+from src.models import registry as reg
 from src.models.detection.labels import holdout_names, read_bgr, samples
 from src.models.detection.latency import (
     cpu_name,
@@ -340,8 +340,8 @@ def log_variant(
         "stage": "optimize",
         "plan_step": "2.4",
         "task": spec.task,
-        serving.PRECISION_TAG: precision,
-        serving.VARIANT_OF_TAG: str(champion.version),
+        reg.PRECISION_TAG: precision,
+        reg.VARIANT_OF_TAG: str(champion.version),
         "source_run_id": champion.run_id,
         "latency_cpu": cpu_name(),
     }
@@ -370,15 +370,15 @@ def log_variant(
                 params={"precision": precision, "variant_of": str(champion.version)},
             )
             arch = (champion.tags or {}).get("arch", "unknown")
-            version = mu.register(
+            version = reg.register(
                 info.model_uri,
                 name,
                 tags={
                     "task": spec.task,
                     "arch": arch,
                     "dataset": (champion.tags or {}).get("dataset", spec.dataset),
-                    serving.PRECISION_TAG: precision,
-                    serving.VARIANT_OF_TAG: str(champion.version),
+                    reg.PRECISION_TAG: precision,
+                    reg.VARIANT_OF_TAG: str(champion.version),
                     "status": "variant",
                     "git_commit": mu.git_commit(),
                 },
@@ -401,7 +401,7 @@ def supersede_variants(
     old = [
         str(v.version)
         for v in client.search_model_versions(f"name='{name}'")
-        if (v.tags or {}).get(serving.VARIANT_OF_TAG) == champion
+        if (v.tags or {}).get(reg.VARIANT_OF_TAG) == champion
         and (v.tags or {}).get("status") == "variant"
         and str(v.version) not in keep
     ]
@@ -420,8 +420,8 @@ def optimise(
 ) -> dict[str, Any]:
     settings = settings or load_settings()
     client = client or MlflowClient()
-    name = serving.REGISTERED[task]
-    champion = client.get_model_version_by_alias(name, serving.CHAMPION)
+    name = reg.REGISTERED[task]
+    champion = client.get_model_version_by_alias(name, reg.CHAMPION)
     spec = task_spec(task, champion)
     data = data or ROOT / spec.dataset_path
     seed = int(settings.get("seed", 0))
@@ -485,7 +485,7 @@ def optimise(
         new = {str(v["version"]) for v in logged.values() if v["version"]}
         supersede_variants(name, str(champion.version), keep=new, client=client)
         chosen = logged[choice.precision]["version"] or str(champion.version)
-        serving.set_served(name, chosen, str(champion.version), choice.precision, client)
+        reg.set_served(name, chosen, str(champion.version), choice.precision, client)
         client.set_model_version_tag(name, chosen, "served_reason", choice.reason[:5000])
         served = chosen
     return {
@@ -532,7 +532,9 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m src.models.optimize")
     parser.add_argument("--task", choices=sorted(SPECS), action="append")
     parser.add_argument("--no-register", action="store_true", help="runs only, no Registry")
-    parser.add_argument("--publish", action="store_true", help="then run src.models.publish")
+    parser.add_argument(
+        "--publish", action="store_true", help="then run src.models.registry publish"
+    )
     args = parser.parse_args(argv)
     console_utf8()
     os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
@@ -550,9 +552,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     print(markdown_table(report))
     if args.publish:
-        from src.models import publish
-
-        publish.main([])
+        reg.publish_main([])
 
 
 if __name__ == "__main__":

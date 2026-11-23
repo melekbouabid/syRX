@@ -28,6 +28,7 @@ from typing import Any
 import mlflow
 from mlflow import MlflowClient
 
+from src.models import registry as reg
 from src.models.detection.import_kaggle import EXPERIMENT, LOCAL_DATA, compare_rules, local_latency
 from src.models.detection.latency import cpu_name
 from src.models.detection.runner import backend, dataset_info, test_metrics
@@ -44,7 +45,7 @@ def family_of(arch: str, tags: dict[str, str]) -> str:
 def evaluate_version(
     version: str | None = None,
     *,
-    alias: str = mu.CHAMPION,
+    alias: str = reg.CHAMPION,
     data_dir: Path = LOCAL_DATA,
     weights: Path | None = None,
     client: MlflowClient | None = None,
@@ -52,7 +53,7 @@ def evaluate_version(
     client = client or MlflowClient()
     rules = compare_rules()
     name = rules["name"]
-    version = version or mu.alias_version(name, alias, client)
+    version = version or reg.alias_version(name, alias, client)
     if version is None:
         raise SystemExit(f"no version of {name} holds the alias {alias!r}")
     mv = client.get_model_version(name, str(version))
@@ -121,7 +122,7 @@ def evaluate_version(
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m src.models.detection.evaluate_champion")
     parser.add_argument("--version", help="registered version (default: the alias)")
-    parser.add_argument("--alias", default=mu.CHAMPION)
+    parser.add_argument("--alias", default=reg.CHAMPION)
     parser.add_argument("--data", type=Path, default=LOCAL_DATA)
     parser.add_argument("--weights", type=Path, help="local weights instead of the run's")
     args = parser.parse_args(argv)

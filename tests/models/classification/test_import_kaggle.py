@@ -14,6 +14,7 @@ import pytest
 mlflow = pytest.importorskip("mlflow")
 onnx = pytest.importorskip("onnx")
 
+from src.models import registry as reg  # noqa: E402
 from src.models.classification import import_kaggle  # noqa: E402
 from src.utils import mlflow_utils as mu  # noqa: E402
 from tests.models.classification.helpers import tiny_classifier  # noqa: E402
@@ -52,10 +53,10 @@ def _register_v1(tracking: SimpleNamespace, metrics: dict[str, float]) -> str:
     with mlflow.start_run():
         mlflow.log_metrics(metrics)
         info = mu.log_model(tiny_classifier(classes=3), name="classifier")
-    version = mu.register(
+    version = reg.register(
         info.model_uri,
         tracking.model,
-        alias=mu.CHAMPION,
+        alias=reg.CHAMPION,
         tags={"baseline": "true", "dataset": "c3pi-v1", "task": "classify"},
     )
     return str(version.version)
@@ -99,8 +100,8 @@ def test_import_creates_runs_registers_and_promotes_over_the_v1_champion(
     artifacts = {a.path for a in tracking.client.list_artifacts(result["run_id"])}
     assert {"export", "onnx", "weights", "confusion", "gradcam", "reproducibility"} <= artifacts
     assert result["eligible"] is True and result["guard_reference"] == v1
-    assert result["promoted"] is True and result["alias"] == mu.CHAMPION
-    assert mu.alias_version(tracking.model, mu.CHALLENGER) == v1
+    assert result["promoted"] is True and result["alias"] == reg.CHAMPION
+    assert reg.alias_version(tracking.model, reg.CHALLENGER) == v1
     version = tracking.client.get_model_version(tracking.model, str(result["version"]))
     assert version.tags["label_space"] == "c3pi-v2" and version.tags["num_classes"] == "6"
 
@@ -119,9 +120,9 @@ def test_guard_archives_a_model_worse_on_the_v1_classes(
         measure_latency=False,
     )
     assert result["eligible"] is False and result["promoted"] is False
-    assert result["alias"] == mu.ARCHIVED
+    assert result["alias"] == reg.ARCHIVED
     assert "not eligible" in result["promotion"]
-    assert mu.alias_version(tracking.model, mu.CHALLENGER) is None
+    assert reg.alias_version(tracking.model, reg.CHALLENGER) is None
 
 
 def test_import_refuses_a_champion_not_scored_on_the_same_split(

@@ -318,6 +318,7 @@ def log_run(
 ) -> dict[str, Any]:
     import mlflow
 
+    from src.models import registry as reg
     from src.utils import mlflow_utils as mu
 
     mu.configure()
@@ -357,13 +358,13 @@ def log_run(
         )
         mlflow.log_metrics(metrics, model_id=info.model_id)
     compare = params["compare"]
-    version = mu.register(
+    version = reg.register(
         info.model_uri,
         REGISTERED,
         tags={"engine": engine, "dataset": "italian-otc-medicines@29ebcd7"},
         description=f"OCR engine {engine} for medicine boxes (step 2.7)",
     )
-    promotion = mu.promote_if_better(
+    promotion = reg.promote_if_better(
         REGISTERED, version.version, compare["metric"], float(compare["min_gain"])
     )
     result.update(version=version.version, promotion=asdict(promotion))
