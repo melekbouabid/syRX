@@ -1,5 +1,4 @@
-"""A classifier is published only with a class list the API resolves to the same products
-(src/models/registry.py `check_class_table`, D101)."""
+"""A classifier is published only with a class list the API resolves to the same products."""
 
 from __future__ import annotations
 

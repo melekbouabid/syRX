@@ -1,6 +1,4 @@
-"""Import of a classifier export into MLflow (src/models/classification/import_kaggle.py) on
-a temporary SQLite store: parent run, one child run per trial, Registry, guard of D100 and
-promote_if_better."""
+"""Import of a classifier export into a temporary MLflow: runs, Registry, guard, promotion."""
 
 from __future__ import annotations
 

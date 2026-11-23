@@ -1,9 +1,4 @@
-"""Acceptance tests of the two custom Git hooks (tools/hooks), with the cases of the advanced
-Git lab (accepted / rejected) and a few cases of this repository.
-
-The hooks run as pre-commit runs them: a separate Python process given file paths, judged
-by its exit code and its output.
-"""
+"""Acceptance tests of the two Git hooks (tools/hooks), run as pre-commit runs them."""
 
 from __future__ import annotations
 

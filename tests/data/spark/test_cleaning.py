@@ -28,9 +28,9 @@ def resave(source: Path, target: Path, quality: int = 95) -> Path:
 
 @pytest.fixture
 def fake(tmp_path):
-    """Images in images/D1/<file> and the selection rows that list them."""
+    """Images in images/disc1/<file> and the selection rows that list them."""
     images = tmp_path / "images"
-    d = images / "D1"
+    d = images / "disc1"
     files = {
         "a_ok1.JPG": ("X", "C3PI_Test", photo(d / "a_ok1.JPG", 1)),
         "a_ok2.JPG": ("X", "C3PI_Test", photo(d / "a_ok2.JPG", 2)),
@@ -54,7 +54,7 @@ def fake(tmp_path):
         file = d / name
         rows.append(
             {
-                "path": f"D1/images/{name}",
+                "path": f"disc1/images/{name}",
                 "class_key": key,
                 "image_type": image_type,
                 "role": "seg" if "SEG" in image_type else "consumer",

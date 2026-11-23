@@ -1,8 +1,6 @@
 """The same retrieval on PostgreSQL + pgvector (dense search in SQL, array filters).
 
-Runs when TUJYA_TEST_PG_URL points to a PostgreSQL server with the pgvector extension
-(the CI backend job has one; locally the compose `postgres`). Uses its own schema, so the
-real index is never touched.
+Runs when TUJYA_TEST_PG_URL points to PostgreSQL with pgvector; uses its own schema.
 """
 
 from __future__ import annotations

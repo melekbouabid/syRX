@@ -1,8 +1,6 @@
 """The experiment runner and the MLflow import, end to end, on a temporary SQLite store.
 
-The model family is the fake one of helpers.py (no PyTorch): the runner's Optuna search,
-retraining, test scores, ONNX export and export folder are real, and so is the import
-(parent run, one child run per trial, Registry, promote_if_better).
+The model family is the fake one of helpers.py; everything else is the real code.
 """
 
 from __future__ import annotations

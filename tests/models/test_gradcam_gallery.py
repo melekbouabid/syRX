@@ -1,7 +1,6 @@
-"""Grad-CAM pictures of the demo gallery (src/models/gradcam_gallery.py, D104).
+"""Grad-CAM pictures of the demo gallery (src/models/gradcam_gallery.py).
 
-The geometry and the version check run everywhere; composing a picture needs PyTorch
-(src/utils/gradcam.py) and is skipped without it.
+Composing a picture needs PyTorch and is skipped without it.
 """
 
 from __future__ import annotations

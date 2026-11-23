@@ -1,8 +1,6 @@
-"""The chunk index in Qdrant (D113): idempotent indexing, payload, filters, copy from SQL.
+"""The chunk index in Qdrant: idempotent indexing, payload, filters, copy from SQL.
 
-Runs on the client's local in-memory mode (same API as the server, no network). The same
-tests run against a real server when TUJYA_TEST_QDRANT_URL is set (the CI job `src` has a
-Qdrant service); they use their own collection, so the real index is never touched.
+In-memory mode, or a real server (own collection) when TUJYA_TEST_QDRANT_URL is set.
 """
 
 from __future__ import annotations

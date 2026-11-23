@@ -1,8 +1,4 @@
-"""FP16 / INT8 variants of an ONNX model and the choice of the served one (src/models/quantize.py).
-
-The model is a tiny convolutional classifier built with onnx.helper (input 1x3x8x8, output
-1x4 probabilities, Ultralytics-like metadata): conversions run in a fraction of a second.
-"""
+"""FP16 / INT8 variants of a tiny ONNX classifier and the choice of the served one."""
 
 from __future__ import annotations
 

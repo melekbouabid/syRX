@@ -1,10 +1,4 @@
-"""Shared test fixtures (pytest plugin). Unit tests never touch the network: HTTP is mocked
-with respx.
-
-Used by the pipeline tests (tests/conftest.py) and by the module 2 corpus tests, which run
-on this pipeline: `pytest_plugins = ["tests.support.sources_fixtures"]`. Needs the `dev` extra
-(pytest, respx); nothing else in the package imports this module.
-"""
+"""Shared fixtures of the data pipeline tests (pytest plugin); HTTP is mocked with respx."""
 
 from __future__ import annotations
 

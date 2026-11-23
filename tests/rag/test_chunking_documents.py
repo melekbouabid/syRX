@@ -1,7 +1,6 @@
-"""The indexed documents: catalog (src/rag/chunking.py) and GET /api/documents (D114).
+"""The indexed documents: catalog (src/rag/chunking.py) and GET /api/documents.
 
-The API tests run the app on a Qdrant in-memory store holding the fake corpus, and ask a
-chat question through it, so the agent's path on Qdrant is covered too.
+The API tests run on a Qdrant in-memory store holding the fake corpus.
 """
 
 from __future__ import annotations

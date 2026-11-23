@@ -1,4 +1,4 @@
-"""GET /api/catalog/summary and /showcase: public counts, one real scan of a demo photo (D128)."""
+"""GET /api/catalog/summary and /showcase: public counts, one real scan of a demo photo."""
 
 from __future__ import annotations
 

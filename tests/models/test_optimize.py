@@ -1,9 +1,6 @@
 """The optimisation chain of src/models/optimize.py on a tiny classifier and a temporary MLflow.
 
-The champion is the tiny convolutional classifier of test_quantize.py, the dataset a few 8x8
-crops per class: the whole chain (variants, scores, latency in a fresh process, one run per
-variant, Registry versions, alias `served`, publication) runs in seconds, without a GPU and
-without the project's MLflow server.
+Variants, scores, latency, runs, Registry versions, alias `served` and publication, in seconds.
 """
 
 from __future__ import annotations
@@ -253,7 +250,7 @@ def test_a_v2_champion_is_scored_on_the_comparison_split_of_step_2_3(
     )
     champion = tracking.client.get_model_version_by_alias(tracking.model, reg.CHAMPION)
     assert optimize.task_spec("classify", champion) is optimize.CLASSIFY_V2
-    assert optimize.task_spec("classify") is optimize.SPECS["classify"]  # v1 model of step 2.1
+    assert optimize.task_spec("classify") is optimize.SPECS["classify"]  # the v1 model
 
     report = optimize.optimise("classify", settings=SETTINGS, data=data, client=tracking.client)
     assert report["metric"] == "test_v2_top1"

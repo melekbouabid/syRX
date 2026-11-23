@@ -1,5 +1,4 @@
-"""identify_pills through the MCP server (step 3.6): the same pipeline as /api/scan, with the
-tiny fake ONNX models of fake_models.py; then the identified pills go to check_interaction."""
+"""identify_pills through the MCP server, with the fake ONNX models, then check_interaction."""
 
 from __future__ import annotations
 

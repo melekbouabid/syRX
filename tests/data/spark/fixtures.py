@@ -1,12 +1,7 @@
 """Fixtures of the Spark job tests: a local SparkSession and tiny fake C3PI files.
 
-Loaded by tests/data/spark/conftest.py, or with `-p tests.data.spark.fixtures` where the
-root conftest cannot load (the Spark image and the CI job `spark` have no web app deps):
-
-    docker compose --profile spark exec spark-master \
-        python3 -m pytest tests/data/spark --noconftest -p tests.data.spark.fixtures
-
-The tests are skipped when pyspark or Java is missing (the Windows host has no Java).
+Skipped without pyspark or Java. In the Spark container:
+`python3 -m pytest tests/data/spark --noconftest -p tests.data.spark.fixtures`.
 """
 
 from __future__ import annotations

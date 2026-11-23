@@ -139,8 +139,8 @@ def workspaces(tmp_path, monkeypatch):
     pairs = tmp_path / "pairs.csv"
     pairs.write_text(
         "ingredient_a,ingredient_b,severity,ddinter_id_a,ddinter_id_b,source_url,license\n"
-        "metformin,warfarin,Minor,D1,D2,https://ddinter2.scbdd.com/,CC BY-NC-SA 4.0\n"
-        "aspirin,warfarin,Major,D3,D2,https://ddinter2.scbdd.com/,CC BY-NC-SA 4.0\n",
+        "metformin,warfarin,Minor,DDI001,DDI002,https://ddinter2.scbdd.com/,CC BY-NC-SA 4.0\n"
+        "aspirin,warfarin,Major,DDI003,DDI002,https://ddinter2.scbdd.com/,CC BY-NC-SA 4.0\n",
         encoding="utf-8",
     )
     monkeypatch.setattr(rag_job, "WORKSPACES", (v1, v2))

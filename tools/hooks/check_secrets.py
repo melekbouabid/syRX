@@ -1,18 +1,7 @@
 """Pre-commit hook: reject staged files that contain a hard-coded secret.
 
-    python tools/hooks/check_secrets.py FILE [FILE ...]      # pre-commit passes the staged files
-
-A line is reported when it holds one of:
-- an assignment of a quoted value of 8 characters or more to a variable named like a secret
-  (api_key, api-key, apikey, secret, token, password, also with a prefix such as DB_PASSWORD,
-  in code, YAML, TOML or a dict literal);
-- an AWS access key id: AKIA followed by exactly 16 upper-case letters or digits;
-- an API key in the `sk-...` format (OpenAI, Anthropic, Stripe and others).
-
-Each finding prints `<file>:<line>: potential secret detected (<kind>)`, never the value
-itself; the exit code is 1 if anything was found, 0 otherwise. A line that is a known false
-positive is skipped when it carries the marker `pragma: allowlist secret` (the convention of
-the detect-secrets tool). Secrets belong in `.env` (git-ignored), see `.env.example`.
+Finds secret-like assignments, AWS key ids and `sk-...` keys; never prints the value.
+A line with `pragma: allowlist secret` is skipped.
 """
 
 from __future__ import annotations

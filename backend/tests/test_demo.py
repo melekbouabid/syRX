@@ -1,8 +1,6 @@
-"""Demo gallery: only listed test-split photos that exist are served, read only.
+"""Demo gallery: only listed photos no served model saw in training are served, read only.
 
-A photo must be in the v2 test split (the detector's) and not in the v1 train or val split
-(the classifier's): never seen in training by a served model (D105). Grad-CAM pictures are
-served next to the photos when they were precomputed (D104).
+Grad-CAM pictures are served next to the photos when they were precomputed.
 """
 
 from __future__ import annotations
@@ -95,7 +93,7 @@ def test_no_gallery_file_means_an_empty_gallery(user: TestClient) -> None:
     assert user.get("/api/demo/images").json()["items"] == []
 
 
-# --- never seen in training by the served models (D105) --------------------------------------
+# --- never seen in training by the served models --------------------------------------------
 
 # F: in the v2 test split, not in v1 at all (the v1 classifier never had it): served.
 # G: in the v1 test split but not in the v2 test split (the v2 detector trained on it): refused.
@@ -143,7 +141,7 @@ def test_no_v2_test_split_file_means_an_empty_gallery(user: TestClient, photos: 
     assert user.get("/api/demo/images").json()["items"] == []
 
 
-# --- Grad-CAM (D104) --------------------------------------------------------------------------
+# --- Grad-CAM ---------------------------------------------------------------------------------
 
 
 def test_gradcam_name_flattens_the_disc_folder() -> None:
@@ -196,12 +194,11 @@ def test_the_shipped_gallery_was_never_seen_in_training() -> None:
     for row in gallery:
         assert row["path"] in test_v2 and test_v2[row["path"]]["image_type"] == "C3PI_Test"
         assert v1.get(row["path"], {}).get("split", "test") == "test", row["path"]
-        assert row["class_id"] in classes  # a class of the served classifier (v2 ids, D119)
+        assert row["class_id"] in classes  # a class of the served classifier (v2 ids)
 
 
 def test_the_shipped_gallery_is_in_the_detection_holdout() -> None:
-    """Stricter, with the DVC data: test_holdout.txt of D93 (no photo of the same session in
-    the v1 train or val split) and the same product in v1 and v2."""
+    """Stricter, with the DVC data: photos in test_holdout.txt, same product in v1 and v2."""
     holdout = PROJECT_DIR / "data" / "processed" / "c3pi" / "datasets_v2" / "detect"
     if not (holdout / "test_holdout.txt").is_file():
         pytest.skip("DVC data not pulled (data/processed/c3pi/datasets_v2/detect)")

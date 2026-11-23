@@ -211,7 +211,7 @@ async def test_pubmed_without_ingredients_explains_what_to_do(
 async def test_pubmed_rejects_the_removed_synergy_query_modes(
     settings: Settings, mock_http: respx.MockRouter
 ) -> None:
-    """`pairs` and `drugs` read the original synergy tables, which no longer exist (D85)."""
+    """The removed `pairs` and `drugs` query modes are rejected."""
     settings.sources["pubmed"] = SourceConfig(enabled=True, options={"mode": "pairs"})
     result = await run(settings, "pubmed")
     assert result.outcome == NEEDS_ATTENTION and "unknown PubMed query mode" in result.message

@@ -118,8 +118,7 @@ def test_http_transport_refuses_a_non_loopback_host() -> None:
 
 
 def test_the_server_uses_the_agents_toolbox_and_retrieval_setting(tmp_path: Path) -> None:
-    """Same retrieval as the chat (D123): with query rewriting on, search_documents searches
-    the LLM's English query, exactly like the agent's tool."""
+    """Same retrieval as the chat: with query rewriting on, the LLM's English query is searched."""
     llm = FakeChatModel(prompts=[], answer="warfarin contraindications")
     toolbox = default_toolbox(
         _settings(tmp_path, rag_query_rewrite=True), FakeEmbedder(DIM), llm=llm
@@ -152,8 +151,7 @@ def test_instructions_give_the_real_catalogue(tmp_path: Path) -> None:
 
 
 def test_an_ingredient_without_documents_is_said_so(tmp_path: Path) -> None:
-    """A class of v2 whose ingredient has no indexed document (D119): pill data, no label
-    excerpt, and an explicit note instead of a silent empty result."""
+    """An ingredient without indexed document gets an explicit note, not a silent empty result."""
     server = _server(tmp_path)
 
     async def run() -> tuple[Any, Any, Any]:

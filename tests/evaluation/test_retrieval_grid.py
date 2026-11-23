@@ -1,5 +1,4 @@
-"""Retrieval grid of step 3.3: corpus variants, relevance of their chunks, metrics, selection
-of the agent's setting (src/evaluation/chunking_variants.py, src/evaluation/retrieval_grid.py)."""
+"""Retrieval grid: corpus variants, relevance of their chunks, metrics and selection."""
 
 from __future__ import annotations
 
@@ -177,7 +176,7 @@ def test_the_corpus_v2_has_the_served_index_only(tmp_path: Path) -> None:
 
 def test_selection_compares_the_configurations_of_one_corpus() -> None:
     results = {
-        "v1-best": {"mrr": 0.9, "ms_per_question": 100},  # no `corpus`: recorded before D126
+        "v1-best": {"mrr": 0.9, "ms_per_question": 100},  # no `corpus`: an older record
         "v2-best": {"mrr": 0.8, "ms_per_question": 100, "corpus": "v2"},
         "v2-next": {"mrr": 0.7, "ms_per_question": 100, "corpus": "v2"},
     }
