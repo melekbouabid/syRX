@@ -3,7 +3,8 @@
 Identify pills on a photo: a detector finds every pill, a classifier names each one among 380
 C3PI classes. The steps below go from raw images to the served API, in order. Results:
 [results.md](results.md). Commands run from the repository root; training ones use the training
-venv (`.venv-train`) and the MLflow server (`docker compose up -d mlflow`).
+venv (`.venv-train`) and the MLflow server (`docker compose up -d mlflow`). Executed notebooks
+with the tables, figures and examples of each step: [notebooks/](../../notebooks/README.md).
 
 ```mermaid
 flowchart LR
