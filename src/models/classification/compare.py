@@ -10,15 +10,22 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from src.models.detection.compare import BEGIN, END, replace_between_markers
+from src.models.detection import compare as detection_compare
 from src.utils import mlflow_utils as mu
 from src.utils.console import console_utf8
 
 __all__ = ["BEGIN", "END", "Row", "collect", "markdown_table", "plot", "replace_between_markers"]
 
 ROOT = mu.ROOT
-DOC = ROOT / "docs" / "module1" / "kaggle_classifieurs.md"
-FIGURE = ROOT / "docs" / "module1" / "assets" / "classifieurs_comparaison.png"
+DOC = ROOT / "docs" / "module1" / "results.md"
+FIGURE = ROOT / "models" / "compare" / "classifiers_comparison.png"
+BEGIN, END = "<!-- classifiers:begin -->", "<!-- classifiers:end -->"
+
+
+def replace_between_markers(text: str, table: str) -> str:
+    return detection_compare.replace_between_markers(text, table, BEGIN, END)
+
+
 COMPARED = "tags.stage LIKE 'compare%' and tags.smoke = 'false' and tags.task = 'classify'"
 CANDIDATE, CHAMPION = "#2a78d6", "#eb6834"
 INK, MUTED, GRID = "#0b0b0b", "#898781", "#e1e0d9"
