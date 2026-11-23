@@ -1,21 +1,7 @@
-"""Pill scan with ONNX Runtime: detect every pill, crop it, identify it.
+"""Pill scan with ONNX Runtime: detect every pill, crop it, identify it (numpy and OpenCV only).
 
-Module 1 serving code, imported by the web API (backend) and by the agent tools.
-
-Same two stages and the same pre- and post-processing as the training code in `../training/`
-(Ultralytics YOLO11 letterbox and NMS for the detector, the 20 %-margin square crop of
-`src.data.autolabel.square_crop` for the classifier), re-implemented with numpy and
-OpenCV so the API needs neither PyTorch nor Ultralytics.
-
-The model directory (`Settings.models_dir`) holds what `python -m src.models.registry publish`
-writes:
-
-    detector.onnx     YOLO11 detection, one class "pill", input 1x3xSxS
-    classifier.onnx   YOLO11 classification, outputs probabilities, input 1x3xCxC
-    models.json       optional: where the two files come from (MLflow model and version)
-
-Class names come from the ONNX metadata that Ultralytics writes (`names`: index -> folder
-name such as "007"); the folder name is the class_id of config/pill_classes.csv.
+Loads detector.onnx, classifier.onnx and models.json written by `python -m src.models.registry
+publish`; class names come from the ONNX metadata `names`.
 """
 
 from __future__ import annotations

@@ -1,10 +1,6 @@
-"""Saved reports: what they hold, their share links, and the seal on chat answers.
+"""Saved reports: their content, share links and the seal on chat answers.
 
-A report is built by the server: the pills and ingredients come in as ids and names, and the
-interaction check is run again here, so a report (which can be shared) never holds a result
-the server did not compute. Chat answers come back from the browser, so each must carry the
-seal the server put on it when it answered (`ChatResult.seal`): an edited answer, for
-example one that calls a combination safe, is refused.
+The server rebuilds every report; a chat answer is accepted only with the seal it was given.
 """
 
 from __future__ import annotations

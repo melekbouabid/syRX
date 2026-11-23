@@ -1,11 +1,6 @@
-"""Data drift of the scanned photos: GET /monitoring/drift (step 2.8, docs/module1/derive.md).
+"""GET /monitoring/drift: data drift of the scanned photos (aggregate numbers only, no sign-in).
 
-Every photo scanned by POST /predict, /predict/visualize or /api/scan adds eight numbers to a
-sliding window in memory (app/drift.py): no image, no file name, nothing about the user. This
-route compares the window with the statistics of the reference photos (Kolmogorov-Smirnov test
-and PSI per statistic) and says whether the photos drift. No sign-in needed, like /health:
-the report holds aggregate numbers only. POST /monitoring/drift/reset (administrator) empties
-the window, e.g. before the demonstration of docs/module1/derive.md.
+POST /monitoring/drift/reset (administrator) empties the window.
 """
 
 from __future__ import annotations

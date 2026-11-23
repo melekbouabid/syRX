@@ -1,9 +1,6 @@
-"""Read access to the Tujya medicine tables (app/pharma.py): pill classes, their active
-ingredients, and the interactions between ingredients, each with its source.
+"""Read access to the medicine tables: pill classes, ingredients and interactions, with sources.
 
-Safety wording (docs/project_rules.md): a pair absent from the table is "aucune interaction
-connue dans cette base de données", never "safe"; DDInter's "Unknown" severity is an
-interaction whose level is not graded, and is always reported as an interaction.
+A pair absent from the table is "no known interaction in this database", never "safe".
 """
 
 from __future__ import annotations

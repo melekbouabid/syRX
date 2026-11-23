@@ -1,8 +1,4 @@
-"""Profile photo and signature: decoded, cleaned and re-encoded before they are stored.
-
-An uploaded file is never kept as it was sent: decoding and re-encoding drops its metadata
-(location, camera) and anything that is not pixels.
-"""
+"""Profile photo and signature: decoded and re-encoded before storage, which drops all metadata."""
 
 from __future__ import annotations
 

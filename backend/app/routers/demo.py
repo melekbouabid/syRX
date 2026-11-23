@@ -1,13 +1,6 @@
-"""Demo gallery: a few C3PI test photos, so the scan can be shown without real pills.
+"""Demo gallery: C3PI test photos no served model saw in training, and their Grad-CAM pictures.
 
-Which photos may be shown is decided by app/gallery.py: only photos that no served model saw
-in training (v2 test split for the detector, not in the v1 train or val split for the
-classifier; decisions D52 and D105). Nothing else on disk can be read through these routes.
-Read only; sign-in required like the scan.
-
-Grad-CAM: `GET /api/demo/images/{id}/gradcam` serves the picture precomputed for that photo
-with the PyTorch weights of the served classifier (`python -m src.models.gradcam_gallery`,
-decision D104); the API itself runs ONNX models only, without PyTorch.
+Read only; sign-in required. Grad-CAM is precomputed offline: the API runs ONNX only.
 """
 
 from __future__ import annotations
@@ -112,12 +105,7 @@ def read_image(image_id: int, settings: SettingsDep, thumbnail: bool = False) ->
     },
 )
 def read_gradcam(image_id: int, settings: SettingsDep) -> Response:
-    """The photo with the Grad-CAM heat map of the classifier over each detected pill.
-
-    Precomputed offline with the PyTorch weights of the served classifier, for the top-1
-    class the API gives (decision D104). Same proportions as the photo, so the boxes of the scan
-    fit on it.
-    """
+    """The photo with the classifier's Grad-CAM heat map over each detected pill (precomputed)."""
     file = _photo(image_id, settings).gradcam
     if not file.is_file():
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No Grad-CAM for this photo")

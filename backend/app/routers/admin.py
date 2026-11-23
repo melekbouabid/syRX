@@ -1,9 +1,4 @@
-"""Administration: every route here requires a signed-in administrator.
-
-Accounts (list, create, edit, reset a password, delete), the numbers of the dashboard, the
-activity log, the daily usage and the CSV exports. What an administrator does to an account
-is itself written to the activity log.
-"""
+"""Administration routes (administrator only): accounts, dashboard, activity, usage, CSV exports."""
 
 from __future__ import annotations
 

@@ -1,8 +1,6 @@
-"""GET /api/documents: the documents indexed for the RAG, their metadata and chunks (D114).
+"""GET /api/documents: the documents indexed for the RAG, their metadata and chunks.
 
-The same chunks the agent searches (Qdrant collection tujya_chunks_v2 by default, D126), grouped
-into documents (src/rag/chunking.py). Filters: type, ingredient, section, language,
-source, text query. Sign-in required, as for the chat that cites them.
+Filters: type, ingredient, section, language, source, text query. Sign-in required.
 """
 
 from __future__ import annotations

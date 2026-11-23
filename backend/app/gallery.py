@@ -1,11 +1,6 @@
-"""The demo gallery list, shared by the API (routers/demo.py) and the Grad-CAM precompute
-(`src/models/gradcam_gallery.py`, training venv): standard library only.
+"""The demo gallery list, shared by the API and the Grad-CAM precompute (standard library only).
 
-`config/demo_gallery.csv` is chosen by hand (decisions D52 and D105). A photo is kept only if
-no served model saw it in training: it must be a consumer photo of the C3PI v2 **test** split
-(`config/splits/c3pi_v2/test.csv`, the detector's split, D89) and must not be in the v1 train
-or val split (`config/splits/selected_images.csv`, the classifier's split), and the file must
-exist under the C3PI image folder.
+A photo is kept only if no served model saw it in training (v2 test split, not in v1 train/val).
 """
 
 from __future__ import annotations
@@ -23,7 +18,7 @@ class DemoPhoto:
     file: Path
     class_id: int
     why: str
-    gradcam: Path  # may not exist: computed for the listed photos only (D104)
+    gradcam: Path  # may not exist: computed for the listed photos only
 
 
 def gradcam_name(path: str) -> str:

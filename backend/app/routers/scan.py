@@ -1,9 +1,6 @@
-"""POST /api/scan: one photo in, every detected pill out with its top-5 identifications,
-or the printed text of a medicine box linked to its active ingredients (step 2.7).
+"""POST /api/scan: one photo in, every pill with its top-5 identifications, or a box's ingredients.
 
-Sign-in required, like the medicine routes: the demo uses the demo account (decision D46).
-The photo's kind (pill, box, unknown) comes from app.boxes.decide_kind (D111): a box is
-never given a pill class, and a photo that is neither is refused instead of guessed.
+Sign-in required. A box never gets a pill class, and a photo that is neither is refused.
 """
 
 from __future__ import annotations
@@ -122,7 +119,7 @@ def _run(
     except InvalidImage as exc:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, str(exc)) from exc
     output = scanner.scan(image)
-    if drift is not None:  # eight numbers of the photo (data drift, step 2.8), never the photo
+    if drift is not None:  # eight numbers of the photo (data drift), never the photo
         drift.record_scan(image, output)
     ocr, match = None, None
     engine = boxes.ocr.get() if boxes is not None else None
@@ -220,16 +217,10 @@ async def scan(
     db: PharmaSession,
     user: CurrentUser,
 ) -> ScanResult:
-    """Detect every pill in the photo, then identify each one among the 150 C3PI classes;
-    or read a medicine box and link its text to active ingredients.
+    """Detect and identify every pill in the photo, or read a medicine box.
 
-    `kind` says what the photo shows: `pill` (pills below), `box` (`box`: lines read, brand,
-    ingredients with their source; no pill class is given to a box) or `unknown` (neither:
-    refused, nothing is guessed). Identification is a suggestion: `needs_confirmation` is
-    true when the most probable class is below `confirm_threshold`, and the app then asks
-    the user to pick from the top-5 or search the list (GET /api/pills). `timings.server_ms`
-    is the whole request on the server; the app shows it next to the latency it measures in
-    the browser.
+    `kind` is `pill`, `box` or `unknown` (refused). `needs_confirmation` is true below
+    `confirm_threshold`: the app then asks the user to pick from the top-5.
     """
     started = time.perf_counter()
     if image.content_type not in ALLOWED_TYPES:
