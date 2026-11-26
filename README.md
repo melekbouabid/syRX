@@ -34,6 +34,12 @@ data cover marketed products (US pills from NLM C3PI, DDInter). The assistant ne
 (and never says a combination is safe); a pill match is a suggestion, always shown with its
 confidence.
 
+## Team
+
+- Melek Bouabid
+- Mohamed Raed Bouhali
+- Ilef Ben Hassen
+
 ## Architecture
 
 ```mermaid
