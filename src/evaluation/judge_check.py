@@ -11,9 +11,10 @@ results are left as they are; everything here reads that new file.
   noise sensitivity on the first `--noise-limit` 20 only, it is the slowest), each metric
   timed. Results in src/evaluation/results/ragas_context.json, one MLflow run.
 - `sheet`: 30 answers for human labels, half judged faithful (faithfulness = 1: every claim
-  supported) and half not, in a shuffled order, with the passages the judge read (the first 4
-  sources, 900 characters each, as the LLM saw them); only answers whose citations all point
-  to those 4 sources. The judge's verdict is not written. JSON rows for the labelling sheet.
+  supported) and half not as far as such answers exist, in a shuffled order, with the
+  passages the judge read (the first 4 sources, 900 characters each, as the LLM saw them);
+  only answers whose citations all point to those 4 sources. The judge's verdict is not
+  written. JSON rows for the labelling sheet.
 - `kappa`: the human labels (src/evaluation/human_labels.csv: id, label) against the judge
   (1 when faithfulness = 1); Cohen's kappa, confusion matrix, Landis & Koch; results in
   src/evaluation/results/judge_kappa.json, one MLflow run.

@@ -267,6 +267,28 @@ answers have no score and are left out of the mean. The whole run took 4772 s (a
 development laptop. This faithfulness is not compared with the 0.9122 of the corpus-v2 row
 above: it is another generation of the same setting.
 
+### The judge against human labels
+
+`python -m src.evaluation.judge_check sheet` drew 30 of these answers (seed 0) for a person to
+label: faithful (1) when every claim is supported by the passages the judge read, else 0. The
+judge's verdict was not on the sheet. It aims at half judged faithful and half not, but only 8
+answers judged not faithful cite passages within the 4 the judge read, so the sheet holds 22
+judged faithful and 8 not. `python -m src.evaluation.judge_check kappa` compares the labels
+([human_labels.csv](../../src/evaluation/human_labels.csv)) with the judge (1 when
+faithfulness = 1). Source: [judge_kappa.json](../../src/evaluation/results/judge_kappa.json),
+experiment `tujya-rag-generation`, run `3d66bbed`.
+
+| | Judge 1 | Judge 0 |
+|---|---:|---:|
+| **Human 1** | 14 | 2 |
+| **Human 0** | 8 | 6 |
+
+Observed agreement 0.667 (20 of 30), agreement expected by chance 0.516, **Cohen's kappa
+0.312**: "fair" on the Landis & Koch scale. The labels find 16 answers faithful, the judge 22.
+8 of the 10 disagreements are answers the judge scored 1 and the label marks unfaithful: the
+judge is more often too lenient than too strict, so the faithfulness means above are likely
+optimistic.
+
 ## Brand questions
 
 8 questions naming a medicine brand ("Panadol", "Doliprane"...), qwen2.5:3b, full agent
@@ -309,9 +331,10 @@ MLflow run `6d3e6790`, Registry `tujya-tox21` v2). Mean test ROC-AUC **0.7252**;
   there, Exact Match, token F1, ROUGE and BLEU measure the language gap. The semantic similarity
   uses bge-m3, the embedding model of the retriever itself.
 - **A local judge of 3.8 B parameters** (phi4-mini) scores RAGAS. Its errors are measured only
-  by Cohen's kappa on 30 answers labelled by one person, the author, chosen half judged faithful
-  and half not, so their mix differs from the whole set (the citation-judge control of
-  `judge_control.json` used an earlier judge, gemma3:4b).
+  by Cohen's kappa (0.312, "fair") on 30 answers labelled by one person, the author: 22 judged
+  faithful and 8 not, so their mix differs from the whole set, and with 30 items the kappa is
+  itself uncertain (the citation-judge control of `judge_control.json` used an earlier judge,
+  gemma3:4b).
 - **RAGAS on a new generation and on subsets.** The metrics that read the passages ran on a new
   generation of the served setting (17 of its 96 answers are identical to the recorded ones:
   temperature 0.1), not on the recorded answers; noise sensitivity on the first 20 answered questions only (17
