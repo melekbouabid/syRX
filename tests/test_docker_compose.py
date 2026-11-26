@@ -36,3 +36,21 @@ def test_adminer_has_no_password(services: dict) -> None:
     environment = services["adminer"].get("environment", {})
     assert environment.get("ADMINER_DEFAULT_SERVER") == "postgres"
     assert not any("PASSWORD" in key for key in environment)
+
+
+TOOLS_CONFIG = COMPOSE_FILE.parent / "frontend" / "src" / "lib" / "tools.ts"
+TOOL_PORT_VARS = {
+    "mlflow": "MLFLOW_PORT",
+    "qdrant": "QDRANT_PORT",
+    "adminer": "ADMINER_PORT",
+    "spark": "SPARK_UI_PORT",
+}
+
+
+def test_admin_tools_ports_match_compose_defaults() -> None:
+    compose = COMPOSE_FILE.read_text(encoding="utf-8")
+    tools = TOOLS_CONFIG.read_text(encoding="utf-8")
+    for tool, variable in TOOL_PORT_VARS.items():
+        default = re.search(rf"\$\{{{variable}:-(\d+)\}}", compose)
+        assert default, variable
+        assert re.search(rf"^\s*{tool}: {default.group(1)},$", tools, re.M), tool
