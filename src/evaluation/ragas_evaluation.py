@@ -52,7 +52,13 @@ METRIC_INPUTS = {
     "answer_relevancy": ("user_input", "response"),
     "context_precision": ("user_input", "retrieved_contexts", "reference"),
     "context_recall": ("user_input", "retrieved_contexts", "reference"),
+    # Measured on a subset of regenerated answers (src/evaluation/judge_check.py), not used to
+    # choose the champion.
+    "context_utilization": ("user_input", "response", "retrieved_contexts"),
+    "noise_sensitivity": ("user_input", "response", "retrieved_contexts", "reference"),
+    "factual_correctness": ("response", "reference"),
 }
+EXTRA_METRICS = ("context_utilization", "noise_sensitivity", "factual_correctness")
 JUDGE_PROMPT = """You check citations. Answer with one word: yes or no.
 SOURCE:
 {source}
@@ -171,6 +177,16 @@ def needs_metric(metric: str, sample: dict[str, Any]) -> bool:
     """Reference-based metrics only for questions with a reference; none for an empty answer."""
     if metric in ("faithfulness", "answer_relevancy"):
         return bool(sample["response"])
+    if metric == "context_utilization":
+        return bool(sample["response"]) and bool(sample["retrieved_contexts"])
+    if metric == "factual_correctness":
+        return bool(sample["response"]) and bool(sample["reference"])
+    if metric == "noise_sensitivity":
+        return (
+            bool(sample["response"])
+            and bool(sample["reference"])
+            and bool(sample["retrieved_contexts"])
+        )
     return bool(sample["reference"]) and bool(sample["retrieved_contexts"])
 
 
@@ -184,9 +200,12 @@ def _num(value: Any) -> float | None:
 
 def _ragas_metric(metric: str) -> Any:
     from ragas.metrics import (
+        ContextUtilization,
+        FactualCorrectness,
         Faithfulness,
         LLMContextPrecisionWithReference,
         LLMContextRecall,
+        NoiseSensitivity,
         ResponseRelevancy,
     )
 
@@ -195,6 +214,9 @@ def _ragas_metric(metric: str) -> Any:
         "answer_relevancy": ResponseRelevancy,
         "context_precision": LLMContextPrecisionWithReference,
         "context_recall": LLMContextRecall,
+        "context_utilization": ContextUtilization,
+        "noise_sensitivity": NoiseSensitivity,
+        "factual_correctness": FactualCorrectness,
     }[metric]()
 
 
@@ -241,6 +263,7 @@ def run_ragas(
     cache_path: Path | None = None,
     *,
     compute: bool = True,
+    metrics: tuple[str, ...] = RAGAS_METRICS,
 ) -> dict[str, dict[str, float | None]]:
     """RAGAS scores per question id and metric (None: not applicable or the judge failed).
     With `compute=False`, a score missing from the cache is an error."""
@@ -250,7 +273,7 @@ def run_ragas(
     cache = read_cache(cache_path)
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     size = int(cfg["ragas"]["batch"])
-    for metric in RAGAS_METRICS:
+    for metric in metrics:
         todo = [
             (qid, s)
             for qid, s in samples.items()
@@ -277,7 +300,7 @@ def run_ragas(
     for qid, sample in samples.items():
         scores[qid] = {
             m: cache.get(cache_key(m, sample, judge)) if needs_metric(m, sample) else None
-            for m in RAGAS_METRICS
+            for m in metrics
         }
     return scores
 
