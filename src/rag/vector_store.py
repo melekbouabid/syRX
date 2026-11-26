@@ -7,6 +7,10 @@ numpy on SQLite, `TUJYA_VECTOR_STORE=sql`) serves the tests and the pgvector bas
 
 Indexing is idempotent: a chunk is embedded again only when its content hash changes.
 Run: `python -m src.rag.vector_store index [--pull] [--chunks PATH] [--copy-from-sql]`.
+One document at a time (same chunking, deterministic point ids, no duplicate on a re-run):
+`python -m src.rag.vector_store add|update --document doc.json`, `delete|show --doc-id ID`;
+trials on a copy: `sample --to COLLECTION --n 300`, `drop --collection COLLECTION`. Writing
+to a served collection needs `--allow-served`; a served collection is never dropped.
 """
 
 from __future__ import annotations
@@ -54,6 +58,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.exc import OperationalError
 
 from app.config import Settings
+from src.rag import chunking
 from src.rag.embedder import (
     Embedder,
     FastEmbedBM25,
@@ -157,6 +162,10 @@ class VectorStore(Protocol):
     def drop(self) -> None: ...
 
     def hashes(self) -> dict[str, str]: ...
+
+    def document_hashes(self, doc_id: str) -> dict[str, str]:
+        """chunk_id -> content_hash of the chunks of one document (empty when not indexed)."""
+        ...
 
     def get_meta(self) -> dict[str, str]: ...
 
@@ -292,6 +301,14 @@ class ChunkStore:
     def hashes(self) -> dict[str, str]:
         with self.engine.connect() as conn:
             rows = conn.execute(select(self.table.c.chunk_id, self.table.c.content_hash))
+            return {row.chunk_id: row.content_hash for row in rows}
+
+    def document_hashes(self, doc_id: str) -> dict[str, str]:
+        if not self.exists():
+            return {}
+        t = self.table
+        with self.engine.connect() as conn:
+            rows = conn.execute(select(t.c.chunk_id, t.c.content_hash).where(t.c.doc_id == doc_id))
             return {row.chunk_id: row.content_hash for row in rows}
 
     def get_meta(self) -> dict[str, str]:
@@ -516,6 +533,29 @@ class QdrantStore:
             for r in self._scroll(["chunk_id", "content_hash"])
             if r.payload
         }
+
+    def document_hashes(self, doc_id: str) -> dict[str, str]:
+        if not self.exists():
+            return {}
+        condition = qm.Filter(
+            must=[qm.FieldCondition(key="doc_id", match=qm.MatchValue(value=doc_id))]
+        )
+        found: dict[str, str] = {}
+        offset: Any = None
+        while True:
+            page, offset = self.client.scroll(
+                self.collection,
+                scroll_filter=condition,
+                limit=PAGE,
+                offset=offset,
+                with_payload=["chunk_id", "content_hash"],
+            )
+            for record in page:
+                if record.payload:
+                    payload = record.payload
+                    found[str(payload["chunk_id"])] = str(payload["content_hash"])
+            if offset is None:
+                return found
 
     def get_meta(self) -> dict[str, str]:
         if not self.exists():
@@ -830,6 +870,171 @@ def copy_index(
     }
 
 
+# --- One document at a time: add, update, delete -----------------------------------------------
+# A document is one JSON object. Its chunk ids come from its doc_id, section and chunk index, so
+# the points of a document are always the same: adding it again overwrites, never duplicates.
+
+DOCUMENT_FIELDS = ("doc_id", "doc_type", "title", "text", "source_name")
+
+
+def document_rows(document: dict[str, Any]) -> list[dict[str, Any]]:
+    """One document -> its chunk rows (the columns `read_chunks` gives).
+
+    Required: doc_id, doc_type, title, text, source_name. Optional: section (default
+    "document"), url, date, version, license, language (default "en"), ingredients,
+    mentioned_ingredients, article_type, is_retracted. The text is cut like the corpus
+    (`chunking.split_text`); a dosage section is refused, as in the corpus.
+    """
+    missing = [name for name in DOCUMENT_FIELDS if not str(document.get(name) or "").strip()]
+    if missing:
+        raise ValueError(f"document without {', '.join(missing)}")
+    section = str(document.get("section") or "document")
+    if chunking.FORBIDDEN_SECTION.search(section):
+        raise ValueError(f"dosage section must never be indexed: {section}")
+
+    def names(key: str) -> list[str]:
+        return sorted({str(n).strip().lower() for n in document.get(key) or [] if str(n).strip()})
+
+    ingredients = names("ingredients")
+    mentioned = [n for n in names("mentioned_ingredients") if n not in ingredients]
+    doc_id = str(document["doc_id"])
+    rows = [
+        {
+            "chunk_id": chunking.chunk_id("document", doc_id, section, index),
+            "doc_id": doc_id,
+            "doc_type": str(document["doc_type"]),
+            "ingredients": ingredients,
+            "mentioned_ingredients": mentioned,
+            "section": section,
+            "chunk_index": index,
+            "title": str(document["title"]),
+            "text": piece,
+            "source_name": str(document["source_name"]),
+            "url": str(document.get("url") or ""),
+            "date": str(document.get("date") or ""),
+            "version": str(document.get("version") or ""),
+            "license": str(document.get("license") or ""),
+            "article_type": document.get("article_type"),
+            "is_retracted": bool(document.get("is_retracted")),
+            "language": str(document.get("language") or "en"),
+        }
+        for index, piece in enumerate(chunking.split_text(str(document["text"])))
+    ]
+    if not rows:
+        raise ValueError("document without text")
+    return rows
+
+
+async def write_document(
+    store: VectorStore,
+    embedder: Embedder,
+    rows: list[dict[str, Any]],
+    *,
+    sparse: SparseEncoder | None = None,
+    must_exist: bool | None = None,
+    batch_size: int = 32,
+) -> dict[str, Any]:
+    """Upsert the chunks of one document and delete its chunks the new version no longer has.
+
+    `must_exist`: True (update) refuses a document that is not indexed, False (add) one that is,
+    None accepts both. Only the chunks whose content hash changed are embedded again; an
+    unchanged document changes nothing. The index must use the same embedding model (and, when
+    it keeps sparse vectors, the same sparse encoder).
+    """
+    doc_ids = {row["doc_id"] for row in rows}
+    if len(doc_ids) != 1:
+        raise ValueError(f"the chunks of exactly one document are expected, got {sorted(doc_ids)}")
+    (doc_id,) = doc_ids
+    meta = store.get_meta() if store.exists() else {}
+    if meta.get("model", embedder.model) != embedder.model:
+        raise ValueError(f"the index uses {meta['model']}, not {embedder.model}")
+    if meta.get("dim", str(store.dim)) != str(store.dim):
+        raise ValueError(f"the index has {meta['dim']} dimensions, not {store.dim}")
+    sparse = sparse if store.kind == "qdrant" else None  # sparse vectors live in Qdrant only
+    indexed_sparse = meta.get("sparse_model", "")
+    if indexed_sparse and (sparse is None or sparse.name != indexed_sparse):
+        raise ValueError(f"the index keeps {indexed_sparse} sparse vectors: use that encoder")
+    if meta and not indexed_sparse:
+        sparse = None  # a dense-only index stays dense-only
+    store.create()
+    existing = store.document_hashes(doc_id)
+    if must_exist is True and not existing:
+        raise LookupError(f"{doc_id} is not indexed: use add")
+    if must_exist is False and existing:
+        raise ValueError(f"{doc_id} is already indexed: use update")
+    wanted = {row["chunk_id"]: content_hash(row, embedder.model) for row in rows}
+    todo = [row for row in rows if existing.get(row["chunk_id"]) != wanted[row["chunk_id"]]]
+    stale = sorted(set(existing) - set(wanted))
+    for start in range(0, len(todo), batch_size):
+        batch = todo[start : start + batch_size]
+        texts = [f"{r['title']}\n{r['text']}" for r in batch]
+        vectors = await embedder.embed(texts)
+        sparse_vectors = sparse.documents(texts) if sparse is not None else [None] * len(batch)
+        store.write(
+            [
+                {
+                    **{k: r.get(k) for k in METADATA_COLUMNS},
+                    "content_hash": wanted[r["chunk_id"]],
+                    "embedding_model": embedder.model,
+                    "embedding": vector,
+                    "sparse": sparse_vector,
+                }
+                for r, vector, sparse_vector in zip(batch, vectors, sparse_vectors, strict=True)
+            ]
+        )
+    if todo or stale:
+        values = {"indexed_at": now()}  # the API's retriever reloads on a new indexed_at
+        if not meta:
+            values.update({"model": embedder.model, "dim": str(store.dim)})
+            if sparse is not None:
+                values["sparse_model"] = sparse.name
+        store.finish(stale, values)
+        store.finish([], {"chunks": str(store.info()["points"])})
+    return {
+        "doc_id": doc_id,
+        "chunks": len(rows),
+        "embedded": len(todo),
+        "deleted": len(stale),
+        "unchanged": len(rows) - len(todo),
+    }
+
+
+def delete_document(store: VectorStore, doc_id: str) -> dict[str, Any]:
+    """Delete every chunk of one document; 0 deleted when it is not indexed."""
+    existing = store.document_hashes(doc_id)
+    if existing:
+        store.finish(sorted(existing), {"indexed_at": now()})
+        store.finish([], {"chunks": str(store.info()["points"])})
+    return {"doc_id": doc_id, "deleted": len(existing)}
+
+
+def sample_collection(source: QdrantStore, target: QdrantStore, n: int) -> dict[str, Any]:
+    """Copy `n` points of `source` (payload, dense and sparse vectors, index metadata) into a new
+    `target` collection, for trials. The source is only read."""
+    if target.collection == source.collection:
+        raise ValueError("the sample must go to another collection")
+    if not source.exists():
+        raise ValueError(f"{source.collection} does not exist")
+    if target.dim != source.dim:
+        raise ValueError(f"dimension {source.dim} -> {target.dim}")
+    records, _ = source.client.scroll(
+        source.collection, limit=n, with_payload=True, with_vectors=True
+    )
+    target.drop()
+    target.create()
+    points = [qm.PointStruct(id=r.id, vector=r.vector or {}, payload=r.payload) for r in records]
+    for start in range(0, len(points), PAGE):
+        target.client.upsert(target.collection, points=points[start : start + PAGE], wait=True)
+    meta = {
+        **source.get_meta(),
+        "chunks": str(len(points)),
+        "indexed_at": now(),
+        "copied_from": source.collection,
+    }
+    target.client.update_collection(target.collection, metadata=meta)
+    return {"collection": target.collection, "copied": len(points), "from": source.collection}
+
+
 # --- Command line ------------------------------------------------------------------------------
 
 
@@ -869,10 +1074,91 @@ def run_index(args: argparse.Namespace, settings: Settings) -> None:
     print(json.dumps(stats))
 
 
+def protected(settings: Settings) -> set[str]:
+    """The served collections: changed only with --allow-served, never dropped."""
+    return {settings.qdrant_collection, COLLECTION, "tujya_chunks_v2"}
+
+
+def run_document(args: argparse.Namespace, settings: Settings) -> None:
+    """add | update | delete | show one document, sample | drop a trial collection."""
+    if args.command == "drop":
+        if args.collection in protected(settings):
+            sys.exit(f"{args.collection} is a served collection: it is never dropped here")
+    elif args.command in ("add", "update", "delete", "sample"):
+        target = args.to if args.command == "sample" else args.collection
+        if target in protected(settings) and not args.allow_served:
+            sys.exit(f"{target} is a served collection: pass --allow-served to change it")
+    connect = QdrantStore.connect
+    if args.command == "sample":
+        source = connect(args.qdrant_url, args.dim, args.collection, timeout=120)
+        target_store = connect(args.qdrant_url, args.dim, args.to, timeout=120)
+        print(json.dumps(sample_collection(source, target_store, args.n)))
+        return
+    store = connect(args.qdrant_url, args.dim, args.collection, timeout=120)
+    if args.command == "drop":
+        store.drop()
+        print(json.dumps({"dropped": args.collection}))
+    elif args.command == "delete":
+        print(json.dumps(delete_document(store, args.doc_id)))
+    elif args.command == "show":
+        chunks = [c for c in store.load_chunks() if c.doc_id == args.doc_id]
+        chunks.sort(key=lambda c: c.chunk_index)
+        print(json.dumps({"doc_id": args.doc_id, "points": store.info()["points"]}))
+        for c in chunks:
+            print(f"[{c.chunk_index}] {c.chunk_id} {c.section} | {c.title}\n    {c.text}")
+        if not chunks:
+            print("    (not indexed)")
+    else:
+        document = json.loads(args.document.read_text(encoding="utf-8"))
+        embedder = OllamaEmbedder(
+            args.ollama_url, args.model, args.dim, num_ctx=settings.embedding_num_ctx
+        )
+        sparse = (
+            None
+            if args.no_sparse
+            else FastEmbedBM25(args.sparse_model, cache_dir=settings.rag_model_cache_dir)
+        )
+        stats = asyncio.run(
+            write_document(
+                store,
+                embedder,
+                document_rows(document),
+                sparse=sparse,
+                must_exist=args.command == "update",
+            )
+        )
+        print(json.dumps(stats))
+
+
 def main(argv: list[str] | None = None) -> None:
     settings = Settings()
     parser = argparse.ArgumentParser(prog="python -m src.rag.vector_store")
     commands = parser.add_subparsers(dest="command", required=True)
+    for name, help_text in (
+        ("add", "add one document (JSON), refused when it is already indexed"),
+        ("update", "replace one indexed document (JSON): new chunks in, old chunks out"),
+        ("delete", "delete every chunk of one document"),
+        ("show", "print the chunks of one document"),
+        ("sample", "copy N points of --collection into the trial collection --to"),
+        ("drop", "drop a trial collection (never a served one)"),
+    ):
+        sub = commands.add_parser(name, help=help_text)
+        sub.add_argument("--collection", default=settings.qdrant_collection)
+        sub.add_argument("--qdrant-url", default=settings.qdrant_url)
+        sub.add_argument("--dim", type=int, default=settings.embedding_dim)
+        if name in ("add", "update", "delete", "sample"):
+            sub.add_argument("--allow-served", action="store_true")
+        if name in ("add", "update"):
+            sub.add_argument("--document", type=Path, required=True, help="a JSON object")
+            sub.add_argument("--ollama-url", default=settings.ollama_url)
+            sub.add_argument("--model", default=settings.embedding_model)
+            sub.add_argument("--sparse-model", default=settings.rag_sparse_model)
+            sub.add_argument("--no-sparse", action="store_true", help="dense vectors only")
+        if name in ("delete", "show"):
+            sub.add_argument("--doc-id", required=True)
+        if name == "sample":
+            sub.add_argument("--to", required=True)
+            sub.add_argument("--n", type=int, default=300)
     index = commands.add_parser("index", help="index the corpus (idempotent)")
     index.add_argument("--chunks", type=Path, default=settings.rag_chunks_file)
     index.add_argument("--store", choices=["qdrant", "sql"], default=settings.vector_store)
@@ -891,7 +1177,10 @@ def main(argv: list[str] | None = None) -> None:
         help="copy the SQL table rag_chunks (--database-url) into Qdrant, without embedding",
     )
     args = parser.parse_args(argv)
-    run_index(args, settings)
+    if args.command == "index":
+        run_index(args, settings)
+    else:
+        run_document(args, settings)
 
 
 if __name__ == "__main__":
