@@ -43,6 +43,15 @@ Both databases in the browser:
   Database `tujya` (app tables) or `mlflow` (MLflow tracking).
 - Qdrant: http://localhost:6333/dashboard (the bare port only returns a JSON version string).
 
+The admin dashboard links to MLflow, Qdrant, Adminer, Swagger and the Spark UI (section
+*Tools*, admins only). Their ports are in [frontend/src/lib/tools.ts](../frontend/src/lib/tools.ts),
+which `tests/test_docker_compose.py` keeps equal to the defaults of `docker-compose.yml`;
+`node scripts/admin-tools-screenshots.mjs` (in `frontend/`) checks the links in a browser.
+
+| Dark theme | Mobile width |
+|---|---|
+| ![Tools, dark theme](screenshots/40-admin-tools-dark.jpg) | ![Tools, mobile](screenshots/41-admin-tools-mobile.jpg) |
+
 The project name (prefix of containers, volumes and images) comes from `COMPOSE_PROJECT_NAME`
 in `.env` ([.env.example](../.env.example)). `docker compose down` keeps the volumes.
 

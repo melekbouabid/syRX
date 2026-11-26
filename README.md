@@ -77,6 +77,11 @@ keeps the volumes.
 
 PostgreSQL login in Adminer: System `PostgreSQL`, Server `postgres`, Username `tujya`, Password: the value of `POSTGRES_PASSWORD` in `.env` (default `tujya`), Database `tujya` (app tables) or `mlflow` (MLflow tracking).
 
+An administrator opens these tools from the **Tools** section of the admin dashboard (one card
+per tool, each in a new tab, on the host the app is opened from):
+
+![Tools section of the admin dashboard](docs/screenshots/39-admin-tools.jpg)
+
 Demo accounts created on the first start: `user@gmail.com` / `user` and `admin@gmail.com` /
 `admin` (change the latter before any other use, `backend/.env.example`).
 
