@@ -1,0 +1,430 @@
+{
+ "answers": "data/processed/rag/bench/generation/qwen2.5-3b__v1__corpus-v2/answers.jsonl",
+ "config": "qwen2.5-3b__v1__corpus-v2",
+ "questions": 96,
+ "answered": 94,
+ "evaluated": 94,
+ "identical_to_recorded": 17,
+ "judge": "phi4-mini-judge",
+ "ragas_version": "0.4.4",
+ "contexts": 4,
+ "metrics": {
+  "faithfulness": {
+   "mean": 0.9469,
+   "n": 84,
+   "seconds": 2259.0,
+   "seconds_per_answer": 26.9
+  },
+  "context_utilization": {
+   "mean": 0.9512,
+   "n": 94,
+   "seconds": 765.0,
+   "seconds_per_answer": 8.1
+  },
+  "noise_sensitivity": {
+   "mean": 0.176,
+   "n": 17,
+   "seconds": 1747.7,
+   "seconds_per_answer": 102.8
+  }
+ },
+ "per_question": {
+  "contraindications-metformin-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 0.9167,
+   "noise_sensitivity": 0.0
+  },
+  "contraindications-amoxicillin-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0,
+   "noise_sensitivity": 0.0
+  },
+  "contraindications-carbamazepine-fr": {
+   "faithfulness": 0.8333,
+   "context_utilization": 1.0,
+   "noise_sensitivity": 0.3333
+  },
+  "contraindications-simvastatin-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 0.6389,
+   "noise_sensitivity": null
+  },
+  "contraindications-lisinopril-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0,
+   "noise_sensitivity": null
+  },
+  "contraindications-allopurinol-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0,
+   "noise_sensitivity": 0.0
+  },
+  "contraindications-levothyroxine-fr": {
+   "faithfulness": 0.75,
+   "context_utilization": 1.0,
+   "noise_sensitivity": 0.5
+  },
+  "contraindications-nitrofurantoin-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0,
+   "noise_sensitivity": 0.3333
+  },
+  "contraindications-fluconazole-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0,
+   "noise_sensitivity": 0.6667
+  },
+  "contraindications-hydroxychloroquine-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0,
+   "noise_sensitivity": 0.0
+  },
+  "contraindications-methyldopa-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0,
+   "noise_sensitivity": 0.0
+  },
+  "contraindications-finasteride-en": {
+   "faithfulness": 0.8,
+   "context_utilization": 1.0,
+   "noise_sensitivity": 0.2
+  },
+  "boxed_warning-citalopram-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0,
+   "noise_sensitivity": 0.0
+  },
+  "boxed_warning-lamotrigine-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0,
+   "noise_sensitivity": 0.0
+  },
+  "boxed_warning-flecainide-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0,
+   "noise_sensitivity": 0.0
+  },
+  "boxed_warning-flutamide-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0,
+   "noise_sensitivity": 0.6667
+  },
+  "boxed_warning-diclofenac-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0,
+   "noise_sensitivity": null
+  },
+  "boxed_warning-haloperidol-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 0.8333,
+   "noise_sensitivity": 0.0
+  },
+  "boxed_warning-carbamazepine-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0,
+   "noise_sensitivity": 0.1667
+  },
+  "boxed_warning-baclofen-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0,
+   "noise_sensitivity": 0.125
+  },
+  "boxed_warning-imipramine-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 0.5
+  },
+  "boxed_warning-benazepril-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "mechanism-allopurinol-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 0.8056
+  },
+  "mechanism-amlodipine-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "mechanism-finasteride-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 0.8056
+  },
+  "mechanism-fluconazole-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 0.8333
+  },
+  "mechanism-gabapentin-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "mechanism-fenofibrate-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 0.75
+  },
+  "mechanism-carvedilol-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "mechanism-clindamycin-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "mechanism-desloratadine-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "mechanism-baclofen-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "adverse_reactions-losartan-fr": {
+   "faithfulness": 0.5,
+   "context_utilization": 1.0
+  },
+  "adverse_reactions-trazodone-en": {
+   "faithfulness": null,
+   "context_utilization": 1.0
+  },
+  "adverse_reactions-metoclopramide-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "adverse_reactions-cyclobenzaprine-en": {
+   "faithfulness": null,
+   "context_utilization": 1.0
+  },
+  "adverse_reactions-glipizide-fr": {
+   "faithfulness": 0.75,
+   "context_utilization": 0.6389
+  },
+  "adverse_reactions-paroxetine-en": {
+   "faithfulness": null,
+   "context_utilization": 1.0
+  },
+  "adverse_reactions-olanzapine-fr": {
+   "faithfulness": 0.7,
+   "context_utilization": 1.0
+  },
+  "adverse_reactions-hydralazine-en": {
+   "faithfulness": null,
+   "context_utilization": 1.0
+  },
+  "adverse_reactions-cefuroxime-fr": {
+   "faithfulness": 0.6,
+   "context_utilization": 0.4167
+  },
+  "adverse_reactions-allopurinol-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "warnings-warfarin-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "warnings-tramadol-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "warnings-venlafaxine-fr": {
+   "faithfulness": 0.75,
+   "context_utilization": 1.0
+  },
+  "warnings-sotalol-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "warnings-metronidazole-fr": {
+   "faithfulness": 0.8571,
+   "context_utilization": 0.8056
+  },
+  "warnings-glimepiride-en": {
+   "faithfulness": 0.8,
+   "context_utilization": 1.0
+  },
+  "warnings-valproate-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "warnings-labetalol-en": {
+   "faithfulness": null,
+   "context_utilization": 1.0
+  },
+  "interaction-clarithromycin-carbamazepine-fr": {
+   "faithfulness": 0.8,
+   "context_utilization": 1.0
+  },
+  "interaction-venlafaxine-tramadol-en": {
+   "faithfulness": 0.8571,
+   "context_utilization": 1.0
+  },
+  "interaction-gemfibrozil-simvastatin-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-propranolol-verapamil-en": {
+   "faithfulness": null,
+   "context_utilization": 1.0
+  },
+  "interaction-valproate-lamotrigine-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-citalopram-tramadol-en": {
+   "faithfulness": 0.3333,
+   "context_utilization": 1.0
+  },
+  "interaction-cyclobenzaprine-tramadol-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-diclofenac-warfarin-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-flecainide-verapamil-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-gemfibrozil-warfarin-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-gemfibrozil-pravastatin-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-metronidazole-warfarin-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-venlafaxine-imipramine-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-citalopram-fluvoxamine-en": {
+   "faithfulness": 0.6,
+   "context_utilization": 1.0
+  },
+  "interaction-imipramine-paroxetine-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-piroxicam-warfarin-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-simvastatin-amlodipine-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-fluconazole-warfarin-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-fluconazole-glyburide-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-lisinopril-losartan-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-trazodone-sotalol-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-carbamazepine-haloperidol-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-nortriptyline-paroxetine-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "interaction-benazepril-amiloride-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 0.9167
+  },
+  "abstract-32290673-fr": {
+   "faithfulness": 0.8571,
+   "context_utilization": 1.0
+  },
+  "abstract-24102182-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 0.5
+  },
+  "abstract-17122536-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "abstract-14651149-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 0.6389
+  },
+  "abstract-30536109-fr": {
+   "faithfulness": null,
+   "context_utilization": 1.0
+  },
+  "abstract-10863228-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 0.5
+  },
+  "abstract-22840347-en": {
+   "faithfulness": null,
+   "context_utilization": 1.0
+  },
+  "abstract-28682284-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "abstract-20065830-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "safety-2-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "safety-3-en": {
+   "faithfulness": 0.75,
+   "context_utilization": 1.0
+  },
+  "safety-4-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "brand-panadol-warfarin-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "brand-doliprane-warfarin-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "brand-nurofen-warfarin-fr": {
+   "faithfulness": null,
+   "context_utilization": 1.0
+  },
+  "brand-advil-lisinopril-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "brand-voltarene-warfarin-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "brand-augmentin-warfarin-en": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  },
+  "brand-ixprim-sertraline-fr": {
+   "faithfulness": null,
+   "context_utilization": 0.9167
+  },
+  "brand-efferalgan-warfarin-fr": {
+   "faithfulness": 1.0,
+   "context_utilization": 1.0
+  }
+ },
+ "run_id": "1eb8100d1a4449a0ace497579679e2c9"
+}
