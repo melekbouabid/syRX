@@ -29,11 +29,19 @@ flowchart LR
 | `backend` | [backend/Dockerfile](../backend/Dockerfile) | http://localhost:8000 (Swagger: `/docs`) | FastAPI: scan, interactions, chat, documents, accounts |
 | `postgres` | `pgvector/pgvector:pg16` | localhost:5432 | accounts, medicine tables, MLflow store |
 | `mlflow` | [infra/mlflow/Dockerfile](../infra/mlflow/Dockerfile) | http://localhost:5000 | experiment tracking, Model Registry, Prompt Registry |
-| `qdrant` | `qdrant/qdrant:v1.20.0` | http://localhost:6333/dashboard | vector index of the RAG (dense + BM25 sparse) |
+| `adminer` | `adminer:6.3.1` | http://localhost:8081 | web UI of PostgreSQL (login below) |
+| `qdrant` | `qdrant/qdrant:v1.20.0` | http://localhost:6333/dashboard | vector index of the RAG (dense + BM25 sparse); the bare port only returns a JSON version string |
 | `ollama` | `ollama/ollama:0.40.12` | http://localhost:11434 | local LLM and embeddings (GPU when available) |
 | `pharma-init` | backend image | none | reloads the medicine tables from `data/processed/pharma`, then exits |
 | `rag-init` | backend image | none | pulls the Ollama models and indexes the corpus in Qdrant, then exits |
 | `spark-master`, `spark-worker` | [infra/spark](../infra/spark/) | http://localhost:8090, :8091 (job UI :4040) | PySpark jobs, only with `--profile spark` |
+
+Both databases in the browser:
+
+- PostgreSQL: http://localhost:8081 (Adminer). System `PostgreSQL`, Server `postgres`,
+  Username `tujya`, Password: the value of `POSTGRES_PASSWORD` in `.env` (default `tujya`),
+  Database `tujya` (app tables) or `mlflow` (MLflow tracking).
+- Qdrant: http://localhost:6333/dashboard (the bare port only returns a JSON version string).
 
 The project name (prefix of containers, volumes and images) comes from `COMPOSE_PROJECT_NAME`
 in `.env` ([.env.example](../.env.example)). `docker compose down` keeps the volumes.
