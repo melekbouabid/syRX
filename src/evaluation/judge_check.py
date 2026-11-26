@@ -7,8 +7,9 @@ data/processed/rag/bench/generation/qwen2.5-3b__v1__corpus-v2/answers.jsonl. The
 results are left as they are; everything here reads that new file.
 
 - `ragas`: faithfulness, context utilization and noise sensitivity with the local judge
-  (phi4-mini, config/rag_generation.yaml), on the answered questions (`--limit N`: the first N),
-  each metric timed. Results in src/evaluation/results/ragas_context.json, one MLflow run.
+  (phi4-mini, config/rag_generation.yaml), on the answered questions (`--limit N`: the first N;
+  noise sensitivity on the first `--noise-limit` 20 only, it is the slowest), each metric
+  timed. Results in src/evaluation/results/ragas_context.json, one MLflow run.
 - `sheet`: 30 answers for human labels, half judged faithful (faithfulness = 1: every claim
   supported) and half not, in a shuffled order, with the passages the judge read (the first 4
   sources, 900 characters each, as the LLM saw them); only answers whose citations all point
@@ -82,7 +83,7 @@ def passage(source: dict[str, Any]) -> str:
 # --- ragas -------------------------------------------------------------------------------
 
 
-def cmd_ragas(limit: int, log: bool) -> None:
+def cmd_ragas(limit: int, noise_limit: int, log: bool) -> None:
     cfg = rg.load_config()
     base_url = os.environ.get("TUJYA_OLLAMA_URL", "http://127.0.0.1:11434")  # as ragas_evaluation
     rows = load_answers()
@@ -92,8 +93,10 @@ def cmd_ragas(limit: int, log: bool) -> None:
     seconds: dict[str, float] = {}
     scores: dict[str, dict[str, float | None]] = {}
     for metric in METRICS:
+        # Noise sensitivity makes many more judge calls (about 2 min per answer here): subset.
+        rows_of = subset[:noise_limit] if metric == "noise_sensitivity" and noise_limit else subset
         started = time.perf_counter()
-        part = rg.run_ragas(subset, cfg, base_url, metrics=(metric,))
+        part = rg.run_ragas(rows_of, cfg, base_url, metrics=(metric,))
         seconds[metric] = round(time.perf_counter() - started, 1)
         for qid, values in part.items():
             scores.setdefault(qid, {}).update(values)
@@ -104,6 +107,7 @@ def cmd_ragas(limit: int, log: bool) -> None:
             "mean": round(sum(values) / len(values), 4) if values else None,
             "n": len(values),
             "seconds": seconds[metric],
+            "seconds_per_answer": round(seconds[metric] / len(values), 1) if values else None,
         }
     data = {
         "answers": str(ANSWERS.relative_to(ROOT)).replace("\\", "/"),
@@ -242,6 +246,9 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m src.evaluation.judge_check")
     parser.add_argument("command", choices=["ragas", "sheet", "kappa"])
     parser.add_argument("--limit", type=int, default=0, help="ragas: the first N answers only")
+    parser.add_argument(
+        "--noise-limit", type=int, default=20, help="ragas: noise sensitivity on the first N only"
+    )
     parser.add_argument("--out", type=Path, help="sheet: the JSON file to write")
     parser.add_argument("--size", type=int, default=SHEET_SIZE)
     parser.add_argument("--seed", type=int, default=0)
@@ -249,7 +256,7 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
     os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
     if args.command == "ragas":
-        cmd_ragas(args.limit, not args.no_mlflow)
+        cmd_ragas(args.limit, args.noise_limit, not args.no_mlflow)
     elif args.command == "sheet":
         if args.out is None:
             parser.error("sheet needs --out")
