@@ -11,7 +11,7 @@ from fastapi import FastAPI
 from mcp import Client
 
 from src.agent.mcp_server import build_server, default_toolbox
-from src.rag.init_qdrant import FakeEmbedder
+from src.rag.embedder import FakeEmbedder
 from tests.fake_models import write_models
 from tests.test_scan import BOXES, NAMES, photo
 

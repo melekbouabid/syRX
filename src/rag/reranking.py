@@ -1,6 +1,8 @@
-"""Cross-encoder reranking of the retrieved candidates (BAAI/bge-reranker-base, ONNX via fastembed).
+"""Query path — Reranking: a cross-encoder reorders the retrieved candidates (measured, not served).
 
-Retrieval returns `fetch_k` candidates; the cross-encoder keeps the `top_n` best.
+BAAI/bge-reranker-base (ONNX via fastembed) by default. Retrieval returns `fetch_k`
+candidates; the cross-encoder keeps the `top_n` best. Off in the served setting
+(`TUJYA_RAG_RERANK`): too slow on the CPU for the latency budget (docs/module2/results.md).
 """
 
 from __future__ import annotations

@@ -26,7 +26,7 @@ from src.models.toxicity.model import ToxHolder, ToxicityUnavailable, predict_mo
 from src.rag.query_rewriting import NameIndex, QueryRewriter
 from src.rag.rag_chain import hit_source
 from src.rag.retrieval import Hit, Mode, RetrieverHolder
-from src.rag.stores.base import Filters
+from src.rag.vector_store import Filters
 
 DOC_TYPES = ("label", "abstract", "interaction")
 INFO_SECTIONS = (
@@ -111,7 +111,9 @@ class Toolbox:
     def retriever(self) -> Any:
         retriever = self.retrievers.get()
         if retriever is None:
-            raise ToolError("the document index is empty: run `python -m src.rag.init_qdrant`")
+            raise ToolError(
+                "the document index is empty: run `python -m src.rag.vector_store index`"
+            )
         return retriever
 
     def indexed_ingredients(self) -> frozenset[str]:

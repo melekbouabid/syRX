@@ -22,13 +22,11 @@ from app.config import Settings
 from app.db import make_engine
 from app.pharma import Ingredient
 from src.evaluation import build_qrels
-from src.rag.init_qdrant import OllamaEmbedder
+from src.rag.embedder import FastEmbedBM25, OllamaEmbedder
 from src.rag.query_rewriting import NameIndex, QueryRewriter
 from src.rag.reranking import CrossEncoderReranker
 from src.rag.retrieval import Mode, Retriever
-from src.rag.stores import open_store
-from src.rag.stores.base import Filters
-from src.rag.stores.sparse import FastEmbedBM25
+from src.rag.vector_store import Filters, open_store
 
 ROOT = Path(__file__).resolve().parents[2]
 QUESTIONS = ROOT / "src" / "evaluation" / "questions.jsonl"

@@ -13,12 +13,10 @@ from collections.abc import Iterator
 import pytest
 from langchain_core.messages import AIMessage
 
-from src.rag.init_qdrant import FakeEmbedder, index_chunks
+from src.rag.embedder import FakeEmbedder, TokenBM25
 from src.rag.query_rewriting import QueryRewriter, clean
 from src.rag.retrieval import BM25, Retriever, rrf, tokenize
-from src.rag.stores.base import METADATA_COLUMNS, Filters
-from src.rag.stores.qdrant import DENSE, QdrantStore
-from src.rag.stores.sparse import TokenBM25
+from src.rag.vector_store import DENSE, METADATA_COLUMNS, Filters, QdrantStore, index_chunks
 from tests.support.rag_fakes import CORPUS, DIM, FakeChatModel
 
 SERVER = os.environ.get("TUJYA_TEST_QDRANT_URL")
@@ -144,6 +142,18 @@ def test_hybrid_is_fused_by_qdrant_like_our_rrf(store: QdrantStore) -> None:
         assert [round(h.score, 6) for h in hits] == [round(s, 6) for _, s in expected], query
         fused = dict(rrf([lexical, dense]))  # same chunk scores; ties may be ordered apart
         assert all(round(fused[h.chunk.chunk_id], 6) == round(h.score, 6) for h in hits), query
+
+
+def test_hybrid_ties_are_broken_by_chunk_id_like_our_rrf(store: QdrantStore) -> None:
+    # Same chunks, same order as the in-memory fusion, and the same answer on every call.
+    retriever = Retriever(store, FakeEmbedder(DIM), sparse=encoder())
+    for query in QUERIES:
+        lexical = retriever.bm25_ranking(query, Filters(), 50)
+        dense = asyncio.run(retriever.dense_ranking(query, Filters(), 50))
+        expected = [cid for cid, _ in rrf([lexical, dense])[:5]]
+        for _ in range(3):
+            hits = asyncio.run(retriever.search(query, k=5, mode="hybrid"))
+            assert [h.chunk.chunk_id for h in hits] == expected, query
 
 
 def test_filters_apply_to_sparse_and_hybrid(store: QdrantStore) -> None:

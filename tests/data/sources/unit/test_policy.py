@@ -18,7 +18,13 @@ CONNECTOR_FILES = sorted((SRC / "connectors").glob("*.py"))
 RAG = Path(__file__).resolve().parents[4] / "src" / "rag"
 # The pipeline test plugin (tests/support) was part of the package and stays checked.
 SUPPORT = Path(__file__).resolve().parents[3] / "support" / "sources_fixtures.py"
-NETWORK_CHECKED = [*sorted(SRC.rglob("*.py")), RAG / "corpus.py", RAG / "chunking.py", SUPPORT]
+NETWORK_CHECKED = [
+    *sorted(SRC.rglob("*.py")),
+    RAG / "extractor.py",
+    RAG / "metadata.py",
+    RAG / "chunking.py",
+    SUPPORT,
+]
 # The links of the original brief for the sources that remain.
 BRIEF_LINKS = [
     "https://ddinter2.scbdd.com/",

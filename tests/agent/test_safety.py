@@ -109,7 +109,7 @@ def test_attribution_by_meaning_cites_the_closest_source_only_when_clear() -> No
     import asyncio
 
     from src.agent.safety import attribute_by_meaning
-    from src.rag.init_qdrant import FakeEmbedder
+    from src.rag.embedder import FakeEmbedder
 
     sources = [
         "Warfarin label: bleeding risk and prothrombin time monitoring with azole antifungals.",

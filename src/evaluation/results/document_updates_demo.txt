@@ -1,0 +1,77 @@
+Document updates on a trial copy of the served collection (python -m src.rag.vector_store).
+Run on 2026-11-26; docs/module2/results.md#document-updates.
+
+== served collection BEFORE
+tujya_chunks_v2 points 27302 indexed_at 2026-11-15T23:28:59+00:00
+
+$ python -m src.rag.vector_store sample --collection tujya_chunks_v2 --to tujya_test_updates --n 300
+{"collection": "tujya_test_updates", "copied": 300, "from": "tujya_chunks_v2"}
+
+$ python -m src.rag.vector_store add --document docs/module2/examples/document_v1.json --collection tujya_test_updates
+{"doc_id": "demo:demotabine", "chunks": 1, "embedded": 1, "deleted": 0, "unchanged": 0}
+
+$ python -m src.rag.vector_store add --document docs/module2/examples/document_v1.json --collection tujya_test_updates
+add refused: demo:demotabine is already indexed: use update
+
+$ python -m src.rag.vector_store update --document docs/module2/examples/document_v1.json --collection tujya_test_updates
+{"doc_id": "demo:demotabine", "chunks": 1, "embedded": 0, "deleted": 0, "unchanged": 1}
+
+$ TUJYA_QDRANT_COLLECTION=tujya_test_updates python -m src.rag.retrieval "demotabine fictivol interaction" --k 3
+loaded 301 chunks from qdrant in 0.15 s
+
+== bm25 (216 ms)
+  0.0164 bm25=1 dense=None TEST DOCUMENT demotabine (invented drug, trial collection only): Drug interactions
+  0.0161 bm25=2 dense=None Pharmacokinetic drug-drug interactions between 1,4-dihydropyridine calcium channel blockers and statins: factors determining interaction strength and relevant clinical risk management.
+  0.0159 bm25=3 dense=None Lovastatin label (Lovastatin): Drug interactions
+
+== dense (245 ms)
+  0.0164 bm25=None dense=1 TEST DOCUMENT demotabine (invented drug, trial collection only): Drug interactions
+  0.0161 bm25=None dense=2 DDInter 2.0: fenofibrate + ramelteon (Moderate)
+  0.0159 bm25=None dense=3 DDInter 2.0: flavoxate + ketoconazole (Moderate)
+
+== hybrid (153 ms)
+  0.0328 bm25=1 dense=1 TEST DOCUMENT demotabine (invented drug, trial collection only): Drug interactions
+  0.0288 bm25=8 dense=11 DDInter 2.0: desvenlafaxine + etodolac (Moderate)
+  0.0287 bm25=15 dense=5 DDInter 2.0: gemfibrozil + zidovudine (Moderate)
+
+$ python -m src.rag.vector_store update --document docs/module2/examples/document_v2.json --collection tujya_test_updates
+{"doc_id": "demo:demotabine", "chunks": 1, "embedded": 1, "deleted": 0, "unchanged": 0}
+
+$ python -m src.rag.vector_store show --doc-id demo:demotabine --collection tujya_test_updates
+{"doc_id": "demo:demotabine", "points": 301}
+[0] 9125f8583adfbed2 drug_interactions | TEST DOCUMENT demotabine (invented drug, trial collection only): Drug interactions
+    TEST DOCUMENT, version 2. Demotabine is an invented drug used only to show document updates. The updated test text says demotabine has no effect on fictivol.
+
+$ TUJYA_QDRANT_COLLECTION=tujya_test_updates python -m src.rag.retrieval "demotabine fictivol interaction" --k 3
+loaded 301 chunks from qdrant in 0.09 s
+
+== bm25 (213 ms)
+  0.0164 bm25=1 dense=None TEST DOCUMENT demotabine (invented drug, trial collection only): Drug interactions
+  0.0161 bm25=2 dense=None Pharmacokinetic drug-drug interactions between 1,4-dihydropyridine calcium channel blockers and statins: factors determining interaction strength and relevant clinical risk management.
+  0.0159 bm25=3 dense=None Lovastatin label (Lovastatin): Drug interactions
+
+== dense (270 ms)
+  0.0164 bm25=None dense=1 TEST DOCUMENT demotabine (invented drug, trial collection only): Drug interactions
+  0.0161 bm25=None dense=2 DDInter 2.0: fenofibrate + ramelteon (Moderate)
+  0.0159 bm25=None dense=3 DDInter 2.0: flavoxate + ketoconazole (Moderate)
+
+== hybrid (101 ms)
+  0.0328 bm25=1 dense=1 TEST DOCUMENT demotabine (invented drug, trial collection only): Drug interactions
+  0.0288 bm25=8 dense=11 DDInter 2.0: desvenlafaxine + etodolac (Moderate)
+  0.0287 bm25=15 dense=5 DDInter 2.0: gemfibrozil + zidovudine (Moderate)
+
+$ python -m src.rag.vector_store delete --doc-id demo:demotabine --collection tujya_test_updates
+{"doc_id": "demo:demotabine", "deleted": 1}
+
+$ python -m src.rag.vector_store show --doc-id demo:demotabine --collection tujya_test_updates
+{"doc_id": "demo:demotabine", "points": 300}
+    (not indexed)
+
+$ python -m src.rag.vector_store add --document docs/module2/examples/document_v1.json --collection tujya_chunks_v2
+tujya_chunks_v2 is a served collection: pass --allow-served to change it
+
+$ python -m src.rag.vector_store drop --collection tujya_test_updates
+{"dropped": "tujya_test_updates"}
+
+== served collection AFTER
+tujya_chunks_v2 points 27302 indexed_at 2026-11-15T23:28:59+00:00

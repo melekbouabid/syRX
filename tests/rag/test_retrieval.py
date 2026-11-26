@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from src.rag.init_qdrant import FakeEmbedder, index_chunks
+from src.rag.embedder import FakeEmbedder
 from src.rag.retrieval import BM25, Retriever, RetrieverHolder, rrf, tokenize
-from src.rag.stores.base import ChunkStore, Filters
+from src.rag.vector_store import ChunkStore, Filters, index_chunks
 from tests.support.rag_fakes import CORPUS, DIM, build_index
 
 

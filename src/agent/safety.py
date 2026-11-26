@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 from app.medicines import DISCLAIMER, NO_KNOWN_INTERACTION
 from src.rag.chunking import fold
-from src.rag.init_qdrant import Embedder
+from src.rag.embedder import Embedder
 from src.rag.rag_chain import CROSS_REFERENCE
 
 _UNITS = (

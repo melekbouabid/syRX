@@ -13,7 +13,7 @@ from mcp import Client
 from app.config import Settings
 from backend.tests.support.pharma_data import load_pharma
 from src.agent.mcp_server import build_server, default_toolbox, main
-from src.rag.init_qdrant import FakeEmbedder
+from src.rag.embedder import FakeEmbedder
 from tests.support.rag_fakes import DIM, FakeChatModel, build_index
 
 

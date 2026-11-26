@@ -32,7 +32,7 @@ stages:
       size: 499041
       nfiles: 1
   rag_corpus:
-    cmd: python -m src.rag.corpus corpus
+    cmd: python -m src.rag.extractor corpus
     deps:
     - path: data/processed/pharma/interactions_between_classes.csv
       hash: md5
@@ -255,8 +255,8 @@ stages:
       size: 10880
     - path: src/rag/chunking.py
       hash: md5
-      md5: 32a47a04b5cb6699f992ec739ed545f7
-      size: 16283
+      md5: 3cd9b4d5dfc9926816d620f0862a557e
+      size: 16513
     params:
       params.yaml:
         bigdata.rag:

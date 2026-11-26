@@ -1,4 +1,5 @@
-"""Tujya data steps: RxNav ingredient mapping (mocked HTTP) and DDInter filtering."""
+"""Step 2, src/rag/metadata.py: RxNav ingredient mapping (mocked HTTP), aliases; and the DDInter
+filtering of src/rag/extractor.py."""
 
 from __future__ import annotations
 
@@ -7,14 +8,9 @@ from pathlib import Path
 import pandas as pd
 import respx
 
-from src.rag import corpus as ing
-from src.rag.corpus import (
-    ddinter_names,
-    filter_interactions,
-    read_aliases,
-    served_classes,
-    update_class_file,
-)
+from src.rag import metadata as ing
+from src.rag.extractor import filter_interactions
+from src.rag.metadata import ddinter_names, read_aliases, served_classes, update_class_file
 from tests.support.sources_fixtures import ClientFactory
 
 R = ing.RXNAV

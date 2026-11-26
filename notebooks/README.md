@@ -20,9 +20,9 @@ Two kinds of notebooks:
 | [module1/04_onnx_optimization](module1/04_onnx_optimization.ipynb) | FP32 / FP16 / INT8: accuracy, size, latency; served variant and its rule | `models/optimize.json` |
 | [module1/05_end_to_end_prediction](module1/05_end_to_end_prediction.ipynb) | a test photo through the served pipeline (boxes, classes, confidence), a medicine box (OCR), an off-topic picture refused | DVC data, `models/` |
 | [module1/06_kaggle_training_runs](module1/06_kaggle_training_runs.ipynb) | every Kaggle run: Optuna trials and search space, training curve, PR curve or confusion matrix, duration, GPU; summary | MLflow |
-| [module2/01_rag_retrieval](module2/01_rag_retrieval.ipynb) | labs 10 to 16: the Qdrant collection, one question in dense, BM25 and hybrid mode, with query rewriting and with reranking | Qdrant, Ollama |
-| [module2/02_retrieval_benchmark](module2/02_retrieval_benchmark.ipynb) | as lab 05/03: questions and qrels, Recall@k and MRR, configuration table, champion and its 2 s rule | result files |
-| [module2/03_ragas_evaluation](module2/03_ragas_evaluation.ipynb) | RAGAS, citation judge, safety gates, generators table, champion; fine-tuned bge-m3 and why it is not served | result files |
+| [module2/01_rag_retrieval](module2/01_rag_retrieval.ipynb) | the pipeline diagram and `src/rag/` file by file (step 1 to 6); labs 10 to 16: the Qdrant collection, one question in dense, BM25 and hybrid mode, with query rewriting and with reranking | Qdrant, Ollama |
+| [module2/02_retrieval_benchmark](module2/02_retrieval_benchmark.ipynb) | as lab 05/03: questions and qrels, configuration table, champion and its 2 s rule; every metric of the course (Hit, Precision, Recall, F1, nDCG @k, R-Precision, MRR, MAP) on the corpus v2, the Recall@k curve and the choice of k, the recorded reranker | result files |
+| [module2/03_ragas_evaluation](module2/03_ragas_evaluation.ipynb) | RAGAS, citation judge, safety gates, generators table, champion; fine-tuned bge-m3 and why it is not served; Exact Match, token F1, ROUGE, BLEU, semantic similarity; context utilization and noise sensitivity; the judge against human labels (Cohen's kappa) | result files |
 | [module2/04_langgraph_agent](module2/04_langgraph_agent.ipynb) | the graph (`draw_mermaid`), the tools, an interaction question with citations, a dose question refused, the MCP tools | Qdrant, Ollama |
 | [module2/05_embedding_finetuning](module2/05_embedding_finetuning.ipynb) | the bge-m3 fine-tuning run on Kaggle: parameters, GPU, loss, scores before / after | MLflow |
 

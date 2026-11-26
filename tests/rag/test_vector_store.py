@@ -15,10 +15,19 @@ from pathlib import Path
 import pytest
 
 from app.db import make_engine
-from src.rag.init_qdrant import FakeEmbedder, copy_index, index_chunks
+from src.rag.embedder import FakeEmbedder
 from src.rag.retrieval import Retriever, RetrieverHolder
-from src.rag.stores.base import METADATA_COLUMNS, ChunkStore, Filters
-from src.rag.stores.qdrant import DENSE, QdrantStore, point_id, to_filter
+from src.rag.vector_store import (
+    DENSE,
+    METADATA_COLUMNS,
+    ChunkStore,
+    Filters,
+    QdrantStore,
+    copy_index,
+    index_chunks,
+    point_id,
+    to_filter,
+)
 from tests.support.rag_fakes import CORPUS, DIM, build_index
 
 SERVER = os.environ.get("TUJYA_TEST_QDRANT_URL")

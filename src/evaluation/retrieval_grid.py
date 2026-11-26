@@ -216,7 +216,7 @@ def load_corpus_v2(path: Path = CORPUS_V2) -> pd.DataFrame:
 
 
 def rows_of(frame: pd.DataFrame) -> list[dict[str, Any]]:
-    """Chunk rows as src/rag/init_qdrant.py `read_chunks` gives them."""
+    """Chunk rows as src/rag/vector_store.py `read_chunks` gives them."""
     rows: list[dict[str, Any]] = frame.to_dict("records")
     for row in rows:
         row["ingredients"] = list(
@@ -286,10 +286,9 @@ class Runtime:
     async def retriever(self, config: Config) -> tuple[Any, float]:
         """The retriever of a configuration (its collection indexed first if needed) and the
         query encoding time to add (sentence-transformers vectors are precomputed)."""
-        from src.rag.init_qdrant import OllamaEmbedder, index_chunks
+        from src.rag.embedder import FastEmbedBM25, OllamaEmbedder
         from src.rag.retrieval import Retriever
-        from src.rag.stores.qdrant import QdrantStore
-        from src.rag.stores.sparse import FastEmbedBM25
+        from src.rag.vector_store import QdrantStore, index_chunks
 
         s = self.settings
         sparse = FastEmbedBM25(s.rag_sparse_model, cache_dir=s.rag_model_cache_dir)
@@ -337,7 +336,7 @@ def read_queries() -> dict[str, Any]:
 async def evaluate(
     runtime: Runtime, config: Config, questions: list[dict[str, Any]], queries: dict[str, Any]
 ) -> tuple[dict[str, float], list[dict[str, Any]]]:
-    from src.rag.stores.base import Filters
+    from src.rag.vector_store import Filters
 
     retriever, added_ms = await runtime.retriever(config)
     relevance = None
@@ -470,7 +469,7 @@ async def cmd_latency(runtime: Runtime, configs: list[Config], selection: dict[s
 
     The median of the round medians is kept.
     """
-    from src.rag.stores.base import Filters
+    from src.rag.vector_store import Filters
 
     questions = load_questions()[:: max(1, 85 // int(selection["latency_questions"]))]
     questions = questions[: int(selection["latency_questions"])]

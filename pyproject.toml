@@ -54,7 +54,8 @@ python_version = "3.11"
 # The data pipeline and the module 2 corpus steps that run on it.
 files = [
     "src/data/sources",
-    "src/rag/corpus.py",
+    "src/rag/extractor.py",
+    "src/rag/metadata.py",
     "src/rag/chunking.py",
     "tests/support/sources_fixtures.py",
 ]

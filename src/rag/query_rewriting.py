@@ -1,7 +1,11 @@
-"""Optional query rewriting by the LLM before retrieval (`TUJYA_RAG_QUERY_REWRITE`).
+"""Query path — Drug-name detection and query rewriting, before retrieval.
 
-The question becomes a short English query that keeps every drug name; an empty, overlong
-or failed rewrite keeps the question.
+`NameIndex` finds the ingredients a question names, in French or English (they become the
+metadata filter; brand names are resolved to ingredients by the brand table,
+src/agent/tools.py `find_brands`). The
+optional rewriting by the LLM (`TUJYA_RAG_QUERY_REWRITE`, on in the served setting) turns the
+question into a short English query that keeps every drug name; an empty, overlong or failed
+rewrite keeps the question.
 """
 
 from __future__ import annotations

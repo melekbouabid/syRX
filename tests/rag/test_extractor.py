@@ -1,4 +1,5 @@
-"""Tujya RAG corpus: openFDA label connector, PubMed ingredient queries and chunking."""
+"""Step 1, src/rag/extractor.py: openFDA label connector, PubMed ingredient queries, and the
+chunks cut from them (step 3)."""
 
 from __future__ import annotations
 
