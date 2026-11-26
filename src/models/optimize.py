@@ -67,7 +67,7 @@ SPECS = {
         "c3pi-v2-detect",
         "data/processed/c3pi/datasets_v2/detect",
         "test_v2_mAP50_95",
-        "test_holdout.txt of C3PI v2 (comparison split of step 2.2)",
+        "test_holdout.txt of C3PI v2 (comparison split, docs/module1/README.md)",
     ),
     "classify": TaskSpec(
         "classify",
@@ -86,7 +86,7 @@ CLASSIFY_V2 = TaskSpec(
     "c3pi-v2-classify",
     "data/processed/c3pi/datasets_v2/classify",
     "test_v2_top1",
-    "test_holdout.txt of C3PI v2 (comparison split of step 2.3)",
+    "test_holdout.txt of C3PI v2 (comparison split, docs/module1/README.md)",
 )
 
 

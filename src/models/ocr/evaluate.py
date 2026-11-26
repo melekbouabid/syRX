@@ -327,7 +327,7 @@ def log_run(
         info.model_uri,
         REGISTERED,
         tags={"engine": engine, "dataset": "italian-otc-medicines@29ebcd7"},
-        description=f"OCR engine {engine} for medicine boxes (step 2.7)",
+        description=f"OCR engine {engine} for medicine boxes (docs/module1/README.md)",
     )
     promotion = reg.promote_if_better(
         REGISTERED, version.version, compare["metric"], float(compare["min_gain"])

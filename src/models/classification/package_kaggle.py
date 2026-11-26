@@ -33,7 +33,7 @@ part in `class_key`). Splits by photo session, no leakage; the augmented images 
 come from train images. `test_holdout.txt` lists the test crops used to compare the
 classifiers (sessions the previous model never saw).
 
-Built by the Tujya project, https://github.com/melekbouabid/syRX (step 2.3,
+Built by the Tujya project, https://github.com/melekbouabid/syRX (see
 docs/module1/README.md). Kept private: do not redistribute.
 """
 
