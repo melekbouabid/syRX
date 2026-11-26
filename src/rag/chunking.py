@@ -1,6 +1,9 @@
-"""RAG corpus chunking: openFDA label sections, PubMed abstracts and DDInter rows -> chunks.
+"""Step 3 — Chunker: openFDA label sections, PubMed abstracts and DDInter rows -> chunks.
 
-Every chunk carries its metadata (`CHUNK_COLUMNS`); dosage sections are refused here again.
+Pieces of at most ~1500 characters cut on sentence ends, one sentence of overlap; a label
+section shorter than that stays whole. Every chunk carries its metadata (`CHUNK_COLUMNS`);
+dosage sections are refused here again. The catalog of indexed documents (Documents page) is
+rebuilt from the chunks at the end of the file.
 """
 
 from __future__ import annotations
@@ -18,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     import pandas as pd
 
-    from src.rag.stores.base import Chunk
+    from src.rag.vector_store import Chunk
 
 
 MAX_CHARS = 1500

@@ -17,7 +17,7 @@ stages:
   # Frozen: the corpus of the 150 v1 classes, kept for the benchmarks; the 380-class corpus
   # is built by the Spark stage spark_rag.
   rag_corpus:
-    cmd: python -m src.rag.corpus corpus
+    cmd: python -m src.rag.extractor corpus
     frozen: true
     deps:
       - data/external/rag_v1/interim

@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from src.agent.graph import TujyaAgent
 from src.agent.prompts import ANSWER_PROMPTS, DEFAULT_PROMPT_VERSION, answer_prompt
 from src.agent.runtime import AgentHolder
-from src.rag.init_qdrant import FakeEmbedder
+from src.rag.embedder import FakeEmbedder
 from tests.support.rag_fakes import DIM, FakeChatModel, build_index
 
 RULES = {

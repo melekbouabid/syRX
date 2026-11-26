@@ -19,7 +19,7 @@ from src.data.sources.config import Settings, load_settings
 from src.data.sources.http.client import PoliteClient
 from src.data.sources.literature.queries import read_ingredients
 from src.data.sources.logging_utils import setup_logging
-from src.rag import corpus as ing
+from src.rag import metadata as ing
 
 ROOT = Path(__file__).resolve().parents[3]
 CONFIG = ROOT / "config" / "data_pipeline" / "config.yaml"

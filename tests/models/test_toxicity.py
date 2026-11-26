@@ -33,7 +33,7 @@ from src.models.toxicity.model import (
     standardise,
     tanimoto_max,
 )
-from src.rag.init_qdrant import FakeEmbedder
+from src.rag.embedder import FakeEmbedder
 from tests.support.rag_fakes import DIM, FakeChatModel, build_index
 
 WARFARIN = "CC(=O)CC(C1=CC=CC=C1)C2=C(C3=CC=CC=C3OC2=O)O"

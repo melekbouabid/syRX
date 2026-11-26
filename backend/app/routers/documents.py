@@ -21,7 +21,7 @@ from src.agent.runtime import AgentHolder
 from src.agent.safety import redact_doses
 from src.rag.chunking import Document
 from src.rag.retrieval import Retriever
-from src.rag.stores import STORE_ERRORS
+from src.rag.vector_store import STORE_ERRORS
 
 router = APIRouter(
     prefix="/api/documents", tags=["documents"], dependencies=[Depends(get_current_user)]
@@ -41,7 +41,7 @@ def get_retriever(request: Request) -> Retriever:
     if retriever is None:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
-            "The document index is empty. Run `python -m src.rag.init_qdrant` "
+            "The document index is empty. Run `python -m src.rag.vector_store index` "
             "(docs/module2/README.md).",
         )
     return retriever

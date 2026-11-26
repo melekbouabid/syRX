@@ -13,12 +13,10 @@ from collections.abc import Iterator
 import pytest
 from langchain_core.messages import AIMessage
 
-from src.rag.init_qdrant import FakeEmbedder, index_chunks
+from src.rag.embedder import FakeEmbedder, TokenBM25
 from src.rag.query_rewriting import QueryRewriter, clean
 from src.rag.retrieval import BM25, Retriever, rrf, tokenize
-from src.rag.stores.base import METADATA_COLUMNS, Filters
-from src.rag.stores.qdrant import DENSE, QdrantStore
-from src.rag.stores.sparse import TokenBM25
+from src.rag.vector_store import DENSE, METADATA_COLUMNS, Filters, QdrantStore, index_chunks
 from tests.support.rag_fakes import CORPUS, DIM, FakeChatModel
 
 SERVER = os.environ.get("TUJYA_TEST_QDRANT_URL")

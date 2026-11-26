@@ -1,6 +1,7 @@
-"""The RAG chain: search -> numbered sources -> prompt -> cited answer.
+"""Step 6 — LLM: question -> search -> numbered sources -> prompt v1 -> qwen2.5:3b -> cited answer.
 
-The agent (src/agent/graph.py) runs it as its retrieve and answer nodes.
+The agent (src/agent/graph.py) runs it as its retrieve and answer nodes; the safety check
+(src/agent/safety.py) then removes doses, "safe" claims and uncited sentences.
 """
 
 from __future__ import annotations

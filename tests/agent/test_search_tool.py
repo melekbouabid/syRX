@@ -7,7 +7,7 @@ import asyncio
 from fastapi import FastAPI
 
 from src.agent.tools import Toolbox
-from src.rag.init_qdrant import FakeEmbedder
+from src.rag.embedder import FakeEmbedder
 from src.rag.query_rewriting import QueryRewriter
 from src.rag.retrieval import RetrieverHolder
 from tests.support.rag_fakes import DIM, FakeChatModel, build_index

@@ -16,9 +16,8 @@ from fastapi.testclient import TestClient
 from backend.tests.support.fixtures import USER, sign_in
 from src.agent.runtime import AgentHolder
 from src.rag.chunking import Catalog, Document, source_group
-from src.rag.init_qdrant import FakeEmbedder, index_chunks
-from src.rag.stores.base import Chunk
-from src.rag.stores.qdrant import QdrantStore
+from src.rag.embedder import FakeEmbedder
+from src.rag.vector_store import Chunk, QdrantStore, index_chunks
 from tests.support.rag_fakes import CORPUS, DIM, FakeChatModel
 
 
@@ -142,7 +141,7 @@ def test_empty_index_answers_503(app: FastAPI, browser: Callable[[], TestClient]
         store=QdrantStore.connect(":memory:", DIM),
     )  # fmt: skip
     response = sign_in(browser(), USER).get("/api/documents")
-    assert response.status_code == 503 and "src.rag.init_qdrant" in response.json()["detail"]
+    assert response.status_code == 503 and "src.rag.vector_store index" in response.json()["detail"]
 
 
 def test_unreachable_store_answers_503(app: FastAPI, browser: Callable[[], TestClient]) -> None:

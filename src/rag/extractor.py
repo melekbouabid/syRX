@@ -1,19 +1,19 @@
-"""Module 2 data steps: `python -m src.rag.corpus [--set key=value] <command>`.
+"""Step 1 — Extractor: source documents (openFDA labels, PubMed abstracts, DDInter) -> clean text.
 
-Commands: ddinter, classes, ingredients (RxNav), interactions, labels, pubmed, corpus.
+The downloads run through the polite connectors of src/data/sources (cache, rate limits,
+provenance); each source lands as clean interim tables (label sections, abstracts, DDInter
+rows), then `corpus` cuts them into chunks (step 3). Run:
+`python -m src.rag.extractor [--set key=value] <command>`, with the commands ddinter, classes,
+ingredients (RxNav, step 2), interactions, labels, pubmed, corpus.
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
-import csv
 import json
-import re
 from collections.abc import Iterable, Mapping
-from dataclasses import asdict, dataclass, fields
 from pathlib import Path
-from typing import Any
 
 import pandas as pd
 
@@ -22,6 +22,19 @@ from src.data.sources.config import Settings, find_config, load_settings
 from src.data.sources.http.client import PoliteClient
 from src.data.sources.provenance import read_parquet, write_parquet
 from src.rag import chunking
+from src.rag.metadata import (
+    HOST,
+    ddinter_names,
+    map_classes,
+    norm_name,
+    read_aliases,
+    read_csv_rows,
+    read_rows,
+    served_classes,
+    summarise,
+    update_class_file,
+    write_rows,
+)
 
 # DDInter is used under its CC BY-NC-SA 4.0 terms (non-commercial student project); the
 # shared config.yaml keeps the connector opt-in.
@@ -45,7 +58,6 @@ PUBMED_OVERRIDES = [
     "sources.pubmed.options.sort=relevance",
     "sources.pubmed.options.start_date=2000/01/01",
 ]
-CLASS_COLUMNS = ["rxcui", "active_ingredients", "ingredient_rxcuis", "ingredient_method"]
 # The corpus steps use the data pipeline configuration; TUJYA_CONFIG or a config.yaml in the
 # working directory wins.
 PIPELINE_CONFIG = Path(__file__).resolve().parents[2] / "config" / "data_pipeline" / "config.yaml"
@@ -68,36 +80,6 @@ def _paths(settings: Settings) -> dict[str, Path]:
     }
 
 
-def _read_csv(path: Path) -> list[dict[str, str]]:
-    with path.open(newline="", encoding="utf-8") as handle:
-        return list(csv.DictReader(handle))
-
-
-def update_class_file(path: Path, summary: dict[int, dict[str, str]]) -> None:
-    """Add or refresh the ingredient columns of config/pill_classes.csv, keeping the rest."""
-    rows = _read_csv(path)
-    names = [c for c in rows[0] if c not in CLASS_COLUMNS] + CLASS_COLUMNS if rows else []
-    empty = dict.fromkeys(CLASS_COLUMNS, "")
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=names)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow({**row, **summary.get(int(row["class_id"]), empty)})
-
-
-def served_classes(source: Path, path: Path) -> int:
-    """Write the class table of the API from the v2 class list: same ids, same columns, plus
-    empty ingredient columns (filled by `ingredients`). Returns the number of classes."""
-    rows = _read_csv(source)
-    names = [c for c in rows[0] if c not in CLASS_COLUMNS] + CLASS_COLUMNS
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=names)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow({**dict.fromkeys(CLASS_COLUMNS, ""), **row})
-    return len(rows)
-
-
 def run_classes(settings: Settings) -> None:
     paths = _paths(settings)
     count = served_classes(paths["classes_v2"], paths["classes"])
@@ -106,7 +88,7 @@ def run_classes(settings: Settings) -> None:
 
 async def run_ingredients(settings: Settings) -> None:
     paths = _paths(settings)
-    pills = _read_csv(paths["classes"])
+    pills = read_csv_rows(paths["classes"])
     async with PoliteClient(settings, allowed_hosts={HOST}) as client:
         rows = await map_classes(client, pills)
     write_rows(rows, paths["ingredients"])
@@ -172,7 +154,7 @@ def run_corpus(settings: Settings) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m src.rag.corpus")
+    parser = argparse.ArgumentParser(prog="python -m src.rag.extractor")
     parser.add_argument("--set", action="append", default=[], metavar="KEY=VALUE")
     parser.add_argument(
         "command",
@@ -201,149 +183,9 @@ def main(argv: list[str] | None = None) -> None:
         run_interactions(settings)
 
 
-# --- Active ingredients of the pill classes (RxNav) --------------------------------------------
-# NDC -> RxCUI (`ndcstatus`) -> base ingredients (`historystatus`), not salts, never strengths.
-# Without a resolved NDC the generic name is looked up (`approximateTerm`, `method=name`).
-
-RXNAV = "https://rxnav.nlm.nih.gov/REST"
-HOST = "rxnav.nlm.nih.gov"
-SOURCE = "rxnav"
-
-
-@dataclass(frozen=True)
-class IngredientRow:
-    """One ingredient of one class, with how it was found."""
-
-    class_id: int
-    class_key: str
-    ndc11: str  # the NDC that resolved, empty for method=name
-    ndc_status: str  # RxNav status of that NDC: ACTIVE, OBSOLETE, ALIEN, UNKNOWN
-    product_rxcui: str
-    product_name: str  # RxNorm name of the product, e.g. "glimepiride 4 MG Oral Tablet"
-    ingredient_rxcui: str
-    ingredient: str  # lower case RxNorm IN
-    method: str  # ndc | name
-
-
-async def _json(client: PoliteClient, path: str, params: dict[str, str] | None = None) -> Any:
-    result = await client.fetch(f"{RXNAV}/{path}", source=SOURCE, params=params)
-    return result.json()
-
-
-async def ndc_product(client: PoliteClient, ndc11: str) -> tuple[str, str, str]:
-    """(rxcui, status, concept name) of a package NDC; rxcui is "" when RxNorm has none."""
-    status = (await _json(client, "ndcstatus.json", {"ndc": ndc11})).get("ndcStatus") or {}
-    rxcui = status.get("rxcui") or ""
-    if not rxcui:
-        for entry in status.get("ndcHistory") or []:
-            rxcui = entry.get("activeRxcui") or entry.get("originalRxcui") or ""
-            if rxcui:
-                break
-    return rxcui, status.get("status") or "UNKNOWN", status.get("conceptName") or ""
-
-
-async def product_ingredients(
-    client: PoliteClient, rxcui: str
-) -> tuple[str, list[tuple[str, str]]]:
-    """(product name, [(ingredient rxcui, ingredient name)]) from the RxCUI's history status."""
-    body = await _json(client, f"rxcui/{rxcui}/historystatus.json")
-    history = body.get("rxcuiStatusHistory") or {}
-    name = (history.get("attributes") or {}).get("name") or ""
-    features = (history.get("definitionalFeatures") or {}).get("ingredientAndStrength") or []
-    found = {(f["baseRxcui"], f["baseName"].lower()) for f in features if f.get("baseRxcui")}
-    if not found:
-        derived = (history.get("derivedConcepts") or {}).get("ingredientConcept") or []
-        found = {
-            (d["ingredientRxcui"], d["ingredientName"].lower())
-            for d in derived
-            if d.get("ingredientRxcui")
-        }
-    return name, sorted(found, key=lambda pair: pair[1])
-
-
-def clean_generic_name(text: str) -> str:
-    """'Warfarin Sodium Tablets, USP' -> 'Warfarin Sodium'. Only for the name fallback."""
-    text = re.sub(
-        r"\b(tablets?|capsules?|usp|us|oral|film[- ]coated|extended[- ]release)\b",
-        " ",
-        text,
-        flags=re.IGNORECASE,
-    )
-    return re.sub(r"[\s,]+", " ", text).strip()
-
-
-async def name_ingredients(client: PoliteClient, generic: str) -> list[tuple[str, str]]:
-    term = clean_generic_name(generic)
-    if not term:
-        return []
-    body = await _json(client, "approximateTerm.json", {"term": term, "maxEntries": "1"})
-    candidates = (body.get("approximateGroup") or {}).get("candidate") or []
-    if not candidates:
-        return []
-    _, found = await product_ingredients(client, candidates[0]["rxcui"])
-    return found
-
-
-async def map_class(client: PoliteClient, pill: dict[str, str]) -> list[IngredientRow]:
-    """All ingredient rows of one row of config/pill_classes.csv."""
-    class_id, key = int(pill["class_id"]), pill["class_key"]
-    rows: list[IngredientRow] = []
-    for ndc11 in filter(None, pill["ndc11_list"].split(";")):
-        rxcui, status, concept = await ndc_product(client, ndc11)
-        if not rxcui:
-            continue
-        name, found = await product_ingredients(client, rxcui)
-        rows.extend(
-            IngredientRow(class_id, key, ndc11, status, rxcui, concept or name, ing_cui, ing, "ndc")
-            for ing_cui, ing in found
-        )
-    if not rows:
-        for ing_cui, ing in await name_ingredients(client, pill.get("generic_name", "")):
-            rows.append(IngredientRow(class_id, key, "", "", "", "", ing_cui, ing, "name"))
-    return rows
-
-
-async def map_classes(client: PoliteClient, pills: Iterable[dict[str, str]]) -> list[IngredientRow]:
-    rows: list[IngredientRow] = []
-    for pill in pills:
-        rows.extend(await map_class(client, pill))
-    return rows
-
-
-def summarise(rows: Iterable[IngredientRow]) -> dict[int, dict[str, str]]:
-    """Per class: one product RxCUI, the ingredient names and RxCUIs ("; "-joined), method."""
-    first: dict[int, IngredientRow] = {}
-    names: dict[int, dict[str, str]] = {}
-    for row in rows:
-        first.setdefault(row.class_id, row)
-        names.setdefault(row.class_id, {})[row.ingredient] = row.ingredient_rxcui
-    return {
-        class_id: {
-            "rxcui": first[class_id].product_rxcui,
-            "active_ingredients": "; ".join(sorted(found)),
-            "ingredient_rxcuis": "; ".join(found[name] for name in sorted(found)),
-            "ingredient_method": first[class_id].method,
-        }
-        for class_id, found in names.items()
-    }
-
-
-def write_rows(rows: Iterable[IngredientRow], path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=[f.name for f in fields(IngredientRow)])
-        writer.writeheader()
-        writer.writerows(asdict(row) for row in rows)
-
-
-def read_rows(path: Path) -> list[IngredientRow]:
-    with path.open(newline="", encoding="utf-8") as handle:
-        return [IngredientRow(int(row.pop("class_id")), **row) for row in csv.DictReader(handle)]
-
-
-# --- DDInter interactions of the class ingredients ---------------------------------------------
-# DDInter names are matched to RxNorm names after config/ingredient_aliases.csv. Each pair is
-# stored once, sorted; a pair listed twice keeps its most severe level (`conflict` = true).
+# --- DDInter interactions of the class ingredients -> clean rows with a sentence each ----------
+# DDInter names are matched to RxNorm names after config/ingredient_aliases.csv (step 2). Each
+# pair is stored once, sorted; a pair listed twice keeps its most severe level (`conflict`).
 
 DDINTER_URL = "https://ddinter2.scbdd.com/"
 DDINTER_CITATION = (
@@ -367,27 +209,6 @@ COLUMNS = [
 ]
 
 
-def _norm(name: object) -> str:
-    return " ".join(str(name).lower().split())
-
-
-def read_aliases(path: Path) -> dict[str, str]:
-    """{normalised DDInter name: RxNorm ingredient} from config/ingredient_aliases.csv."""
-    if not path.exists():
-        return {}
-    table = pd.read_csv(path, dtype="string")
-    return {
-        _norm(d): _norm(r)
-        for r, d in zip(table["rxnorm_ingredient"], table["ddinter_name"], strict=True)
-    }
-
-
-def ddinter_names(ddinter: pd.DataFrame, aliases: Mapping[str, str] | None = None) -> set[str]:
-    aliases = aliases or {}
-    names = pd.concat([ddinter["drug_a_name"], ddinter["drug_b_name"]])
-    return {aliases.get(_norm(n), _norm(n)) for n in names}
-
-
 def filter_interactions(
     ddinter: pd.DataFrame,
     ingredients: Iterable[str],
@@ -396,11 +217,11 @@ def filter_interactions(
     aliases: Mapping[str, str] | None = None,
 ) -> pd.DataFrame:
     """Interactions where both drugs (or, with both=False, at least one) are in `ingredients`."""
-    wanted = {_norm(i) for i in ingredients}
+    wanted = {norm_name(i) for i in ingredients}
     aliases = aliases or {}
 
     def name(value: object) -> str:
-        return aliases.get(_norm(value), _norm(value))
+        return aliases.get(norm_name(value), norm_name(value))
 
     frame = pd.DataFrame(
         {

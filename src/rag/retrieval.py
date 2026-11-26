@@ -1,6 +1,7 @@
-"""Retrieval: BM25, dense (bge-m3) or hybrid (reciprocal rank fusion), optionally reranked.
+"""Query path — Retrieval: BM25, dense (bge-m3) or hybrid (reciprocal rank fusion), top k.
 
-Runs in Qdrant, or in SQL / numpy for the SQL store; metadata filters apply to every mode.
+Hybrid (served): dense and BM25 candidates, each filtered by the metadata, fused by RRF
+(k = 60) in Qdrant; in SQL / numpy for the SQL store. Optionally reranked (reranking.py).
 """
 
 from __future__ import annotations
@@ -20,11 +21,9 @@ import numpy as np
 
 from app.config import Settings
 from src.rag.chunking import Catalog, fold
-from src.rag.init_qdrant import Embedder, OllamaEmbedder
+from src.rag.embedder import Embedder, FastEmbedBM25, OllamaEmbedder, SparseEncoder
 from src.rag.reranking import CrossEncoderReranker, Reranker
-from src.rag.stores import open_store
-from src.rag.stores.base import Chunk, Filters, VectorStore
-from src.rag.stores.sparse import FastEmbedBM25, SparseEncoder
+from src.rag.vector_store import Chunk, Filters, VectorStore, open_store
 
 Mode = Literal["bm25", "dense", "hybrid"]
 RRF_K = 60
@@ -396,7 +395,7 @@ class RetrieverHolder:
         self._lock = threading.Lock()
 
     def get(self) -> Retriever | None:
-        """None when the index does not exist yet (`python -m src.rag.init_qdrant`)."""
+        """None when the index does not exist yet (`python -m src.rag.vector_store index`)."""
         with self._lock:
             if not self.store.exists():
                 return None

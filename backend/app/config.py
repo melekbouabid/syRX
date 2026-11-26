@@ -62,9 +62,9 @@ class Settings(BaseSettings):
         PROJECT_DIR / "data" / "processed" / "c3pi" / "drift" / "reference.json"
     )
 
-    # Module 2: RAG and agent. `python -m src.rag.init_qdrant` indexes these chunks (380 classes)
-    # in Qdrant; collection tujya_chunks holds the 150-class corpus. "sql" keeps the index in
-    # the pharma database instead. Ollama serves the LLM and the embeddings.
+    # Module 2: RAG and agent. `python -m src.rag.vector_store index` indexes these chunks
+    # (380 classes) in Qdrant; collection tujya_chunks holds the 150-class corpus. "sql" keeps
+    # the index in the pharma database instead. Ollama serves the LLM and the embeddings.
     rag_chunks_file: Path = PROJECT_DIR / "data" / "processed" / "rag" / "corpus_v2" / "chunks"
     vector_store: Literal["qdrant", "sql"] = "qdrant"
     # docker compose `qdrant`; ":memory:" = the client's local in-memory mode (tests).

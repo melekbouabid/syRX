@@ -31,7 +31,7 @@ from src.agent.safety import (
 from src.agent.tools import CHAT_TOOLS, Toolbox, ToolError, langchain_tools
 from src.models.toxicity.model import LOW_NOTE, MIXTURE_NOTE, WORDING
 from src.rag.chunking import fold
-from src.rag.init_qdrant import EmbeddingError
+from src.rag.embedder import EmbeddingError
 from src.rag.rag_chain import SOURCE_CHARS, answer_messages, number_sources, stream_answer
 
 # A question about toxicity gets predict_toxicity even if the planner forgets it (folded text).

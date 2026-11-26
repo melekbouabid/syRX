@@ -105,7 +105,7 @@ services:
   rag-init:
     image: ${BACKEND_IMAGE:-${COMPOSE_PROJECT_NAME:-tujya}-backend:local}
     build: *backend-build
-    command: ["python", "-m", "src.rag.init_qdrant", "--pull"]
+    command: ["python", "-m", "src.rag.vector_store", "index", "--pull"]
     environment: *backend-env
     volumes: *backend-mounts
     depends_on:

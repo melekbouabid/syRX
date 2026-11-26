@@ -12,8 +12,8 @@ from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResu
 from pydantic import Field
 
 from app.db import make_engine
-from src.rag.init_qdrant import FakeEmbedder, index_chunks
-from src.rag.stores.base import ChunkStore
+from src.rag.embedder import FakeEmbedder
+from src.rag.vector_store import ChunkStore, index_chunks
 
 DIM = 64
 

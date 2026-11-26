@@ -13,9 +13,9 @@ import pytest
 from sqlalchemy import MetaData, text
 
 from app.db import make_engine
-from src.rag.init_qdrant import FakeEmbedder, index_chunks
+from src.rag.embedder import FakeEmbedder
 from src.rag.retrieval import Retriever
-from src.rag.stores.base import ChunkStore, Filters
+from src.rag.vector_store import ChunkStore, Filters, index_chunks
 from tests.support.rag_fakes import CORPUS, DIM
 
 URL = os.environ.get("TUJYA_TEST_PG_URL")

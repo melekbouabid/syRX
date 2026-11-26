@@ -15,11 +15,10 @@ from app.inference import ScannerHolder
 from src.agent.graph import TujyaAgent
 from src.agent.tools import Toolbox
 from src.models.toxicity.model import ToxHolder
-from src.rag.init_qdrant import Embedder, OllamaEmbedder
+from src.rag.embedder import Embedder, OllamaEmbedder
 from src.rag.query_rewriting import QueryRewriter
 from src.rag.retrieval import retriever_holder
-from src.rag.stores import open_store
-from src.rag.stores.base import VectorStore
+from src.rag.vector_store import VectorStore, open_store
 
 
 def ollama_llm(settings: Settings) -> BaseChatModel:

@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     # PostgreSQL + pgvector and Qdrant (same version as docker-compose.yml) for the RAG store
-    # tests (tests/rag/test_rag_pgvector.py, test_rag_qdrant.py). The tests use fake
+    # tests (tests/rag/test_vector_store_pgvector.py, test_vector_store.py). The tests use fake
     # embeddings and a fake LLM: CI never needs Ollama or a real model.
     services:
       postgres:
