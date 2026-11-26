@@ -3,15 +3,36 @@
 [![ci-tests](https://github.com/melekbouabid/syRX/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/melekbouabid/syRX/actions/workflows/ci-tests.yml)
 [![docker-build](https://github.com/melekbouabid/syRX/actions/workflows/docker-build.yml/badge.svg)](https://github.com/melekbouabid/syRX/actions/workflows/docker-build.yml)
 
-Tujya is a medication-safety web app. Photograph one or more pills (upload or webcam): a YOLO11s
-model **detects** each pill and an EfficientNetV2-S classifier **identifies** it among 380 pills
-of the public NLM C3PI dataset, with its confidence. Each pill is linked to its active
-ingredients and their **interactions** (DDInter); a LangGraph agent then answers follow-up
-questions by **RAG** over openFDA labels, PubMed abstracts and DDInter, **citing its sources**.
-Student project evaluated in two modules: **Vision & MLOps** and **AI Engineering**.
+Tujya is a decision-support platform for drug and dietary-supplement manufacturers. It checks
+interactions between active ingredients (DDInter), predicts molecule toxicity (Tox21), answers
+questions over official drug labels and the scientific literature with a cited RAG assistant,
+and uses computer vision to flag look-alike risks with existing pills and to read packaging text
+(OCR). The full MLOps lifecycle is automated (DVC, MLflow, ONNX, Docker Compose, GitHub Actions
+CI/CD). Student project evaluated in two modules: **Vision & MLOps** and **AI Engineering**.
 
-> **For information only: ask a pharmacist or a doctor.** Tujya never gives a dose and never says
-> a combination is safe; a pill identification is a suggestion, always shown with its confidence.
+**Who it is for.** R&D and quality teams of drug and supplement manufacturing sites: Tujya gives
+them quick, cited access to drug labels, the scientific literature and interaction data, to make
+their daily checks easier.
+
+**Problem solved.** Before producing a new medicine or supplement, a lab must check its
+ingredients' interactions, their toxicity and whether its pill could be confused with an existing
+product. This information is scattered across interaction databases, official labels, the
+literature and pill image catalogues; Tujya gathers it in one tool with cited sources to speed up
+and secure the first checks.
+
+| Function | Where |
+|---|---|
+| Interactions between active ingredients (DDInter) | `POST /api/interactions` ([medicines.py](backend/app/routers/medicines.py)); Scanner page, interactions report |
+| Molecule toxicity (Tox21 assays) | `POST /api/toxicity` ([toxicity.py](backend/app/routers/toxicity.py), model in [src/models/toxicity/](src/models/toxicity/)); Toxicity page |
+| Cited RAG assistant (openFDA labels, PubMed, DDInter) | `POST /api/chat` ([chat.py](backend/app/routers/chat.py), agent in [src/agent/](src/agent/), RAG in [src/rag/](src/rag/)); chat panel of the Scanner page |
+| Drug labels and literature with their citations | `GET /api/documents` ([documents.py](backend/app/routers/documents.py)); Documents page |
+| Look-alike risk: a pill photo matched against 380 existing US pills (YOLO11s detection, EfficientNetV2-S top-5 with confidence) | `POST /api/scan`, `POST /predict`, `POST /predict/visualize` ([scan.py](backend/app/routers/scan.py), [vision.py](backend/app/routers/vision.py)); Scanner page (upload or webcam) |
+| Packaging text (OCR) and the box's ingredients | `POST /api/scan` on a medicine box ([boxes.py](backend/app/boxes.py), OCR in [src/models/ocr/](src/models/ocr/)); Scanner page |
+
+**Scope and limits.** Decision support and first checks only, not a regulatory validation. The
+data cover marketed products (US pills from NLM C3PI, DDInter). The assistant never gives doses
+(and never says a combination is safe); a pill match is a suggestion, always shown with its
+confidence.
 
 ## Architecture
 
@@ -76,7 +97,7 @@ uv venv .venv -p 3.12 && uv pip install -p .venv -r requirements-dev.txt   # pro
 python -m pytest                                # tests of src/ (tests/)
 cd backend && python -m pytest && cd ..         # API tests (backend/tests/)
 python -m pytest tools/tests                    # Git hooks
-cd frontend && npm ci && npm test && npm run lint && npm run build && cd ..
+cd frontend && npm ci && npm ci --prefix eslint && npm test && npm run lint && npm run build && cd ..
 ruff check . && ruff format --check . && mypy
 dvc status                                      # data and pipeline up to date
 ```
@@ -99,7 +120,7 @@ src/
 tests/              tests of src/
 config/             class tables, splits, search spaces, RAG grid, brand table
 data/               DVC-tracked data (raw/, processed/, external/), never in git
-notebooks/          Kaggle notebooks (module 1)
+notebooks/          summary notebooks of both modules, Kaggle training notebooks
 infra/              MLflow, PostgreSQL, Ollama and Spark images and settings
 tools/              Git hooks and their tests
 docs/               documentation (this README links every page)
