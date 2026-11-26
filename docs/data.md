@@ -113,8 +113,9 @@ python -m src.data.spark.log_stats         # before / after table above, logged 
 
 ## Medicine tables
 
-[src/rag/corpus.py](../src/rag/corpus.py) maps every pill class to its active ingredients with
-RxNav and keeps the DDInter interactions of those ingredients
+[src/rag/extractor.py](../src/rag/extractor.py) (with the name rules of
+[src/rag/metadata.py](../src/rag/metadata.py)) maps every pill class to its active ingredients
+with RxNav and keeps the DDInter interactions of those ingredients
 (`data/processed/pharma/`, loaded into PostgreSQL by `pharma-init`):
 
 | Table | Rows |
