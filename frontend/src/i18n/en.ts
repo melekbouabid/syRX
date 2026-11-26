@@ -844,6 +844,27 @@ const en = {
         actions: "Actions",
       },
     },
+    tools: {
+      title: "Tools",
+      lead: "The services of the stack, each in a new tab. They only answer on this machine.",
+      open: "Open",
+      sparkProfile: "Only with --profile spark",
+      items: {
+        mlflow: { name: "MLflow", role: "Experiments, Model Registry and Prompt Registry." },
+        qdrant: { name: "Qdrant", role: "Vector index of the RAG: chunks, payload and vectors." },
+        adminer: { name: "Adminer / PostgreSQL", role: "App tables and MLflow tables in the browser." },
+        swagger: { name: "Swagger", role: "Interactive documentation of the API." },
+        spark: { name: "Spark UI", role: "Master of the Spark cluster for the PySpark jobs." },
+      } as Record<string, { name: string; role: string }>,
+      login: {
+        title: "Adminer sign-in",
+        system: "System",
+        server: "Server",
+        username: "Username",
+        database: "Database",
+        or: "or",
+      },
+    },
     users: {
       hint: (n: number) =>
         `At least ${n} characters. Only a hash is stored: it cannot be shown again.`,

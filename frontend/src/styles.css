@@ -1149,6 +1149,87 @@ input::placeholder {
   gap: 16px;
 }
 
+/* Tools of the admin dashboard: one card per service, each opening in a new tab. */
+.admin-tools-lead {
+  margin: -6px 0 14px;
+}
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tool-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.tool-card p {
+  margin: 0;
+}
+
+.tool-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tool-head h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  color: var(--heading);
+}
+
+.tool-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 10px;
+  background: var(--primary-soft);
+  color: var(--primary-text);
+}
+
+.tool-note {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.tool-open {
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+.tool-login {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 0.85rem;
+}
+
+.tool-login dt {
+  color: var(--muted);
+}
+
+.tool-login dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+}
+
 .stat-grid-3 {
   grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
 }
