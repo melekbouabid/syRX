@@ -98,7 +98,8 @@ served collection needs `--allow-served`; a served collection is never dropped. 
 the change at its next question (the index metadata `indexed_at` changes). The demo of
 [results.md](results.md#document-updates) ran on a trial copy of 300 points.
 
-**What to show in Qdrant** (http://localhost:6333/dashboard):
+**What to show in Qdrant** (http://localhost:6333/dashboard; the bare
+http://localhost:6333 only returns a JSON version string):
 
 1. *Collections*: `tujya_chunks_v2`, 27,302 points, vectors `dense` (1,024, Cosine) and sparse
    `bm25`; the collection info lists the payload indexes (`doc_type`, `ingredients`,

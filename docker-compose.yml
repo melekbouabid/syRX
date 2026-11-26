@@ -6,6 +6,7 @@
 #   http://localhost:8000/docs   API directly (Swagger)
 #   http://localhost:5000        MLflow UI          localhost:5432  PostgreSQL + pgvector
 #   http://localhost:6333/dashboard  Qdrant (RAG chunks, payload and vectors)
+#   http://localhost:8081        Adminer: PostgreSQL in the browser (server `postgres`)
 #   http://localhost:11434       Ollama (local LLM and embeddings, GPU if available)
 #
 #   docker compose down          # keeps the volumes; `down -v` deletes them
@@ -23,7 +24,7 @@
 #
 # Credentials are development defaults; override them in the shell or in a compose
 # `.env` file (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_PORT, MLFLOW_PORT,
-# BACKEND_IMAGE, FRONTEND_IMAGE). The project name (containers, volumes, image names) is
+# ADMINER_PORT, BACKEND_IMAGE, FRONTEND_IMAGE). The project name (containers, volumes, image names) is
 # COMPOSE_PROJECT_NAME (.env, see .env.example).
 
 services:
@@ -131,6 +132,20 @@ services:
         condition: service_completed_successfully
       qdrant:
         condition: service_started
+    restart: unless-stopped
+
+  # Web UI of PostgreSQL (http://localhost:8081): System "PostgreSQL", Server "postgres",
+  # Username and Password = POSTGRES_USER / POSTGRES_PASSWORD, Database "tujya" (app tables)
+  # or "mlflow" (MLflow tracking). No credential is stored here: they are typed at login.
+  adminer:
+    image: adminer:6.3.1
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - "127.0.0.1:${ADMINER_PORT:-8081}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   # Vector database of the RAG: collection tujya_chunks_v2 (tujya_chunks = the corpus of the

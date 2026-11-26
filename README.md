@@ -71,8 +71,16 @@ keeps the volumes.
 | http://localhost:8080 | web app (Scanner, chat, Documents, Monitoring, Toxicity) |
 | http://localhost:8000/docs | Swagger UI of the API ([docs/api.md](docs/api.md)) |
 | http://localhost:5000 | MLflow: experiments, Model Registry, Prompt Registry |
-| http://localhost:6333/dashboard | Qdrant dashboard: indexed chunks and their metadata |
+| http://localhost:6333/dashboard | Qdrant dashboard: indexed chunks and their metadata (the bare port only returns a JSON version string) |
+| http://localhost:8081 | Adminer: PostgreSQL in the browser (login below) |
 | http://localhost:8090 | Spark master UI (`docker compose --profile spark up -d`) |
+
+PostgreSQL login in Adminer: System `PostgreSQL`, Server `postgres`, Username `tujya`, Password: the value of `POSTGRES_PASSWORD` in `.env` (default `tujya`), Database `tujya` (app tables) or `mlflow` (MLflow tracking).
+
+An administrator opens these tools from the **Tools** section of the admin dashboard (one card
+per tool, each in a new tab, on the host the app is opened from):
+
+![Tools section of the admin dashboard](docs/screenshots/39-admin-tools.jpg)
 
 Demo accounts created on the first start: `user@gmail.com` / `user` and `admin@gmail.com` /
 `admin` (change the latter before any other use, `backend/.env.example`).

@@ -844,6 +844,27 @@ const fr: Messages = {
         actions: "Actions",
       },
     },
+    tools: {
+      title: "Outils",
+      lead: "Les services de la plateforme, chacun dans un nouvel onglet. Ils ne répondent que sur cette machine.",
+      open: "Ouvrir",
+      sparkProfile: "Seulement avec --profile spark",
+      items: {
+        mlflow: { name: "MLflow", role: "Expériences, Model Registry et Prompt Registry." },
+        qdrant: { name: "Qdrant", role: "Index vectoriel du RAG : chunks, métadonnées et vecteurs." },
+        adminer: { name: "Adminer / PostgreSQL", role: "Tables de l'application et de MLflow dans le navigateur." },
+        swagger: { name: "Swagger", role: "Documentation interactive de l'API." },
+        spark: { name: "Spark UI", role: "Master du cluster Spark des jobs PySpark." },
+      },
+      login: {
+        title: "Connexion à Adminer",
+        system: "Système",
+        server: "Serveur",
+        username: "Utilisateur",
+        database: "Base de données",
+        or: "ou",
+      },
+    },
     users: {
       hint: (n) =>
         `Au moins ${n} caractères. Seul un hachage est conservé : il ne pourra plus être affiché.`,

@@ -17,6 +17,7 @@ import { useQuery } from "../../hooks";
 import { Icon, type IconName } from "../../components/icons";
 import { actionLabel, GROUP_TONE, groupLabel } from "../../lib/activity";
 import { useT } from "../../i18n";
+import ToolsSection from "./Tools";
 
 // Labels and notes in src/i18n (admin.dashboard.tiles), by key.
 const TILES: { key: keyof AdminStats; icon: IconName }[] = [
@@ -162,6 +163,8 @@ export default function Dashboard() {
         {stats.data ? <AccessMeter stats={stats.data} /> : <div />}
         <LatestActivity />
       </div>
+
+      <ToolsSection />
 
       <h2 className="section-title">{d.newest}</h2>
       {recent.error && <Alert>{recent.error}</Alert>}
