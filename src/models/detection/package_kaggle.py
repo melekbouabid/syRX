@@ -32,7 +32,7 @@ Boxes: automatic labelling (classical computer vision), long side resized to 640
 Splits: by photo session, no leakage (train / val / test). `test_holdout.txt` lists the test
 images used to compare the detectors (sessions the baseline never saw).
 
-Built by the Tujya project, https://github.com/melekbouabid/syRX (step 2.2,
+Built by the Tujya project, https://github.com/melekbouabid/syRX (see
 docs/module1/README.md). Kept private: do not redistribute.
 """
 

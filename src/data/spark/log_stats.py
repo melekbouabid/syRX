@@ -56,7 +56,7 @@ def _git(*args: str) -> str:
 
 
 def v1_stats() -> dict[str, Any]:
-    """The dataset of steps 1.1-1.3: 150 classes, config/splits/selected_images.csv."""
+    """The v1 dataset: 150 classes, config/splits/selected_images.csv (docs/data.md)."""
     with SPLITS_V1.open(newline="", encoding="utf-8") as handle:
         rows = list(csv.DictReader(handle))
     frame = pd.DataFrame(rows)

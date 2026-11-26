@@ -45,7 +45,7 @@ def build(arch: str) -> nbformat.NotebookNode:
     description, duration, accelerator = ARCHS[arch]
     branch = branch_of(arch)
     cells = [
-        new_markdown_cell(f"""# Tujya, step 2.2: detector `{arch}` on C3PI v2
+        new_markdown_cell(f"""# Tujya: detector `{arch}` on C3PI v2
 
 {description}. Branch `{branch}` of {REPO.removesuffix(".git")}.
 

@@ -34,8 +34,8 @@ def wanted() -> list[tuple[str, int, list[dict[str, str]], str]]:
     for version in sorted(ANSWER_PROMPTS, key=lambda v: int(v.removeprefix("v"))):
         for language in ("fr", "en"):
             message = {
-                "v1": "answer prompt of steps 3.1 to 3.3",
-                "v2": "direct answer first, one source fact per sentence (step 3.4)",
+                "v1": "first answer prompt (docs/module2/README.md)",
+                "v2": "direct answer first, one source fact per sentence",
             }.get(version, f"answer prompt {version}")
             items.append(
                 (
