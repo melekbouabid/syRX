@@ -1118,15 +1118,18 @@ def run_document(args: argparse.Namespace, settings: Settings) -> None:
             if args.no_sparse
             else FastEmbedBM25(args.sparse_model, cache_dir=settings.rag_model_cache_dir)
         )
-        stats = asyncio.run(
-            write_document(
-                store,
-                embedder,
-                document_rows(document),
-                sparse=sparse,
-                must_exist=args.command == "update",
+        try:
+            stats = asyncio.run(
+                write_document(
+                    store,
+                    embedder,
+                    document_rows(document),
+                    sparse=sparse,
+                    must_exist=args.command == "update",
+                )
             )
-        )
+        except (ValueError, LookupError) as refused:  # already indexed, unknown, wrong model
+            sys.exit(f"{args.command} refused: {refused}")
         print(json.dumps(stats))
 
 

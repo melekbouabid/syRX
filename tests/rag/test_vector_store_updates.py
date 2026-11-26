@@ -208,3 +208,20 @@ def test_the_command_line_never_writes_a_served_collection_by_default(
     }[command]
     with pytest.raises(SystemExit, match="served collection"):
         main([*argv, "--qdrant-url", "http://127.0.0.1:9"])  # never reached
+
+
+def test_the_command_line_refuses_cleanly(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    trial = QdrantStore.connect(":memory:", DIM, "tujya_test_cli")
+    asyncio.run(index_chunks(trial, FakeEmbedder(DIM), [dict(r) for r in CORPUS]))
+    monkeypatch.setattr(QdrantStore, "connect", classmethod(lambda cls, *a, **k: trial))
+    monkeypatch.setattr("src.rag.vector_store.OllamaEmbedder", lambda *a, **k: FakeEmbedder(DIM))
+    path = tmp_path / "doc.json"
+    path.write_text(json.dumps(DOCUMENT), encoding="utf-8")
+    argv = ["--document", str(path), "--collection", "tujya_test_cli", "--no-sparse"]
+    main(["add", *argv])
+    with pytest.raises(SystemExit, match="add refused: note:zorbatide is already indexed"):
+        main(["add", *argv])
+    main(["update", *argv])  # same text: nothing to do, no error
+    main(["delete", "--doc-id", "note:zorbatide", "--collection", "tujya_test_cli"])
+    with pytest.raises(SystemExit, match="update refused: note:zorbatide is not indexed"):
+        main(["update", *argv])
