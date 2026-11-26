@@ -4,7 +4,10 @@ Benchmark set: 96 hand-checked questions ([src/evaluation/questions.jsonl](../..
 49 in French, 47 in English); 85 of them have expected chunks
 ([src/evaluation/qrels.json](../../src/evaluation/qrels.json)) and are used for retrieval. Every
 configuration searches like the agent: the ingredients found in the question are a metadata
-filter, top 10 kept. Last column: MLflow run id. The served choice is in bold.
+filter, top 10 kept. Last column: MLflow run id. The served choice is in bold. In the first
+two tables "Recall@k" is the share of questions with at least one relevant chunk in the top k
+(Hit@k in the course); the [metrics of the course](#retrieval-metrics-of-the-course) below
+separate Hit@k from Recall@k (share of the relevant chunks found).
 
 ## Retrieval: first benchmark
 
@@ -60,6 +63,89 @@ and another chunking would need the served index rebuilt, which the rule allows 
 significant gain (paired bootstrap).
 The selection is registered as `tujya-rag-retrieval` ([grid/champion.json](../../src/evaluation/results/grid/champion.json)).
 
+Qdrant ordered the tied RRF scores of the hybrid search differently from one call to the next,
+so the hybrid rows above come from one order of the ties. The order is now fixed (score, then
+`chunk_id`): on the same 85 questions the served configuration gets MRR 0.839 (top 20, run
+`104ad4c3`) and dense 0.833 (run `8cbb255f`), so the champion is unchanged (next section).
+
+## Retrieval metrics of the course
+
+`python -m src.evaluation.retrieval_evaluation run` (source:
+[retrieval_metrics.json](../../src/evaluation/results/retrieval_metrics.json), rankings in
+[retrieval_rankings.jsonl](../../src/evaluation/results/retrieval_rankings.jsonl), experiment
+`tujya-rag-retrieval`). Served corpus v2 (`tujya_chunks_v2`, read only), the 85 questions with
+qrels, binary relevance (the qrels mapped to the v2 chunks as in the grid), top 20 per question,
+deterministic order of ties: two runs give the same rankings. Set metrics: Hit@k, Precision@k,
+Recall@k, F1@k, R-Precision (= Precision@|relevant|); rank metrics: MRR, MAP, nDCG@k (linear
+gains). Formulas and the worked example of the course:
+[retrieval_metrics.py](../../src/evaluation/retrieval_metrics.py) and its tests.
+
+| Configuration | Hit@5 | P@5 | R@5 | F1@5 | nDCG@5 | R@10 | R@20 | R-Precision | MRR | MAP | MLflow run |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| BM25 | 0.753 | 0.306 | 0.580 | 0.344 | 0.556 | 0.664 | 0.737 | 0.497 | 0.587 | 0.537 | `66804baf` |
+| dense | 0.894 | 0.377 | 0.694 | 0.409 | 0.749 | 0.807 | 0.883 | 0.690 | 0.833 | 0.719 | `8cbb255f` |
+| hybrid | 0.871 | 0.395 | 0.694 | 0.429 | 0.734 | 0.817 | 0.871 | 0.665 | 0.803 | 0.706 | `86f03f5f` |
+| **hybrid + rewriting (served)** | **0.906** | **0.386** | **0.720** | **0.426** | **0.763** | **0.810** | **0.884** | **0.686** | **0.839** | **0.730** | **`104ad4c3`** |
+
+The served configuration is the best on 6 of the 10 columns (Hit@5, R@5, nDCG@5, R@20, MRR,
+MAP); plain hybrid has the best P@5, F1@5 and R@10, dense the best R-Precision. The qrels hold
+every chunk of the expected section, so most questions have several relevant chunks and
+Precision@5 stays low even when the answer is found (Hit@5 0.906).
+
+**Recall@k curve of the served configuration and the choice of k.** The agent gives the LLM the
+5 best search passages (`search_documents`, `k = 5` in
+[src/agent/tools.py](../../src/agent/tools.py); at most `rag_top_k = 6` of them and 8 sources in
+all in [rag_chain.py](../../src/rag/rag_chain.py)).
+
+| k | Hit@k | Precision@k | Recall@k | nDCG@k |
+|---:|---:|---:|---:|---:|
+| 1 | 0.776 | 0.776 | 0.464 | 0.776 |
+| 2 | 0.835 | 0.565 | 0.550 | 0.757 |
+| 3 | 0.882 | 0.498 | 0.641 | 0.770 |
+| 4 | 0.906 | 0.441 | 0.689 | 0.768 |
+| **5 (sent to the LLM)** | **0.906** | **0.386** | **0.720** | **0.763** |
+| 6 | 0.941 | 0.345 | 0.751 | 0.769 |
+| 7 | 0.965 | 0.309 | 0.771 | 0.772 |
+| 8 | 0.977 | 0.281 | 0.782 | 0.773 |
+| 9 | 0.977 | 0.261 | 0.796 | 0.777 |
+| 10 | 0.977 | 0.246 | 0.810 | 0.783 |
+| 11 | 0.977 | 0.232 | 0.820 | 0.787 |
+| 12 | 0.988 | 0.220 | 0.836 | 0.792 |
+| 13 (flattens) | 0.988 | 0.209 | 0.851 | 0.797 |
+| 14 | 0.988 | 0.199 | 0.858 | 0.801 |
+| 15 | 0.988 | 0.190 | 0.864 | 0.803 |
+| 16 | 0.988 | 0.179 | 0.866 | 0.803 |
+| 17 | 0.988 | 0.172 | 0.871 | 0.806 |
+| 18 | 0.988 | 0.164 | 0.872 | 0.806 |
+| 19 | 0.988 | 0.159 | 0.877 | 0.808 |
+| 20 | 0.988 | 0.153 | 0.884 | 0.810 |
+
+The curve does not flatten at k = 5: it gains less than 0.01 Recall twice in a row only from
+k = 13. Most of the gain comes early: from 5 to 8 passages, Hit goes from 0.906 to 0.977 and
+Recall from 0.720 to 0.782, while Precision falls from 0.386 to 0.281. k = 5 is kept in this
+step; **k = 8 is the proposed next experiment**, to be validated by a generation run (answer
+quality, latency budget of 15 s, context of a 3B model), since more passages only help if the
+small LLM still cites the right one.
+
+**Reranker** (recorded rankings, not run again). The reranker grid ran on the corpus v1 only;
+its top-10 rankings, logged by the grid runs, are scored with the same metrics next to the same
+configuration without reranker:
+
+| Corpus v1, recorded top 10 | Hit@1 | Hit@5 | R@5 | nDCG@5 | R@10 | MRR | MAP | ms / question | MLflow run (grid run) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| hybrid + rewriting | 0.753 | 0.906 | 0.722 | 0.756 | 0.819 | 0.824 | 0.699 | 394 | `070d7b4b` (`3ae434b6`) |
+| hybrid + rewriting + MiniLM-L-12 reranker (20 candidates) | 0.894 | 0.965 | 0.762 | 0.834 | 0.848 | 0.922 | 0.766 | 11,251 | `458a2cee` (`254574f3`) |
+
+The reranker gives the best ranking measured (MRR 0.922 against 0.824, nDCG@5 0.834 against
+0.756) but takes 11,251 ms per question against 394, far above the 2 s budget: it stays off.
+These v1 rankings predate the fixed order of ties.
+
+## Document updates
+
+`python -m src.rag.vector_store add | update | delete` on a trial copy of 300 points of
+`tujya_chunks_v2` (`sample`), with the example documents of [examples/](examples/); transcript:
+[document_updates_demo.txt](../../src/evaluation/results/document_updates_demo.txt).
+
 ## Embedding fine-tuning (not served)
 
 bge-m3 fine-tuned on Kaggle (MLflow run `03c72c9c`, experiment `tujya-rag-finetuning`, Tesla T4,
@@ -110,6 +196,77 @@ dose questions refused 1.0. MLflow safety judge: 0.8333 (qwen2.5:3b v1).
 Judge control ([judge_control.json](../../src/evaluation/results/judge_control.json)): paired
 with a source that cannot support the claim, the judge said "yes" 4 times out of 40 (0.10).
 
+## Generation: reference-based metrics
+
+`python -m src.evaluation.generation_evaluation` (source:
+[generation_metrics.json](../../src/evaluation/results/generation_metrics.json), per question in
+[generation_metrics_per_question.jsonl](../../src/evaluation/results/generation_metrics_per_question.jsonl),
+experiment `tujya-rag-generation`). The recorded answers of the table above, never generated
+again, cleaned as for RAGAS (citation marks and fixed safety texts removed), against the
+reference of each question (the label or abstract text that answers it); answered questions
+with a reference only. Tokens are normalised as in SQuAD (lower case, punctuation and articles
+removed, accents folded). BLEU is sentence BLEU with smoothing: a long free-form answer rarely
+shares a 4-gram with the reference, and without smoothing its BLEU is 0 whatever its 1- and
+2-gram overlap, so most answers would tie at 0; the smoothing of Chen & Cherry (2014, `exp` in
+sacrebleu) gives an empty order a small precision instead. Semantic similarity: cosine of the
+bge-m3 embeddings of answer and reference, used instead of BERTScore because half the answers
+are in French and the references in English (BERTScore matches tokens and needs PyTorch, which
+the project venv does not have; bge-m3 is multilingual and already served). The metrics agree
+with sacrebleu 2.6.0 and rouge-score 0.1.2 on the same tokens (85 pairs, largest difference
+1e-16).
+
+| Configuration | Answers | Language | EM | Token F1 | ROUGE-1 | ROUGE-2 | ROUGE-L | BLEU | Similarity | MLflow run |
+|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---|
+| **qwen2.5:3b, prompt v1, corpus v2 (served)** | 83 | all | 0.000 | 0.263 | 0.263 | 0.157 | 0.222 | 0.123 | 0.790 | `2a15d4e1` |
+| | 42 | en | 0.000 | 0.434 | 0.434 | 0.298 | 0.367 | 0.234 | 0.828 | |
+| | 41 | fr | 0.000 | 0.087 | 0.087 | 0.013 | 0.072 | 0.011 | 0.751 | |
+| qwen2.5:3b, prompt v1 (corpus v1) | 84 | all | 0.000 | 0.240 | 0.240 | 0.135 | 0.198 | 0.102 | 0.773 | `e3ceaeb2` |
+| | 42 | en | 0.000 | 0.382 | 0.382 | 0.252 | 0.318 | 0.186 | 0.799 | |
+| | 42 | fr | 0.000 | 0.099 | 0.099 | 0.017 | 0.079 | 0.019 | 0.747 | |
+| qwen2.5:3b, prompt v2 (corpus v1) | 84 | all | 0.000 | 0.245 | 0.245 | 0.143 | 0.209 | 0.107 | 0.770 | `3245d4a6` |
+| | 42 | en | 0.000 | 0.401 | 0.401 | 0.267 | 0.341 | 0.196 | 0.808 | |
+| | 42 | fr | 0.000 | 0.089 | 0.089 | 0.019 | 0.077 | 0.019 | 0.732 | |
+| llama3.2:3b, prompt v1 (corpus v1) | 83 | all | 0.000 | 0.246 | 0.246 | 0.152 | 0.209 | 0.114 | 0.794 | `3d4d47a2` |
+| | 42 | en | 0.000 | 0.392 | 0.392 | 0.272 | 0.332 | 0.200 | 0.820 | |
+| | 41 | fr | 0.000 | 0.096 | 0.096 | 0.029 | 0.082 | 0.025 | 0.768 | |
+
+Exact Match is 0 everywhere: it suits short extractive answers, not cited paragraphs. ROUGE-1
+equals token F1 here (both are the F1 of the common words, counted with their multiplicity).
+On the English answers the served champion has the best lexical scores; on the French answers
+the lexical metrics mostly measure the language gap with the English references, while the
+multilingual similarity stays between 0.73 and 0.77. The corpus-v1 rows compare the prompt and
+the LLM on the same corpus; the corpus-v2 row is not compared with them.
+
+## RAGAS on the passages and the judge check
+
+`python -m src.evaluation.judge_check ragas` (source:
+[ragas_context.json](../../src/evaluation/results/ragas_context.json), per question inside,
+experiment `tujya-rag-generation`, run `1eb8100d`). The recorded answers keep no passages, so
+the served setting (qwen2.5:3b, prompt v1, corpus v2) was generated again with its sources
+(`python -m src.evaluation.benchmark_generation --corpus v2`): 96 questions, 94 answered, 17
+answers identical to the recorded ones (temperature 0.1). Judge phi4-mini (RAGAS 0.4.4), the
+first 4 passages given to the LLM, 900 characters each, as in the table of
+[Generation: RAGAS, judge and MLflow GenAI](#generation-ragas-judge-and-mlflow-genai).
+
+- **Context utilization** (higher is better): for each passage, does the judge find it useful to
+  reach the answer; the mean precision of those verdicts weighted by rank. It is context
+  precision with the answer in place of a reference.
+- **Noise sensitivity** (lower is better): share of the claims of the answer that are wrong
+  against the reference and come from a passage. It makes many more judge calls (about 100 s
+  per answer here), so it runs on the first 20 answered questions only.
+- **Faithfulness**, computed again on this generation for the judge check below.
+
+| Metric | Mean | Answers scored | Not parsed | Time | s / answer |
+|---|---:|---:|---:|---:|---:|
+| Faithfulness | 0.9469 | 84 of 94 | 10 | 2259 s | 26.9 |
+| Context utilization | 0.9512 | 94 of 94 | 0 | 765 s | 8.1 |
+| Noise sensitivity (lower is better) | 0.1760 | 17 of 20 | 3 | 1748 s | 102.8 |
+
+"Not parsed": the judge's output did not fit the RAGAS format even after its retries; those
+answers have no score and are left out of the mean. The whole run took 4772 s (about 80 min) on the
+development laptop. This faithfulness is not compared with the 0.9122 of the corpus-v2 row
+above: it is another generation of the same setting.
+
 ## Brand questions
 
 8 questions naming a medicine brand ("Panadol", "Doliprane"...), qwen2.5:3b, full agent
@@ -128,3 +285,40 @@ with a source that cannot support the claim, the judge said "yes" 4 times out of
 12 LightGBM models on Morgan fingerprints, scaffold split 80/10/10 (`models/tox21/model.json`,
 MLflow run `6d3e6790`, Registry `tujya-tox21` v2). Mean test ROC-AUC **0.7252**; per assay from
 0.6468 (SR-ARE) to 0.8217 (NR-AhR).
+
+## Limitations
+
+- **Size of the question set.** 96 questions, 85 with qrels and 84 with a reference: one
+  question moves a mean such as Hit@k or MRR by up to 1/85 = 0.012, so differences of one or two
+  hundredths between configurations are within noise (for that reason the grid asks for a
+  paired bootstrap before rebuilding the index).
+- **How the questions were built.** From hand-written templates per question type
+  (contraindications, boxed warning, mechanism, adverse reactions, warnings, interactions,
+  abstracts, brands, safety) over the corpus itself, each with an extractive reference taken
+  from the source text. They are closer to the corpus than free questions of users.
+- **Binary qrels at section level.** Every chunk of the expected section is relevant, every
+  other chunk is not, even when it also answers: no graded relevance (nDCG uses gains of 1) and
+  a low Precision@k by construction. The qrels were built on the corpus v1 and mapped to the v2
+  chunks by shared text.
+- **Recorded query rewrites.** The served configuration replays the rewrites recorded for the
+  grid (`data/processed/rag/bench/queries.json`); a new LLM call could rewrite a question
+  differently.
+- **Reranker on the corpus v1 only**, scored from its recorded top-10 rankings, made before the
+  order of tied scores was fixed.
+- **Lexical generation metrics against English references.** Half the answers are in French:
+  there, Exact Match, token F1, ROUGE and BLEU measure the language gap. The semantic similarity
+  uses bge-m3, the embedding model of the retriever itself.
+- **A local judge of 3.8 B parameters** (phi4-mini) scores RAGAS. Its errors are measured only
+  by Cohen's kappa on 30 answers labelled by one person, the author, chosen half judged faithful
+  and half not, so their mix differs from the whole set (the citation-judge control of
+  `judge_control.json` used an earlier judge, gemma3:4b).
+- **RAGAS on a new generation and on subsets.** The metrics that read the passages ran on a new
+  generation of the served setting (17 of its 96 answers are identical to the recorded ones:
+  temperature 0.1), not on the recorded answers; noise sensitivity on the first 20 answered questions only (17
+  scored); 10 faithfulness and 3 noise-sensitivity outputs of the judge could not be parsed.
+- **Corpus mostly in English**, from three sources (openFDA labels, PubMed abstracts, DDInter):
+  French questions rely on the multilingual embeddings and on the query rewriting.
+- **One machine.** Every time comes from the development laptop (Ollama on a 4 GB GPU); a
+  reranker or a larger k could fit the budget on other hardware.
+- **Embedding fine-tuning** evaluated on pairs taken from the same corpus as the benchmark; not
+  served.
