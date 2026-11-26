@@ -146,6 +146,14 @@ These v1 rankings predate the fixed order of ties.
 `tujya_chunks_v2` (`sample`), with the example documents of [examples/](examples/); transcript:
 [document_updates_demo.txt](../../src/evaluation/results/document_updates_demo.txt).
 
+- `add` embeds the new document (1 chunk) and it comes first in BM25, dense and hybrid search;
+  a second `add` of the same document is refused ("use update").
+- `update` with the same text embeds nothing (1 chunk unchanged); with version 2 it embeds the
+  new text under the same chunk id (301 points), and search returns the new text.
+- `delete` removes it (300 points); `add` on `tujya_chunks_v2` is refused without
+  `--allow-served`.
+- `tujya_chunks_v2` keeps 27302 points and the same `indexed_at` before and after.
+
 ## Embedding fine-tuning (not served)
 
 bge-m3 fine-tuned on Kaggle (MLflow run `03c72c9c`, experiment `tujya-rag-finetuning`, Tesla T4,
