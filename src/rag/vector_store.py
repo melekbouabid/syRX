@@ -635,7 +635,12 @@ class QdrantStore:
         k: int,
         candidates: int,
     ) -> list[tuple[str, float]]:
-        """Dense and BM25 candidates, each filtered, fused by Qdrant with RRF (k = 60)."""
+        """Dense and BM25 candidates, each filtered, fused by Qdrant with RRF (k = 60).
+
+        Qdrant orders tied RRF scores differently from one call to the next, so every fused
+        candidate is fetched and sorted by score, then chunk_id (as `retrieval.rrf`), before
+        the cut to `k`: the same query always gives the same ranking.
+        """
         condition = to_filter(filters)
         prefetch = [qm.Prefetch(query=dense, using=DENSE, filter=condition, limit=candidates)]
         if sparse.indices:
@@ -648,10 +653,11 @@ class QdrantStore:
             # Qdrant scores 1 / (k + position), positions from 0: k = 61 there is exactly
             # 1 / (60 + rank) with ranks from 1, the fusion of the SQL store (retrieval.rrf).
             query=qm.RrfQuery(rrf=qm.Rrf(k=RRF_K + 1)),
-            limit=k,
+            limit=max(k, len(prefetch) * candidates),  # every fused candidate: ties at the cut
             with_payload=["chunk_id"],
         )
-        return [(str((p.payload or {})["chunk_id"]), float(p.score)) for p in response.points]
+        fused = [(str((p.payload or {})["chunk_id"]), float(p.score)) for p in response.points]
+        return sorted(fused, key=lambda item: (-item[1], item[0]))[:k]
 
     def info(self) -> dict[str, Any]:
         """What the Documents page shows about the collection."""

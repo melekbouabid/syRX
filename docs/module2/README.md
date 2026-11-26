@@ -54,8 +54,10 @@ changes.
 | Command | `python -m src.rag.retrieval "fluconazole warfarin" --ingredient warfarin --k 5` |
 | Result | first retrieval table of [results.md](results.md) |
 
-Hybrid search fuses the dense and BM25 lists by reciprocal rank fusion inside Qdrant. The
-ingredients found in the question are a metadata filter.
+Hybrid search fuses the dense and BM25 lists by reciprocal rank fusion inside Qdrant. Tied RRF
+scores are broken deterministically (score descending, then `chunk_id`, as the in-memory fusion
+of the SQL store), so the same question always gets the same ranking. The ingredients found in
+the question are a metadata filter.
 
 ## 5. Query rewriting
 

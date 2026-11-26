@@ -144,6 +144,18 @@ def test_hybrid_is_fused_by_qdrant_like_our_rrf(store: QdrantStore) -> None:
         assert all(round(fused[h.chunk.chunk_id], 6) == round(h.score, 6) for h in hits), query
 
 
+def test_hybrid_ties_are_broken_by_chunk_id_like_our_rrf(store: QdrantStore) -> None:
+    # Same chunks, same order as the in-memory fusion, and the same answer on every call.
+    retriever = Retriever(store, FakeEmbedder(DIM), sparse=encoder())
+    for query in QUERIES:
+        lexical = retriever.bm25_ranking(query, Filters(), 50)
+        dense = asyncio.run(retriever.dense_ranking(query, Filters(), 50))
+        expected = [cid for cid, _ in rrf([lexical, dense])[:5]]
+        for _ in range(3):
+            hits = asyncio.run(retriever.search(query, k=5, mode="hybrid"))
+            assert [h.chunk.chunk_id for h in hits] == expected, query
+
+
 def test_filters_apply_to_sparse_and_hybrid(store: QdrantStore) -> None:
     retriever = Retriever(store, FakeEmbedder(DIM), sparse=encoder())
     labels = Filters(doc_types=("label",), ingredients=("warfarin",))
