@@ -1,0 +1,30 @@
+{
+ "config": "qwen2.5-3b__v1__corpus-v2",
+ "items": 30,
+ "rater_a": "human (src/evaluation/human_labels.csv)",
+ "rater_b": "RAGAS faithfulness = 1 (phi4-mini-judge)",
+ "human_faithful": 16,
+ "judge_faithful": 22,
+ "n": 30,
+ "labels": [
+  1,
+  0
+ ],
+ "confusion": [
+  [
+   14,
+   2
+  ],
+  [
+   8,
+   6
+  ]
+ ],
+ "observed_agreement": 0.6666666666666666,
+ "expected_agreement": 0.5155555555555555,
+ "kappa": 0.3119266055045871,
+ "interpretation": "fair",
+ "confusion_rows": "human 1, human 0",
+ "confusion_columns": "judge 1, judge 0",
+ "run_id": "3d66bbedc9b4497d9f525b841dd5661a"
+}
