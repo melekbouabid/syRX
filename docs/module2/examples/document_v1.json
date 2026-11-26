@@ -1,0 +1,19 @@
+{
+  "doc_id": "demo:demotabine",
+  "doc_type": "label",
+  "section": "drug_interactions",
+  "title": "TEST DOCUMENT demotabine (invented drug, trial collection only): Drug interactions",
+  "text": "TEST DOCUMENT, version 1. Demotabine is an invented drug used only to show document updates. In this test text, demotabine is said to raise the blood level of the invented drug fictivol.",
+  "source_name": "Tujya update demo",
+  "url": "https://example.org/demo",
+  "date": "2026-11-26",
+  "version": "1",
+  "license": "CC0",
+  "language": "en",
+  "ingredients": [
+    "demotabine"
+  ],
+  "mentioned_ingredients": [
+    "fictivol"
+  ]
+}
